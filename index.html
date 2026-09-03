@@ -1,0 +1,995 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Game Nuke Premium Edition — Android Gaming Cockpit & Optimizer</title>
+  <meta name="description" content="Download resmi Game Nuke Premium APK: Dual-Engine Macro (0ms Shizuku), VPN Ping Booster 1ms Mobile Legends, Tactical Crosshair, Force 120Hz & Edge CDN Auto-Update.">
+  <meta name="keywords" content="game nuke premium, game booster android, macro gaming shizuku, vpn ping boost mlbb, ping 1ms mobile legends, game turbo non root">
+  <meta name="theme-color" content="#030712">
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Game Nuke Premium Edition — Enterprise Gaming Cockpit">
+  <meta property="og:description" content="Kuasai setiap match dengan Macro Dual-Engine 0ms, VPN Ping 1ms MLBB, dan Kontrol Kernel Shizuku.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://agungputraa.github.io/GameNuke/">
+  <meta property="og:image" content="https://agungputraa.github.io/GameNuke/og-preview.png">
+
+  <!-- Favicon -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='24' fill='%2300ff88'/><circle cx='50' cy='50' r='28' fill='%23030712'/><circle cx='50' cy='50' r='12' fill='%2300e5ff'/></svg>">
+
+  <!-- Google Fonts: Orbitron, Outfit, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;800&family=Orbitron:wght@500;700;900&family=Outfit:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            cyber: {
+              black: '#030712',
+              card: '#0b1120',
+              border: '#1e293b',
+              neonGreen: '#00ff88',
+              neonCyan: '#00e5ff',
+              neonPink: '#ff0055',
+              neonYellow: '#ffe600',
+              subtext: '#94a3b8'
+            }
+          },
+          fontFamily: {
+            orbitron: ['Orbitron', 'sans-serif'],
+            outfit: ['Outfit', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          boxShadow: {
+            'neon-green': '0 0 25px -5px rgba(0, 255, 136, 0.4), 0 0 10px -3px rgba(0, 255, 136, 0.3)',
+            'neon-cyan': '0 0 25px -5px rgba(0, 229, 255, 0.4), 0 0 10px -3px rgba(0, 229, 255, 0.3)',
+            'neon-pink': '0 0 25px -5px rgba(255, 0, 85, 0.4), 0 0 10px -3px rgba(255, 0, 85, 0.3)',
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'glow-scan': 'scanline 4s linear infinite',
+          },
+          keyframes: {
+            scanline: {
+              '0%': { transform: 'translateY(-100%)' },
+              '100%': { transform: 'translateY(1000%)' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Custom Styles for Cyber Matrix Backdrops & Scanlines -->
+  <link rel="stylesheet" href="style.css">
+
+  <!-- Alpine.js CDN (defer) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+</head>
+
+<body class="bg-cyber-black text-slate-100 font-outfit antialiased selection:bg-cyber-neonGreen selection:text-black min-h-screen relative overflow-x-hidden"
+      x-data="gameNukeApp()">
+
+  <!-- Cyber Grid Background -->
+  <div class="fixed inset-0 pointer-events-none bg-[radial-gradient(#1e293b_1px,transparent_1px)] [background-size:24px_24px] opacity-40 z-0"></div>
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[900px] h-[350px] bg-gradient-to-b from-cyber-neonGreen/10 via-cyber-neonCyan/5 to-transparent blur-3xl pointer-events-none z-0"></div>
+
+  <!-- ── Top Navbar ──────────────────────────────────────────────────────────── -->
+  <header class="sticky top-0 z-50 backdrop-blur-xl bg-cyber-black/85 border-b border-cyber-border/80 transition-all duration-300">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-20">
+        
+        <!-- Logo -->
+        <a href="#" class="flex items-center gap-3.5 group">
+          <div class="relative flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br from-cyber-neonGreen to-cyber-neonCyan p-[2px] shadow-neon-green transition-transform duration-300 group-hover:scale-105">
+            <div class="w-full h-full bg-cyber-black rounded-[10px] flex items-center justify-center">
+              <i class="fa-solid fa-bolt text-cyber-neonGreen text-xl group-hover:text-cyber-neonCyan transition-colors"></i>
+            </div>
+            <div class="absolute -inset-1 rounded-xl bg-cyber-neonGreen/30 blur-sm -z-10 group-hover:opacity-100 opacity-60 transition-opacity"></div>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-orbitron font-extrabold text-xl tracking-wider text-white">GAME<span class="text-cyber-neonGreen">NUKE</span></span>
+              <span class="px-2 py-0.5 text-[10px] font-mono font-bold tracking-wider text-cyber-black bg-cyber-neonGreen rounded-md">PREMIUM</span>
+            </div>
+            <p class="text-[11px] font-mono text-cyber-subtext">V2.2.0 STANDALONE CORE</p>
+          </div>
+        </a>
+
+        <!-- Desktop Navigation -->
+        <nav class="hidden md:flex items-center gap-8">
+          <a href="#fitur" class="text-sm font-medium text-slate-300 hover:text-cyber-neonGreen transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-microchip text-xs text-cyber-neonGreen/70"></i> Fitur Pro
+          </a>
+          <a href="#macro" class="text-sm font-medium text-slate-300 hover:text-cyber-neonGreen transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-hand-pointer text-xs text-cyber-neonCyan/70"></i> Dual Macro
+          </a>
+          <a href="#vpn" class="text-sm font-medium text-slate-300 hover:text-cyber-neonGreen transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-satellite-dish text-xs text-cyber-neonGreen/70"></i> VPN Ping 1ms
+          </a>
+          <a href="#komparasi" class="text-sm font-medium text-slate-300 hover:text-cyber-neonGreen transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-scale-balanced text-xs text-cyber-neonYellow/70"></i> Komparasi
+          </a>
+          <a href="#faq" class="text-sm font-medium text-slate-300 hover:text-cyber-neonGreen transition-colors flex items-center gap-1.5">
+            <i class="fa-solid fa-circle-question text-xs text-slate-400"></i> FAQ
+          </a>
+        </nav>
+
+        <!-- CTA Header Button -->
+        <div class="hidden sm:flex items-center gap-4">
+          <button @click="scrollToDownload()" 
+                  class="relative group px-5 py-2.5 rounded-xl font-orbitron text-xs font-bold tracking-wider uppercase text-cyber-black bg-gradient-to-r from-cyber-neonGreen via-emerald-400 to-cyber-neonCyan hover:brightness-110 shadow-neon-green transition-all duration-300 transform active:scale-95 flex items-center gap-2">
+            <i class="fa-solid fa-download animate-bounce"></i>
+            <span>DOWNLOAD APK</span>
+          </button>
+        </div>
+
+        <!-- Mobile Menu Hamburger -->
+        <div class="flex md:hidden">
+          <button @click="mobileMenuOpen = !mobileMenuOpen" 
+                  class="p-2.5 rounded-lg text-slate-400 hover:text-white hover:bg-cyber-card border border-cyber-border focus:outline-none">
+            <i :class="mobileMenuOpen ? 'fa-solid fa-xmark' : 'fa-solid fa-bars'" class="text-xl"></i>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Mobile Dropdown Menu -->
+    <div x-show="mobileMenuOpen" 
+         x-transition:enter="transition ease-out duration-200"
+         x-transition:enter-start="opacity-0 -translate-y-2"
+         x-transition:enter-end="opacity-100 translate-y-0"
+         x-transition:leave="transition ease-in duration-150"
+         x-transition:leave-start="opacity-100 translate-y-0"
+         x-transition:leave-end="opacity-0 -translate-y-2"
+         class="md:hidden bg-cyber-card/95 backdrop-blur-xl border-b border-cyber-border px-6 py-6 space-y-4">
+      <a href="#fitur" @click="mobileMenuOpen = false" class="block text-slate-200 hover:text-cyber-neonGreen font-medium py-2"><i class="fa-solid fa-microchip w-6 text-cyber-neonGreen"></i> Fitur Pro</a>
+      <a href="#macro" @click="mobileMenuOpen = false" class="block text-slate-200 hover:text-cyber-neonGreen font-medium py-2"><i class="fa-solid fa-hand-pointer w-6 text-cyber-neonCyan"></i> Dual Macro Fast-Hand</a>
+      <a href="#vpn" @click="mobileMenuOpen = false" class="block text-slate-200 hover:text-cyber-neonGreen font-medium py-2"><i class="fa-solid fa-satellite-dish w-6 text-cyber-neonGreen"></i> VPN Ping Booster 1ms</a>
+      <a href="#komparasi" @click="mobileMenuOpen = false" class="block text-slate-200 hover:text-cyber-neonGreen font-medium py-2"><i class="fa-solid fa-scale-balanced w-6 text-cyber-neonYellow"></i> Komparasi Free vs Pro</a>
+      <a href="#faq" @click="mobileMenuOpen = false" class="block text-slate-200 hover:text-cyber-neonGreen font-medium py-2"><i class="fa-solid fa-circle-question w-6 text-slate-400"></i> Tanya Jawab (FAQ)</a>
+      <button @click="scrollToDownload(); mobileMenuOpen = false;" class="w-full py-3 mt-4 rounded-xl font-orbitron font-bold text-center text-cyber-black bg-cyber-neonGreen shadow-neon-green">
+        <i class="fa-solid fa-download mr-2"></i> DOWNLOAD SEKARANG
+      </button>
+    </div>
+  </header>
+
+  <!-- ── Top Sponsored Ad Slot (Monetization) ─────────────────────────────────── -->
+  <div class="max-w-5xl mx-auto px-4 mt-6">
+    <div class="relative rounded-xl border border-dashed border-cyber-border bg-cyber-card/40 p-3 text-center backdrop-blur-md overflow-hidden group hover:border-cyber-neonGreen/40 transition-colors">
+      <div class="flex items-center justify-between text-[11px] font-mono text-slate-500 mb-1 px-2">
+        <span><i class="fa-solid fa-rectangle-ad mr-1"></i> SPONSORED DIRECTLINK & BANNER PARTNER</span>
+        <span class="text-cyber-neonGreen/60">AD-ZONE 728x90</span>
+      </div>
+      <div class="py-2.5 flex items-center justify-center gap-3 cursor-pointer" @click="handleAdClick()">
+        <span class="text-xs text-slate-400 group-hover:text-cyber-neonCyan transition-colors">
+          🚀 Ingin Pasang Iklan Banner / Directlink Game Nuke? Klik di sini untuk aktivasi slot promosi.
+        </span>
+        <i class="fa-solid fa-arrow-up-right-from-square text-xs text-cyber-neonCyan"></i>
+      </div>
+    </div>
+  </div>
+
+  <main class="relative z-10">
+
+    <!-- ── Hero Section ──────────────────────────────────────────────────────── -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-12 pb-20 lg:pt-16 lg:pb-28">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+        
+        <!-- Left Hero Copy -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          
+          <!-- Version Pill -->
+          <div class="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-cyber-card border border-cyber-neonGreen/30 backdrop-blur-md shadow-neon-green/20">
+            <span class="w-2.5 h-2.5 rounded-full bg-cyber-neonGreen animate-ping"></span>
+            <span class="text-xs font-mono font-semibold text-cyber-neonGreen">STANDALONE ENTERPRISE ENGINE</span>
+            <span class="text-xs text-slate-500">•</span>
+            <span class="text-xs font-mono text-slate-300" x-text="`VERSI ${meta.versionName}`">VERSI v2.2.0-prem</span>
+          </div>
+
+          <!-- Main Title -->
+          <h1 class="font-orbitron font-black text-4xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.15] text-white">
+            UNLEASH <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyber-neonGreen via-emerald-400 to-cyber-neonCyan drop-shadow-[0_0_25px_rgba(0,255,136,0.3)]">UNFAIR</span> GAMING SPEED
+          </h1>
+
+          <!-- Description -->
+          <p class="text-base sm:text-lg text-slate-300 max-w-2xl font-normal leading-relaxed">
+            Kokpit gaming Android paling bertenaga yang dirilis di luar Google Play. 
+            Menghadirkan <b class="text-cyber-neonGreen font-semibold">Dual-Engine Macro 0ms</b> (Shizuku Privileged Mode), 
+            <b class="text-cyber-neonCyan font-semibold">VPN Ping Booster 1ms</b> (Local Loopback MLBB Responder), 
+            Force 120Hz Display Lock, Anti-Mistouch Palm Shield, dan Tactical Reticle Studio.
+          </p>
+
+          <!-- Core Feature Bullets -->
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-3 pt-2 text-left font-mono text-xs">
+            <div class="p-2.5 rounded-lg bg-cyber-card/60 border border-cyber-border flex items-center gap-2">
+              <i class="fa-solid fa-shield-halved text-cyber-neonGreen"></i>
+              <span>Anti-Ban & Safe</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-cyber-card/60 border border-cyber-border flex items-center gap-2">
+              <i class="fa-solid fa-lock-open text-cyber-neonCyan"></i>
+              <span>Tanpa Wajib Root</span>
+            </div>
+            <div class="p-2.5 rounded-lg bg-cyber-card/60 border border-cyber-border flex items-center gap-2 col-span-2 sm:col-span-1">
+              <i class="fa-solid fa-cloud-arrow-down text-cyber-neonYellow"></i>
+              <span>Edge CDN Updates</span>
+            </div>
+          </div>
+
+          <!-- Download Action Card -->
+          <div id="download-zone" class="p-6 rounded-2xl bg-gradient-to-b from-cyber-card to-cyber-card/90 border border-cyber-border/80 shadow-2xl relative overflow-hidden">
+            <div class="absolute -right-12 -top-12 w-48 h-48 bg-cyber-neonGreen/10 rounded-full blur-3xl pointer-events-none"></div>
+
+            <div class="flex flex-col sm:flex-row items-center gap-4">
+              
+              <!-- Download Button with Alpine Progress -->
+              <button @click="startDownloadProcess()" 
+                      :disabled="downloadState === 'downloading'"
+                      class="w-full sm:w-auto flex-1 relative overflow-hidden py-4 px-8 rounded-xl font-orbitron font-bold text-sm tracking-wider uppercase text-cyber-black bg-gradient-to-r from-cyber-neonGreen via-emerald-400 to-cyber-neonCyan hover:brightness-110 shadow-neon-green transition-all transform active:scale-95 disabled:opacity-80 flex items-center justify-center gap-3 group">
+                
+                <!-- Background Loading Progress Bar -->
+                <div x-show="downloadState === 'downloading'" 
+                     class="absolute left-0 top-0 bottom-0 bg-white/30 transition-all duration-150"
+                     :style="`width: ${downloadProgress}%`"></div>
+
+                <template x-if="downloadState === 'idle'">
+                  <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-download text-lg group-hover:animate-bounce"></i>
+                    <span>DOWNLOAD GAME NUKE PREMIUM</span>
+                  </span>
+                </template>
+
+                <template x-if="downloadState === 'downloading'">
+                  <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-spinner fa-spin text-lg"></i>
+                    <span x-text="`DOWNLOADING STREAM... ${downloadProgress}%`"></span>
+                  </span>
+                </template>
+
+                <template x-if="downloadState === 'completed'">
+                  <span class="flex items-center gap-3">
+                    <i class="fa-solid fa-circle-check text-lg text-emerald-950"></i>
+                    <span>DOWNLOAD BERHASIL! BUKA APK</span>
+                  </span>
+                </template>
+              </button>
+
+              <!-- Mirror Direct Button -->
+              <a :href="meta.downloadUrl" 
+                 target="_blank"
+                 class="w-full sm:w-auto px-4 py-4 rounded-xl border border-cyber-border bg-cyber-black/50 hover:bg-cyber-black font-mono text-xs font-semibold text-slate-300 hover:text-cyber-neonCyan transition-colors flex items-center justify-center gap-2">
+                <i class="fa-solid fa-link"></i>
+                <span>Direct Mirror</span>
+              </a>
+
+            </div>
+
+            <!-- APK Specs Bar -->
+            <div class="mt-4 pt-4 border-t border-cyber-border/60 flex flex-wrap items-center justify-between gap-y-2 text-xs font-mono text-slate-400">
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-file-code text-cyber-neonGreen"></i>
+                <span>Paket: <b class="text-slate-200">com.neon.gametweak</b></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-cube text-cyber-neonCyan"></i>
+                <span>Ukuran: <b class="text-slate-200" x-text="`${meta.apkSizeMb} MB`">24.3 MB</b></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fa-brands fa-android text-emerald-400"></i>
+                <span>Android: <b class="text-slate-200">11, 12, 13, 14, 15, 16</b></span>
+              </div>
+              <div class="flex items-center gap-1.5">
+                <i class="fa-solid fa-fingerprint text-cyber-neonYellow"></i>
+                <button @click="copySha256()" class="hover:text-white transition-colors flex items-center gap-1">
+                  <span>SHA256: <b class="text-slate-300" x-text="meta.sha256.substring(0, 10) + '...'">AEFF9DF...</b></span>
+                  <i class="fa-regular fa-copy text-[10px]"></i>
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- Right Hero: Interactive Cockpit Live Telemetry Visualizer -->
+        <div class="lg:col-span-5">
+          <div class="relative mx-auto max-w-sm rounded-[32px] p-2 bg-gradient-to-b from-cyber-border/80 via-cyber-card to-cyber-black shadow-2xl border border-cyber-neonGreen/30">
+            
+            <!-- Phone Bezel Header -->
+            <div class="rounded-[26px] bg-cyber-black p-5 border border-cyber-border relative overflow-hidden">
+              
+              <!-- Neon Scanline Effect -->
+              <div class="absolute inset-0 bg-gradient-to-b from-transparent via-cyber-neonGreen/5 to-transparent h-20 w-full animate-glow-scan pointer-events-none"></div>
+
+              <!-- Cockpit Top Bar -->
+              <div class="flex items-center justify-between pb-4 border-b border-cyber-border/80 text-xs font-mono">
+                <div class="flex items-center gap-2">
+                  <span class="w-2 h-2 rounded-full bg-cyber-neonGreen animate-pulse"></span>
+                  <span class="font-bold text-cyber-neonGreen tracking-wider">NUKE ENGINE PRO</span>
+                </div>
+                <div class="flex items-center gap-2 text-slate-400">
+                  <span>SHIZUKU PRIVILEGED</span>
+                  <i class="fa-solid fa-plug text-cyber-neonCyan text-xs"></i>
+                </div>
+              </div>
+
+              <!-- Reactive Latency Gauge -->
+              <div class="my-6 p-4 rounded-xl bg-cyber-card/80 border border-cyber-border relative">
+                <div class="flex items-center justify-between">
+                  <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Lobby Ping Loopback</div>
+                  <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-cyber-neonGreen/10 text-cyber-neonGreen border border-cyber-neonGreen/30">
+                    RESPONDER ACTIVE
+                  </span>
+                </div>
+                <div class="flex items-baseline gap-2 mt-2">
+                  <span class="font-orbitron font-black text-5xl tracking-tight text-white" x-text="liveTelemetry.ping">1</span>
+                  <span class="font-orbitron font-bold text-xl text-cyber-neonGreen">ms</span>
+                  <span class="text-xs font-mono text-slate-500 ml-auto">Jitter: 0.02ms</span>
+                </div>
+                <!-- Mini Bar Graph -->
+                <div class="grid grid-cols-12 gap-1 mt-3 h-4 items-end">
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-3 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2.5 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-3.5 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-3 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                  <div class="bg-cyber-neonGreen h-2 rounded-sm"></div>
+                </div>
+              </div>
+
+              <!-- Telemetry Matrix Grid -->
+              <div class="grid grid-cols-2 gap-3 font-mono text-xs">
+                
+                <div class="p-3 rounded-xl bg-cyber-card/60 border border-cyber-border">
+                  <div class="text-[10px] text-slate-400">FRAME RATE</div>
+                  <div class="font-orbitron font-bold text-xl text-cyber-neonCyan mt-1" x-text="liveTelemetry.fps + ' FPS'">120 FPS</div>
+                  <div class="text-[9px] text-emerald-400 mt-0.5">Force 120Hz Locked</div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-cyber-card/60 border border-cyber-border">
+                  <div class="text-[10px] text-slate-400">TOUCH INJECTION</div>
+                  <div class="font-orbitron font-bold text-xl text-cyber-neonGreen mt-1" x-text="liveTelemetry.macroLatency + ' ms'">0.1 ms</div>
+                  <div class="text-[9px] text-cyber-neonGreen mt-0.5">Direct Linux /dev/input</div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-cyber-card/60 border border-cyber-border">
+                  <div class="text-[10px] text-slate-400">TOUCH SAMPLING</div>
+                  <div class="font-orbitron font-bold text-xl text-slate-200 mt-1">360 Hz</div>
+                  <div class="text-[9px] text-slate-500 mt-0.5">Ultra Response Turbo</div>
+                </div>
+
+                <div class="p-3 rounded-xl bg-cyber-card/60 border border-cyber-border">
+                  <div class="text-[10px] text-slate-400">ANTI-MISTOUCH</div>
+                  <div class="font-orbitron font-bold text-xl text-cyber-neonYellow mt-1">ARMED</div>
+                  <div class="text-[9px] text-slate-400 mt-0.5">Palm Edge Shield Active</div>
+                </div>
+
+              </div>
+
+              <!-- Quick HUD Toggles Preview -->
+              <div class="mt-4 pt-4 border-t border-cyber-border/80 flex items-center justify-between text-xs font-mono">
+                <span class="text-slate-400">Tactical HUD Deck</span>
+                <span class="text-cyber-neonGreen font-semibold flex items-center gap-1">
+                  <i class="fa-solid fa-circle-check"></i> 6 Pro Tools Ready
+                </span>
+              </div>
+
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ── Interactive Playgrounds: Macro Speed Tester & 1ms Ping Simulator ─── -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12 border-t border-cyber-border/60">
+      
+      <div class="text-center max-w-3xl mx-auto mb-12">
+        <h2 class="font-orbitron font-extrabold text-2xl sm:text-3xl text-white tracking-wide">
+          INTERACTIVE <span class="text-cyber-neonGreen">TECH LAB</span>
+        </h2>
+        <p class="text-slate-400 text-sm sm:text-base mt-2">
+          Uji langsung kecepatan simulasi latency touch macro dan uji coba local loopback responder VPN ping sebelum mendownload aplikasi.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        
+        <!-- Interactive Tester 1: Macro Fast-Hand Clicker -->
+        <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonGreen/40 transition-all flex flex-col justify-between"
+             x-data="macroClickerLab()">
+          
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-hand-pointer text-cyber-neonGreen"></i>
+                <h3 class="font-orbitron font-bold text-lg text-white">Dual-Engine Macro Speed Lab</h3>
+              </div>
+              <span class="px-2.5 py-1 text-[11px] font-mono rounded bg-cyber-neonGreen/10 text-cyber-neonGreen border border-cyber-neonGreen/30 font-bold"
+                    x-text="currentMode.toUpperCase() + ' MODE'">SHIZUKU MODE</span>
+            </div>
+            
+            <p class="text-slate-300 text-xs leading-relaxed mb-6">
+              Bandingkan respon ketukan jari manusia standar (~85ms) dengan <b>AccessibilityService (~35ms)</b> dan 
+              <b>Game Nuke Shizuku Privileged Engine (~0.1ms)</b> yang langsung menembak ke subsystem kernel input.
+            </p>
+
+            <!-- Mode Selector Tabs -->
+            <div class="grid grid-cols-3 gap-2 mb-6 font-mono text-xs">
+              <button @click="setMode('human')" 
+                      :class="currentMode === 'human' ? 'bg-slate-700 text-white border-white' : 'bg-cyber-black text-slate-400 border-cyber-border'"
+                      class="py-2 px-3 rounded-lg border transition-all text-center">
+                Jari Normal (85ms)
+              </button>
+              <button @click="setMode('accessibility')" 
+                      :class="currentMode === 'accessibility' ? 'bg-cyber-neonCyan/20 text-cyber-neonCyan border-cyber-neonCyan' : 'bg-cyber-black text-slate-400 border-cyber-border'"
+                      class="py-2 px-3 rounded-lg border transition-all text-center">
+                Accessibility (35ms)
+              </button>
+              <button @click="setMode('shizuku')" 
+                      :class="currentMode === 'shizuku' ? 'bg-cyber-neonGreen/20 text-cyber-neonGreen border-cyber-neonGreen shadow-neon-green/30' : 'bg-cyber-black text-slate-400 border-cyber-border'"
+                      class="py-2 px-3 rounded-lg border transition-all text-center font-bold">
+                Shizuku (0.1ms)
+              </button>
+            </div>
+
+            <!-- Virtual Touch Trigger Pad -->
+            <div @click="triggerTap()" 
+                 class="relative h-36 rounded-xl border-2 border-dashed border-cyber-border hover:border-cyber-neonGreen bg-cyber-black/70 flex flex-col items-center justify-center cursor-pointer select-none overflow-hidden group active:scale-[0.99] transition-transform">
+              <div class="text-center">
+                <i class="fa-solid fa-fingerprint text-3xl text-cyber-neonGreen mb-2 group-hover:scale-110 transition-transform"></i>
+                <div class="font-orbitron font-bold text-sm text-slate-200">KETUK DISINI UNTUK TEST FAST-HAND COMBO</div>
+                <div class="text-[11px] font-mono text-slate-500 mt-1">Simulasi eksekusi combo 5 tap beruntun</div>
+              </div>
+
+              <!-- Animated Click Ripples -->
+              <template x-for="r in ripples" :key="r.id">
+                <span class="absolute w-8 h-8 rounded-full bg-cyber-neonGreen/40 animate-ping pointer-events-none"
+                      :style="`left: ${r.x}px; top: ${r.y}px`"></span>
+              </template>
+            </div>
+          </div>
+
+          <!-- Stats readout -->
+          <div class="grid grid-cols-3 gap-3 mt-6 pt-4 border-t border-cyber-border font-mono text-xs">
+            <div>
+              <div class="text-[10px] text-slate-400">TOTAL TAPS</div>
+              <div class="text-lg font-bold text-white font-orbitron" x-text="totalTaps">0</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400">TAP LATENCY</div>
+              <div class="text-lg font-bold text-cyber-neonGreen font-orbitron" x-text="latencyDisplay">0.1ms</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400">COMBO SPEED</div>
+              <div class="text-lg font-bold text-cyber-neonCyan font-orbitron" x-text="cpsDisplay">0 CPS</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Interactive Tester 2: VPN Ping Loopback Simulator -->
+        <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonCyan/40 transition-all flex flex-col justify-between"
+             x-data="vpnPingLab()">
+          
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-satellite-dish text-cyber-neonCyan"></i>
+                <h3 class="font-orbitron font-bold text-lg text-white">VPN Ping Booster 1ms Lab</h3>
+              </div>
+              <button @click="toggleBooster()" 
+                      :class="isBoosterActive ? 'bg-cyber-neonGreen text-cyber-black shadow-neon-green' : 'bg-slate-800 text-slate-400'"
+                      class="px-3 py-1 text-xs font-mono font-bold rounded-lg transition-all flex items-center gap-1.5">
+                <i class="fa-solid fa-power-off text-xs"></i>
+                <span x-text="isBoosterActive ? 'BOOSTER: AKTIF' : 'BOOSTER: NONAKTIF'"></span>
+              </button>
+            </div>
+
+            <p class="text-slate-300 text-xs leading-relaxed mb-6">
+              Fitur legendaris Game Nuke: <b>Local Loopback TUN Responder</b>. Paket ICMP/UDP echo request dicegat langsung 
+              di dalam device dan dijawab instan dalam sub-millisecond, menjaga tampilan ping di lobby Mobile Legends tetap 1ms hijau stabil.
+            </p>
+
+            <!-- Ping Comparison Display -->
+            <div class="grid grid-cols-2 gap-4 mb-6">
+              
+              <div class="p-4 rounded-xl border" 
+                   :class="!isBoosterActive ? 'border-cyber-neonPink/60 bg-cyber-neonPink/5' : 'border-cyber-border bg-cyber-black/40 opacity-50'">
+                <div class="text-[10px] font-mono text-slate-400">KONEKSI STANDAR (NO BOOSTER)</div>
+                <div class="flex items-baseline gap-1 mt-2">
+                  <span class="font-orbitron font-bold text-3xl text-rose-400" x-text="normalPing">78</span>
+                  <span class="text-xs font-orbitron text-rose-400">ms</span>
+                </div>
+                <div class="text-[10px] font-mono text-rose-400 mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-chart-line"></i> Jitter 12-40ms (Spike)
+                </div>
+              </div>
+
+              <div class="p-4 rounded-xl border" 
+                   :class="isBoosterActive ? 'border-cyber-neonGreen/60 bg-cyber-neonGreen/10 shadow-neon-green/20' : 'border-cyber-border bg-cyber-black/40 opacity-50'">
+                <div class="text-[10px] font-mono text-cyber-neonGreen font-bold">GAME NUKE LOOPBACK TUN</div>
+                <div class="flex items-baseline gap-1 mt-2">
+                  <span class="font-orbitron font-bold text-3xl text-cyber-neonGreen" x-text="nukePing">1</span>
+                  <span class="text-xs font-orbitron text-cyber-neonGreen">ms</span>
+                </div>
+                <div class="text-[10px] font-mono text-cyber-neonGreen mt-1 flex items-center gap-1">
+                  <i class="fa-solid fa-bolt"></i> Ultra DNS (1.1.1.1 + 8.8.8.8)
+                </div>
+              </div>
+
+            </div>
+
+            <!-- In-game Simulation Bar -->
+            <div class="p-3.5 rounded-xl bg-cyber-black border border-cyber-border flex items-center justify-between font-mono text-xs">
+              <div class="flex items-center gap-2.5">
+                <span class="w-2.5 h-2.5 rounded-full" :class="isBoosterActive ? 'bg-cyber-neonGreen' : 'bg-amber-400'"></span>
+                <span class="text-slate-300">Status Server Lobby:</span>
+                <span class="font-bold" :class="isBoosterActive ? 'text-cyber-neonGreen' : 'text-amber-400'" 
+                      x-text="isBoosterActive ? '1ms Ping Locked' : 'Normal Fluctuating'"></span>
+              </div>
+              <span class="text-[11px] text-slate-500">MTU: 1400 Tun0</span>
+            </div>
+          </div>
+
+          <!-- DNS routing details -->
+          <div class="mt-6 pt-4 border-t border-cyber-border flex items-center justify-between font-mono text-[11px] text-slate-400">
+            <span>Routing: Cloudflare 1.1.1.1 + Google 8.8.8.8</span>
+            <span class="text-cyber-neonCyan">Bypass ISP Throttle</span>
+          </div>
+
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ── Feature Showcase Grid ─────────────────────────────────────────────── -->
+    <section id="fitur" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-cyber-border/60">
+      
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyber-neonGreen/10 border border-cyber-neonGreen/30 text-cyber-neonGreen text-xs font-mono font-semibold mb-3">
+          <i class="fa-solid fa-cube"></i> ARSITEKTUR KELAS ENTERPRISE
+        </div>
+        <h2 class="font-orbitron font-black text-3xl sm:text-4xl text-white tracking-wide">
+          FITUR EKSKLUSIF <span class="text-transparent bg-clip-text bg-gradient-to-r from-cyber-neonGreen to-cyber-neonCyan">PREMIUM EDITION</span>
+        </h2>
+        <p class="text-slate-400 text-base mt-3">
+          Semua module dirancang untuk memberikan keuntungan kompetitif di game FPS, MOBA, dan Battle Royale tanpa melanggar integritas keamanan perangkat.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+        
+        <!-- Card 1: Dual Macro -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonGreen transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonGreen/10 border border-cyber-neonGreen/30 flex items-center justify-center text-cyber-neonGreen text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-hand-pointer"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Dual-Engine Touch Macro</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Dua mode eksekusi macro dalam satu paket. Gunakan <b>Shizuku Privileged Engine</b> untuk respon touch 0ms tanpa input-lag, atau <b>Accessibility Service</b> untuk aktivasi instan tanpa PC/Wireless Debugging.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> Rekam koordinat custom fleksibel</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> Loop count & delay microsecond</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> Clamping boundary anti-offscreen</li>
+          </ul>
+        </div>
+
+        <!-- Card 2: VPN Ping 1ms -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonCyan transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonCyan/10 border border-cyber-neonCyan/30 flex items-center justify-center text-cyber-neonCyan text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-satellite-dish"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">VPN Ping Booster 1ms</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Local Loopback VPN Service khusus menjawab probe ping Mobile Legends di bawah 1 milidetik. Dilengkapi gaming DNS Cloudflare 1.1.1.1 & Google 8.8.8.8 untuk stabilitas rute packet match internasional.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> 1ms Ping Hijau di Lobby MLBB</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Anti-Packet Drop MTU 1400 Tuning</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Hemat kuota: Tidak ada server luar</li>
+          </ul>
+        </div>
+
+        <!-- Card 3: 120Hz Locker -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonYellow transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonYellow/10 border border-cyber-neonYellow/30 flex items-center justify-center text-cyber-neonYellow text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-gauge-high"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">120Hz Refresh Rate Force</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Kunci layar perangkat di mode 90Hz atau 120Hz terus-menerus. Mencegah thermal throttling OEM yang sering menurunkan frame rate ke 60Hz saat game mulai berat atau suhu memanas.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Support Xiaomi, Realme, Samsung, Asus</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Override dynamic refresh throttling</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Smooth motion rendering</li>
+          </ul>
+        </div>
+
+        <!-- Card 4: Tactical Reticle Studio -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonPink transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonPink/10 border border-cyber-neonPink/30 flex items-center justify-center text-cyber-neonPink text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-crosshairs"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Tactical Crosshair Studio</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Overlay reticle presisi tingkat piksel untuk game FPS (Free Fire, PUBG Mobile, COD Mobile). Tembak no-scope sniper lebih akurat dengan kustomisasi bentuk titik, lingkar, dan warna neon tajam.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonPink"></i> Zero latency hardware-accelerated overlay</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonPink"></i> Centered coordinate micro-adjuster</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonPink"></i> Multi-style preset (Dot, Circle, Cross)</li>
+          </ul>
+        </div>
+
+        <!-- Card 5: Anti-Mistouch Palm Shield -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-emerald-400 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-emerald-400/10 border border-emerald-400/30 flex items-center justify-center text-emerald-400 text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Anti-Mistouch Palm Shield</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Mencegah telapak tangan tidak sengaja menekan tombol home, notification tray, atau sudut layar saat bermain posisi landscape 4 jari / claw grip. Bermain lebih tenang tanpa gangguan accidental exit.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Edge dead-zone filtering</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Blokir notifikasi & pull-down bar</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-emerald-400"></i> Cocok untuk gamer kompetitif 4-jari</li>
+          </ul>
+        </div>
+
+        <!-- Card 6: Unlimited Edge CDN Updates -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-sky-400 transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-sky-400/10 border border-sky-400/30 flex items-center justify-center text-sky-400 text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-cloud-arrow-down"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Edge CDN In-App Updater</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Sistem update otomatis di dalam aplikasi menggunakan Cloudflare Global Edge CDN (`version.json`). Bebas limit API GitHub REST (60 req/hr), sehingga jutaan pengguna dapat mendownload pembaruan instan.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-400"></i> Notifikasi update otomatis dalam aplikasi</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-400"></i> Blob streaming download & hash check</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-sky-400"></i> 1-Tap install PackageInstaller resmi</li>
+          </ul>
+        </div>
+
+        <!-- Card 7: Footstep Audio Booster -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonGreen transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonGreen/10 border border-cyber-neonGreen/30 flex items-center justify-center text-cyber-neonGreen text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-headphones"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Tactical Footstep Equalizer</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Memanfaatkan Android Native AudioEffect Equalizer session ID 0 untuk mendongkrak frekuensi 1kHz-4kHz (langkah kaki & reload senjata) sekaligus meredam frekuensi rumble ledakan. Dengar posisi musuh lebih dulu di PUBG & Free Fire.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> 100% Native OS tanpa Root</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> Zero latency audio pipeline</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonGreen"></i> Support speaker & headset bluetooth</li>
+          </ul>
+        </div>
+
+        <!-- Card 8: In-Game Floating PiP Wiki -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonCyan transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonCyan/10 border border-cyber-neonCyan/30 flex items-center justify-center text-cyber-neonCyan text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-book-open"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">In-Game Floating PiP Wiki</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Mini browser transparan mengambang di atas game MLBB / Honor of Kings. Cek counter hero musuh dan rekomendasi build item tanpa perlu Alt-Tab keluar dari game atau kena hukuman AFK.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Slider transparansi (20% - 100%)</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Quick bookmark MLBB & Liquipedia</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Minimize bubble anti-gangguan</li>
+          </ul>
+        </div>
+
+        <!-- Card 9: Hardware FPS HUD Chip -->
+        <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonYellow transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
+          <div>
+            <div class="w-12 h-12 rounded-xl bg-cyber-neonYellow/10 border border-cyber-neonYellow/30 flex items-center justify-center text-cyber-neonYellow text-2xl mb-6 group-hover:scale-110 transition-transform">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Hardware FPS HUD Chip</h3>
+            <p class="text-slate-300 text-sm leading-relaxed">
+              Floating badge ringan yang membaca frame rate render Choreographer Android secara real-time. Menampilkan FPS nyata, indikator frame drop saat teamfight, dan suhu baterai yang dapat dipindah ke mana saja.
+            </p>
+          </div>
+          <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Indikator warna dinamis (Hijau/Cyan/Merah)</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Pemantau thermal & refresh rate 120Hz</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonYellow"></i> Sangat ringan (0.2% penggunaan CPU)</li>
+          </ul>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ── Comparison Section: Free vs Premium ──────────────────────────────── -->
+    <section id="komparasi" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-cyber-border/60">
+      
+      <div class="text-center max-w-3xl mx-auto mb-14">
+        <h2 class="font-orbitron font-extrabold text-3xl sm:text-4xl text-white tracking-wide">
+          KENAPA HARUS <span class="text-cyber-neonGreen">PREMIUM EDITION</span>?
+        </h2>
+        <p class="text-slate-400 text-sm sm:text-base mt-2">
+          Perbandingan langsung antara versi standar Google Play Store dengan versi Standalone Enterprise yang didistribusikan langsung oleh pengembang.
+        </p>
+      </div>
+
+      <div class="max-w-4xl mx-auto overflow-x-auto rounded-2xl border border-cyber-border bg-cyber-card/70 backdrop-blur-md shadow-2xl">
+        <table class="w-full text-left font-mono text-xs sm:text-sm border-collapse">
+          <thead>
+            <tr class="border-b border-cyber-border bg-cyber-black/60 text-slate-300">
+              <th class="p-4 sm:p-5 font-orbitron font-bold">KOMPONEN / FITUR</th>
+              <th class="p-4 sm:p-5 font-orbitron font-bold text-slate-400 text-center">PLAY STORE STANDAR</th>
+              <th class="p-4 sm:p-5 font-orbitron font-bold text-cyber-neonGreen text-center bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                PREMIUM STANDALONE
+              </th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-cyber-border/60 text-slate-300">
+            
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">Dual-Engine Macro (Shizuku + Accessibility)</td>
+              <td class="p-4 text-center text-rose-500 font-bold"><i class="fa-solid fa-xmark text-base"></i> Dilarang Kebijakan Store</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Full Support (0ms)
+              </td>
+            </tr>
+
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">VPN Ping Booster 1ms MLBB Loopback</td>
+              <td class="p-4 text-center text-slate-400">Standar DNS Saja</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Dedicated Tun Responder
+              </td>
+            </tr>
+
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">120Hz Screen Refresh Rate Force</td>
+              <td class="p-4 text-center text-rose-500"><i class="fa-solid fa-xmark text-base"></i> Terbatas</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Full Kernel Privilege
+              </td>
+            </tr>
+
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">Anti-Mistouch & Palm Edge Shield</td>
+              <td class="p-4 text-center text-slate-400">Dasar</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Advanced 4-Finger Grip
+              </td>
+            </tr>
+
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">In-App Update CDN (Tanpa Delay Review)</td>
+              <td class="p-4 text-center text-slate-400">Harus Menunggu Review Google</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Instant Edge CDN Release
+              </td>
+            </tr>
+
+            <tr class="hover:bg-cyber-card/40 transition-colors">
+              <td class="p-4 font-semibold text-white">Iklan Mengganggu Saat Bermain</td>
+              <td class="p-4 text-center text-slate-400">Sering Muncul Interstitial</td>
+              <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
+                <i class="fa-solid fa-check text-base mr-1"></i> Clean Gaming HUD
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+      </div>
+
+    </section>
+
+    <!-- ── Setup Guide: 3 Easy Steps ─────────────────────────────────────────── -->
+    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-cyber-border/60">
+      
+      <div class="text-center max-w-3xl mx-auto mb-14">
+        <h2 class="font-orbitron font-extrabold text-3xl sm:text-4xl text-white tracking-wide">
+          PANDUAN <span class="text-cyber-neonCyan">INSTALASI CEPAT</span>
+        </h2>
+        <p class="text-slate-400 text-sm sm:text-base mt-2">
+          Tiga langkah mudah untuk mengaktifkan seluruh fitur Game Nuke Premium di ponsel Android Anda.
+        </p>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+        
+        <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border relative">
+          <div class="w-10 h-10 rounded-full bg-cyber-neonGreen text-cyber-black font-orbitron font-black text-lg flex items-center justify-center mb-5">
+            1
+          </div>
+          <h3 class="font-orbitron font-bold text-lg text-white mb-2">Download & Pasang APK</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            Download file APK resmi melalui tombol download di atas. Aktifkan izin <i>"Install Unknown Apps"</i> di browser Anda untuk memasang aplikasi dengan aman.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border relative">
+          <div class="w-10 h-10 rounded-full bg-cyber-neonCyan text-cyber-black font-orbitron font-black text-lg flex items-center justify-center mb-5">
+            2
+          </div>
+          <h3 class="font-orbitron font-bold text-lg text-white mb-2">Buka Floating Cockpit</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            Berikan izin <i>"Display Over Other Apps"</i> (Overlay). Widget kokpit HUD akan muncul melayang di samping layar saat Anda membuka game favorit.
+          </p>
+        </div>
+
+        <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border relative">
+          <div class="w-10 h-10 rounded-full bg-cyber-neonYellow text-cyber-black font-orbitron font-black text-lg flex items-center justify-center mb-5">
+            3
+          </div>
+          <h3 class="font-orbitron font-bold text-lg text-white mb-2">Aktifkan Macro & Ping 1ms</h3>
+          <p class="text-slate-300 text-xs leading-relaxed">
+            Ketuk tombol <b>MACRO</b> di panel kanan untuk memilih mode Accessibility atau Shizuku. Aktifkan <b>PING 1MS</b> untuk booster koneksi lobby instan.
+          </p>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ── FAQ Section (Alpine Accordion) ────────────────────────────────────── -->
+    <section id="faq" class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20 border-t border-cyber-border/60">
+      
+      <div class="text-center mb-12">
+        <h2 class="font-orbitron font-extrabold text-3xl text-white tracking-wide">
+          PERTANYAAN <span class="text-cyber-neonGreen">UMUM (FAQ)</span>
+        </h2>
+        <p class="text-slate-400 text-sm mt-2">Semua hal yang perlu Anda ketahui tentang Game Nuke Premium.</p>
+      </div>
+
+      <div class="space-y-4 font-mono text-sm" x-data="{ openIdx: 0 }">
+        
+        <div class="rounded-xl border border-cyber-border bg-cyber-card overflow-hidden">
+          <button @click="openIdx = (openIdx === 0 ? null : 0)" 
+                  class="w-full p-5 text-left flex items-center justify-between text-white font-bold hover:text-cyber-neonGreen transition-colors">
+            <span>Apakah akun game saya aman dari ban?</span>
+            <i class="fa-solid text-xs transition-transform duration-200" :class="openIdx === 0 ? 'fa-minus text-cyber-neonGreen rotate-180' : 'fa-plus text-slate-400'"></i>
+          </button>
+          <div x-show="openIdx === 0" x-collapse class="px-5 pb-5 text-slate-300 text-xs leading-relaxed border-t border-cyber-border/40 pt-4 font-outfit">
+            Sangat aman. Game Nuke tidak memodifikasi file game (tidak ada inject memory atau modifikasi bytecode). Macro bekerja murni pada sistem Android touch input (seperti jari manusia yang mengetuk cepat), dan VPN Ping Booster hanya mengoptimasi rute DNS serta packet responder.
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-cyber-border bg-cyber-card overflow-hidden">
+          <button @click="openIdx = (openIdx === 1 ? null : 1)" 
+                  class="w-full p-5 text-left flex items-center justify-between text-white font-bold hover:text-cyber-neonGreen transition-colors">
+            <span>Apakah ponsel saya harus di-Root?</span>
+            <i class="fa-solid text-xs transition-transform duration-200" :class="openIdx === 1 ? 'fa-minus text-cyber-neonGreen rotate-180' : 'fa-plus text-slate-400'"></i>
+          </button>
+          <div x-show="openIdx === 1" x-collapse class="px-5 pb-5 text-slate-300 text-xs leading-relaxed border-t border-cyber-border/40 pt-4 font-outfit">
+            Tidak perlu root sama sekali. Anda dapat menggunakan mode <b>Accessibility Service</b> yang bisa langsung aktif dengan 1-klik di pengaturan Android. Jika Anda ingin respon 0ms absolut, Anda cukup memasang aplikasi Shizuku via Wireless Debugging tanpa perlu membongkar sistem OS.
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-cyber-border bg-cyber-card overflow-hidden">
+          <button @click="openIdx = (openIdx === 2 ? null : 2)" 
+                  class="w-full p-5 text-left flex items-center justify-between text-white font-bold hover:text-cyber-neonGreen transition-colors">
+            <span>Bagaimana cara kerja VPN Ping Booster 1ms?</span>
+            <i class="fa-solid text-xs transition-transform duration-200" :class="openIdx === 2 ? 'fa-minus text-cyber-neonGreen rotate-180' : 'fa-plus text-slate-400'"></i>
+          </button>
+          <div x-show="openIdx === 2" x-collapse class="px-5 pb-5 text-slate-300 text-xs leading-relaxed border-t border-cyber-border/40 pt-4 font-outfit">
+            VPN Service Game Nuke membuat interface virtual TUN lokal di ponsel Anda. Paket echo request ping lobby dijawab seketika oleh loopback responder lokal (&lt;1ms), sementara traffic pertandingan game nyata diarahkan melalui server gaming DNS Cloudflare 1.1.1.1 dan Google 8.8.8.8 yang sangat cepat.
+          </div>
+        </div>
+
+        <div class="rounded-xl border border-cyber-border bg-cyber-card overflow-hidden">
+          <button @click="openIdx = (openIdx === 3 ? null : 3)" 
+                  class="w-full p-5 text-left flex items-center justify-between text-white font-bold hover:text-cyber-neonGreen transition-colors">
+            <span>Bagaimana cara mengupdate aplikasi jika ada rilis baru?</span>
+            <i class="fa-solid text-xs transition-transform duration-200" :class="openIdx === 3 ? 'fa-minus text-cyber-neonGreen rotate-180' : 'fa-plus text-slate-400'"></i>
+          </button>
+          <div x-show="openIdx === 3" x-collapse class="px-5 pb-5 text-slate-300 text-xs leading-relaxed border-t border-cyber-border/40 pt-4 font-outfit">
+            Aplikasi Game Nuke Premium memiliki fitur in-app update otomatis. Saat pengembang merilis versi baru di GitHub, aplikasi Anda akan otomatis mendeteksi update via Edge CDN dan menampilkan tombol download langsung di dalam layar tanpa harus membuka Play Store.
+          </div>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- ── Bottom Ad Slot & Final Download CTA ───────────────────────────────── -->
+    <section class="max-w-5xl mx-auto px-4 py-16 text-center">
+      
+      <div class="p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-cyber-card via-cyber-card/90 to-cyber-black border border-cyber-neonGreen/40 shadow-neon-green/20 relative overflow-hidden">
+        <div class="absolute inset-0 bg-[radial-gradient(circle_at_top,_var(--tw-gradient-stops))] from-cyber-neonGreen/10 via-transparent to-transparent pointer-events-none"></div>
+
+        <h2 class="font-orbitron font-black text-3xl sm:text-4xl text-white tracking-wide mb-4">
+          SIAP MENJADI <span class="text-cyber-neonGreen">MVP</span> SETIAP MATCH?
+        </h2>
+        <p class="text-slate-300 text-sm sm:text-base max-w-xl mx-auto mb-8 font-normal">
+          Download Game Nuke Premium sekarang juga secara gratis dan nikmati pengalaman gaming tanpa lag, fast macro, dan ping 1ms.
+        </p>
+
+        <button @click="startDownloadProcess()" 
+                class="px-8 py-4 rounded-xl font-orbitron font-bold text-sm tracking-wider uppercase text-cyber-black bg-gradient-to-r from-cyber-neonGreen via-emerald-400 to-cyber-neonCyan hover:brightness-110 shadow-neon-green transition-all transform active:scale-95 inline-flex items-center gap-3">
+          <i class="fa-solid fa-download text-lg animate-bounce"></i>
+          <span>DOWNLOAD APK SEKARANG (GRATIS)</span>
+        </button>
+
+        <div class="mt-6 text-xs font-mono text-slate-500">
+          Versi Terbaru: <b class="text-slate-300" x-text="meta.versionName">v2.2.0-prem</b> • Standalone Package: com.neon.gametweak
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ── Footer ──────────────────────────────────────────────────────────────── -->
+  <footer class="border-t border-cyber-border bg-cyber-black/90 py-12 text-slate-400 text-xs font-mono">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row items-center justify-between gap-6">
+      
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-cyber-neonGreen text-cyber-black flex items-center justify-center font-bold">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <div>
+          <span class="font-orbitron font-bold text-white text-sm">GAME NUKE</span>
+          <p class="text-[11px] text-slate-500">© 2026 Game Nuke Team. All rights reserved.</p>
+        </div>
+      </div>
+
+      <div class="flex items-center gap-6 text-slate-400">
+        <a href="#fitur" class="hover:text-white transition-colors">Fitur</a>
+        <a href="#macro" class="hover:text-white transition-colors">Macro 0ms</a>
+        <a href="#vpn" class="hover:text-white transition-colors">VPN 1ms</a>
+        <a :href="meta.downloadUrl" class="hover:text-cyber-neonGreen transition-colors">Mirror APK</a>
+      </div>
+
+      <div class="text-right text-[11px] text-slate-500">
+        Standalone Edge CDN Distribution • Powered by GitHub Pages
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ── JavaScript Application Logic ────────────────────────────────────────── -->
+  <script src="app.js"></script>
+
+</body>
+</html>

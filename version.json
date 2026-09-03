@@ -1,0 +1,21 @@
+{
+    "versionCode":  16,
+    "versionName":  "2.3.0-prem",
+    "appName":  "Game Nuke Premium",
+    "publishedAt":  "2026-09-04",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "24.3",
+    "releaseNotes":  [
+                         "Dual-Engine Macro: Shizuku privileged input (~0.1ms latency) + Accessibility fallback",
+                         "VPN Ping Booster: 1ms MLBB Lobby Loopback responder + Gaming DNS (Cloudflare and Google)",
+                         "Tactical Audio Equalizer: Footstep Enhancer and Gunshot Clarity for FPS games without root",
+                         "In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider",
+                         "Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay",
+                         "Touch Turbo and Anti-Mistouch Edge Shield for competitive 4-finger claw grip",
+                         "Unlimited In-App Updater via Edge CDN: Automatic background checks without Google Play delays"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk",
+    "sha256":  "F1C5833FEF276A9D172987FF3871D84FD4BEC7865C10F7B1CA4971ABC2BC32E9",
+    "directlinkAdUrl":  "https://example-directlink-ad.com/?ref=gamenuke"
+}
