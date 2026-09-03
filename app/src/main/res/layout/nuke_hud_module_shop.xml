@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.neon.gametweak.NukeChildPanelLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/moduleRoot"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:paddingLeft="16dp"
+    android:paddingTop="9dp"
+    android:paddingRight="14dp"
+    android:paddingBottom="12dp">
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical">
+        <FrameLayout android:id="@+id/moduleDrag" android:layout_width="match_parent" android:layout_height="42dp">
+            <LinearLayout android:layout_width="32dp" android:layout_height="match_parent" android:gravity="center" android:orientation="vertical">
+                <View android:layout_width="13dp" android:layout_height="1dp" android:background="@color/nuke_muted_deep"/><View android:layout_width="13dp" android:layout_height="1dp" android:layout_marginTop="3dp" android:background="@color/nuke_muted_deep"/><View android:layout_width="13dp" android:layout_height="1dp" android:layout_marginTop="3dp" android:background="@color/nuke_muted_deep"/>
+            </LinearLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="match_parent" android:layout_gravity="center" android:fontFamily="sans-serif-medium" android:gravity="center" android:letterSpacing="0.06" android:text="NUKE MODULE BAY" android:textColor="@color/nuke_text" android:textSize="13sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/moduleClose" android:layout_width="36dp" android:layout_height="match_parent" android:layout_gravity="end" android:clickable="true" android:focusable="true" android:gravity="center" android:text="×" android:textColor="@color/nuke_text" android:textSize="22sp"/>
+        </FrameLayout>
+
+        <EditText android:id="@+id/shopSearch" android:layout_width="match_parent" android:layout_height="38dp" android:background="@drawable/nuke_hud_search" android:fontFamily="sans-serif" android:hint="Search real tools…" android:imeOptions="actionSearch" android:singleLine="true" android:textColor="@color/nuke_text" android:textColorHint="@color/nuke_muted" android:textSize="8sp" />
+        <HorizontalScrollView android:layout_width="match_parent" android:layout_height="34dp" android:layout_marginTop="7dp" android:overScrollMode="never" android:scrollbars="none">
+            <LinearLayout android:id="@+id/shopCategories" android:layout_width="wrap_content" android:layout_height="match_parent" android:orientation="horizontal"/>
+        </HorizontalScrollView>
+
+        <LinearLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_marginTop="7dp" android:layout_weight="1" android:orientation="horizontal">
+            <ScrollView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.45" android:fillViewport="true" android:overScrollMode="never" android:scrollbars="none">
+                <LinearLayout android:id="@+id/shopList" android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingEnd="5dp"/>
+            </ScrollView>
+
+            <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_marginStart="6dp" android:layout_weight="1" android:background="@drawable/nuke_hud_glass" android:orientation="vertical" android:padding="11dp">
+                <com.neon.gametweak.NukeReactorCoreView android:layout_width="44dp" android:layout_height="44dp" android:layout_gravity="center_horizontal"/>
+                <TextView android:id="@+id/shopDetailTitle" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:fontFamily="sans-serif-medium" android:gravity="center" android:maxLines="2" android:text="Tool" android:textColor="@color/nuke_text" android:textSize="10sp" android:textStyle="bold"/>
+                <TextView android:id="@+id/shopDetailCategory" android:layout_width="wrap_content" android:layout_height="22dp" android:layout_gravity="center_horizontal" android:layout_marginTop="5dp" android:background="@drawable/nuke_hud_chip_active" android:fontFamily="sans-serif-medium" android:gravity="center" android:paddingHorizontal="10dp" android:text="SYSTEM" android:textColor="@color/nuke_cyan" android:textSize="6sp"/>
+                <TextView android:id="@+id/shopDetailDesc" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="10dp" android:fontFamily="sans-serif" android:lineSpacingExtra="2dp" android:text="Description" android:textColor="@color/nuke_muted" android:textSize="7sp"/>
+                <LinearLayout android:layout_width="match_parent" android:layout_height="40dp" android:layout_marginTop="12dp" android:gravity="center_vertical" android:orientation="horizontal">
+                    <TextView android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:fontFamily="sans-serif-medium" android:text="Show in HUD" android:textColor="@color/nuke_text" android:textSize="8sp"/>
+                    <Switch android:id="@+id/shopDetailSwitch" android:layout_width="44dp" android:layout_height="28dp" android:showText="false"/>
+                </LinearLayout>
+                <Space android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1"/>
+                <com.neon.gametweak.NukeActionTileView android:id="@+id/shopApply" android:layout_width="match_parent" android:layout_height="52dp" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <TextView android:id="@+id/moduleStatus" android:layout_width="match_parent" android:layout_height="26dp" android:layout_marginTop="6dp" android:background="@drawable/nuke_hud_chip" android:fontFamily="sans-serif" android:gravity="center_vertical" android:maxLines="1" android:paddingHorizontal="9dp" android:text="REAL TOOLS ONLY" android:textColor="@color/nuke_muted" android:textSize="6.5sp" />
+    </LinearLayout>
+</com.neon.gametweak.NukeChildPanelLayout>

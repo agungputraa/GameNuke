@@ -1,0 +1,944 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "urn:gamenuke:remote-config:schema:v1",
+  "title": "GameNuke Remote Product Definition v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schemaVersion",
+    "configId",
+    "revision",
+    "publishedAt",
+    "enabled",
+    "channel",
+    "minAppVersionCode",
+    "compatibility",
+    "changePolicy",
+    "delivery",
+    "activation",
+    "security",
+    "runtimePolicy",
+    "privacy",
+    "accessibility",
+    "diagnostics",
+    "featureFlags",
+    "ruleEngine",
+    "theme",
+    "responsive",
+    "appShell",
+    "overlay",
+    "deviceProfiles",
+    "capabilities",
+    "rendererCatalog",
+    "resourceCatalog",
+    "localization",
+    "stateModel",
+    "metricCatalog",
+    "operationCatalog",
+    "shellCatalog",
+    "pipelines",
+    "quickControls",
+    "panels",
+    "errorCatalog",
+    "selfTests"
+  ],
+  "properties": {
+    "$schema": {"type": "string"},
+    "schemaVersion": {"const": 1},
+    "configId": {"$ref": "#/$defs/identifier"},
+    "revision": {"type": "integer", "minimum": 1},
+    "publishedAt": {"type": "string", "format": "date-time"},
+    "enabled": {"type": "boolean"},
+    "channel": {"enum": ["stable", "canary", "development"]},
+    "minAppVersionCode": {"type": "integer", "minimum": 1},
+    "compatibility": {"$ref": "#/$defs/compatibility"},
+    "changePolicy": {"$ref": "#/$defs/changePolicy"},
+    "delivery": {"$ref": "#/$defs/delivery"},
+    "activation": {"$ref": "#/$defs/activation"},
+    "security": {"$ref": "#/$defs/security"},
+    "runtimePolicy": {"$ref": "#/$defs/runtimePolicy"},
+    "privacy": {"$ref": "#/$defs/privacy"},
+    "accessibility": {"$ref": "#/$defs/accessibility"},
+    "diagnostics": {"$ref": "#/$defs/diagnostics"},
+    "featureFlags": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/featureFlag"},
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "ruleEngine": {"$ref": "#/$defs/ruleEngine"},
+    "theme": {"$ref": "#/$defs/theme"},
+    "responsive": {"$ref": "#/$defs/responsive"},
+    "appShell": {"$ref": "#/$defs/appShell"},
+    "overlay": {"$ref": "#/$defs/overlay"},
+    "deviceProfiles": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/deviceProfile"},
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "capabilities": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/capability"},
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "rendererCatalog": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/renderer"},
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "resourceCatalog": {"$ref": "#/$defs/resourceCatalog"},
+    "localization": {"$ref": "#/$defs/localization"},
+    "stateModel": {"$ref": "#/$defs/stateModel"},
+    "metricCatalog": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/metric"},
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "operationCatalog": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/operation"},
+      "minItems": 1,
+      "maxItems": 256
+    },
+    "shellCatalog": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/shellOperation"},
+      "maxItems": 128
+    },
+    "pipelines": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/pipeline"},
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "quickControls": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/quickControl"},
+      "maxItems": 24
+    },
+    "panels": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/panel"},
+      "minItems": 1,
+      "maxItems": 64
+    },
+    "errorCatalog": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/errorItem"},
+      "minItems": 1,
+      "maxItems": 128
+    },
+    "selfTests": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/selfTest"},
+      "minItems": 1,
+      "maxItems": 128
+    }
+  },
+  "$defs": {
+    "identifier": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9._-]{0,127}$"
+    },
+    "idList": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/identifier"},
+      "uniqueItems": true,
+      "maxItems": 64
+    },
+    "stringList": {
+      "type": "array",
+      "items": {"type": "string", "maxLength": 512},
+      "uniqueItems": true,
+      "maxItems": 128
+    },
+    "jsonValue": {
+      "anyOf": [
+        {"type": "null"},
+        {"type": "boolean"},
+        {"type": "number"},
+        {"type": "string", "maxLength": 4096},
+        {"type": "array", "items": {"$ref": "#/$defs/jsonValue"}, "maxItems": 256},
+        {"type": "object", "additionalProperties": {"$ref": "#/$defs/jsonValue"}, "maxProperties": 256}
+      ]
+    },
+    "compatibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "rendererContract",
+        "operationContract",
+        "pipelineContract",
+        "minSdk",
+        "unknownFieldPolicy",
+        "unknownRendererPolicy",
+        "unknownOperationPolicy",
+        "unknownPipelineStepPolicy",
+        "requiredClientFeatures"
+      ],
+      "properties": {
+        "rendererContract": {"type": "integer", "minimum": 1},
+        "operationContract": {"type": "integer", "minimum": 1},
+        "pipelineContract": {"type": "integer", "minimum": 1},
+        "minSdk": {"type": "integer", "minimum": 23, "maximum": 100},
+        "unknownFieldPolicy": {"enum": ["ignore_for_forward_compatibility", "reject"]},
+        "unknownRendererPolicy": {"enum": ["hide_component", "disable_component", "reject_config"]},
+        "unknownOperationPolicy": {"enum": ["disable_component", "hide_component", "reject_config"]},
+        "unknownPipelineStepPolicy": {"const": "reject_config"},
+        "requiredClientFeatures": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "changePolicy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["remoteSafeDomains", "apkUpdateRequiredDomains", "remoteExecutableCodeAllowed", "remoteRawShellAllowed"],
+      "properties": {
+        "remoteSafeDomains": {"$ref": "#/$defs/idList"},
+        "apkUpdateRequiredDomains": {"$ref": "#/$defs/idList"},
+        "remoteExecutableCodeAllowed": {"const": false},
+        "remoteRawShellAllowed": {"const": false}
+      }
+    },
+    "delivery": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requireHttps", "allowedHosts", "connectTimeoutMs", "readTimeoutMs", "maxBytes",
+        "acceptContentTypes", "useEtag", "useIfModifiedSince", "cacheTtlHours",
+        "minimumFetchIntervalMinutes", "manualRefreshAllowed", "manualRefreshBypassesTtl", "maxRedirects",
+        "staleWhileRevalidateHours", "lastKnownGoodDays", "fallbackAsset", "fetchPolicy", "retry"
+      ],
+      "properties": {
+        "requireHttps": {"const": true},
+        "allowedHosts": {"$ref": "#/$defs/stringList"},
+        "connectTimeoutMs": {"type": "integer", "minimum": 500, "maximum": 30000},
+        "readTimeoutMs": {"type": "integer", "minimum": 500, "maximum": 60000},
+        "maxBytes": {"type": "integer", "minimum": 4096, "maximum": 2097152},
+        "acceptContentTypes": {"$ref": "#/$defs/stringList"},
+        "useEtag": {"type": "boolean"},
+        "useIfModifiedSince": {"type": "boolean"},
+        "cacheTtlHours": {"type": "integer", "minimum": 1, "maximum": 720},
+        "minimumFetchIntervalMinutes": {"type": "integer", "minimum": 5, "maximum": 1440},
+        "manualRefreshAllowed": {"type": "boolean"},
+        "manualRefreshBypassesTtl": {"type": "boolean"},
+        "maxRedirects": {"type": "integer", "minimum": 0, "maximum": 3},
+        "staleWhileRevalidateHours": {"type": "integer", "minimum": 1, "maximum": 2160},
+        "lastKnownGoodDays": {"type": "integer", "minimum": 1, "maximum": 365},
+        "fallbackAsset": {"type": "string", "pattern": "^[A-Za-z0-9._-]+$"},
+        "fetchPolicy": {"type": "string", "maxLength": 128},
+        "retry": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["maxReadOnlyAttempts", "baseDelayMs", "maxDelayMs", "jitterPercent", "retryHttpCodes"],
+          "properties": {
+            "maxReadOnlyAttempts": {"type": "integer", "minimum": 0, "maximum": 5},
+            "baseDelayMs": {"type": "integer", "minimum": 0, "maximum": 30000},
+            "maxDelayMs": {"type": "integer", "minimum": 0, "maximum": 120000},
+            "jitterPercent": {"type": "integer", "minimum": 0, "maximum": 100},
+            "retryHttpCodes": {"type": "array", "items": {"type": "integer", "minimum": 400, "maximum": 599}, "uniqueItems": true}
+          }
+        }
+      }
+    },
+    "activation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "mode", "validateBeforePersist", "validateAllReferences", "prefetchRemoteAssets",
+        "activateAtSafePoint", "neverRecomposeOpenPanelFromNetwork", "persistRevisionFloor",
+        "rejectRevisionRollback", "allowEmergencyRollback", "disabledConfigBehavior", "crashGuard"
+      ],
+      "properties": {
+        "mode": {"const": "atomic_two_phase"},
+        "validateBeforePersist": {"const": true},
+        "validateAllReferences": {"const": true},
+        "prefetchRemoteAssets": {"type": "boolean"},
+        "activateAtSafePoint": {"$ref": "#/$defs/idList"},
+        "neverRecomposeOpenPanelFromNetwork": {"const": true},
+        "persistRevisionFloor": {"const": true},
+        "rejectRevisionRollback": {"const": true},
+        "allowEmergencyRollback": {"type": "boolean"},
+        "disabledConfigBehavior": {"enum": ["use_bundled_safe_config", "keep_last_known_good"]},
+        "crashGuard": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["enabled", "observationWindowSeconds", "maxOverlayFailures", "action", "quarantineHours"],
+          "properties": {
+            "enabled": {"const": true},
+            "observationWindowSeconds": {"type": "integer", "minimum": 10, "maximum": 600},
+            "maxOverlayFailures": {"type": "integer", "minimum": 1, "maximum": 10},
+            "action": {"const": "restore_last_known_good_and_quarantine_revision"},
+            "quarantineHours": {"type": "integer", "minimum": 1, "maximum": 720}
+          }
+        }
+      }
+    },
+    "security": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "allowRemoteOperationSelection", "allowRemoteSafeParameters", "allowRemoteShellTemplates",
+        "allowArbitraryShell", "requireLocalHandlerRegistryMatch", "requireLocalPolicyMatch",
+        "requireUserGestureForMutation", "requireCapabilityProbe", "requireReadBackForMutation",
+        "requireRollbackForSessionMutation", "rejectShellComposition", "maxRenderedCommandLength",
+        "maxStdoutBytes", "maxStderrBytes", "redactPatterns", "parameterPolicies", "protectedTargets",
+        "sensitiveFeaturePolicies", "integrity"
+      ],
+      "properties": {
+        "allowRemoteOperationSelection": {"const": true},
+        "allowRemoteSafeParameters": {"const": true},
+        "allowRemoteShellTemplates": {"const": false},
+        "allowArbitraryShell": {"const": false},
+        "requireLocalHandlerRegistryMatch": {"const": true},
+        "requireLocalPolicyMatch": {"const": true},
+        "requireUserGestureForMutation": {"const": true},
+        "requireCapabilityProbe": {"const": true},
+        "requireReadBackForMutation": {"const": true},
+        "requireRollbackForSessionMutation": {"const": true},
+        "rejectShellComposition": {"const": true},
+        "maxRenderedCommandLength": {"type": "integer", "minimum": 128, "maximum": 8192},
+        "maxStdoutBytes": {"type": "integer", "minimum": 1024, "maximum": 1048576},
+        "maxStderrBytes": {"type": "integer", "minimum": 1024, "maximum": 262144},
+        "redactPatterns": {"$ref": "#/$defs/stringList"},
+        "parameterPolicies": {"type": "object", "minProperties": 1, "additionalProperties": {"type": "object"}},
+        "protectedTargets": {"type": "object", "minProperties": 7, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "sensitiveFeaturePolicies": {
+          "type": "object",
+          "required": ["accessibilityAutomation", "mediaProjection"],
+          "properties": {
+            "accessibilityAutomation": {"type": "object", "minProperties": 10, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+            "mediaProjection": {"type": "object", "minProperties": 6, "additionalProperties": {"$ref": "#/$defs/jsonValue"}}
+          },
+          "additionalProperties": false
+        },
+        "integrity": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "requiredInProduction", "mode", "algorithm", "digest", "signatureSiblingSuffix",
+            "keyId", "publicKeyLocation", "allowUnsignedDevelopmentConfig", "keyRotation"
+          ],
+          "properties": {
+            "requiredInProduction": {"const": true},
+            "mode": {"const": "detached_ed25519"},
+            "algorithm": {"const": "Ed25519"},
+            "digest": {"const": "SHA-256"},
+            "signatureSiblingSuffix": {"const": ".sig"},
+            "keyId": {"type": "string", "minLength": 1, "maxLength": 128},
+            "publicKeyLocation": {"const": "pinned_in_apk"},
+            "allowUnsignedDevelopmentConfig": {"const": false},
+            "keyRotation": {"type": "object", "minProperties": 3, "additionalProperties": {"type": "boolean"}}
+          }
+        }
+      }
+    },
+    "runtimePolicy": {
+      "type": "object",
+      "required": [
+        "runtimeProbeOverridesJson", "hideUnknownComponents", "disableUnsupportedComponents",
+        "showUnsupportedReason", "unknownOperationBehavior", "shellFailureBehavior",
+        "neverRetryMutationsAutomatically", "readOnlyRetryCount", "singleFlightPerOperation",
+        "singleFlightPerResourceLock", "clickDebounceMs", "settingsLaunchDebounceMs",
+        "switchOptimisticUpdate", "readBackBeforeSwitchSettled", "deviceLink", "performanceBudgets", "safetyGuards"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "runtimeProbeOverridesJson": {"const": true},
+        "hideUnknownComponents": {"type": "boolean"},
+        "disableUnsupportedComponents": {"type": "boolean"},
+        "showUnsupportedReason": {"type": "boolean"},
+        "unknownOperationBehavior": {"enum": ["disable", "hide", "reject_config"]},
+        "shellFailureBehavior": {"enum": ["mark_unsupported_for_session", "show_error", "hide_operation"]},
+        "neverRetryMutationsAutomatically": {"const": true},
+        "readOnlyRetryCount": {"type": "integer", "minimum": 0, "maximum": 3},
+        "singleFlightPerOperation": {"const": true},
+        "singleFlightPerResourceLock": {"const": true},
+        "clickDebounceMs": {"type": "integer", "minimum": 100, "maximum": 3000},
+        "settingsLaunchDebounceMs": {"type": "integer", "minimum": 1000, "maximum": 10000},
+        "switchOptimisticUpdate": {"type": "boolean"},
+        "readBackBeforeSwitchSettled": {"const": true},
+        "deviceLink": {"type": "object", "minProperties": 8, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "performanceBudgets": {"type": "object", "minProperties": 5, "additionalProperties": {"type": "integer", "minimum": 0}},
+        "safetyGuards": {"type": "object", "minProperties": 8, "additionalProperties": {"$ref": "#/$defs/jsonValue"}}
+      }
+    },
+    "privacy": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "collectPersonalData", "collectCommandArguments", "collectPackageNamesInRemoteTelemetry",
+        "collectDeviceSerial", "diagnosticsLocalOnlyByDefault", "userInitiatedDiagnosticExport", "retentionDays"
+      ],
+      "properties": {
+        "collectPersonalData": {"const": false},
+        "collectCommandArguments": {"const": false},
+        "collectPackageNamesInRemoteTelemetry": {"const": false},
+        "collectDeviceSerial": {"const": false},
+        "diagnosticsLocalOnlyByDefault": {"const": true},
+        "userInitiatedDiagnosticExport": {"const": true},
+        "retentionDays": {"type": "integer", "minimum": 1, "maximum": 90}
+      }
+    },
+    "accessibility": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "minimumContrastRatio", "minimumTouchTargetDp", "semanticsRequiredForInteractiveComponents",
+        "contentDescriptionFallback", "supportTalkBackTraversal", "supportFontScaleUpTo",
+        "neverEncodeStateByColorOnly", "respectReduceMotion", "respectRemoveAnimations", "hapticsOptional"
+      ],
+      "properties": {
+        "minimumContrastRatio": {"type": "number", "minimum": 3, "maximum": 21},
+        "minimumTouchTargetDp": {"type": "integer", "minimum": 48},
+        "semanticsRequiredForInteractiveComponents": {"const": true},
+        "contentDescriptionFallback": {"enum": ["title_then_type", "title", "explicit_only"]},
+        "supportTalkBackTraversal": {"const": true},
+        "supportFontScaleUpTo": {"type": "number", "minimum": 1, "maximum": 2.5},
+        "neverEncodeStateByColorOnly": {"const": true},
+        "respectReduceMotion": {"const": true},
+        "respectRemoveAnimations": {"const": true},
+        "hapticsOptional": {"const": true}
+      }
+    },
+    "diagnostics": {
+      "type": "object",
+      "required": ["enabled", "localRingBufferEntries", "exportFormat", "healthIndicators"],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "localRingBufferEntries": {"type": "integer", "minimum": 10, "maximum": 5000},
+        "exportFormat": {"enum": ["json_zip", "json"]},
+        "healthIndicators": {"$ref": "#/$defs/idList"}
+      },
+      "additionalProperties": {"type": "boolean"}
+    },
+    "featureFlag": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "enabled", "rolloutPercent", "killSwitch"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "enabled": {"type": "boolean"},
+        "rolloutPercent": {"type": "integer", "minimum": 0, "maximum": 100},
+        "killSwitch": {"type": "boolean"},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "ruleEngine": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion", "allowedFields", "allowedOperators", "maxConditionsPerRule", "maxRuleDepth",
+        "unknownConditionResult", "deterministicRolloutKey", "rolloutSalt"
+      ],
+      "properties": {
+        "contractVersion": {"const": 1},
+        "allowedFields": {"$ref": "#/$defs/idList"},
+        "allowedOperators": {"$ref": "#/$defs/idList"},
+        "maxConditionsPerRule": {"type": "integer", "minimum": 1, "maximum": 64},
+        "maxRuleDepth": {"type": "integer", "minimum": 1, "maximum": 8},
+        "unknownConditionResult": {"const": false},
+        "deterministicRolloutKey": {"$ref": "#/$defs/identifier"},
+        "rolloutSalt": {"type": "string", "minLength": 8, "maxLength": 128}
+      }
+    },
+    "theme": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["styleId", "brandGlyph", "panelShape", "moduleShape", "density", "colors", "typography", "effects", "motion", "haptics"],
+      "properties": {
+        "styleId": {"$ref": "#/$defs/identifier"},
+        "brandGlyph": {"$ref": "#/$defs/identifier"},
+        "panelShape": {"$ref": "#/$defs/identifier"},
+        "moduleShape": {"$ref": "#/$defs/identifier"},
+        "density": {"$ref": "#/$defs/identifier"},
+        "colors": {"type": "object", "minProperties": 8, "additionalProperties": {"type": "string", "pattern": "^#[0-9A-Fa-f]{6,8}$"}},
+        "typography": {"type": "object", "minProperties": 5, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "effects": {"type": "object", "minProperties": 5, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "motion": {"type": "object", "minProperties": 5, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "haptics": {"type": "object", "minProperties": 3, "additionalProperties": {"$ref": "#/$defs/jsonValue"}}
+      }
+    },
+    "responsive": {
+      "type": "object",
+      "required": ["useOverlayViewport", "respectSafeInsets", "minimumTouchTargetDp", "contentScrollFallback", "breakpoints", "heightOverrides"],
+      "properties": {
+        "useOverlayViewport": {"const": true},
+        "respectSafeInsets": {"const": true},
+        "minimumTouchTargetDp": {"type": "integer", "minimum": 48},
+        "contentScrollFallback": {"const": true},
+        "breakpoints": {"type": "array", "items": {"$ref": "#/$defs/layoutRule"}, "minItems": 3, "maxItems": 8},
+        "heightOverrides": {"type": "array", "items": {"type": "object", "required": ["id"], "additionalProperties": {"$ref": "#/$defs/jsonValue"}}, "maxItems": 8}
+      },
+      "additionalProperties": {"$ref": "#/$defs/jsonValue"}
+    },
+    "layoutRule": {
+      "type": "object",
+      "required": ["id", "layout", "moduleColumns"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "layout": {"$ref": "#/$defs/identifier"},
+        "moduleColumns": {"type": "integer", "minimum": 1, "maximum": 8},
+        "minWidthDp": {"type": "integer", "minimum": 0, "maximum": 4000},
+        "maxWidthDp": {"type": "integer", "minimum": 1, "maximum": 4000}
+      },
+      "additionalProperties": {"$ref": "#/$defs/jsonValue"}
+    },
+    "appShell": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "surfaceId", "brandGlyph", "homeRoute", "compactNavigation", "mediumNavigation",
+        "expandedNavigation", "preserveRouteState", "unknownRouteBehavior", "routes"
+      ],
+      "properties": {
+        "surfaceId": {"$ref": "#/$defs/identifier"},
+        "brandGlyph": {"$ref": "#/$defs/identifier"},
+        "homeRoute": {"$ref": "#/$defs/identifier"},
+        "compactNavigation": {"$ref": "#/$defs/identifier"},
+        "mediumNavigation": {"$ref": "#/$defs/identifier"},
+        "expandedNavigation": {"$ref": "#/$defs/identifier"},
+        "preserveRouteState": {"type": "boolean"},
+        "unknownRouteBehavior": {"enum": ["navigate_home", "show_not_found"]},
+        "routes": {"type": "array", "items": {"$ref": "#/$defs/appRoute"}, "minItems": 1, "maxItems": 64}
+      }
+    },
+    "appRoute": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "title", "icon", "contentType", "primary", "visible"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "order": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "icon": {"$ref": "#/$defs/identifier"},
+        "contentType": {"enum": ["builtin_screen", "dynamic_panel_catalog"]},
+        "handlerId": {"$ref": "#/$defs/identifier"},
+        "catalogId": {"$ref": "#/$defs/identifier"},
+        "primary": {"type": "boolean"},
+        "visible": {"type": "boolean"},
+        "featureFlag": {"$ref": "#/$defs/identifier"},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"contentType": {"const": "builtin_screen"}}, "required": ["contentType"]},
+          "then": {"required": ["handlerId"]}
+        },
+        {
+          "if": {"properties": {"contentType": {"const": "dynamic_panel_catalog"}}, "required": ["contentType"]},
+          "then": {"required": ["catalogId"]}
+        }
+      ]
+    },
+    "overlay": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["surfaceId", "window", "edgeHandle", "mainPanel", "lifecycle", "touchPolicy", "boostLaunchPolicy"],
+      "properties": {
+        "surfaceId": {"$ref": "#/$defs/identifier"},
+        "window": {"type": "object", "minProperties": 8, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "edgeHandle": {"type": "object", "minProperties": 10, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "mainPanel": {
+          "type": "object",
+          "minProperties": 9,
+          "required": ["moduleShop"],
+          "properties": {
+            "moduleShop": {"$ref": "#/$defs/moduleShop"}
+          },
+          "additionalProperties": {"$ref": "#/$defs/jsonValue"}
+        },
+        "lifecycle": {"type": "object", "minProperties": 9, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "touchPolicy": {"type": "object", "minProperties": 5, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "boostLaunchPolicy": {
+          "type": "object",
+          "required": ["neverMutateResolution", "neverMutateDensity", "neverRunWmSize", "neverRunWmDensity", "forbiddenLocalHandlers"],
+          "properties": {
+            "neverMutateResolution": {"const": true},
+            "neverMutateDensity": {"const": true},
+            "neverRunWmSize": {"const": true},
+            "neverRunWmDensity": {"const": true},
+            "forbiddenLocalHandlers": {"$ref": "#/$defs/idList"}
+          },
+          "additionalProperties": {"$ref": "#/$defs/jsonValue"}
+        }
+      }
+    },
+    "moduleShop": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "enabled", "catalogUrl", "catalogSha256", "repositoryOwner", "repositoryName", "branch",
+        "maxCatalogBytes", "maxArchiveBytes", "maxEntries", "trustChain", "archiveEntries",
+        "installMode", "executionMode", "activation", "deactivation", "restoreOrder",
+        "rejectZipSlip", "rejectRedirects", "singleFlight"
+      ],
+      "properties": {
+        "enabled": {"type": "boolean"},
+        "catalogUrl": {
+          "type": "string",
+          "const": "https://raw.githubusercontent.com/AgungDevlop/ModuleShop/main/plugins.json"
+        },
+        "catalogSha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+        "repositoryOwner": {"const": "AgungDevlop"},
+        "repositoryName": {"const": "ModuleShop"},
+        "branch": {"const": "main"},
+        "maxCatalogBytes": {"type": "integer", "minimum": 65536, "maximum": 1048576},
+        "maxArchiveBytes": {"type": "integer", "minimum": 16384, "maximum": 1048576},
+        "maxEntries": {"type": "integer", "minimum": 1, "maximum": 512},
+        "trustChain": {"const": "ed25519_remote_config_to_catalog_sha256_to_archive_sha256"},
+        "archiveEntries": {
+          "type": "array",
+          "prefixItems": [{"const": "exec.sh"}, {"const": "del.sh"}],
+          "items": false,
+          "minItems": 2,
+          "maxItems": 2
+        },
+        "installMode": {"const": "explicit_user_gesture_private_atomic"},
+        "executionMode": {"const": "android_shell_uid_only_no_root"},
+        "activation": {"const": "exec.sh"},
+        "deactivation": {"const": "del.sh"},
+        "restoreOrder": {"const": "reverse_activation_order"},
+        "rejectZipSlip": {"const": true},
+        "rejectRedirects": {"const": true},
+        "singleFlight": {"const": true}
+      }
+    },
+    "deviceProfile": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "priority", "manufacturers"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "priority": {"type": "integer", "minimum": 0, "maximum": 1000},
+        "manufacturers": {"$ref": "#/$defs/stringList"},
+        "minSdk": {"type": "integer", "minimum": 23, "maximum": 100},
+        "inherits": {"$ref": "#/$defs/identifier"},
+        "policy": {"type": "object", "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "settingsHints": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "capability": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "source", "probeId", "cache"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "source": {"enum": ["android_api", "device_link", "shell", "local"]},
+        "probeId": {"$ref": "#/$defs/identifier"},
+        "cache": {"enum": ["live", "session", "per_game", "per_device_build", "until_permission_change"]},
+        "minSdk": {"type": "integer", "minimum": 23, "maximum": 100}
+      }
+    },
+    "renderer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "contract"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "contract": {"type": "integer", "minimum": 1}
+      }
+    },
+    "resourceCatalog": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["bundledIcons", "remoteAssets", "remoteAssetPolicy"],
+      "properties": {
+        "bundledIcons": {"$ref": "#/$defs/idList"},
+        "remoteAssets": {
+          "type": "array",
+          "maxItems": 128,
+          "items": {
+            "type": "object",
+            "required": ["id", "url", "sha256", "mimeType", "fallback"],
+            "properties": {
+              "id": {"$ref": "#/$defs/identifier"},
+              "url": {"type": "string", "format": "uri"},
+              "sha256": {"type": "string", "pattern": "^[0-9a-f]{64}$"},
+              "mimeType": {"enum": ["image/png", "image/webp"]},
+              "fallback": {"$ref": "#/$defs/identifier"}
+            },
+            "additionalProperties": false
+          }
+        },
+        "remoteAssetPolicy": {"type": "object", "minProperties": 8, "additionalProperties": {"$ref": "#/$defs/jsonValue"}}
+      }
+    },
+    "localization": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["defaultLocale", "fallbackLocale", "fallbackToInlineText", "locales"],
+      "properties": {
+        "defaultLocale": {"type": "string", "pattern": "^[a-z]{2}-[A-Z]{2}$"},
+        "fallbackLocale": {"type": "string", "pattern": "^[a-z]{2}-[A-Z]{2}$"},
+        "fallbackToInlineText": {"type": "boolean"},
+        "locales": {
+          "type": "object",
+          "minProperties": 1,
+          "additionalProperties": {
+            "type": "object",
+            "additionalProperties": {"type": "string", "maxLength": 512}
+          }
+        }
+      }
+    },
+    "stateModel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "contractVersion", "storage", "transactionalWrites", "preserveUserOverridesAcrossConfigUpdates",
+        "dropUnknownKeysAfterDays", "allowedTypes", "allowedScopes", "migrationPolicy", "settings", "migrations"
+      ],
+      "properties": {
+        "contractVersion": {"const": 1},
+        "storage": {"enum": ["datastore_preferences", "shared_preferences"]},
+        "transactionalWrites": {"const": true},
+        "preserveUserOverridesAcrossConfigUpdates": {"const": true},
+        "dropUnknownKeysAfterDays": {"type": "integer", "minimum": 1, "maximum": 3650},
+        "allowedTypes": {"$ref": "#/$defs/idList"},
+        "allowedScopes": {"$ref": "#/$defs/idList"},
+        "migrationPolicy": {"type": "object", "minProperties": 4, "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "settings": {"type": "array", "items": {"$ref": "#/$defs/stateSetting"}, "minItems": 1, "maxItems": 512},
+        "migrations": {"type": "array", "items": {"type": "object"}, "maxItems": 128}
+      }
+    },
+    "stateSetting": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "scope", "default"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "type": {"enum": ["boolean", "integer", "decimal", "string", "enum", "string_set", "color_argb"]},
+        "scope": {"enum": ["installation", "per_game", "per_orientation", "session"]},
+        "default": {"$ref": "#/$defs/jsonValue"},
+        "values": {"$ref": "#/$defs/stringList"},
+        "min": {"type": "number"},
+        "max": {"type": "number"}
+      }
+    },
+    "metric": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "unit", "sourceCandidates", "unavailableBehavior"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "unit": {"$ref": "#/$defs/identifier"},
+        "range": {"type": "array", "items": {"type": "number"}, "minItems": 2, "maxItems": 2},
+        "sourceCandidates": {"$ref": "#/$defs/idList"},
+        "sampleIntervalMs": {"type": "integer", "minimum": 100, "maximum": 3600000},
+        "sampleMode": {"enum": ["on_demand", "operation_result"]},
+        "smoothing": {"$ref": "#/$defs/identifier"},
+        "visibleOnly": {"type": "boolean"},
+        "unavailableBehavior": {"enum": ["show_dash", "hide_metric", "show_unsupported", "show_zero", "show_normal", "hide_panel"]}
+      },
+      "anyOf": [
+        {"required": ["sampleIntervalMs"]},
+        {"required": ["sampleMode"]}
+      ]
+    },
+    "operation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "handlerId", "kind", "timeoutMs"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "handlerId": {"$ref": "#/$defs/identifier"},
+        "kind": {"enum": ["read_only", "local_state", "navigation", "user_mutation", "reversible_session"]},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"},
+        "resourceLocks": {"$ref": "#/$defs/idList"},
+        "timeoutMs": {"type": "integer", "minimum": 100, "maximum": 300000},
+        "debounceMs": {"type": "integer", "minimum": 0, "maximum": 30000},
+        "cooldownMs": {"type": "integer", "minimum": 0, "maximum": 86400000},
+        "rollback": {"$ref": "#/$defs/identifier"}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "reversible_session"}}, "required": ["kind"]},
+          "then": {"required": ["rollback"]}
+        }
+      ]
+    },
+    "shellOperation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id", "handlerId", "implementationCandidates", "policyId", "kind", "requires",
+        "probeId", "verifyId", "resourceLocks", "timeoutMs"
+      ],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "handlerId": {"$ref": "#/$defs/identifier"},
+        "implementationCandidates": {"$ref": "#/$defs/idList"},
+        "policyId": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,127}$"},
+        "kind": {"enum": ["read_only_sequence", "user_mutation", "session_mutation"]},
+        "allowedSessionPhases": {"$ref": "#/$defs/idList"},
+        "minSdk": {"type": "integer", "minimum": 23, "maximum": 100},
+        "requires": {"$ref": "#/$defs/idList"},
+        "parameters": {"type": "object", "additionalProperties": {"$ref": "#/$defs/jsonValue"}},
+        "probeId": {"$ref": "#/$defs/identifier"},
+        "verifyId": {"$ref": "#/$defs/identifier"},
+        "rollbackId": {"$ref": "#/$defs/identifier"},
+        "resourceLocks": {"$ref": "#/$defs/idList"},
+        "sampleDurationMs": {"type": "integer", "minimum": 100, "maximum": 60000},
+        "timeoutMs": {"type": "integer", "minimum": 100, "maximum": 300000},
+        "cooldownMs": {"type": "integer", "minimum": 0, "maximum": 86400000}
+      },
+      "allOf": [
+        {
+          "if": {"properties": {"kind": {"const": "session_mutation"}}, "required": ["kind"]},
+          "then": {"required": ["rollbackId"]}
+        }
+      ]
+    },
+    "pipelineStep": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "failure"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "type": {
+          "enum": [
+            "invoke_local",
+            "invoke_local_if_supported",
+            "invoke_operation_if_supported",
+            "invoke_pipeline_if_enabled",
+            "toggle_pipeline",
+            "wait_condition",
+            "capture_metrics",
+            "refresh_metrics",
+            "invoke_if_selected_and_supported",
+            "invoke_for_each_validated_selection",
+            "rollback_operation_if_active"
+          ]
+        },
+        "target": {"$ref": "#/$defs/identifier"},
+        "targets": {"$ref": "#/$defs/idList"},
+        "selection": {"$ref": "#/$defs/identifier"},
+        "timeoutMs": {"type": "integer", "minimum": 0, "maximum": 300000},
+        "delayMs": {"type": "integer", "minimum": 0, "maximum": 300000},
+        "maxItems": {"type": "integer", "minimum": 1, "maximum": 64},
+        "allowedSessionPhases": {"$ref": "#/$defs/idList"},
+        "failure": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "pipeline": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "kind", "resourceLocks", "steps"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "kind": {"enum": ["user_flow", "user_mutation", "reversible_session", "system_flow"]},
+        "resourceLocks": {"$ref": "#/$defs/idList"},
+        "steps": {"type": "array", "items": {"$ref": "#/$defs/pipelineStep"}, "minItems": 1, "maxItems": 64},
+        "forbiddenTargets": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "requirements": {
+      "type": "object",
+      "properties": {
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"}
+      }
+    },
+    "quickControl": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "title", "icon", "type", "operationId"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "order": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "title": {"type": "string", "minLength": 1, "maxLength": 80},
+        "icon": {"$ref": "#/$defs/identifier"},
+        "type": {"enum": ["switch", "action"]},
+        "operationId": {"$ref": "#/$defs/identifier"},
+        "stateKey": {"$ref": "#/$defs/identifier"},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"},
+        "unsupportedBehavior": {"enum": ["hide", "disable"]}
+      }
+    },
+    "component": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "type": {
+          "enum": [
+            "metric_cluster", "metric_tile", "speedometer", "sparkline_pair", "line_chart",
+            "canvas_chart", "canvas_preview", "severity_banner", "result_summary", "switch",
+            "checkbox", "action", "icon_action", "slider", "range_slider", "selector",
+            "segmented_selector", "dropdown", "multi_select", "protected_multi_select",
+            "searchable_grid", "permission_row", "progress_stepper", "color_picker", "empty_state"
+          ]
+        },
+        "title": {"type": "string", "maxLength": 160},
+        "subtitle": {"type": "string", "maxLength": 320},
+        "operationId": {"$ref": "#/$defs/identifier"},
+        "stateKey": {"$ref": "#/$defs/identifier"},
+        "featureFlag": {"$ref": "#/$defs/identifier"},
+        "metric": {"$ref": "#/$defs/identifier"},
+        "metrics": {"$ref": "#/$defs/idList"},
+        "options": {"$ref": "#/$defs/stringList"},
+        "values": {"$ref": "#/$defs/stringList"},
+        "renderer": {"$ref": "#/$defs/identifier"},
+        "dataSource": {"$ref": "#/$defs/identifier"},
+        "min": {"type": "number"},
+        "max": {"type": "number"},
+        "step": {"type": "number", "exclusiveMinimum": 0},
+        "maxItems": {"type": "integer", "minimum": 1, "maximum": 256},
+        "allowedSessionPhases": {"$ref": "#/$defs/idList"},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"},
+        "unsupportedBehavior": {"enum": ["hide", "disable"]}
+      }
+    },
+    "panel": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "title", "subtitle", "icon", "accent", "layout", "visible", "components"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "order": {"type": "integer", "minimum": 0, "maximum": 10000},
+        "title": {"type": "string", "minLength": 1, "maxLength": 100},
+        "subtitle": {"type": "string", "maxLength": 240},
+        "icon": {"$ref": "#/$defs/identifier"},
+        "accent": {"enum": ["primary", "secondary", "accent", "danger", "warning"]},
+        "layout": {"$ref": "#/$defs/identifier"},
+        "visible": {"type": "boolean"},
+        "featureFlag": {"$ref": "#/$defs/identifier"},
+        "requiresAll": {"$ref": "#/$defs/idList"},
+        "requiresAny": {"$ref": "#/$defs/idList"},
+        "unsupportedBehavior": {"enum": ["hide", "disable"]},
+        "components": {"type": "array", "items": {"$ref": "#/$defs/component"}, "minItems": 1, "maxItems": 64}
+      }
+    },
+    "errorItem": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "severity", "userMessageKey", "action"],
+      "properties": {
+        "id": {"type": "string", "pattern": "^[A-Z][A-Z0-9_]{2,127}$"},
+        "severity": {"enum": ["info", "recoverable", "security", "fatal"]},
+        "userMessageKey": {"$ref": "#/$defs/identifier"},
+        "action": {"$ref": "#/$defs/identifier"}
+      }
+    },
+    "selfTest": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "phase", "required"],
+      "properties": {
+        "id": {"$ref": "#/$defs/identifier"},
+        "phase": {"enum": ["before_activation", "after_activation_before_publish"]},
+        "required": {"type": "boolean"}
+      }
+    }
+  }
+}
