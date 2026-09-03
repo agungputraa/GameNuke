@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Internal keyed-tag IDs for the live monitor. They are not visible edge-rail widgets. -->
+    <item type="id" name="monitorCpuTag"/>
+    <item type="id" name="monitorRamTag"/>
+    <item type="id" name="monitorDisplayTag"/>
+    <item type="id" name="monitorCpuSparkTag"/>
+    <item type="id" name="monitorRamSparkTag"/>
+</resources>

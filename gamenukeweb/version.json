@@ -1,0 +1,19 @@
+{
+    "versionCode":  15,
+    "versionName":  "2.2.0-prem",
+    "appName":  "Game Nuke Premium",
+    "publishedAt":  "2026-09-04",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "24.3",
+    "releaseNotes":  [
+                         "🔥 Powerful Macro Engine: Dual-engine support (Shizuku 0ms privileged input + Accessibility Service fallback)",
+                         "⚡ VPN Ping Booster: 1ms MLBB Lobby Loopback responder + Ultra-Low Latency Gaming DNS (Cloudflare \u0026 Google)",
+                         "🎯 Expanded Right Panel Cockpit: Tactical Crosshair Studio, Mini PiP Game Guide Browser, Refresh Rate Locker (120Hz)",
+                         "🛡️ Touch Turbo \u0026 Anti-Mistouch Edge Shield for competitive landscape gaming",
+                         "🚀 Built-in In-App Updater via Edge CDN: Never miss a release without Play Store limitations"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.2.0-prem/GameNuke-Premium-v2.2.0.apk",
+    "sha256":  "AEFF9DF9F675CF5F20DA0F92939C24AC4CC993BA743411092DE3525F1915EC9B",
+    "directlinkAdUrl":  "https://example-directlink-ad.com/?ref=gamenuke"
+}

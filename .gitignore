@@ -1,0 +1,24 @@
+# Android generated files
+*.iml
+.gradle
+/local.properties
+/.idea
+.DS_Store
+build/
+**/build/
+/captures
+.externalNativeBuild
+.cxx
+*.apk
+release-apk/
+release-aab/
+
+# Release signing credentials — NEVER commit these
+release.properties
+*.jks
+*.keystore
+tools/*.env
+tools/*.token
+*.aab
+
+

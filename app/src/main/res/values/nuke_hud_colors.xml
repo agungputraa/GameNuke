@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="nuke_void">#030705</color>
+    <color name="nuke_panel">#07100C</color>
+    <color name="nuke_panel_raised">#0A1712</color>
+    <color name="nuke_panel_soft">#0C1E17</color>
+    <color name="nuke_green">#53F58A</color>
+    <color name="nuke_green_dim">#226F42</color>
+    <color name="nuke_text">#EAF1EC</color>
+    <color name="nuke_muted">#8DA095</color>
+    <color name="nuke_muted_deep">#556B5E</color>
+    <color name="nuke_cyan">#38D9D1</color>
+    <color name="nuke_blue">#4F74FF</color>
+    <color name="nuke_violet">#8A66FF</color>
+    <color name="nuke_amber">#F3B65B</color>
+    <color name="nuke_danger">#F06464</color>
+</resources>

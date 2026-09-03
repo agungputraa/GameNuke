@@ -1,0 +1,74 @@
+name: Validate GameNuke Remote Config
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - "gamenuke-remote-config.v1.json"
+      - "gamenuke-remote-config.v1.json.sig"
+      - "gamenuke-remote-config.schema.v1.json"
+      - "validate_gamenuke_remote_config.py"
+      - "remote-nuke-2026-01-public.pem"
+      - ".github/workflows/validate-gamenuke-config.yml"
+  push:
+    branches: ["main"]
+    paths:
+      - "gamenuke-remote-config.v1.json"
+      - "gamenuke-remote-config.v1.json.sig"
+      - "gamenuke-remote-config.schema.v1.json"
+      - "validate_gamenuke_remote_config.py"
+      - "remote-nuke-2026-01-public.pem"
+      - ".github/workflows/validate-gamenuke-config.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: validate-remote-config-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Signature, schema and semantic safety
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+        with:
+          fetch-depth: 1
+          persist-credentials: false
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Install JSON Schema validator
+        run: |
+          python -m pip install --disable-pip-version-check "jsonschema>=4.23,<5"
+          python -m pip check
+
+      - name: Compile validator
+        run: python -m py_compile validate_gamenuke_remote_config.py
+
+      - name: Validate schema and semantic safety rules
+        run: >-
+          python validate_gamenuke_remote_config.py
+          gamenuke-remote-config.v1.json
+          gamenuke-remote-config.schema.v1.json
+
+      - name: Verify detached Ed25519 signature
+        shell: bash
+        run: |
+          set -euo pipefail
+          openssl base64 -d -A \
+            -in gamenuke-remote-config.v1.json.sig \
+            -out gamenuke-remote-config.signature.bin
+          test "$(wc -c < gamenuke-remote-config.signature.bin)" -eq 64
+          openssl pkeyutl -verify -pubin \
+            -inkey remote-nuke-2026-01-public.pem \
+            -rawin \
+            -in gamenuke-remote-config.v1.json \
+            -sigfile gamenuke-remote-config.signature.bin
+

@@ -1,0 +1,199 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <queries>
+        <!-- Package-visibility-safe discovery for Android 11+: only launchable apps are queried. -->
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LAUNCHER" />
+        </intent>
+        <intent>
+            <action android:name="android.intent.action.MAIN" />
+            <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
+        </intent>
+        <!-- Shizuku and iAdb server visibility -->
+        <package android:name="moe.shizuku.privileged.api" />
+        <package android:name="com.iadb.helper" />
+        <package android:name="com.iadb" />
+        <package android:name="com.smoothie.wirelessDebuggingSwitch" />
+    </queries>
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+    <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
+    <uses-permission android:name="android.permission.CHANGE_WIFI_MULTICAST_STATE" />
+    <!-- Android 16 local-network protection can gate mDNS/TCP when explicitly enabled.
+         Declaring Nearby devices keeps Wireless ADB discovery ready without location semantics. -->
+    <uses-permission
+        android:name="android.permission.NEARBY_WIFI_DEVICES"
+        android:usesPermissionFlags="neverForLocation" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
+    <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <!-- User-started, user-visible gaming HUD session. Required for reliable long sessions. -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
+    <!-- Required for NukeWebServerService ForegroundService type on Android 14+ -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_DATA_SYNC" />
+    <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" />
+
+
+    <application
+        android:name=".NukeApplication"
+        android:allowBackup="false"
+        android:icon="@drawable/logo_nuke"
+        android:roundIcon="@drawable/logo_nuke"
+        android:label="@string/app_name"
+        android:supportsRtl="true"
+        android:resizeableActivity="true"
+        android:enableOnBackInvokedCallback="true"
+        android:hasFragileUserData="false"
+        android:fullBackupContent="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+        tools:targetApi="36">
+
+        <!-- Liftoff Monetize (Vungle) SDK — app ID is initialized in code via NukeAdManager.initialize() -->
+
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.Splash"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".GameLaunchSplashActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden"
+            android:screenOrientation="sensorLandscape"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.DeviceDefault.NoActionBar"
+            android:resizeableActivity="true"
+            android:screenOrientation="unspecified"
+            android:windowSoftInputMode="adjustResize|stateUnspecified">
+        </activity>
+
+        <receiver
+            android:name=".PairingReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.neon.gametweak.ACTION_PAIR" />
+            </intent-filter>
+        </receiver>
+
+
+        <activity
+            android:name=".CallShieldRoleActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:finishOnTaskLaunch="true"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Nuke.FloatingPanel" />
+
+        <service
+            android:name=".NukeCallScreeningService"
+            android:exported="true"
+            android:permission="android.permission.BIND_SCREENING_SERVICE">
+            <intent-filter>
+                <action android:name="android.telecom.CallScreeningService" />
+            </intent-filter>
+        </service>
+
+        <service
+            android:name=".FloatingBoosterService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="specialUse"
+            android:stopWithTask="false">
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="User starts a gaming session; Game Nuke keeps a persistent notification and floating HUD over the selected game for live performance telemetry and user controls until the user ends the session" />
+        </service>
+
+        <service
+            android:name=".NukeWebServerService"
+            android:enabled="true"
+            android:exported="false"
+            android:foregroundServiceType="dataSync"
+            android:stopWithTask="false" />
+
+        <service
+            android:name=".NukeMacroService"
+            android:exported="true"
+            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
+            <intent-filter>
+                <action android:name="android.accessibilityservice.AccessibilityService" />
+            </intent-filter>
+            <meta-data
+                android:name="android.accessibilityservice"
+                android:resource="@xml/nuke_macro_accessibility_config" />
+        </service>
+
+        <service
+            android:name=".NukeVpnService"
+            android:exported="false"
+            android:permission="android.permission.BIND_VPN_SERVICE">
+            <intent-filter>
+                <action android:name="android.net.VpnService" />
+            </intent-filter>
+        </service>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.fileprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+        <!--
+            ShizukuProvider delivers the Shizuku binder to this app automatically
+            when the app starts, even without WiFi or active ADB session.
+            The INTERACT_ACROSS_USERS_FULL permission prevents unauthorized apps
+            from accessing this provider.
+        -->
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <!--
+            IadbProvider delivers the iAdb binder to this app automatically
+            when the app starts. directBootAware=true allows it to work before
+            the user unlocks the device.
+        -->
+        <provider
+            android:name="com.iadb.IadbProvider"
+            android:authorities="${applicationId}.iadb"
+            android:directBootAware="true"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+    </application>
+</manifest>

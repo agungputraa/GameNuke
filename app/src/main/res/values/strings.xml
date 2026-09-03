@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Game Nuke</string>
+    <string name="nuke_macro_accessibility_desc">Game Nuke Macro Engine dispatches low-latency taps and gestures for gaming automation.</string>
+</resources>

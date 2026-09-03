@@ -1,0 +1,913 @@
+{
+  "$schema": "./gamenuke-remote-config.schema.v1.json",
+  "schemaVersion": 1,
+  "configId": "gamenuke-production",
+  "revision": 4,
+  "publishedAt": "2026-08-24T23:15:00+08:00",
+  "enabled": true,
+  "channel": "stable",
+  "minAppVersionCode": 35,
+  "compatibility": {
+    "rendererContract": 1,
+    "operationContract": 1,
+    "pipelineContract": 1,
+    "minSdk": 30,
+    "unknownFieldPolicy": "ignore_for_forward_compatibility",
+    "unknownRendererPolicy": "hide_component",
+    "unknownOperationPolicy": "disable_component",
+    "unknownPipelineStepPolicy": "reject_config",
+    "requiredClientFeatures": [
+      "remote_config_v1",
+      "adaptive_overlay_v1",
+      "typed_operation_registry_v1",
+      "transactional_activation_v1"
+    ]
+  },
+  "changePolicy": {
+    "remoteSafeDomains": [
+      "copy",
+      "localization",
+      "theme_tokens",
+      "layout_parameters",
+      "component_visibility",
+      "component_order",
+      "feature_flags",
+      "rollout_percentage",
+      "thresholds",
+      "sampling_intervals",
+      "safe_handler_parameters",
+      "handler_candidate_order",
+      "action_pipeline_order",
+      "data_only_assets"
+    ],
+    "apkUpdateRequiredDomains": [
+      "new_component_renderer",
+      "new_local_handler",
+      "new_pipeline_step_type",
+      "new_android_permission",
+      "manifest_or_service_change",
+      "new_shell_grammar",
+      "new_native_or_dex_code",
+      "unprepared_signing_key_rotation"
+    ],
+    "remoteExecutableCodeAllowed": false,
+    "remoteRawShellAllowed": false
+  },
+  "delivery": {
+    "requireHttps": true,
+    "allowedHosts": [
+      "raw.githubusercontent.com"
+    ],
+    "connectTimeoutMs": 3500,
+    "readTimeoutMs": 5500,
+    "maxBytes": 524288,
+    "acceptContentTypes": [
+      "application/json",
+      "text/plain"
+    ],
+    "useEtag": true,
+    "useIfModifiedSince": true,
+    "cacheTtlHours": 1,
+    "minimumFetchIntervalMinutes": 15,
+    "manualRefreshAllowed": true,
+    "manualRefreshBypassesTtl": true,
+    "maxRedirects": 0,
+    "staleWhileRevalidateHours": 168,
+    "lastKnownGoodDays": 60,
+    "fallbackAsset": "gamenuke-remote-config.v1.json",
+    "fetchPolicy": "background_on_app_start_and_session_start",
+    "retry": {
+      "maxReadOnlyAttempts": 2,
+      "baseDelayMs": 750,
+      "maxDelayMs": 6000,
+      "jitterPercent": 25,
+      "retryHttpCodes": [408, 429, 500, 502, 503, 504]
+    }
+  },
+  "activation": {
+    "mode": "atomic_two_phase",
+    "validateBeforePersist": true,
+    "validateAllReferences": true,
+    "prefetchRemoteAssets": true,
+    "activateAtSafePoint": [
+      "next_app_start",
+      "next_overlay_open",
+      "after_game_session_end"
+    ],
+    "neverRecomposeOpenPanelFromNetwork": true,
+    "persistRevisionFloor": true,
+    "rejectRevisionRollback": true,
+    "allowEmergencyRollback": false,
+    "disabledConfigBehavior": "use_bundled_safe_config",
+    "crashGuard": {
+      "enabled": true,
+      "observationWindowSeconds": 45,
+      "maxOverlayFailures": 2,
+      "action": "restore_last_known_good_and_quarantine_revision",
+      "quarantineHours": 72
+    }
+  },
+  "security": {
+    "allowRemoteOperationSelection": true,
+    "allowRemoteSafeParameters": true,
+    "allowRemoteShellTemplates": false,
+    "allowArbitraryShell": false,
+    "requireLocalHandlerRegistryMatch": true,
+    "requireLocalPolicyMatch": true,
+    "requireUserGestureForMutation": true,
+    "requireCapabilityProbe": true,
+    "requireReadBackForMutation": true,
+    "requireRollbackForSessionMutation": true,
+    "rejectShellComposition": true,
+    "maxRenderedCommandLength": 4096,
+    "maxStdoutBytes": 131072,
+    "maxStderrBytes": 32768,
+    "redactPatterns": [
+      "(?i)token=[^\\s]+",
+      "(?i)authorization:[^\\n]+",
+      "(?i)cookie:[^\\n]+"
+    ],
+    "parameterPolicies": {
+      "package": {
+        "type": "package_name",
+        "pattern": "^[A-Za-z][A-Za-z0-9_]*(?:\\.[A-Za-z0-9_]+)+$",
+        "maxLength": 255
+      },
+      "enabled01": {"type": "enum", "values": ["0", "1"]},
+      "enabledBool": {"type": "enum", "values": ["true", "false"]},
+      "mode": {"type": "enum", "values": ["standard", "performance", "battery"]},
+      "targetFreeBytes": {"type": "integer", "min": 268435456, "max": 8589934592}
+    },
+    "protectedTargets": {
+      "alwaysProtectOwnPackage": true,
+      "alwaysProtectActiveGame": true,
+      "protectForegroundPackages": true,
+      "protectLauncher": true,
+      "protectDefaultIme": true,
+      "protectSystemUi": true,
+      "protectPersistentAndSystemUids": true,
+      "maxPackagesPerBackgroundRelease": 5
+    },
+    "sensitiveFeaturePolicies": {
+      "accessibilityAutomation": {
+        "enabledByDefault": false,
+        "requirePlayDisclosureBeforeEnable": true,
+        "requireProminentInAppDisclosure": true,
+        "explicitUserGestureForEveryExecution": true,
+        "fixedUserDefinedSequenceOnly": true,
+        "autonomousPlanningAllowed": false,
+        "autonomousDecisionMakingAllowed": false,
+        "backgroundExecutionAllowed": false,
+        "infiniteLoopAllowed": false,
+        "maxPoints": 12,
+        "maxSequenceDurationMs": 10000,
+        "alwaysVisibleStopControl": true
+      },
+      "mediaProjection": {
+        "requireConsentEverySession": true,
+        "reuseConsentToken": false,
+        "foregroundServiceType": "mediaProjection",
+        "startFromBootAllowed": false,
+        "persistentRecordingIndicator": true,
+        "stopFromNotification": true
+      }
+    },
+    "integrity": {
+      "requiredInProduction": true,
+      "mode": "detached_ed25519",
+      "algorithm": "Ed25519",
+      "digest": "SHA-256",
+      "signatureSiblingSuffix": ".sig",
+      "keyId": "remote-nuke-2026-01",
+      "publicKeyLocation": "pinned_in_apk",
+      "allowUnsignedDevelopmentConfig": false,
+      "keyRotation": {
+        "acceptPinnedCurrentKey": true,
+        "acceptPinnedNextKey": true,
+        "remoteKeyReplacementAllowed": false
+      }
+    }
+  },
+  "runtimePolicy": {
+    "runtimeProbeOverridesJson": true,
+    "hideUnknownComponents": true,
+    "disableUnsupportedComponents": false,
+    "showUnsupportedReason": true,
+    "unknownOperationBehavior": "disable",
+    "shellFailureBehavior": "mark_unsupported_for_session",
+    "neverRetryMutationsAutomatically": true,
+    "readOnlyRetryCount": 1,
+    "singleFlightPerOperation": true,
+    "singleFlightPerResourceLock": true,
+    "clickDebounceMs": 550,
+    "settingsLaunchDebounceMs": 3000,
+    "switchOptimisticUpdate": false,
+    "readBackBeforeSwitchSettled": true,
+    "deviceLink": {
+      "connectionMode": "persistent",
+      "prewarmWhenGameSelected": true,
+      "keepAliveSeconds": 20,
+      "maxConcurrentReadOnly": 2,
+      "maxConcurrentMutations": 1,
+      "coalesceEquivalentReadsMs": 300,
+      "cancelStaleReadOnlyRequests": true,
+      "commandQueueLimit": 24,
+      "mutationQueueLimit": 1,
+      "exposeOnlyProbeVerifiedCapabilities": true,
+      "demoteFailedCapabilityForSession": true,
+      "fallbackOrder": ["android_public_api", "local_read_only", "device_link_verified", "hide_component"]
+    },
+    "performanceBudgets": {
+      "configParseMs": 40,
+      "firstOverlayRenderMs": 120,
+      "panelOpenMs": 90,
+      "tapFeedbackMs": 50,
+      "mainThreadShellCalls": 0,
+      "maxTelemetryRecompositionsPerSecond": 4,
+      "maxOverlayMemoryMb": 48
+    },
+    "safetyGuards": {
+      "blockAllMutationsDuringSplash": true,
+      "blockHeavyOperationsDuringFirstSessionMs": 5000,
+      "heavyOperationIds": ["shell.memory.compact", "shell.storage.trim_caches", "shell.game.art_prime"],
+      "heavyOperationAllowedPhases": ["idle", "preparing"],
+      "blockHeavyOperationsAtThermalStatus": "severe",
+      "minimumBatteryPercentForHeavyOperation": 20,
+      "requireChargingForArtPrimeBelowBatteryPercent": 40,
+      "neverKillActiveGameOnAnyPhase": true,
+      "neverStopOverlayForChildPanelFailure": true,
+      "unknownOemBehavior": "local_read_only",
+      "privateOemIntentPolicy": "forbidden"
+    }
+  },
+  "privacy": {
+    "collectPersonalData": false,
+    "collectCommandArguments": false,
+    "collectPackageNamesInRemoteTelemetry": false,
+    "collectDeviceSerial": false,
+    "diagnosticsLocalOnlyByDefault": true,
+    "userInitiatedDiagnosticExport": true,
+    "retentionDays": 7
+  },
+  "accessibility": {
+    "minimumContrastRatio": 4.5,
+    "minimumTouchTargetDp": 48,
+    "semanticsRequiredForInteractiveComponents": true,
+    "contentDescriptionFallback": "title_then_type",
+    "supportTalkBackTraversal": true,
+    "supportFontScaleUpTo": 1.3,
+    "neverEncodeStateByColorOnly": true,
+    "respectReduceMotion": true,
+    "respectRemoveAnimations": true,
+    "hapticsOptional": true
+  },
+  "diagnostics": {
+    "enabled": true,
+    "localRingBufferEntries": 300,
+    "recordConfigSource": true,
+    "recordConfigRevision": true,
+    "recordCapabilityResults": true,
+    "recordOperationLatency": true,
+    "recordSanitizedShellExit": true,
+    "recordOverlayLifecycle": true,
+    "recordUnsupportedReasons": true,
+    "exportFormat": "json_zip",
+    "healthIndicators": [
+      "config_status",
+      "overlay_service",
+      "device_link",
+      "capability_probe",
+      "operation_queue",
+      "telemetry_sampler"
+    ]
+  },
+  "featureFlags": [
+    {"id": "remote_config", "enabled": true, "rolloutPercent": 100, "killSwitch": false},
+    {"id": "adaptive_overlay", "enabled": true, "rolloutPercent": 100, "killSwitch": false},
+    {"id": "device_link_operations", "enabled": true, "rolloutPercent": 100, "requiresAll": ["extended.control"], "killSwitch": false},
+    {"id": "crosshair_studio", "enabled": true, "rolloutPercent": 100, "requiresAll": ["overlay"], "killSwitch": false},
+    {"id": "macro_studio", "enabled": false, "rolloutPercent": 0, "requiresAll": ["local.accessibility_macro"], "killSwitch": true},
+    {"id": "capture_tools", "enabled": true, "rolloutPercent": 100, "requiresAll": ["local.media_projection"], "killSwitch": false},
+    {"id": "remote_data_assets", "enabled": true, "rolloutPercent": 100, "killSwitch": false},
+    {"id": "remote_executable_modules", "enabled": false, "rolloutPercent": 0, "killSwitch": true},
+    {"id": "voice_changer", "enabled": false, "rolloutPercent": 0, "killSwitch": true}
+  ],
+  "ruleEngine": {
+    "contractVersion": 1,
+    "allowedFields": [
+      "sdkInt",
+      "appVersionCode",
+      "manufacturer",
+      "model",
+      "locale",
+      "orientation",
+      "overlayWidthDp",
+      "overlayHeightDp",
+      "hasCapability",
+      "deviceLinkConnected"
+    ],
+    "allowedOperators": ["eq", "neq", "in", "not_in", "gte", "lte", "contains", "exists"],
+    "maxConditionsPerRule": 12,
+    "maxRuleDepth": 3,
+    "unknownConditionResult": false,
+    "deterministicRolloutKey": "installation_scoped_random_id",
+    "rolloutSalt": "gamenuke-remote-v1"
+  },
+  "theme": {
+    "styleId": "quantum-split-wings",
+    "brandGlyph": "particle_atom",
+    "panelShape": "split_trapezoid_curtains",
+    "moduleShape": "trapezoid_blade",
+    "density": "comfortable_gaming",
+    "colors": {
+      "background": "#F20A0F0D",
+      "surface": "#F21A211E",
+      "surfaceRaised": "#F225302B",
+      "primary": "#A8FF00",
+      "secondary": "#00E5A8",
+      "accent": "#8A5CFF",
+      "danger": "#FF4D6D",
+      "warning": "#FFC857",
+      "textPrimary": "#F4FFF8",
+      "textSecondary": "#B8C8BE",
+      "outline": "#4D6F6058",
+      "scrim": "#99000000"
+    },
+    "typography": {
+      "family": "bundled_inter",
+      "numericFamily": "bundled_jetbrains_mono",
+      "titleScale": 1.0,
+      "bodyScale": 1.0,
+      "minimumSp": 12
+    },
+    "effects": {
+      "glassAlpha": 0.82,
+      "edgeGlowAlpha": 0.38,
+      "particleCount": 14,
+      "particleSpeed": "slow",
+      "backgroundBlurDp": 12,
+      "noiseAlpha": 0.035,
+      "shadowDp": 18
+    },
+    "motion": {
+      "enabled": true,
+      "panelOpenMs": 240,
+      "panelCloseMs": 170,
+      "moduleStaggerMs": 22,
+      "pressScale": 0.97,
+      "respectAnimatorScale": true,
+      "respectReduceMotion": true,
+      "reducedMotionFallback": "crossfade"
+    },
+    "haptics": {"enabled": true, "toggle": "text_handle_move", "action": "confirm", "error": "reject"}
+  },
+  "responsive": {
+    "useOverlayViewport": true,
+    "respectSafeInsets": true,
+    "respectDisplayCutout": true,
+    "respectSystemGestures": true,
+    "respectImeInsets": true,
+    "minimumTouchTargetDp": 48,
+    "minimumTextScaleSupport": 1.3,
+    "contentScrollFallback": true,
+    "preservePanelScrollState": true,
+    "lowHeightThresholdDp": 360,
+    "breakpoints": [
+      {"id": "compact", "maxWidthDp": 479, "layout": "stacked_quantum_trapezoids", "moduleColumns": 2, "telemetryMode": "compact_pair", "quickControlMode": "two_column_grid", "showReactorDetails": false, "mainPaddingDp": 10, "gapDp": 8},
+      {"id": "medium", "minWidthDp": 480, "maxWidthDp": 719, "layout": "split_quantum_wings", "moduleColumns": 3, "telemetryMode": "single_row", "quickControlMode": "horizontal_rail", "showReactorDetails": true, "mainPaddingDp": 12, "gapDp": 10},
+      {"id": "expanded", "minWidthDp": 720, "layout": "split_quantum_wings", "moduleColumns": 4, "telemetryMode": "side_wings", "quickControlMode": "symmetric_rails", "showReactorDetails": true, "mainPaddingDp": 16, "gapDp": 12}
+    ],
+    "heightOverrides": [
+      {"id": "short_landscape", "maxHeightDp": 359, "forceScrollableBody": true, "telemetryMode": "compact_pair", "moduleDockMode": "horizontal_pager", "hideDecorativeParticles": true}
+    ]
+  },
+  "appShell": {
+    "surfaceId": "main_app",
+    "brandGlyph": "particle_atom",
+    "homeRoute": "dashboard",
+    "compactNavigation": "bottom_bar_with_drawer_overflow",
+    "mediumNavigation": "navigation_rail",
+    "expandedNavigation": "permanent_drawer",
+    "preserveRouteState": true,
+    "unknownRouteBehavior": "navigate_home",
+    "routes": [
+      {"id": "dashboard", "order": 10, "title": "Dashboard", "icon": "home", "contentType": "builtin_screen", "handlerId": "builtin.screen.dashboard", "primary": true, "visible": true},
+      {"id": "games", "order": 20, "title": "Games", "icon": "games", "contentType": "builtin_screen", "handlerId": "builtin.screen.game_library", "primary": true, "visible": true},
+      {"id": "booster_tools", "order": 30, "title": "Tools", "icon": "tools", "contentType": "dynamic_panel_catalog", "catalogId": "panels", "primary": true, "visible": true},
+      {"id": "device_control", "order": 40, "title": "Device Link", "icon": "link", "contentType": "builtin_screen", "handlerId": "builtin.screen.device_link", "primary": true, "visible": true},
+      {"id": "diagnostics", "order": 50, "title": "Diagnostics", "icon": "diagnostics", "contentType": "builtin_screen", "handlerId": "builtin.screen.diagnostics", "primary": false, "visible": true},
+      {"id": "tutorial", "order": 60, "title": "Tutorial", "icon": "tutorial", "contentType": "builtin_screen", "handlerId": "builtin.screen.tutorial", "primary": false, "visible": true},
+      {"id": "settings", "order": 70, "title": "Settings", "icon": "settings", "contentType": "builtin_screen", "handlerId": "builtin.screen.settings", "primary": false, "visible": true},
+      {"id": "developer", "order": 1000, "title": "Developer", "icon": "developer", "contentType": "builtin_screen", "handlerId": "builtin.screen.developer", "primary": false, "visible": false}
+    ]
+  },
+  "overlay": {
+    "surfaceId": "gaming_overlay",
+    "window": {
+      "widthMode": "viewport_fraction_with_max",
+      "widthFraction": 0.94,
+      "maxWidthDp": 980,
+      "minWidthDp": 296,
+      "heightMode": "wrap_with_viewport_cap",
+      "maxHeightFraction": 0.88,
+      "minimumEdgeMarginDp": 8,
+      "clipToSafeBounds": true,
+      "allowDrag": true,
+      "allowDockEdges": ["left", "right"],
+      "updateLayoutMaxPerSecond": 60
+    },
+    "edgeHandle": {
+      "shape": "circle",
+      "glyph": "particle_atom",
+      "surfaceStyle": "solid_circle",
+      "showChassisPattern": false,
+      "showOnlyGlyph": true,
+      "sizeDp": 56,
+      "touchTargetDp": 56,
+      "visibleCoreDp": 46,
+      "magneticDock": true,
+      "edgeInsetDp": 6,
+      "idleAlpha": 0.76,
+      "activeAlpha": 1.0,
+      "autoDimSeconds": 4,
+      "singleTapAction": "overlay.expand",
+      "longPressAction": "overlay.context_menu"
+    },
+    "mainPanel": {
+      "layoutId": "split_quantum_wings",
+      "landscapeLayoutId": "split_quantum_wings",
+      "portraitLayoutId": "stacked_quantum_trapezoids",
+      "showAllModulesOnMain": true,
+      "moduleOverflow": "wing_scroll_fallback",
+      "closePlacement": "top_end_safe_inset",
+      "closeAction": "overlay.collapse",
+      "showEndSession": true,
+      "endSessionPlacement": "top_end_after_close",
+      "stopOverlayAction": "overlay.stop_confirmed",
+      "requireEndSessionConfirmation": true,
+      "endSessionConfirmationStyle": "inline_danger_gate",
+      "childOpenMode": "replace_body_keep_shell",
+      "childCloseAction": "navigate_to_main",
+      "bodyScroll": "vertical_when_needed",
+      "keepHeaderAndClosePinned": true,
+      "windowTopology": "two_physical_overlay_windows",
+      "landscapeWingShape": "mirrored_sideways_isosceles_trapezoids",
+      "landscapeWingWidthFraction": 0.38,
+      "landscapeCenterGapMinimumFraction": 0.24,
+      "portraitWingShape": "mirrored_top_bottom_isosceles_trapezoids",
+      "portraitWingHeightFraction": 0.39,
+      "safeContentSlopedInsetDp": 28,
+      "touchRegionMode": "visible_polygon_only",
+      "gameplayGapTouchable": true,
+      "searchRequiresTemporaryImeFocus": true,
+      "moduleShop": {
+        "enabled": true,
+        "catalogUrl": "https://raw.githubusercontent.com/AgungDevlop/ModuleShop/main/plugins.json",
+        "catalogSha256": "e41469d89889c7bff7640135d117310a9b7678247342f64cf2a39ae47600b8a5",
+        "repositoryOwner": "AgungDevlop",
+        "repositoryName": "ModuleShop",
+        "branch": "main",
+        "maxCatalogBytes": 524288,
+        "maxArchiveBytes": 262144,
+        "maxEntries": 256,
+        "trustChain": "ed25519_remote_config_to_catalog_sha256_to_archive_sha256",
+        "archiveEntries": ["exec.sh", "del.sh"],
+        "installMode": "explicit_user_gesture_private_atomic",
+        "executionMode": "android_shell_uid_only_no_root",
+        "activation": "exec.sh",
+        "deactivation": "del.sh",
+        "restoreOrder": "reverse_activation_order",
+        "rejectZipSlip": true,
+        "rejectRedirects": true,
+        "singleFlight": true
+      }
+    },
+    "lifecycle": {
+      "foregroundServiceRequired": true,
+      "recoverAfterProcessRecreation": true,
+      "rehydrateActiveSession": true,
+      "persistDockEdge": true,
+      "persistPositionPerOrientation": true,
+      "persistOpenPanelId": false,
+      "renderFailureBehavior": "show_compact_safe_panel",
+      "childFailureMustNotStopService": true,
+      "closePanelMustNotStopService": true,
+      "stopWhenGameSessionEnds": false
+    },
+    "touchPolicy": {
+      "touchThroughDefault": false,
+      "touchThroughAllowedOnlyForMonitor": true,
+      "escapeGesture": "double_tap_edge_handle",
+      "dragStartsAfterDp": 6,
+      "preventSystemGestureConflict": true
+    },
+    "boostLaunchPolicy": {
+      "neverMutateResolution": true,
+      "neverMutateDensity": true,
+      "neverRunWmSize": true,
+      "neverRunWmDensity": true,
+      "forbiddenLocalHandlers": [
+        "builtin.shell.wm_size",
+        "builtin.shell.wm_density",
+        "builtin.shell.forced_display_size",
+        "builtin.shell.forced_display_density"
+      ],
+      "launchGameBeforeOverlayAttach": true,
+      "waitForGameForegroundMs": 3500,
+      "overlayAttachDelayAfterForegroundMs": 120,
+      "deferHeavyOperationsMs": 5000,
+      "onForegroundTimeout": "show_edge_handle_without_heavy_operations",
+      "onOverlayFailure": "keep_game_running_and_show_notification_recovery"
+    }
+  },
+  "deviceProfiles": [
+    {"id": "generic-android", "priority": 0, "manufacturers": ["*"], "minSdk": 30, "policy": {"probeEveryShellCapability": true, "preferAndroidApi": true, "preferReadOnlyTelemetry": true, "preferNetworkCapabilitiesWifiInfo": true, "neverAssumeOemSupport": true, "neverUsePrivateOemIntents": true, "hideFailedShellComponents": true, "fallbackSettingsRoute": "android.app_details"}},
+    {"id": "samsung", "priority": 100, "manufacturers": ["samsung"], "inherits": "generic-android", "settingsHints": ["android.overlay_permission", "android.battery_optimization", "android.notification_policy"]},
+    {"id": "xiaomi-family", "priority": 100, "manufacturers": ["xiaomi", "redmi", "poco"], "inherits": "generic-android", "policy": {"publicApiOnly": true, "overlayProbeAfterGrant": true, "keepForegroundNotification": true, "demoteFailedCapabilityForSession": true, "failureFallback": "local_only"}, "settingsHints": ["android.overlay_permission", "android.app_details", "android.battery_optimization"]},
+    {"id": "oppo-family", "priority": 100, "manufacturers": ["oppo", "realme", "oneplus"], "inherits": "generic-android", "settingsHints": ["android.overlay_permission", "android.app_details", "android.battery_optimization"]},
+    {"id": "vivo-family", "priority": 100, "manufacturers": ["vivo", "iqoo"], "inherits": "generic-android", "settingsHints": ["android.overlay_permission", "android.app_details", "android.battery_optimization"]},
+    {"id": "huawei-honor", "priority": 90, "manufacturers": ["huawei", "honor"], "inherits": "generic-android", "settingsHints": ["android.overlay_permission", "android.app_details", "android.battery_optimization"]},
+    {"id": "transsion-family", "priority": 90, "manufacturers": ["infinix", "tecno", "itel"], "inherits": "generic-android", "settingsHints": ["android.overlay_permission", "android.app_details", "android.battery_optimization"]},
+    {"id": "asus", "priority": 80, "manufacturers": ["asus"], "inherits": "generic-android"},
+    {"id": "google", "priority": 80, "manufacturers": ["google"], "inherits": "generic-android"},
+    {"id": "motorola-lenovo", "priority": 80, "manufacturers": ["motorola", "lenovo"], "inherits": "generic-android"},
+    {"id": "nothing", "priority": 80, "manufacturers": ["nothing"], "inherits": "generic-android"}
+  ],
+  "capabilities": [
+    {"id": "overlay", "source": "android_api", "probeId": "overlay.permission", "cache": "until_permission_change"},
+    {"id": "local.telemetry", "source": "android_api", "probeId": "local.telemetry", "cache": "session"},
+    {"id": "local.display", "source": "android_api", "probeId": "display.modes", "cache": "session"},
+    {"id": "local.thermal", "source": "android_api", "probeId": "thermal.status", "minSdk": 29, "cache": "session"},
+    {"id": "local.wifi", "source": "android_api", "probeId": "wifi.feature", "cache": "session"},
+    {"id": "local.battery", "source": "android_api", "probeId": "battery.manager", "cache": "session"},
+    {"id": "local.storage", "source": "android_api", "probeId": "storage.stats", "cache": "session"},
+    {"id": "local.dnd", "source": "android_api", "probeId": "notification.policy_access", "cache": "until_permission_change"},
+    {"id": "local.keep_awake", "source": "android_api", "probeId": "overlay.keep_screen_on", "cache": "session"},
+    {"id": "local.accessibility_macro", "source": "android_api", "probeId": "accessibility.service_enabled", "cache": "until_permission_change"},
+    {"id": "local.media_projection", "source": "android_api", "probeId": "media_projection.available", "cache": "session"},
+    {"id": "local.game_launch", "source": "android_api", "probeId": "package.launch_intent", "cache": "per_game"},
+    {"id": "extended.control", "source": "device_link", "probeId": "adb.connected", "cache": "live"},
+    {"id": "shell.refresh_guard", "source": "shell", "probeId": "refresh.readable", "cache": "per_device_build"},
+    {"id": "shell.frame_scan", "source": "shell", "probeId": "surfaceflinger.timestats", "cache": "per_device_build"},
+    {"id": "shell.game_mode", "source": "shell", "probeId": "game.mode", "minSdk": 31, "cache": "per_device_build"},
+    {"id": "shell.compaction", "source": "shell", "probeId": "activity.compact", "cache": "per_device_build"},
+    {"id": "shell.cache_trim", "source": "shell", "probeId": "package.trim_caches", "cache": "per_device_build"},
+    {"id": "shell.art_prime", "source": "shell", "probeId": "package.compile", "cache": "per_device_build"},
+    {"id": "shell.cpu_clocks", "source": "shell", "probeId": "cpu.clocks", "cache": "per_device_build"},
+    {"id": "shell.rotation", "source": "shell", "probeId": "rotation.settings", "cache": "per_device_build"},
+    {"id": "shell.power_saver", "source": "shell", "probeId": "power.saver", "cache": "per_device_build"},
+    {"id": "shell.data_saver", "source": "shell", "probeId": "data.saver", "cache": "per_device_build"},
+    {"id": "shell.background_release", "source": "shell", "probeId": "activity.package_kill", "cache": "per_device_build"}
+  ],
+  "rendererCatalog": [
+    {"id": "metric_cluster", "contract": 1},
+    {"id": "metric_tile", "contract": 1},
+    {"id": "speedometer", "contract": 1},
+    {"id": "sparkline_pair", "contract": 1},
+    {"id": "line_chart", "contract": 1},
+    {"id": "canvas_chart", "contract": 1},
+    {"id": "canvas_preview", "contract": 1},
+    {"id": "severity_banner", "contract": 1},
+    {"id": "result_summary", "contract": 1},
+    {"id": "switch", "contract": 1},
+    {"id": "checkbox", "contract": 1},
+    {"id": "action", "contract": 1},
+    {"id": "icon_action", "contract": 1},
+    {"id": "slider", "contract": 1},
+    {"id": "range_slider", "contract": 1},
+    {"id": "selector", "contract": 1},
+    {"id": "segmented_selector", "contract": 1},
+    {"id": "dropdown", "contract": 1},
+    {"id": "multi_select", "contract": 1},
+    {"id": "protected_multi_select", "contract": 1},
+    {"id": "searchable_grid", "contract": 1},
+    {"id": "permission_row", "contract": 1},
+    {"id": "progress_stepper", "contract": 1},
+    {"id": "color_picker", "contract": 1},
+    {"id": "empty_state", "contract": 1}
+  ],
+  "resourceCatalog": {
+    "bundledIcons": [
+      "particle_atom", "gamepad", "speed", "clean", "crosshair", "monitor", "network", "radar", "screen", "cpu", "macro", "record", "focus", "settings", "close", "collapse", "back", "home", "games", "tools", "link", "diagnostics", "tutorial", "developer"
+    ],
+    "remoteAssets": [],
+    "remoteAssetPolicy": {
+      "allowedMimeTypes": ["image/png", "image/webp"],
+      "maxAssetBytes": 524288,
+      "maxPixelCount": 1048576,
+      "requireSha256": true,
+      "requireHttps": true,
+      "allowedHosts": ["raw.githubusercontent.com"],
+      "fallbackOnFailure": "bundled_resource",
+      "animatedAssetsAllowed": false,
+      "svgAllowed": false
+    }
+  },
+  "localization": {
+    "defaultLocale": "id-ID",
+    "fallbackLocale": "en-US",
+    "fallbackToInlineText": true,
+    "locales": {
+      "id-ID": {
+        "overlay.title": "GAME NUKE",
+        "overlay.close": "Ciutkan panel",
+        "overlay.stop": "Hentikan panel",
+        "status.ready": "Siap",
+        "status.running": "Menjalankan",
+        "status.unsupported": "Tidak didukung perangkat ini",
+        "status.device_link_required": "Hubungkan kontrol perangkat",
+        "status.permission_required": "Izin diperlukan",
+        "error.operation_busy": "Tunggu proses sebelumnya selesai",
+        "error.config_invalid": "Konfigurasi jarak jauh tidak valid",
+        "error.safe_fallback": "Panel aman bawaan digunakan"
+      },
+      "en-US": {
+        "overlay.title": "GAME NUKE",
+        "overlay.close": "Collapse panel",
+        "overlay.stop": "Stop overlay",
+        "status.ready": "Ready",
+        "status.running": "Running",
+        "status.unsupported": "Not supported on this device",
+        "status.device_link_required": "Connect device control",
+        "status.permission_required": "Permission required",
+        "error.operation_busy": "Wait for the previous operation",
+        "error.config_invalid": "Remote configuration is invalid",
+        "error.safe_fallback": "Bundled safe panel is active"
+      }
+    }
+  },
+  "stateModel": {
+    "contractVersion": 1,
+    "storage": "datastore_preferences",
+    "transactionalWrites": true,
+    "preserveUserOverridesAcrossConfigUpdates": true,
+    "dropUnknownKeysAfterDays": 90,
+    "allowedTypes": ["boolean", "integer", "decimal", "string", "enum", "string_set", "color_argb"],
+    "allowedScopes": ["installation", "per_game", "per_orientation", "session"],
+    "migrationPolicy": {
+      "allowedActions": ["rename", "copy", "clamp", "map_enum", "delete_deprecated"],
+      "backupBeforeMigration": true,
+      "rollbackOnFailure": true,
+      "unknownMigrationAction": "reject_config"
+    },
+    "settings": [
+      {"id": "session.adaptive_enabled", "type": "boolean", "scope": "per_game", "default": false},
+      {"id": "focus.enabled", "type": "boolean", "scope": "session", "default": false},
+      {"id": "network.lock_enabled", "type": "boolean", "scope": "per_game", "default": false},
+      {"id": "crosshair.enabled", "type": "boolean", "scope": "per_game", "default": false},
+      {"id": "crosshair.style", "type": "enum", "scope": "per_game", "default": "dot", "values": ["dot", "cross", "circle", "tactic"]},
+      {"id": "crosshair.color", "type": "color_argb", "scope": "per_game", "default": "#A8FF00"},
+      {"id": "crosshair.size", "type": "integer", "scope": "per_game", "default": 24, "min": 8, "max": 64},
+      {"id": "crosshair.gap", "type": "integer", "scope": "per_game", "default": 6, "min": 0, "max": 28},
+      {"id": "crosshair.opacity", "type": "integer", "scope": "per_game", "default": 90, "min": 20, "max": 100},
+      {"id": "monitor.touch_through", "type": "boolean", "scope": "per_game", "default": false},
+      {"id": "screen.rotation_lock", "type": "boolean", "scope": "per_game", "default": false},
+      {"id": "screen.keep_awake", "type": "boolean", "scope": "per_game", "default": true},
+      {"id": "hud.opacity", "type": "integer", "scope": "per_game", "default": 90, "min": 72, "max": 98},
+      {"id": "hud.scale", "type": "integer", "scope": "per_orientation", "default": 100, "min": 85, "max": 115},
+      {"id": "macro.enabled", "type": "boolean", "scope": "session", "default": false},
+      {"id": "macro.mode", "type": "enum", "scope": "per_game", "default": "single_sequence", "values": ["single_sequence", "hold_repeat", "tap_repeat"]},
+      {"id": "macro.interval_ms", "type": "integer", "scope": "per_game", "default": 250, "min": 50, "max": 2000},
+      {"id": "capture.recording", "type": "boolean", "scope": "session", "default": false},
+      {"id": "capture.quality", "type": "enum", "scope": "per_game", "default": "1080p_30", "values": ["720p_30", "1080p_30", "1080p_60"]},
+      {"id": "capture.bitrate_mbps", "type": "integer", "scope": "per_game", "default": 10, "min": 4, "max": 20}
+    ],
+    "migrations": []
+  },
+  "metricCatalog": [
+    {"id": "cpu.load", "unit": "percent", "range": [0, 100], "sourceCandidates": ["device_link.cpu_load", "local.cpu_load_if_accessible"], "sampleIntervalMs": 750, "smoothing": "ewma_0_35", "visibleOnly": true, "unavailableBehavior": "show_dash"},
+    {"id": "ram.used", "unit": "percent", "range": [0, 100], "sourceCandidates": ["android.activity_manager_memory_info"], "sampleIntervalMs": 750, "smoothing": "ewma_0_25", "visibleOnly": true, "unavailableBehavior": "show_dash"},
+    {"id": "display.current_hz", "unit": "hz", "sourceCandidates": ["android.display_refresh_rate"], "sampleIntervalMs": 1500, "visibleOnly": true, "unavailableBehavior": "hide_metric"},
+    {"id": "display.max_hz", "unit": "hz", "sourceCandidates": ["android.supported_display_modes"], "sampleIntervalMs": 60000, "visibleOnly": true, "unavailableBehavior": "hide_metric"},
+    {"id": "fps.measured", "unit": "fps", "sourceCandidates": ["shell.surfaceflinger_timestats"], "sampleMode": "on_demand", "unavailableBehavior": "show_unsupported"},
+    {"id": "thermal.status", "unit": "severity", "sourceCandidates": ["android.thermal_status"], "sampleIntervalMs": 2000, "visibleOnly": true, "unavailableBehavior": "hide_metric"},
+    {"id": "network.ping", "unit": "ms", "sourceCandidates": ["local.configured_https_probe"], "sampleIntervalMs": 5000, "visibleOnly": true, "unavailableBehavior": "show_dash"},
+    {"id": "wifi.rssi", "unit": "dbm", "sourceCandidates": ["android.wifi_connection_info"], "sampleIntervalMs": 2000, "visibleOnly": true, "unavailableBehavior": "hide_metric"},
+    {"id": "wifi.link_mbps", "unit": "mbps", "sourceCandidates": ["android.wifi_link_speed"], "sampleIntervalMs": 2000, "visibleOnly": true, "unavailableBehavior": "hide_metric"},
+    {"id": "memory.gain_mb", "unit": "mb", "sourceCandidates": ["operation.memory_delta"], "sampleMode": "operation_result", "unavailableBehavior": "show_zero"},
+    {"id": "storage.gain_mb", "unit": "mb", "sourceCandidates": ["operation.storage_delta"], "sampleMode": "operation_result", "unavailableBehavior": "show_zero"},
+    {"id": "device.pressure", "unit": "severity", "sourceCandidates": ["local.memory_pressure_model"], "sampleIntervalMs": 2500, "visibleOnly": true, "unavailableBehavior": "show_normal"},
+    {"id": "cpu.average_mhz", "unit": "mhz", "sourceCandidates": ["device_link.cpu_clocks"], "sampleIntervalMs": 1500, "visibleOnly": true, "unavailableBehavior": "hide_panel"},
+    {"id": "cpu.peak_mhz", "unit": "mhz", "sourceCandidates": ["device_link.cpu_clocks"], "sampleIntervalMs": 1500, "visibleOnly": true, "unavailableBehavior": "hide_panel"},
+    {"id": "cpu.core_count", "unit": "count", "sourceCandidates": ["android.runtime_processors"], "sampleIntervalMs": 60000, "visibleOnly": true, "unavailableBehavior": "hide_metric"}
+  ],
+  "operationCatalog": [
+    {"id": "focus.dnd", "handlerId": "builtin.focus.dnd_session", "kind": "reversible_session", "requiresAll": ["local.dnd"], "resourceLocks": ["notification_policy"], "timeoutMs": 3000, "rollback": "restore_captured_dnd_filter"},
+    {"id": "network.session_lock", "handlerId": "builtin.network.wifi_session_lock", "kind": "reversible_session", "requiresAll": ["local.wifi"], "resourceLocks": ["wifi_lock"], "timeoutMs": 2000, "rollback": "release_wifi_lock"},
+    {"id": "crosshair.enabled", "handlerId": "builtin.overlay.crosshair", "kind": "reversible_session", "requiresAll": ["overlay"], "resourceLocks": ["crosshair_overlay"], "timeoutMs": 1500, "rollback": "remove_crosshair_overlay"},
+    {"id": "monitor.touch_through", "handlerId": "builtin.overlay.monitor_touch_through", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 1000},
+    {"id": "network.refresh", "handlerId": "builtin.network.refresh_metrics", "kind": "read_only", "requiresAny": ["local.wifi", "local.telemetry"], "timeoutMs": 2500},
+    {"id": "navigation.network_settings", "handlerId": "builtin.navigation.network_settings", "kind": "navigation", "requiresAll": ["overlay"], "timeoutMs": 1500, "debounceMs": 3000},
+    {"id": "navigation.power_settings", "handlerId": "builtin.navigation.battery_saver_settings", "kind": "navigation", "requiresAll": ["overlay"], "timeoutMs": 1500, "debounceMs": 3000},
+    {"id": "screen.keep_awake", "handlerId": "builtin.overlay.keep_screen_awake", "kind": "reversible_session", "requiresAll": ["local.keep_awake"], "resourceLocks": ["screen_awake"], "timeoutMs": 1000, "rollback": "clear_keep_screen_on"},
+    {"id": "hud.opacity", "handlerId": "builtin.overlay.set_opacity", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 500},
+    {"id": "hud.scale", "handlerId": "builtin.overlay.set_scale", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 500},
+    {"id": "macro.enabled", "handlerId": "builtin.accessibility.macro_session", "kind": "reversible_session", "requiresAll": ["local.accessibility_macro"], "resourceLocks": ["macro_dispatch"], "timeoutMs": 1500, "rollback": "stop_macro_dispatch"},
+    {"id": "macro.test", "handlerId": "builtin.accessibility.macro_test", "kind": "user_mutation", "requiresAll": ["local.accessibility_macro"], "resourceLocks": ["macro_dispatch"], "timeoutMs": 10000, "cooldownMs": 1500},
+    {"id": "capture.recording", "handlerId": "builtin.capture.media_projection", "kind": "reversible_session", "requiresAll": ["local.media_projection"], "resourceLocks": ["media_projection"], "timeoutMs": 5000, "rollback": "stop_media_projection"},
+    {"id": "overlay.expand", "handlerId": "builtin.overlay.expand", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 500},
+    {"id": "overlay.collapse", "handlerId": "builtin.overlay.collapse_to_edge_handle", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 500},
+    {"id": "overlay.context_menu", "handlerId": "builtin.overlay.context_menu", "kind": "local_state", "requiresAll": ["overlay"], "timeoutMs": 500},
+    {"id": "overlay.stop", "handlerId": "builtin.overlay.stop_confirmed", "kind": "user_mutation", "requiresAll": ["overlay"], "timeoutMs": 3000}
+  ],
+  "shellCatalog": [
+    {"id": "shell.game_mode.performance", "handlerId": "builtin.shell.game_mode_set", "implementationCandidates": ["game_mode_cmd_v2", "game_mode_cmd_v1"], "policyId": "GAME_MODE_PER_PACKAGE", "kind": "session_mutation", "minSdk": 31, "requires": ["extended.control", "shell.game_mode"], "parameters": {"package": "@session.activeGamePackage", "mode": "performance"}, "probeId": "probe.game_mode_list_modes", "verifyId": "verify.game_mode_matches_requested", "rollbackId": "rollback.restore_captured_game_mode", "resourceLocks": ["game_mode"], "timeoutMs": 5000},
+    {"id": "shell.memory.compact", "handlerId": "builtin.shell.memory_compact", "implementationCandidates": ["am_compact_system_v1"], "policyId": "ACTIVITY_MANAGER_COMPACT_SYSTEM", "kind": "user_mutation", "allowedSessionPhases": ["idle", "preparing"], "requires": ["extended.control", "shell.compaction"], "probeId": "probe.am_compact_system", "verifyId": "verify.available_memory_delta", "resourceLocks": ["memory_reclaim"], "timeoutMs": 15000, "cooldownMs": 30000},
+    {"id": "shell.storage.trim_caches", "handlerId": "builtin.shell.storage_trim_caches", "implementationCandidates": ["pm_trim_caches_v1"], "policyId": "PACKAGE_MANAGER_TRIM_CACHES", "kind": "user_mutation", "allowedSessionPhases": ["idle", "preparing"], "requires": ["extended.control", "shell.cache_trim", "local.storage"], "parameters": {"targetFreeBytes": 1073741824}, "probeId": "probe.pm_trim_caches", "verifyId": "verify.free_storage_delta", "resourceLocks": ["storage_reclaim"], "timeoutMs": 90000, "cooldownMs": 300000},
+    {"id": "shell.game.art_prime", "handlerId": "builtin.shell.package_compile_game", "implementationCandidates": ["package_compile_speed_profile_v1", "package_compile_speed_v1"], "policyId": "PACKAGE_COMPILE_GAME", "kind": "user_mutation", "allowedSessionPhases": ["idle", "preparing"], "requires": ["extended.control", "shell.art_prime"], "parameters": {"package": "@session.activeGamePackage"}, "probeId": "probe.package_compile", "verifyId": "verify.package_compile_exit", "resourceLocks": ["package_compile"], "timeoutMs": 120000, "cooldownMs": 86400000},
+    {"id": "shell.frame.sample", "handlerId": "builtin.shell.surfaceflinger_frame_sample", "implementationCandidates": ["surfaceflinger_timestats_v1"], "policyId": "SURFACE_FLINGER_TIMESTATS", "kind": "read_only_sequence", "requires": ["extended.control", "shell.frame_scan"], "probeId": "probe.surfaceflinger_timestats", "verifyId": "verify.parse_surfaceflinger_timestats", "resourceLocks": ["surfaceflinger_timestats"], "sampleDurationMs": 5000, "timeoutMs": 18000, "cooldownMs": 10000},
+    {"id": "shell.power_saver.set", "handlerId": "builtin.shell.power_saver_set", "implementationCandidates": ["cmd_power_set_mode_v1"], "policyId": "POWER_SAVER", "kind": "session_mutation", "requires": ["extended.control", "shell.power_saver"], "probeId": "probe.power_saver", "verifyId": "verify.power_saver_matches", "rollbackId": "rollback.restore_captured_power_saver", "resourceLocks": ["power_saver"], "timeoutMs": 5000, "cooldownMs": 1500},
+    {"id": "shell.data_saver.set", "handlerId": "builtin.shell.data_saver_set", "implementationCandidates": ["cmd_netpolicy_restrict_background_v1"], "policyId": "DATA_SAVER", "kind": "session_mutation", "requires": ["extended.control", "shell.data_saver"], "probeId": "probe.data_saver", "verifyId": "verify.data_saver_matches", "rollbackId": "rollback.restore_captured_data_saver", "resourceLocks": ["data_saver"], "timeoutMs": 5000, "cooldownMs": 1500},
+    {"id": "shell.background.release", "handlerId": "builtin.shell.background_release", "implementationCandidates": ["am_kill_package_v1"], "policyId": "ACTIVITY_MANAGER_KILL_PACKAGE", "kind": "user_mutation", "requires": ["extended.control", "shell.background_release"], "parameters": {"package": "@selection.validatedPackage"}, "probeId": "probe.am_kill_package", "verifyId": "verify.refresh_pressure_radar", "resourceLocks": ["background_release"], "timeoutMs": 5000, "cooldownMs": 1000},
+    {"id": "shell.rotation.set", "handlerId": "builtin.shell.rotation_set", "implementationCandidates": ["settings_rotation_v1"], "policyId": "ROTATION_SETTINGS", "kind": "session_mutation", "requires": ["extended.control", "shell.rotation"], "probeId": "probe.rotation_settings", "verifyId": "verify.rotation_matches", "rollbackId": "rollback.restore_captured_rotation", "resourceLocks": ["rotation"], "timeoutMs": 5000, "cooldownMs": 1000}
+  ],
+  "pipelines": [
+    {
+      "id": "boost.launch",
+      "kind": "user_flow",
+      "resourceLocks": ["boost_launch"],
+      "steps": [
+        {"id": "validate_game", "type": "invoke_local", "target": "builtin.game.validate_launch_target", "failure": "abort_with_message"},
+        {"id": "create_session", "type": "invoke_local", "target": "builtin.session.create", "failure": "abort_with_message"},
+        {"id": "prewarm_device_link", "type": "invoke_local_if_supported", "target": "builtin.device_link.prewarm", "failure": "continue"},
+        {"id": "launch_game", "type": "invoke_local", "target": "builtin.game.launch", "failure": "rollback_and_abort"},
+        {"id": "wait_foreground", "type": "wait_condition", "target": "session.game_is_foreground", "timeoutMs": 3500, "failure": "continue_safe_mode"},
+        {"id": "attach_overlay", "type": "invoke_local_if_supported", "target": "builtin.overlay.attach_edge_handle", "delayMs": 120, "failure": "notify_recovery_without_closing_game"},
+        {"id": "start_light_metrics", "type": "invoke_local", "target": "builtin.telemetry.start_lightweight", "failure": "continue"},
+        {"id": "apply_user_session_preset", "type": "invoke_pipeline_if_enabled", "target": "session.performance_preset", "delayMs": 5000, "failure": "continue_and_report"}
+      ],
+      "forbiddenTargets": ["builtin.shell.wm_size", "builtin.shell.wm_density", "shell.memory.compact", "shell.storage.trim_caches", "shell.game.art_prime"]
+    },
+    {
+      "id": "session.performance_preset",
+      "kind": "reversible_session",
+      "resourceLocks": ["session_preset"],
+      "steps": [
+        {"id": "game_mode", "type": "invoke_operation_if_supported", "target": "shell.game_mode.performance", "failure": "continue"},
+        {"id": "wifi_lock", "type": "invoke_operation_if_supported", "target": "network.session_lock", "failure": "continue"},
+        {"id": "keep_awake", "type": "invoke_operation_if_supported", "target": "screen.keep_awake", "failure": "continue"}
+      ]
+    },
+    {"id": "session.adaptive_mode", "kind": "reversible_session", "resourceLocks": ["session_preset"], "steps": [{"id": "toggle_performance_preset", "type": "toggle_pipeline", "target": "session.performance_preset", "failure": "show_partial_support"}]},
+    {"id": "power.battery_saver", "kind": "reversible_session", "resourceLocks": ["power_saver"], "steps": [{"id": "set_with_device_link", "type": "invoke_operation_if_supported", "target": "shell.power_saver.set", "failure": "disable_switch_do_not_open_settings"}]},
+    {"id": "network.data_saver", "kind": "reversible_session", "resourceLocks": ["data_saver"], "steps": [{"id": "set_with_device_link", "type": "invoke_operation_if_supported", "target": "shell.data_saver.set", "failure": "disable_switch_do_not_open_settings"}]},
+    {
+      "id": "frame.maximize_native",
+      "kind": "reversible_session",
+      "resourceLocks": ["frame_policy"],
+      "steps": [
+        {"id": "prefer_game_mode", "type": "invoke_operation_if_supported", "target": "shell.game_mode.performance", "failure": "show_monitor_only"},
+        {"id": "refresh_metrics", "type": "refresh_metrics", "targets": ["display.current_hz", "thermal.status"], "failure": "continue"}
+      ]
+    },
+    {
+      "id": "clean.execute_selected",
+      "kind": "user_mutation",
+      "resourceLocks": ["deep_clean"],
+      "steps": [
+        {"id": "capture_baseline", "type": "capture_metrics", "targets": ["ram.used"], "failure": "continue"},
+        {"id": "compact_memory", "type": "invoke_if_selected_and_supported", "selection": "memory_compact", "target": "shell.memory.compact", "allowedSessionPhases": ["idle", "preparing"], "failure": "continue_and_report"},
+        {"id": "trim_package_caches", "type": "invoke_if_selected_and_supported", "selection": "package_cache_trim", "target": "shell.storage.trim_caches", "allowedSessionPhases": ["idle", "preparing"], "failure": "continue_and_report"},
+        {"id": "release_background", "type": "invoke_for_each_validated_selection", "selection": "safe_background_release", "target": "shell.background.release", "maxItems": 5, "failure": "continue_and_report"},
+        {"id": "measure_result", "type": "refresh_metrics", "targets": ["memory.gain_mb", "storage.gain_mb"], "failure": "show_partial_result"}
+      ]
+    },
+    {"id": "screen.rotation_lock", "kind": "reversible_session", "resourceLocks": ["rotation"], "steps": [{"id": "set_rotation", "type": "invoke_operation_if_supported", "target": "shell.rotation.set", "failure": "disable_switch"}]},
+    {
+      "id": "session.end",
+      "kind": "system_flow",
+      "resourceLocks": ["session_end"],
+      "steps": [
+        {"id": "stop_macro", "type": "rollback_operation_if_active", "target": "macro.enabled", "failure": "continue"},
+        {"id": "stop_capture", "type": "rollback_operation_if_active", "target": "capture.recording", "failure": "continue"},
+        {"id": "restore_rotation", "type": "rollback_operation_if_active", "target": "shell.rotation.set", "failure": "continue_and_report"},
+        {"id": "restore_game_mode", "type": "rollback_operation_if_active", "target": "shell.game_mode.performance", "failure": "continue_and_report"},
+        {"id": "release_wifi", "type": "rollback_operation_if_active", "target": "network.session_lock", "failure": "continue"},
+        {"id": "clear_keep_awake", "type": "rollback_operation_if_active", "target": "screen.keep_awake", "failure": "continue"},
+        {"id": "detach_overlay", "type": "invoke_local", "target": "builtin.overlay.detach_session_windows", "failure": "continue"},
+        {"id": "finish_session", "type": "invoke_local", "target": "builtin.session.finish", "failure": "continue"}
+      ]
+    }
+  ],
+  "quickControls": [
+    {"id": "adaptive_mode", "order": 10, "title": "Game Mode", "icon": "gamepad", "type": "switch", "stateKey": "session.adaptive_enabled", "operationId": "session.adaptive_mode", "requiresAny": ["local.display", "shell.game_mode"]},
+    {"id": "focus", "order": 20, "title": "Focus", "icon": "focus", "type": "switch", "stateKey": "focus.enabled", "operationId": "focus.dnd", "requiresAll": ["local.dnd"]},
+    {"id": "network_boost", "order": 30, "title": "Net Lock", "icon": "network", "type": "switch", "stateKey": "network.lock_enabled", "operationId": "network.session_lock", "requiresAll": ["local.wifi"]},
+    {"id": "crosshair_toggle", "order": 40, "title": "Crosshair", "icon": "crosshair", "type": "switch", "stateKey": "crosshair.enabled", "operationId": "crosshair.enabled", "requiresAll": ["overlay"]},
+    {"id": "keep_awake", "order": 50, "title": "Awake", "icon": "screen", "type": "switch", "stateKey": "screen.keep_awake", "operationId": "screen.keep_awake", "requiresAll": ["local.keep_awake"]},
+    {"id": "recording", "order": 60, "title": "Record", "icon": "record", "type": "switch", "stateKey": "capture.recording", "operationId": "capture.recording", "requiresAll": ["local.media_projection"], "unsupportedBehavior": "hide"}
+  ],
+  "panels": [
+    {
+      "id": "frame_control", "order": 10, "title": "Frame Control", "subtitle": "Native frame path and measured FPS", "icon": "speed", "accent": "primary", "layout": "hero_metrics_actions", "visible": true, "requiresAny": ["local.display", "shell.frame_scan"],
+      "components": [
+        {"id": "frame_metrics", "type": "metric_cluster", "metrics": ["display.current_hz", "display.max_hz", "fps.measured", "thermal.status"]},
+        {"id": "maximize_frame_path", "type": "action", "title": "Optimize native frame path", "operationId": "frame.maximize_native", "requiresAny": ["local.display", "shell.game_mode"]},
+        {"id": "sample_fps", "type": "action", "title": "Measure real game FPS", "operationId": "shell.frame.sample", "requiresAll": ["shell.frame_scan"]},
+        {"id": "art_prime", "type": "action", "title": "Prime game bytecode", "operationId": "shell.game.art_prime", "allowedSessionPhases": ["idle", "preparing"], "requiresAll": ["shell.art_prime"], "unsupportedBehavior": "hide"}
+      ]
+    },
+    {
+      "id": "deep_clean", "order": 20, "title": "Deep Clean", "subtitle": "Measured cache and memory reclaim", "icon": "clean", "accent": "secondary", "layout": "stepper_with_result", "visible": true, "requiresAll": ["local.telemetry"],
+      "components": [
+        {"id": "clean_layers", "type": "multi_select", "options": ["memory_compact", "package_cache_trim", "safe_background_release"]},
+        {"id": "clean_safety", "type": "severity_banner", "title": "Active game and Game Nuke are always protected"},
+        {"id": "run_clean", "type": "action", "title": "Start measured clean", "operationId": "clean.execute_selected"},
+        {"id": "clean_result", "type": "result_summary", "metrics": ["memory.gain_mb", "storage.gain_mb"]}
+      ]
+    },
+    {
+      "id": "crosshair", "order": 30, "title": "Crosshair Studio", "subtitle": "Canvas aim overlay", "icon": "crosshair", "accent": "accent", "layout": "preview_controls", "visible": true, "requiresAll": ["overlay"], "featureFlag": "crosshair_studio",
+      "components": [
+        {"id": "crosshair_enabled", "type": "switch", "title": "Enable crosshair", "stateKey": "crosshair.enabled", "operationId": "crosshair.enabled"},
+        {"id": "crosshair_preview", "type": "canvas_preview", "renderer": "crosshair"},
+        {"id": "crosshair_style", "type": "segmented_selector", "stateKey": "crosshair.style", "values": ["dot", "cross", "circle", "tactic"]},
+        {"id": "crosshair_color", "type": "color_picker", "stateKey": "crosshair.color", "values": ["#A8FF00", "#00E5FF", "#FF4D6D", "#FFFFFF"]},
+        {"id": "crosshair_size", "type": "slider", "stateKey": "crosshair.size", "min": 8, "max": 64, "step": 1},
+        {"id": "crosshair_gap", "type": "slider", "stateKey": "crosshair.gap", "min": 0, "max": 28, "step": 1},
+        {"id": "crosshair_opacity", "type": "slider", "stateKey": "crosshair.opacity", "min": 20, "max": 100, "step": 1}
+      ]
+    },
+    {
+      "id": "live_monitor", "order": 40, "title": "Live Monitor", "subtitle": "CPU and RAM telemetry", "icon": "monitor", "accent": "secondary", "layout": "dual_gauge", "visible": true, "requiresAll": ["local.telemetry"],
+      "components": [
+        {"id": "cpu_gauge", "type": "speedometer", "metric": "cpu.load"},
+        {"id": "ram_gauge", "type": "speedometer", "metric": "ram.used"},
+        {"id": "trend_chart", "type": "sparkline_pair", "metrics": ["cpu.load", "ram.used"]},
+        {"id": "touch_through", "type": "switch", "title": "Touch-through monitor", "stateKey": "monitor.touch_through", "operationId": "monitor.touch_through"}
+      ]
+    },
+    {
+      "id": "network", "order": 50, "title": "Network Core", "subtitle": "Link quality and Wi-Fi session lock", "icon": "network", "accent": "primary", "layout": "metrics_controls", "visible": true, "requiresAny": ["local.wifi", "local.telemetry"],
+      "components": [
+        {"id": "network_metrics", "type": "metric_cluster", "metrics": ["network.ping", "wifi.rssi", "wifi.link_mbps"]},
+        {"id": "wifi_lock", "type": "switch", "title": "Wi-Fi performance lock", "stateKey": "network.lock_enabled", "operationId": "network.session_lock", "requiresAll": ["local.wifi"]},
+        {"id": "refresh_network", "type": "action", "title": "Refresh link status", "operationId": "network.refresh"},
+        {"id": "open_network_settings", "type": "action", "title": "Android network settings", "operationId": "navigation.network_settings"}
+      ]
+    },
+    {
+      "id": "pressure_radar", "order": 60, "title": "Pressure Radar", "subtitle": "Protected background process release", "icon": "radar", "accent": "warning", "layout": "radar_selection", "visible": true, "requiresAll": ["shell.background_release"],
+      "components": [
+        {"id": "pressure_summary", "type": "severity_banner", "metric": "device.pressure"},
+        {"id": "processes", "type": "protected_multi_select", "dataSource": "process.pressure"},
+        {"id": "release", "type": "action", "title": "Release selected", "operationId": "shell.background.release", "requiresAll": ["shell.background_release"], "unsupportedBehavior": "hide"}
+      ]
+    },
+    {
+      "id": "screen_hud", "order": 70, "title": "Screen and HUD", "subtitle": "Orientation and overlay comfort", "icon": "screen", "accent": "accent", "layout": "settings_grid", "visible": true, "requiresAll": ["overlay"],
+      "components": [
+        {"id": "rotation", "type": "switch", "title": "Lock game rotation", "stateKey": "screen.rotation_lock", "operationId": "screen.rotation_lock", "requiresAll": ["shell.rotation"], "unsupportedBehavior": "hide"},
+        {"id": "keep_awake", "type": "switch", "title": "Keep screen awake", "stateKey": "screen.keep_awake", "operationId": "screen.keep_awake"},
+        {"id": "hud_opacity", "type": "slider", "title": "HUD opacity", "stateKey": "hud.opacity", "min": 72, "max": 98, "step": 1, "operationId": "hud.opacity"},
+        {"id": "hud_scale", "type": "slider", "title": "HUD scale", "stateKey": "hud.scale", "min": 85, "max": 115, "step": 1, "operationId": "hud.scale"}
+      ]
+    },
+    {
+      "id": "macro_studio", "order": 80, "title": "Macro Studio", "subtitle": "User-controlled multi-point touch sequence", "icon": "macro", "accent": "secondary", "layout": "preview_controls", "visible": true, "featureFlag": "macro_studio", "requiresAll": ["local.accessibility_macro"], "unsupportedBehavior": "hide",
+      "components": [
+        {"id": "macro_enabled", "type": "switch", "title": "Enable macro HUD", "stateKey": "macro.enabled", "operationId": "macro.enabled"},
+        {"id": "macro_mode", "type": "segmented_selector", "stateKey": "macro.mode", "values": ["single_sequence", "hold_repeat", "tap_repeat"]},
+        {"id": "macro_interval", "type": "slider", "title": "Interval", "stateKey": "macro.interval_ms", "min": 50, "max": 2000, "step": 25},
+        {"id": "macro_points", "type": "canvas_preview", "renderer": "macro_points"},
+        {"id": "macro_test", "type": "action", "title": "Test sequence", "operationId": "macro.test"}
+      ]
+    },
+    {
+      "id": "capture_tools", "order": 90, "title": "Capture Tools", "subtitle": "MediaProjection screen recording", "icon": "record", "accent": "danger", "layout": "settings_grid", "visible": true, "featureFlag": "capture_tools", "requiresAll": ["local.media_projection"], "unsupportedBehavior": "hide",
+      "components": [
+        {"id": "recording_enabled", "type": "switch", "title": "Screen recording", "stateKey": "capture.recording", "operationId": "capture.recording"},
+        {"id": "recording_quality", "type": "dropdown", "title": "Quality", "stateKey": "capture.quality", "values": ["720p_30", "1080p_30", "1080p_60"]},
+        {"id": "recording_bitrate", "type": "slider", "title": "Bitrate", "stateKey": "capture.bitrate_mbps", "min": 4, "max": 20, "step": 1}
+      ]
+    },
+    {
+      "id": "cpu_monitor", "order": 100, "title": "CPU Monitor", "subtitle": "Read-only per-core clocks", "icon": "cpu", "accent": "secondary", "layout": "chart_detail", "visible": true, "requiresAll": ["shell.cpu_clocks"], "unsupportedBehavior": "hide",
+      "components": [
+        {"id": "cpu_summary", "type": "metric_cluster", "metrics": ["cpu.average_mhz", "cpu.peak_mhz", "cpu.core_count"]},
+        {"id": "cpu_chart", "type": "canvas_chart", "renderer": "cpu_cores", "maxItems": 16}
+      ]
+    }
+  ],
+  "errorCatalog": [
+    {"id": "CONFIG_INVALID", "severity": "recoverable", "userMessageKey": "error.config_invalid", "action": "use_last_known_good"},
+    {"id": "CONFIG_SIGNATURE_INVALID", "severity": "security", "userMessageKey": "error.safe_fallback", "action": "reject_and_quarantine"},
+    {"id": "OPERATION_BUSY", "severity": "info", "userMessageKey": "error.operation_busy", "action": "ignore_duplicate_tap"},
+    {"id": "CAPABILITY_UNSUPPORTED", "severity": "info", "userMessageKey": "status.unsupported", "action": "disable_component"},
+    {"id": "DEVICE_LINK_DISCONNECTED", "severity": "recoverable", "userMessageKey": "status.device_link_required", "action": "disable_shell_components_keep_overlay"},
+    {"id": "OVERLAY_RENDER_FAILURE", "severity": "recoverable", "userMessageKey": "error.safe_fallback", "action": "show_compact_safe_panel"},
+    {"id": "SHELL_TIMEOUT", "severity": "recoverable", "userMessageKey": "status.unsupported", "action": "cancel_operation_release_lock_no_auto_retry"}
+  ],
+  "selfTests": [
+    {"id": "all_ids_unique", "phase": "before_activation", "required": true},
+    {"id": "all_references_resolve", "phase": "before_activation", "required": true},
+    {"id": "all_renderers_supported", "phase": "before_activation", "required": true},
+    {"id": "all_handlers_registered", "phase": "before_activation", "required": true},
+    {"id": "all_pipeline_steps_supported", "phase": "before_activation", "required": true},
+    {"id": "all_mutations_have_policy_probe_verify", "phase": "before_activation", "required": true},
+    {"id": "all_session_mutations_have_rollback", "phase": "before_activation", "required": true},
+    {"id": "boost_pipeline_has_no_display_geometry_mutation", "phase": "before_activation", "required": true},
+    {"id": "protected_package_rules_enabled", "phase": "before_activation", "required": true},
+    {"id": "safe_overlay_smoke_test", "phase": "after_activation_before_publish", "required": true}
+  ]
+}

@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.neon.gametweak.NukeMainCockpitLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/hubRoot" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:paddingLeft="10dp" android:paddingTop="6dp" android:paddingRight="10dp" android:paddingBottom="8dp">
+
+    <com.neon.gametweak.NukeEnergyRailView android:layout_width="match_parent" android:layout_height="3dp" android:layout_gravity="top" android:layout_marginHorizontal="46dp" android:layout_marginTop="5dp"/>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="30dp" android:layout_gravity="top" android:layout_marginHorizontal="25dp" android:layout_marginTop="7dp" android:orientation="horizontal">
+        <TextView android:id="@+id/hubFps" style="@style/NukeHudMetric" android:text="FPS --" android:textColor="@color/nuke_green"/>
+        <TextView android:id="@+id/hubPing" style="@style/NukeHudMetric" android:layout_marginStart="2dp" android:text="-- ms"/>
+        <TextView android:id="@+id/hubThermal" style="@style/NukeHudMetric" android:layout_marginStart="2dp" android:text="--"/>
+        <Space android:layout_width="40dp" android:layout_height="1dp"/>
+        <TextView android:id="@+id/hubBattery" style="@style/NukeHudMetric" android:text="--%"/>
+        <TextView android:id="@+id/hubStorage" style="@style/NukeHudMetric" android:layout_marginStart="2dp" android:text="--%"/>
+        <TextView android:id="@+id/hubNetworkState" style="@style/NukeHudMetric" android:layout_marginStart="2dp" android:text="--" android:textColor="@color/nuke_cyan"/>
+    </LinearLayout>
+
+    <com.neon.gametweak.NukeReactorCoreView android:id="@+id/hubReactor" android:layout_width="46dp" android:layout_height="42dp" android:layout_gravity="top|center_horizontal" android:clickable="true" android:focusable="true"/>
+
+    <LinearLayout android:layout_width="match_parent" android:layout_height="88dp" android:layout_gravity="top" android:layout_marginLeft="14dp" android:layout_marginTop="42dp" android:layout_marginRight="14dp" android:orientation="horizontal">
+        <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight=".9" android:background="@drawable/nuke_hud_glass">
+            <com.neon.gametweak.NukeSpeedometerView android:id="@+id/gaugeCpu" android:layout_width="match_parent" android:layout_height="match_parent"/>
+            <TextView android:id="@+id/hubCpuValue" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone"/><TextView android:id="@+id/hubCpuSub" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone"/>
+        </FrameLayout>
+        <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1.8" android:layout_marginHorizontal="4dp" android:background="@drawable/nuke_hud_glass" android:gravity="center" android:orientation="vertical">
+            <TextView android:id="@+id/hubGame" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:fontFamily="sans-serif-medium" android:text="GAME NUKE" android:textColor="@color/nuke_text" android:textSize="8sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/hubMode" android:layout_width="126dp" android:layout_height="25dp" android:layout_marginTop="2dp" android:background="@drawable/nuke_mode_badge" android:gravity="center" android:fontFamily="sans-serif-medium" android:text="NUKE CORE" android:textColor="@color/nuke_text" android:textSize="10sp" android:textStyle="bold"/>
+            <TextView android:id="@+id/hubPhase" android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center" android:maxLines="1" android:text="CORE READY" android:textColor="@color/nuke_muted" android:textSize="4.8sp"/>
+        </LinearLayout>
+        <FrameLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight=".9" android:background="@drawable/nuke_hud_glass">
+            <com.neon.gametweak.NukeSpeedometerView android:id="@+id/gaugeRam" android:layout_width="match_parent" android:layout_height="match_parent"/>
+            <TextView android:id="@+id/hubRamValue" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone"/><TextView android:id="@+id/hubRamSub" android:layout_width="1dp" android:layout_height="1dp" android:visibility="gone"/>
+        </FrameLayout>
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent" android:layout_height="270dp"
+        android:layout_gravity="bottom" android:layout_marginHorizontal="12dp" android:layout_marginBottom="9dp"
+        android:orientation="vertical">
+        <LinearLayout android:layout_width="match_parent" android:layout_height="14dp" android:orientation="horizontal" android:gravity="center_vertical">
+            <TextView android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1" android:gravity="center_vertical"
+                android:text="ACTION MATRIX" android:textColor="@color/nuke_cyan" android:textSize="6sp" android:fontFamily="sans-serif-medium"/>
+            <TextView android:id="@+id/hubAllTools" android:layout_width="wrap_content" android:layout_height="match_parent" android:minWidth="62dp"
+                android:gravity="center" android:paddingHorizontal="5dp" android:clickable="true" android:focusable="true"
+                android:text="ALL TOOLS ›" android:textColor="@color/nuke_green" android:textSize="5.5sp" android:fontFamily="sans-serif-medium"/>
+        </LinearLayout>
+        <GridLayout
+            android:id="@+id/hubToolsGrid" android:layout_width="match_parent" android:layout_height="120dp"
+            android:columnCount="3" android:rowCount="3" android:useDefaultMargins="false">
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubAimResponse" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubCrosshair" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubDeepClean" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubMaxFps" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubNetwork" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubMonitor" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubRadar" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubBackgroundSweep" style="@style/NukeHudToolCellCompact"/>
+            <com.neon.gametweak.NukeHudToolView android:id="@+id/hubScreenControl" style="@style/NukeHudToolCellCompact"/>
+        </GridLayout>
+        <TextView android:layout_width="match_parent" android:layout_height="14dp" android:gravity="center_vertical"
+            android:text="QUICK TOGGLES" android:textColor="@color/nuke_green" android:textSize="6sp" android:fontFamily="sans-serif-medium"/>
+        <GridLayout android:layout_width="match_parent" android:layout_height="126dp"
+            android:columnCount="2" android:rowCount="3" android:useDefaultMargins="false">
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubGameMode" style="@style/NukeHudToggleCell"/>
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubDnd" style="@style/NukeHudToggleCell"/>
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubCallShield" style="@style/NukeHudToggleCell"/>
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubBatterySaver" style="@style/NukeHudToggleCell"/>
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubDataSaver" style="@style/NukeHudToggleCell"/>
+            <com.neon.gametweak.NukeHudToggleView android:id="@+id/hubNetworkBoost" style="@style/NukeHudToggleCell"/>
+        </GridLayout>
+    </LinearLayout>
+    <ImageView android:id="@+id/hubClose" android:layout_width="40dp" android:layout_height="40dp" android:layout_gravity="bottom|start" android:layout_margin="4dp" android:padding="10dp" android:clickable="true" android:focusable="true" android:contentDescription="End session" android:src="@drawable/nuke_ic_close" android:tint="#FFFF5A66"/>
+    <ImageView android:id="@+id/hubMinimize" android:layout_width="36dp" android:layout_height="36dp" android:layout_gravity="bottom|end" android:layout_margin="5dp" android:clickable="true" android:focusable="true" android:contentDescription="Minimize HUD" android:src="@drawable/nuke_ic_minimize" android:tint="@color/nuke_muted"/>
+    <TextView android:id="@+id/hubStatus" android:layout_width="match_parent" android:layout_height="7dp" android:layout_gravity="bottom" android:gravity="center" android:maxLines="1" android:text="CORE" android:textColor="@color/nuke_muted_deep" android:textSize="3.8sp"/>
+</com.neon.gametweak.NukeMainCockpitLayout>
