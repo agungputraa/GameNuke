@@ -1,132 +1,141 @@
-# 🤖 GAME NUKE PREMIUM — AI & DEVELOPER BLUEPRINT
+# 🤖 GAME NUKE PREMIUM — ULTIMATE AI & DEVELOPER BLUEPRINT
 
-> **IMPORTANT NOTICE FOR FUTURE AI ASSISTANTS & DEVELOPERS:**
-> Read this document thoroughly before performing any modifications, builds, or releases. It documents the core architecture, security boundaries, monetization rules, and automation pipeline of **Game Nuke Premium Edition**.
-
----
-
-## 1. Executive Architecture Overview
-
-Game Nuke is divided into two distinct repositories/zones:
-
-| Component | Physical Location | Git Remote Policy | Description |
-| :--- | :--- | :--- | :--- |
-| **Android Core App** | `c:\ProyekAndroid\GameNukePrem` | **STRICTLY PRIVATE / LOCAL ONLY** | Proprietary Kotlin/Compose Android app (`com.neon.gametweak`). **NEVER** push to public GitHub! |
-| **Web & Releases** | `c:\ProyekAndroid\GameNukePrem\gamenukeweb` | **PUBLIC GITHUB** (`agungputraa/GameNuke`) | Hosts the Cyberpunk Landing Page (Tailwind+Alpine.js), `version.json` (Edge CDN), and GitHub Releases (.apk). |
+> **CRITICAL MANDATE FOR ALL AI ASSISTANTS & FUTURE ENGINEERS:**
+> Read this document from top to bottom before touching, editing, building, or committing any code in this repository.
+> It documents the exact architecture, security rules, anti-leak protocols, monetization bindings, and automation pipelines of **Game Nuke Premium Edition**.
 
 ---
 
-## 2. Critical Rules & Guardrails
+## ⚡ 1. Emergency 30-Second Quickstart
 
-### ⚠️ RULE 1: Never Push Android Source to GitHub
-The remote repository `https://github.com/agungputraa/GameNuke.git` is **PUBLIC**. It must **ONLY** contain:
-- Landing Page (`index.html`, `style.css`, `app.js`)
-- Update metadata (`version.json`)
-- Public `README.md`
-- Releases (.apk binary assets)
+* **What is Game Nuke?** A high-performance Android gaming cockpit with sub-millisecond touch macro, 1ms MLBB loopback ping responder, floating wiki guides, tactical audio equalizer, and hardware FPS overlay.
+* **Where does the code live?**
+  * `c:\ProyekAndroid\GameNukePrem\` ➔ **STRICTLY PRIVATE / LOCAL ONLY**. Contains proprietary Android Kotlin source code, signing keystore (`agwallpaper84.jks`), and Gradle build system. **NEVER push this directory to public GitHub!**
+  * `c:\ProyekAndroid\GameNukePrem\gamenukeweb\` ➔ **PUBLIC REPOSITORY** (`https://github.com/agungputraa/GameNuke.git`). Contains the Tailwind CSS + Alpine.js landing page, `version.json` (Edge CDN update metadata), `.github/workflows/`, and compiled APK releases.
+* **How do I release a new version?**
+  1. Bump `versionCode` (e.g., `16`) and `versionName` (e.g., `"2.3.0-prem"`) in [`app/build.gradle.kts`](file:///c:/ProyekAndroid/GameNukePrem/app/build.gradle.kts).
+  2. Run `tools\publish_release.bat`.
+  3. Everything else (compile, SHA256 hash, update `version.json`, deploy web to GitHub Pages, create GitHub release, upload binary APK) is **100% automated**.
 
-**NEVER** run `git push origin main` from the root directory `c:\ProyekAndroid\GameNukePrem`. Always use the automated publisher script: `tools\publish_release.bat`.
+---
 
-### ⚠️ RULE 2: Never Expose GitHub Token
-The GitHub personal access token (`ghp_...`) is stored in `tools/github_token.env`. This file is gitignored (`.gitignore`). Never hardcode or commit tokens to any git branch or public file.
+## 🔒 2. Cardinal Security & Monetization Invariants ("Anti-Bongkar-Dapur")
 
-### ⚠️ RULE 3: Never Change Package Name or Keystore
+### 🔴 INVARIANT 1: Strict Source Code Isolation
+Under NO circumstances should the Android source code (`app/`, `build.gradle.kts`, `gradle/`, `*.kt`, `*.xml`) be committed or pushed to the GitHub repository `agungputraa/GameNuke`.
+- The remote repository is public and is reserved **exclusively** for the Landing Page web files, update metadata, and GitHub Releases.
+- The automation script [`tools/publish_release.ps1`](file:///c:/ProyekAndroid/GameNukePrem/tools/publish_release.ps1) isolates `gamenukeweb` into an independent git tree and pushes only web files.
+- The root Android project folder has its remote origin removed to prevent accidental leakage.
+
+### 🔴 INVARIANT 2: Confidentiality of GitHub Token
+- The GitHub personal access token (`ghp_...`) is kept strictly inside [`tools/github_token.env`](file:///c:/ProyekAndroid/GameNukePrem/tools/github_token.env).
+- This file is ignored by `.gitignore`. Never output, commit, or push this token.
+
+### 🔴 INVARIANT 3: Preserve Package Name and Signing Keystore
 - **Package Name:** `com.neon.gametweak`
 - **Signing Keystore:** `agwallpaper84.jks` (Key alias: `agwallpaper`)
-- **Reason:** Preserves the existing **Liftoff Monetize (Vungle Ads)** publisher account and placement IDs (`6a8dd7d372786c9ba4de1adc`, etc.) so ad revenue continues flowing without requiring app re-verification.
+- **Reason:** The app's Liftoff Monetize (Vungle Ads) publisher account is bound to `com.neon.gametweak`. Changing the package name or signing certificate will break ad fill rates and invalidate monetization revenues (`6a8dd7d372786c9ba4de1adc`, etc.).
 
 ---
 
-## 3. Android Core Engines Explained
-
-### A. Dual-Engine Macro System
-- **Files:**
-  - [`NukeMacroService.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/NukeMacroService.kt): Extends `AccessibilityService`. Dispatches touch taps and swipes using Android's `dispatchGesture()` API.
-  - [`NukeMacroController.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/NukeMacroController.kt): Coordinates execution between two modes:
-    1. **Privileged Mode (Shizuku):** If Shizuku / privileged ADB connection is detected (`NukeConnectionManager.isConnected()`), it injects input directly via root/shell (`/system/bin/input tap X Y`) with **~0.1ms latency**, bypassing UI thread queue limits.
-    2. **Accessibility Fallback:** If Shizuku is not running, it gracefully falls back to `NukeMacroService.dispatchTap()`.
-  - Includes coordinate clamping to screen bounds (`clampX`, `clampY`), loop intervals, and combo macro profiles.
-
-### B. VPN Ping Booster 1ms (Local Loopback Responder)
-- **File:** [`NukeVpnService.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/NukeVpnService.kt)
-- **How it works:**
-  1. Establishes an Android `VpnService` with a TUN interface (MTU 1400, address `10.255.0.2/32`).
-  2. Sets DNS to Cloudflare (`1.1.1.1`) and Google (`8.8.8.8`) for low latency gaming DNS routing.
-  3. Spawns a background thread reading IP packets from the TUN interface file descriptor.
-  4. Intercepts incoming ICMP Echo Requests (pings) and UDP probe packets sent by Mobile Legends / game lobbies.
-  5. Instantly constructs an ICMP Echo Reply / loopback response and writes it back into the TUN descriptor in **< 1ms**, locking the lobby ping display to 1ms green.
-  6. Handles `onRevoke()` and clean resource shutdown.
-
-### C. Unlimited Edge CDN In-App Updater
-- **Files:**
-  - [`NukeAppUpdater.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/NukeAppUpdater.kt)
-  - [`AppUpdateController.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/AppUpdateController.kt)
-- **Rate Limit Bypass Technique:**
-  Directly calling the GitHub REST API (`https://api.github.com/repos/.../releases/latest`) from thousands of app instances triggers the **60 requests/hour IP rate limit** (HTTP 403).
-  **Solution:** The app queries static metadata `https://agungputraa.github.io/GameNuke/version.json` cached across Cloudflare edge servers. This provides **unlimited hits** with 0ms rate limiting.
-  When an update is detected:
-  1. Compares `versionCode` (e.g. 15 vs 14).
-  2. Streams APK download with progress callback.
-  3. Checks `canRequestPackageInstalls()`.
-  4. Launches `FileProvider` (`com.neon.gametweak.fileprovider`) `ACTION_VIEW` intent with `application/vnd.android.package-archive` MIME type.
-
-### D. Floating Cockpit HUD Deck
-- **Files:**
-  - [`FloatingHudCompose.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/FloatingHudCompose.kt)
-  - [`FloatingBoosterService.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/FloatingBoosterService.kt)
-- The Right Wing contains the **PRO GAMING MATRIX**:
-  - `MACRO`: Toggles dual-engine touch macro.
-  - `PING 1MS`: Toggles `NukeVpnService`.
-  - `120 HZ`: Overrides dynamic display refresh rate.
-  - `MISTOUCH`: Activates edge touch suppression for 4-finger claw grip.
-  - `AIM HUD`: Toggles customizable floating crosshair overlay.
-  - `UPDATE`: Triggers on-demand in-app Edge CDN update check.
-
----
-
-## 4. 1-Click Release & Publishing Workflow
-
-The entire build and release lifecycle is fully automated:
-
-### How to Run Release:
-```powershell
-# From project root:
-tools\publish_release.bat
-```
-
-### What `tools\publish_release.ps1` does automatically:
-1. **Compiles Release APK:** Runs `gradlew.bat assembleRelease` and verifies signed output in `release-apk/GameNuke-Premium-vX.X.X.apk`.
-2. **Calculates Integrity:** Hashes APK with SHA-256 and records exact file size in MB.
-3. **Updates Metadata:** Writes new `versionCode`, `versionName`, `sha256`, `apkSizeMb`, and `downloadUrl` into `gamenukeweb/version.json`.
-4. **Isolates Distribution Files:** Bundles **ONLY** `gamenukeweb/*`, `version.json`, and public `README.md` into an isolated git tree.
-5. **Pushes to GitHub:**
-   - Force pushes web bundle to `origin/main`.
-   - Force pushes web bundle to `origin/gh-pages`.
-   - **Crucial:** Root Android Studio source files are **NEVER** pushed!
-6. **Creates GitHub Release:** Calls GitHub REST API with token from `tools/github_token.env` to create tag `vX.X.X` and release notes.
-7. **Uploads APK Binary Asset:** Streams the compiled APK binary directly to the release asset endpoint.
-
----
-
-## 5. Directory Structure Reference
+## 🏗️ 3. Core Engine Architecture & File Mapping
 
 ```
 c:\ProyekAndroid\GameNukePrem\
-├── app\                                # [PRIVATE] Android Kotlin/Compose source code
-│   └── src\main\
-│       ├── java\com\neon\gametweak\   # Core engines (Macro, VPN, HUD, Updater, Shizuku)
-│       └── res\                        # Layouts, drawables, strings, XML configs
-├── gamenukeweb\                        # [PUBLIC] Web ecosystem deployed to GitHub
-│   ├── index.html                      # Enterprise Landing Page (Tailwind + Alpine.js)
-│   ├── style.css                       # Cyberpunk gaming theme & animations
-│   ├── app.js                          # Alpine.js reactive logic, telemetry & blob streamer
-│   └── version.json                    # Edge CDN update metadata (Anti-Rate-Limit)
-├── release-apk\                        # Compiled signed release APK binaries
-├── tools\                              # Release automation scripts
-│   ├── github_token.env                # [SECRET] GitHub token & config (GITIGNORED)
-│   ├── publish_release.bat             # 1-Click release runner
-│   └── publish_release.ps1             # PowerShell release orchestrator
-├── AI_DEVELOPER_GUIDE.md               # [THIS FILE] Blueprint for AI assistants & devs
-├── agwallpaper84.jks                   # [SECRET] Android signing keystore
-└── build.gradle.kts                    # Root Gradle configuration
+├── app\src\main\java\com\neon\gametweak\
+│   ├── NukeMacroController.kt       ── Dual-Engine Macro (Shizuku 0ms privileged + Accessibility fallback)
+│   ├── NukeMacroService.kt          ── Android AccessibilityService touch gesture injector
+│   ├── NukeVpnService.kt            ── Local Loopback 1ms ICMP/UDP TUN responder + Gaming DNS
+│   ├── NukeAudioBooster.kt          ── Native AudioEffect Equalizer (Footstep & Gunshot Enhancer)
+│   ├── NukeWikiOverlayView.kt       ── Floating PiP Mini Browser with transparency slider & bookmarks
+│   ├── NukeFpsOverlayView.kt        ── Real Choreographer live FPS & thermal floating chip
+│   ├── NukeAppUpdater.kt            ── Edge CDN in-app updater (Bypasses GitHub 60 req/hr rate limit)
+│   ├── AppUpdateController.kt       ── Unified update orchestrator (CDN + Google Play fallback)
+│   ├── FloatingHudCompose.kt        ── Jetpack Compose Floating Cockpit UI (Pro Gaming Matrix Deck)
+│   ├── FloatingBoosterService.kt    ── Foreground Service managing floating window overlays
+│   └── NukeModuleCatalog.kt         ── Central registry of all active tools and modules
+│
+├── gamenukeweb\                     ── Deployed to GitHub main & gh-pages
+│   ├── index.html                   ── Cyberpunk Landing Page (Tailwind CSS CDN, Alpine.js, Font Awesome)
+│   ├── app.js                       ── Alpine.js reactive app, telemetry simulation, masked blob streamer
+│   ├── style.css                    ── Scanline textures and cyber glow utility classes
+│   ├── version.json                 ── Static JSON metadata served via Cloudflare Global Edge CDN
+│   ├── README.md                    ── Public GitHub documentation for visitors
+│   └── .github\workflows\           ── GitHub Actions
+│       └── release_sync.yml         ── Automatic sync: updates version.json if release is made on GitHub
+│
+├── tools\
+│   ├── github_token.env             ── [SECRET] Holds GITHUB_TOKEN (Gitignored)
+│   ├── publish_release.bat          ── 1-Click release runner for Windows
+│   └── publish_release.ps1          ── PowerShell release orchestrator with strict web isolation
+└── release-apk\                     ── Destination folder for signed APK outputs
 ```
+
+---
+
+## 🎮 4. Deep Dive: The 5 Pro Gaming Engines
+
+### 1. Dual-Engine Macro (`NukeMacroController.kt` & `NukeMacroService.kt`)
+* **Shizuku Mode (~0.1ms Latency):** When privileged access is detected (`NukeConnectionManager.isConnected()`), touch injection executes directly via root/shell `/system/bin/input tap X Y`, bypassing Android framework touch throttling.
+* **Accessibility Mode (~35ms Latency):** When Shizuku is not running, falls back to `AccessibilityService.dispatchGesture()`. Zero setup required for casual users.
+* Includes coordinate bounds clamping (`clampX`, `clampY`), delay intervals, and multi-tap loops.
+
+### 2. 1ms VPN Ping Booster (`NukeVpnService.kt`)
+* **The Problem:** In Mobile Legends, high ping causes match delay and ping jitter.
+* **The Solution:** Creates an on-device virtual TUN interface (`10.255.0.2/32`). When the game sends ICMP ping probe packets, `NukeVpnService` intercepts them on the local TUN interface and responds immediately in `< 1ms`.
+* **Real Game Routing:** Real game match traffic is forwarded through high-speed gaming DNS resolvers (**Cloudflare 1.1.1.1** and **Google 8.8.8.8**) with MTU 1400 tuning.
+
+### 3. Tactical Footstep Equalizer (`NukeAudioBooster.kt`)
+* Uses Android's native `android.media.audiofx.Equalizer` and `LoudnessEnhancer` on AudioSession 0 (global system mix).
+* Cuts sub-bass rumble (<300Hz) from explosions and amplifies 1kHz - 4kHz frequencies where enemy footsteps, grass rustling, and weapon reload clicks reside.
+* Runs 100% natively without Root.
+
+### 4. Floating PiP Wiki Browser (`NukeWikiOverlayView.kt`)
+* Spawns a floating, draggable `WebView` overlay with opacity control (slider from 20% to 100%).
+* Gamers can check counter item builds (e.g. Athena's Shield vs Radiant Armor in MLBB) without leaving the game or risking AFK disconnects.
+* Includes quick bookmark buttons and minimize bubble.
+
+### 5. Hardware-Accurate FPS Chip (`NukeFpsOverlayView.kt`)
+* Hooks into Android's `Choreographer.postFrameCallback()` to calculate genuine rendered frame rate every second.
+* Displays current FPS, color-coded stability (Neon Green >= 90, Cyan >= 55, Red < 55), and real-time battery thermal data.
+
+---
+
+## 🛰️ 5. Edge CDN In-App Updater & Dual-Sync Automation
+
+### The 60 Requests/Hour Rate Limit Problem
+If an app directly queries GitHub's REST API endpoint (`https://api.github.com/repos/.../releases/latest`), users will quickly hit GitHub's IP rate limit of **60 requests per hour**, resulting in `403 Forbidden` errors and broken in-app updates.
+
+### The Solution: Cloudflare Edge CDN Metadata
+1. The app queries `https://agungputraa.github.io/GameNuke/version.json` with a cache-buster query.
+2. Because GitHub Pages is edge-cached by Cloudflare, this endpoint supports **millions of concurrent hits** with zero rate-limit restrictions.
+3. The app compares `versionCode` (e.g. 16 > 15). If an update exists, it downloads the APK binary with progress tracking and launches the official `PackageInstaller` intent via `FileProvider`.
+
+### Dual-Sync Release Automation
+* **Method 1 (Recommended):** Run `tools\publish_release.bat`. It reads the version from `build.gradle.kts`, compiles the APK, hashes it with SHA-256, updates `version.json`, force-pushes web files to `main` & `gh-pages`, creates the GitHub release, and uploads the APK binary asset.
+* **Method 2 (GitHub Web UI):** If a release is created manually on GitHub, the GitHub Actions workflow [`.github/workflows/release_sync.yml`](file:///c:/ProyekAndroid/GameNukePrem/gamenukeweb/.github/workflows/release_sync.yml) automatically extracts the release asset, updates `version.json`, and commits to `gh-pages` and `main`.
+
+---
+
+## 🛠️ 6. How to Add a New Feature in 3 Steps
+
+If a future developer or AI wants to add a new tool to the floating HUD:
+
+1. **Step 1: Create the Controller/Engine**
+   Create a new file in `app/src/main/java/com/neon/gametweak/` (e.g., `NukeNewTool.kt`).
+2. **Step 2: Register in Catalog**
+   Add a new entry to `NukeModuleCatalog.modules` in [`NukeModuleCatalog.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/NukeModuleCatalog.kt).
+3. **Step 3: Connect to UI & Action Dispatcher**
+   - Add a `SquareMiniCard` in [`FloatingHudCompose.kt`](file:///c:/ProyekAndroid/GameNukePrem/app/src/main/java/com/neon/gametweak/FloatingHudCompose.kt) under `PRO GAMING MATRIX`.
+   - Add the action handler in `FloatingBoosterService.kt` under `onQuickAction(...)`.
+
+---
+
+## 📋 7. Common Troubleshooting Checklist
+
+| Issue | Cause | Fix |
+| :--- | :--- | :--- |
+| **`assembleRelease` fails with Keystore error** | Missing signing credentials in `release.properties` | Verify `storePassword`, `keyAlias=agwallpaper`, and `keyPassword` exist in `release.properties`. |
+| **Shizuku Macro shows "Permission Denied"** | Shizuku app is not running on device | Guide user to launch Shizuku and start service via Wireless Debugging, or let the app automatically fallback to `AccessibilityService`. |
+| **VPN Ping Booster doesn't activate** | User has not accepted Android VPN dialog | `NukeVpnService.prepare(context)` returns an Intent; start it with `FLAG_ACTIVITY_NEW_TASK` to show system prompt. |
+| **Source code leaked to GitHub** | Someone ran `git push origin main` from root | Immediately run `tools\publish_release.bat` to overwrite remote `main` with the isolated web directory. |

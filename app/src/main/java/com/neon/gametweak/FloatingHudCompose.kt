@@ -1249,6 +1249,9 @@ private fun QuickActionsDeckView(
     val isVpnOn = states["vpn_boost"] ?: false
     val isFpsLockOn = states["fps_lock"] ?: false
     val isAntiMistouchOn = states["anti_mistouch"] ?: false
+    val isFootstepOn = states["footstep_boost"] ?: false
+    val isWikiOn = states["wiki_pip"] ?: false
+    val isFpsChipOn = states["fps_overlay"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Compact Header ───────────────────────────────────────────────────
@@ -1307,6 +1310,11 @@ private fun QuickActionsDeckView(
                     SquareMiniCard(Icons.Outlined.TouchApp, "MACRO", "FAST", "OFF", NukeGreen, isMacroOn, { callbacks.onQuickAction("macro") }, Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.Bolt, "PING 1MS", "TURBO", "STD", NukeCyan, isVpnOn, { callbacks.onQuickAction("vpn_boost") }, Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.Speed, "120 HZ", "LOCKED", "AUTO", NukeGreen, isFpsLockOn, { callbacks.onQuickAction("fps_lock") }, Modifier.weight(1f))
+                }
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                    SquareMiniCard(Icons.Outlined.Tune, "FOOTSTEP", "BOOST", "STD", NukeGreen, isFootstepOn, { callbacks.onQuickAction("footstep_boost") }, Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.MenuBook, "WIKI PIP", "GUIDE", "OFF", NukeCyan, isWikiOn, { callbacks.onQuickAction("wiki_pip") }, Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.MonitorHeart, "FPS HUD", "CHIP", "OFF", NukeGreen, isFpsChipOn, { callbacks.onQuickAction("fps_overlay") }, Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SquareMiniCard(Icons.Outlined.Security, "MISTOUCH", "SHIELD", "OFF", NukeAmber, isAntiMistouchOn, { callbacks.onQuickAction("anti_mistouch") }, Modifier.weight(1f))

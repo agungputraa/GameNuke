@@ -141,6 +141,8 @@ class FloatingBoosterService : Service() {
     private var crosshairAddFailures = 0
     private var edgeStopArmedUntil = 0L
     private val moduleAddFailures = ConcurrentHashMap<String, Int>()
+    private var wikiOverlay: NukeWikiOverlayView? = null
+    private var fpsOverlay: NukeFpsOverlayView? = null
 
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
@@ -1272,6 +1274,34 @@ class FloatingBoosterService : Service() {
                         toastOutcome("Cek update gagal: $err")
                     }
                 )
+            }
+            "footstep_boost" -> {
+                val nextActive = NukeAudioBooster.toggleFootstepBoost(applicationContext)
+                toastOutcome(if (nextActive) "Footstep Boost: ACTIVE (1kHz-4kHz)" else "Footstep Boost: OFF")
+            }
+            "wiki_pip" -> {
+                if (wikiOverlay?.isShowing == true) {
+                    wikiOverlay?.hide()
+                    toastOutcome("Tactical PiP Wiki: CLOSED")
+                } else {
+                    if (wikiOverlay == null) {
+                        wikiOverlay = NukeWikiOverlayView(applicationContext)
+                    }
+                    wikiOverlay?.show()
+                    toastOutcome("Tactical PiP Wiki: OPEN")
+                }
+            }
+            "fps_overlay" -> {
+                if (fpsOverlay?.isShowing == true) {
+                    fpsOverlay?.hide()
+                    toastOutcome("FPS HUD Chip: CLOSED")
+                } else {
+                    if (fpsOverlay == null) {
+                        fpsOverlay = NukeFpsOverlayView(applicationContext)
+                    }
+                    fpsOverlay?.show()
+                    toastOutcome("FPS HUD Chip: ACTIVE")
+                }
             }
             else -> toastOutcome("Action completed")
         }
@@ -3184,6 +3214,9 @@ class FloatingBoosterService : Service() {
         cancelLoops(); switchJob?.cancel()
         runCatching { if (::prefs.isInitialized) prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener) }
         removeAllWindowsImmediate()
+        wikiOverlay?.hide(); wikiOverlay = null
+        fpsOverlay?.hide(); fpsOverlay = null
+        NukeAudioBooster.disableBoost()
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }
         if (foregroundStarted) {
