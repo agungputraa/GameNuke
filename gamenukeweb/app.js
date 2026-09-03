@@ -1,266 +1,223 @@
 /**
- * Game Nuke Premium — Master Web Controller
- * Handles dynamic version fetch, Blob Download masking (anti-bongkar-dapur),
- * Directlink ad integration, and interactive live HUD simulation.
+ * Game Nuke Premium Edition — Enterprise Web Logic
+ * Powered by Alpine.js, Tailwind CSS CDN & Edge CDN (Cloudflare)
  */
 
-const CONFIG = {
-  versionEndpoint: 'version.json',
-  defaultApkName: 'GameNuke_Premium_v2.2.0.apk',
-  // Default directlink ad URL (user can replace this or configure via version.json)
-  directlinkUrl: 'https://example-directlink-ad.com/?ref=gamenuke',
-  directlinkEnabled: true,
-  fallbackReleaseUrl: 'https://github.com/agungputraa/GameNuke/releases'
-};
-
-let releaseData = null;
-let isDownloading = false;
-
-// ── Initialize on DOM ready ──────────────────────────────────────────────────
-document.addEventListener('DOMContentLoaded', () => {
-  initVersionLoader();
-  initLiveSimulation();
-  initStickyCta();
-  bindDownloadButtons();
-});
-
-// ── Fetch Version Metadata dynamically without GitHub API Rate Limit ─────────
-async function initVersionLoader() {
-  try {
-    // Cache-busting query parameter ensures instant updates
-    const cacheBuster = `?t=${Date.now()}`;
-    const response = await fetch(CONFIG.versionEndpoint + cacheBuster);
-    if (!response.ok) throw new Error('Failed to load version.json');
-    
-    releaseData = await response.json();
-    applyReleaseData(releaseData);
-  } catch (err) {
-    console.warn('Using fallback release metadata:', err);
-    // Fallback display if offline/local preview
-    applyReleaseData({
+document.addEventListener('alpine:init', () => {
+  // ── Main Game Nuke App Store & Controller ──────────────────────────────────
+  Alpine.data('gameNukeApp', () => ({
+    mobileMenuOpen: false,
+    downloadState: 'idle', // 'idle' | 'downloading' | 'completed'
+    downloadProgress: 0,
+    meta: {
       versionName: '2.2.0-prem',
-      apkSizeMb: '34.2',
+      apkSizeMb: '24.3',
       publishedAt: '2026-09-04',
-      downloadUrl: CONFIG.fallbackReleaseUrl
-    });
-  }
-}
+      downloadUrl: 'https://github.com/agungputraa/GameNuke/releases/download/v2.2.0-prem/GameNuke-Premium-v2.2.0.apk',
+      sha256: 'AEFF9DF9F675CF5F20DA0F92939C24AC4CC993BA743411092DE3525F1915EC9B',
+      directlinkAdUrl: 'https://example-directlink-ad.com/?ref=gamenuke'
+    },
+    liveTelemetry: {
+      ping: 1,
+      fps: 120,
+      macroLatency: 0.1
+    },
 
-function applyReleaseData(data) {
-  // Update DOM elements
-  const versionEl = document.querySelectorAll('.dynamic-version');
-  const sizeEl = document.querySelectorAll('.dynamic-size');
-  const dateEl = document.querySelectorAll('.dynamic-date');
-  const changelogContainer = document.getElementById('dynamicChangelog');
-  
-  versionEl.forEach(el => el.textContent = `v${data.versionName || '2.2.0-prem'}`);
-  sizeEl.forEach(el => el.textContent = `${data.apkSizeMb || '34'} MB`);
-  dateEl.forEach(el => el.textContent = data.publishedAt || '2026-09-04');
-  
-  if (data.directlinkAdUrl) {
-    CONFIG.directlinkUrl = data.directlinkAdUrl;
-  }
+    async init() {
+      await this.fetchVersionMetadata();
+      this.startTelemetryLoop();
+    },
 
-  // Populate changelog if container exists
-  if (changelogContainer && Array.isArray(data.releaseNotes)) {
-    changelogContainer.innerHTML = '';
-    data.releaseNotes.forEach(note => {
-      const li = document.createElement('li');
-      li.textContent = note;
-      changelogContainer.appendChild(li);
-    });
-  }
-}
+    async fetchVersionMetadata() {
+      try {
+        const cacheBuster = `?t=${Date.now()}`;
+        const res = await fetch(`version.json${cacheBuster}`);
+        if (res.ok) {
+          const data = await res.json();
+          this.meta = {
+            ...this.meta,
+            ...data
+          };
+        }
+      } catch (err) {
+        console.warn('Using default version metadata (local or offline preview):', err);
+      }
+    },
 
-// ── Directlink Ad Trigger ────────────────────────────────────────────────────
-function triggerDirectlinkAd() {
-  if (!CONFIG.directlinkEnabled || !CONFIG.directlinkUrl) return;
-  try {
-    // Open directlink ad in a new background/active tab safely
-    const win = window.open(CONFIG.directlinkUrl, '_blank');
-    if (win) {
-      win.focus();
-    }
-  } catch (e) {
-    console.log('Ad popup gated by browser');
-  }
-}
+    startTelemetryLoop() {
+      setInterval(() => {
+        // High-precision live simulation: locked 120 FPS with 1% micro-jitter
+        this.liveTelemetry.fps = Math.random() > 0.96 ? 119 : 120;
+        // 1ms ping with rare 2ms spike simulation
+        this.liveTelemetry.ping = Math.random() > 0.98 ? 2 : 1;
+        // Macro touch injection 0.1ms
+        this.liveTelemetry.macroLatency = (0.1 + (Math.random() * 0.05)).toFixed(2);
+      }, 1400);
+    },
 
-// ── Anti-Bongkar-Dapur: Blob Download Streamer ────────────────────────────────
-async function startBlobDownload(targetUrl, filename) {
-  if (isDownloading) return;
-  isDownloading = true;
+    scrollToDownload() {
+      const el = document.getElementById('download-zone');
+      if (el) {
+        el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    },
 
-  const downloadBtn = document.getElementById('mainDownloadBtn');
-  const btnText = document.getElementById('mainDownloadBtnText');
-  const progressBar = document.getElementById('btnProgressBar');
-  const modalBackdrop = document.getElementById('downloadModal');
-  const modalProgress = document.getElementById('modalProgressInner');
-  const modalStatus = document.getElementById('modalStatusText');
+    copySha256() {
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(this.meta.sha256);
+        alert(`SHA256 Hash Disalin:\n${this.meta.sha256}`);
+      }
+    },
 
-  // Trigger Directlink Ad immediately on click
-  triggerDirectlinkAd();
+    handleAdClick() {
+      if (this.meta.directlinkAdUrl) {
+        window.open(this.meta.directlinkAdUrl, '_blank');
+      }
+    },
 
-  // Show modal if present
-  if (modalBackdrop) {
-    modalBackdrop.classList.add('active');
-  }
+    async startDownloadProcess() {
+      if (this.downloadState === 'downloading') return;
+      this.downloadState = 'downloading';
+      this.downloadProgress = 10;
 
-  const updateProgress = (percent, text) => {
-    if (progressBar) progressBar.style.width = `${percent}%`;
-    if (modalProgress) modalProgress.style.width = `${percent}%`;
-    if (btnText) btnText.textContent = text;
-    if (modalStatus) modalStatus.textContent = text;
-  };
+      // 1. Trigger Monetization Directlink in background tab
+      this.handleAdClick();
 
-  updateProgress(10, 'CONNECTING ENCRYPTED CORE… (10%)');
+      // 2. Animate masked streaming download
+      const apkName = `GameNuke-Premium-v${this.meta.versionName}.apk`;
+      const targetUrl = this.meta.downloadUrl;
 
-  try {
-    const finalUrl = targetUrl || (releaseData && releaseData.downloadUrl) || CONFIG.fallbackReleaseUrl;
-    
-    // Attempt Blob Fetch
-    const response = await fetch(finalUrl, { mode: 'cors' });
-    if (!response.ok) throw new Error('Binary stream unavailable');
+      try {
+        // Attempt CORS blob streaming if permitted
+        const progressTimer = setInterval(() => {
+          if (this.downloadProgress < 90) {
+            this.downloadProgress += Math.floor(Math.random() * 15) + 8;
+          }
+        }, 180);
 
-    const contentLength = response.headers.get('content-length');
-    const total = parseInt(contentLength, 10);
-    
-    let received = 0;
-    const reader = response.body.getReader();
-    const chunks = [];
+        const response = await fetch(targetUrl, { mode: 'cors' }).catch(() => null);
 
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      chunks.push(value);
-      received += value.length;
-      if (total) {
-        const pct = Math.min(98, Math.round((received / total) * 100));
-        updateProgress(pct, `STREAMING GAME NUKE APK… (${pct}%)`);
-      } else {
-        updateProgress(65, 'DOWNLOADING APK DATA…');
+        if (response && response.ok) {
+          const blob = await response.blob();
+          clearInterval(progressTimer);
+          this.downloadProgress = 100;
+
+          // Masked in-memory blob download URL
+          const blobUrl = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.style.display = 'none';
+          a.href = blobUrl;
+          a.download = apkName;
+          document.body.appendChild(a);
+          a.click();
+
+          setTimeout(() => {
+            window.URL.revokeObjectURL(blobUrl);
+            a.remove();
+            this.downloadState = 'completed';
+            setTimeout(() => { this.downloadState = 'idle'; }, 4000);
+          }, 1200);
+
+        } else {
+          // Fallback direct download link (standard browser stream)
+          clearInterval(progressTimer);
+          this.downloadProgress = 100;
+
+          const a = document.createElement('a');
+          a.href = targetUrl;
+          a.download = apkName;
+          a.target = '_blank';
+          document.body.appendChild(a);
+          a.click();
+          a.remove();
+
+          setTimeout(() => {
+            this.downloadState = 'completed';
+            setTimeout(() => { this.downloadState = 'idle'; }, 3000);
+          }, 1000);
+        }
+
+      } catch (e) {
+        console.warn('Fallback standard download:', e);
+        this.downloadProgress = 100;
+        window.location.href = targetUrl;
+        setTimeout(() => { this.downloadState = 'idle'; }, 2000);
       }
     }
+  }));
 
-    updateProgress(100, 'PACKING SECURE BLOB… 100%');
+  // ── Interactive Macro Speed Lab ───────────────────────────────────────────
+  Alpine.data('macroClickerLab', () => ({
+    currentMode: 'shizuku', // 'human' | 'accessibility' | 'shizuku'
+    totalTaps: 0,
+    latencyDisplay: '0.1ms',
+    cpsDisplay: '0 CPS',
+    ripples: [],
+    tapTimes: [],
 
-    // Combine chunks into binary Blob
-    const blob = new Blob(chunks, { type: 'application/vnd.android.package-archive' });
-    const blobUrl = window.URL.createObjectURL(blob);
+    setMode(mode) {
+      this.currentMode = mode;
+      if (mode === 'human') this.latencyDisplay = '85.4ms';
+      else if (mode === 'accessibility') this.latencyDisplay = '34.8ms';
+      else this.latencyDisplay = '0.1ms';
+    },
 
-    // Trigger local disguised download
-    const disguisedLink = document.createElement('a');
-    disguisedLink.style.display = 'none';
-    disguisedLink.href = blobUrl;
-    disguisedLink.download = filename || CONFIG.defaultApkName;
-    document.body.appendChild(disguisedLink);
-    disguisedLink.click();
-    
-    setTimeout(() => {
-      window.URL.revokeObjectURL(blobUrl);
-      disguisedLink.remove();
-      updateProgress(100, 'DOWNLOAD COMPLETE! ENJOY 1MS PING');
-      setTimeout(resetDownloadUi, 2500);
-    }, 1500);
+    triggerTap(e) {
+      const now = performance.now();
+      this.tapTimes.push(now);
+      this.tapTimes = this.tapTimes.filter(t => now - t <= 1000);
 
-  } catch (err) {
-    console.warn('Direct Blob streaming fallback:', err);
-    // Fallback: If CORS or file streaming fails, trigger download seamlessly
-    updateProgress(100, 'STARTING DIRECT DOWNLOAD…');
-    const fallbackLink = document.createElement('a');
-    fallbackLink.href = targetUrl || (releaseData && releaseData.downloadUrl) || CONFIG.fallbackReleaseUrl;
-    fallbackLink.download = filename || CONFIG.defaultApkName;
-    fallbackLink.target = '_blank';
-    document.body.appendChild(fallbackLink);
-    fallbackLink.click();
-    fallbackLink.remove();
-    setTimeout(resetDownloadUi, 2000);
-  }
-}
+      // Multi-tap combo simulation depending on mode
+      const comboCount = this.currentMode === 'shizuku' ? 5 : (this.currentMode === 'accessibility' ? 3 : 1);
+      this.totalTaps += comboCount;
 
-function resetDownloadUi() {
-  isDownloading = false;
-  const btnText = document.getElementById('mainDownloadBtnText');
-  const progressBar = document.getElementById('btnProgressBar');
-  const modalBackdrop = document.getElementById('downloadModal');
+      // Calculate simulated CPS
+      if (this.currentMode === 'shizuku') {
+        this.cpsDisplay = `${Math.min(99, this.tapTimes.length * 12)} CPS`;
+        this.latencyDisplay = `${(0.08 + Math.random() * 0.04).toFixed(2)}ms`;
+      } else if (this.currentMode === 'accessibility') {
+        this.cpsDisplay = `${Math.min(30, this.tapTimes.length * 4)} CPS`;
+        this.latencyDisplay = `${(32.0 + Math.random() * 6).toFixed(1)}ms`;
+      } else {
+        this.cpsDisplay = `${Math.min(12, this.tapTimes.length)} CPS`;
+        this.latencyDisplay = `${(75.0 + Math.random() * 25).toFixed(1)}ms`;
+      }
 
-  if (btnText) btnText.textContent = 'DOWNLOAD GAME NUKE PREMIUM (APK)';
-  if (progressBar) progressBar.style.width = '0%';
-  if (modalBackdrop) modalBackdrop.classList.remove('active');
-}
+      // Add visual ripple
+      const rect = (e?.currentTarget || document.body).getBoundingClientRect();
+      const x = (e?.clientX || (rect.left + rect.width / 2)) - rect.left - 16;
+      const y = (e?.clientY || (rect.top + rect.height / 2)) - rect.top - 16;
 
-function bindDownloadButtons() {
-  const mainBtn = document.getElementById('mainDownloadBtn');
-  const stickyBtn = document.getElementById('stickyDownloadBtn');
-  const modalClose = document.getElementById('modalCloseBtn');
-  const modalAdBtn = document.getElementById('modalAdActionBtn');
-
-  if (mainBtn) {
-    mainBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const filename = releaseData ? `GameNuke_Premium_v${releaseData.versionName}.apk` : CONFIG.defaultApkName;
-      startBlobDownload(releaseData?.downloadUrl, filename);
-    });
-  }
-
-  if (stickyBtn) {
-    stickyBtn.addEventListener('click', (e) => {
-      e.preventDefault();
-      const filename = releaseData ? `GameNuke_Premium_v${releaseData.versionName}.apk` : CONFIG.defaultApkName;
-      startBlobDownload(releaseData?.downloadUrl, filename);
-    });
-  }
-
-  if (modalClose) {
-    modalClose.addEventListener('click', () => {
-      const modalBackdrop = document.getElementById('downloadModal');
-      if (modalBackdrop) modalBackdrop.classList.remove('active');
-    });
-  }
-
-  if (modalAdBtn) {
-    modalAdBtn.addEventListener('click', () => {
-      triggerDirectlinkAd();
-    });
-  }
-}
-
-// ── Interactive Live Cockpit Simulation ──────────────────────────────────────
-function initLiveSimulation() {
-  const fpsEl = document.getElementById('liveFps');
-  const pingEl = document.getElementById('livePing');
-  const tempEl = document.getElementById('liveTemp');
-
-  if (!fpsEl || !pingEl) return;
-
-  // Simulate solid locked 120 FPS and 1ms ping with realistic micro-variations
-  setInterval(() => {
-    // 98% chance 120 FPS, 2% micro-frame 119
-    const fps = Math.random() > 0.95 ? 119 : 120;
-    fpsEl.textContent = `${fps} FPS`;
-
-    // 1ms ping locked (simulating local ping booster loopback responder)
-    const ping = Math.random() > 0.98 ? 2 : 1;
-    pingEl.textContent = `${ping} ms`;
-
-    // Stable low thermal
-    if (tempEl) {
-      const temp = (36.2 + Math.sin(Date.now() / 10000) * 0.4).toFixed(1);
-      tempEl.textContent = `${temp}°C`;
+      const rippleId = Date.now() + Math.random();
+      this.ripples.push({ id: rippleId, x, y });
+      setTimeout(() => {
+        this.ripples = this.ripples.filter(r => r.id !== rippleId);
+      }, 600);
     }
-  }, 1200);
-}
+  }));
 
-// ── Sticky CTA Bar on Scroll ─────────────────────────────────────────────────
-function initStickyCta() {
-  const stickyCta = document.getElementById('floatingStickyCta');
-  if (!stickyCta) return;
+  // ── Interactive VPN Ping Lab ──────────────────────────────────────────────
+  Alpine.data('vpnPingLab', () => ({
+    isBoosterActive: true,
+    normalPing: 78,
+    nukePing: 1,
+    pingInterval: null,
 
-  window.addEventListener('scroll', () => {
-    if (window.scrollY > 450) {
-      stickyCta.classList.add('visible');
-    } else {
-      stickyCta.classList.remove('visible');
+    init() {
+      this.startPingSimulation();
+    },
+
+    startPingSimulation() {
+      this.pingInterval = setInterval(() => {
+        // Normal network ping fluctuates widely
+        this.normalPing = Math.floor(65 + Math.random() * 35 + (Math.random() > 0.85 ? 40 : 0));
+        // Game Nuke Loopback responder is locked at 1ms with sub-micro jitter
+        this.nukePing = Math.random() > 0.97 ? 2 : 1;
+      }, 1000);
+    },
+
+    toggleBooster() {
+      this.isBoosterActive = !this.isBoosterActive;
     }
-  }, { passive: true });
-}
+  }));
+});

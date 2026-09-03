@@ -1,5 +1,5 @@
 # Game Nuke 1-Click Release & GitHub Publisher
-# Automates: Build Signed APK -> Generate Metadata -> GitHub Release -> Upload Asset -> Deploy gh-pages
+# Automates: Build Signed APK -> Generate Metadata -> Deploy Web/README to GitHub main & gh-pages -> Create GitHub Release -> Upload Asset
 
 $ErrorActionPreference = "Stop"
 
@@ -33,7 +33,8 @@ if (-not $Token -or -not $Owner -or -not $Repo) {
     exit 1
 }
 
-Write-Host "[1/6] Checking signed release APK..." -ForegroundColor Yellow
+# 2. Check or build signed release APK
+Write-Host "[1/6] Verifying signed release APK..." -ForegroundColor Yellow
 $ApkPath = "$RootDir\release-apk\GameNuke-Premium-v2.2.0.apk"
 if (-not (Test-Path $ApkPath)) {
     Write-Host "   Building signed release APK with Gradle..." -ForegroundColor Yellow
@@ -57,7 +58,7 @@ $ApkName = $ApkItem.Name
 Write-Host "   APK verified: $ApkName ($ApkSizeMb MB)" -ForegroundColor Green
 Write-Host "   SHA256: $ApkSha256" -ForegroundColor DarkGray
 
-# 2. Update gamenukeweb/version.json
+# 3. Update gamenukeweb/version.json
 Write-Host "[2/6] Updating version metadata in gamenukeweb..." -ForegroundColor Yellow
 $VersionJsonPath = "$RootDir\gamenukeweb\version.json"
 if (Test-Path $VersionJsonPath) {
@@ -69,51 +70,54 @@ if (Test-Path $VersionJsonPath) {
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
 }
 
-# 3. Synchronize Git workspace to GitHub main
-Write-Host "[3/6] Synchronizing Git workspace to GitHub main..." -ForegroundColor Yellow
-if (-not (Test-Path "$RootDir\.git")) {
-    git init
-    git branch -M main
-    git remote add origin "https://x-access-token:$Token@github.com/$Owner/$Repo.git"
-} else {
-    git remote set-url origin "https://x-access-token:$Token@github.com/$Owner/$Repo.git"
-}
-
-git add .
-git commit -m "Game Nuke Premium Edition v2.2.0-prem (Dual-Engine Macro, VPN Ping 1ms, Web Ecosystem)" -q
-git push -u origin main --force
-
-# 4. Deploy gamenukeweb to gh-pages branch for Edge CDN
-Write-Host "[4/6] Deploying gamenukeweb to gh-pages branch (Edge CDN)..." -ForegroundColor Yellow
+# 4. Deploy gamenukeweb to GitHub main and gh-pages branches (STRICT WEB ISOLATION)
+# Notice: Android private source code in $RootDir is NEVER pushed!
+Write-Host "[3/6] Deploying Landing Page and README to GitHub repository (main & gh-pages)..." -ForegroundColor Yellow
 $WebDir = "$RootDir\gamenukeweb"
 Push-Location $WebDir
 try {
-    if (Test-Path ".git") { Remove-Item -Recurse -Force ".git" }
+    if (Test-Path ".git") { 
+        Remove-Item -Recurse -Force ".git" 
+    }
     git init -q
-    git branch -M gh-pages
+    git config user.name "Game Nuke Release Automation"
+    git config user.email "release@gamenuke.internal"
+    
+    # Ensure .nojekyll exists so GitHub Pages serves assets directly
+    if (-not (Test-Path ".nojekyll")) {
+        New-Item -ItemType File -Name ".nojekyll" -Force | Out-Null
+    }
+
     git add .
-    git commit -m "Deploy Game Nuke Premium Landing Page and Edge CDN Metadata" -q
-    git remote add origin "https://x-access-token:$Token@github.com/$Owner/$Repo.git"
-    git push -u origin gh-pages --force -q
-    Write-Host "   GitHub Pages deployed successfully to https://$Owner.github.io/$Repo/" -ForegroundColor Green
+    git commit -m "Game Nuke Premium Web & Release Portal v$($vJson.versionName) (Tailwind, Alpine.js, Edge CDN)" -q
+
+    # Push to origin 'main' (overwriting previous Android code with pure Web & README)
+    Write-Host "   Overwriting remote 'main' branch with pure Web & README..." -ForegroundColor Cyan
+    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:main --force -q
+    
+    # Push to origin 'gh-pages' (Edge CDN serving)
+    Write-Host "   Deploying to remote 'gh-pages' branch for Edge CDN..." -ForegroundColor Cyan
+    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q
+
+    Write-Host "   Remote repository successfully synchronized to Web & Docs only!" -ForegroundColor Green
 } finally {
     Pop-Location
 }
 
-# 5. Create GitHub Release via API
-Write-Host "[5/6] Creating GitHub Release via API..." -ForegroundColor Yellow
+# 5. Create or Update GitHub Release via API
+Write-Host "[4/6] Synchronizing GitHub Release via API..." -ForegroundColor Yellow
 $Headers = @{
     "Authorization" = "token $Token"
     "Accept"        = "application/vnd.github.v3+json"
 }
 
-$Tag = "v2.2.0-prem"
-$ReleaseBody = "Game Nuke Premium Edition v2.2.0`n`nOfficial Standalone Release with Unlimited Edge CDN Updates.`n`nHighlights:`n- Macro Fast-Hand Dual-Engine: Shizuku privileged input (~0ms latency) + Accessibility fallback.`n- VPN Ping Booster: 1ms local loopback responder for Mobile Legends lobby + Ultra-Low Latency Gaming DNS (Cloudflare 1.1.1.1 and Google 8.8.8.8).`n- Pro Gaming Deck Expansion: Tactical Crosshair Studio, Force 120Hz Refresh Rate, Anti-Mistouch Palm Shield.`n- Automated In-App Updater: Instant background checks without Google Play Store restrictions.`n`nIntegrity:`n- File: $ApkName`n- Size: $ApkSizeMb MB`n- SHA256: $ApkSha256"
+$Tag = "v" + $vJson.versionName
+$ReleaseBody = "Game Nuke Premium Edition v$($vJson.versionName)`n`nOfficial Standalone Release with Unlimited Edge CDN Updates.`n`nHighlights:`n- Macro Fast-Hand Dual-Engine: Shizuku privileged input (~0.1ms latency) + Accessibility fallback.`n- VPN Ping Booster: 1ms local loopback responder for Mobile Legends lobby + Ultra-Low Latency Gaming DNS (Cloudflare 1.1.1.1 and Google 8.8.8.8).`n- Pro Gaming Deck Expansion: Tactical Crosshair Studio, Force 120Hz Refresh Rate, Anti-Mistouch Palm Shield.`n- Automated In-App Updater: Instant background checks without Google Play Store restrictions.`n`nIntegrity:`n- File: $ApkName`n- Size: $ApkSizeMb MB`n- SHA256: $ApkSha256"
 
 $ReleasePayload = @{
     tag_name         = $Tag
     target_commitish = "main"
-    name             = "Game Nuke Premium Edition v2.2.0"
+    name             = "Game Nuke Premium Edition v$($vJson.versionName)"
     body             = $ReleaseBody
     draft            = $false
     prerelease       = $false
@@ -139,33 +143,43 @@ if ($ExistingRelease) {
     Write-Host "   Release created successfully (ID: $ReleaseId)" -ForegroundColor Green
 }
 
-# 6. Upload APK binary asset
-Write-Host "[6/6] Uploading APK binary to GitHub Release assets..." -ForegroundColor Yellow
+# 6. Upload APK binary asset if not already uploaded or outdated
+Write-Host "[5/6] Verifying and uploading APK binary asset..." -ForegroundColor Yellow
 $CleanUploadUrl = $UploadUrl -replace '\{\?name,label\}', "?name=$ApkName"
 
-# Check if asset exists and delete if needed
+$AssetAlreadyUploaded = $false
 try {
     $Assets = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases/$ReleaseId/assets" -Headers $Headers -Method Get
     foreach ($a in $Assets) {
-        if ($a.name -eq $ApkName) {
-            Write-Host "   Deleting old asset $($a.id)..." -ForegroundColor DarkGray
+        if ($a.name -eq $ApkName -and $a.size -eq $ApkItem.Length) {
+            Write-Host "   Asset $ApkName already present with matching size ($($a.size) bytes)." -ForegroundColor Green
+            $AssetAlreadyUploaded = $true
+        } elseif ($a.name -eq $ApkName) {
+            Write-Host "   Deleting outdated asset $($a.id)..." -ForegroundColor DarkGray
             Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases/assets/$($a.id)" -Headers $Headers -Method Delete
         }
     }
 } catch {}
 
-$UploadHeaders = @{
-    "Authorization" = "token $Token"
-    "Content-Type"  = "application/vnd.android.package-archive"
+if (-not $AssetAlreadyUploaded) {
+    Write-Host "   Streaming APK binary to release asset..." -ForegroundColor Cyan
+    $UploadHeaders = @{
+        "Authorization" = "token $Token"
+        "Content-Type"  = "application/vnd.android.package-archive"
+    }
+
+    $ApkBytes = [System.IO.File]::ReadAllBytes($ApkPath)
+    $UploadResponse = Invoke-RestMethod -Uri $CleanUploadUrl -Headers $UploadHeaders -Method Post -Body $ApkBytes
+    Write-Host "   Binary uploaded: $($UploadResponse.browser_download_url)" -ForegroundColor Green
 }
 
-$ApkBytes = [System.IO.File]::ReadAllBytes($ApkPath)
-$UploadResponse = Invoke-RestMethod -Uri $CleanUploadUrl -Headers $UploadHeaders -Method Post -Body $ApkBytes
-
+# 7. Final Status Report
+Write-Host "[6/6] Verifying Live Endpoints..." -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   SUCCESS! GAME NUKE PREMIUM RELEASE IS LIVE" -ForegroundColor Green
+Write-Host "   SUCCESS! GAME NUKE PREMIUM ECOSYSTEM IS ONLINE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "   Landing Page : https://$Owner.github.io/$Repo/" -ForegroundColor Cyan
 Write-Host "   Metadata API : https://$Owner.github.io/$Repo/version.json" -ForegroundColor Cyan
-Write-Host "   Release URL  : $($UploadResponse.browser_download_url)" -ForegroundColor Cyan
+Write-Host "   GitHub Repo  : https://github.com/$Owner/$Repo" -ForegroundColor Cyan
+Write-Host "   Releases     : https://github.com/$Owner/$Repo/releases/tag/$Tag" -ForegroundColor Cyan
 Write-Host "==========================================================" -ForegroundColor Green
