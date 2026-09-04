@@ -5,7 +5,7 @@
   "publishedAt": "2026-09-04",
   "minAndroidVersion": 11,
   "targetSdk": 36,
-  "apkSizeMb": "24.3",
+  "apkSizeMb": "28.5",
   "releaseNotes": [
     "Dual-Engine Macro: Shizuku privileged input (~0.1ms latency) + Accessibility fallback",
     "VPN Ping Booster: 1ms MLBB Lobby Loopback responder + Gaming DNS (Cloudflare and Google)",
@@ -15,7 +15,7 @@
     "Touch Turbo and Anti-Mistouch Edge Shield for competitive 4-finger claw grip",
     "Unlimited In-App Updater via Edge CDN: Automatic background checks without Google Play delays"
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0-prem.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk",
   "sha256": "FD4FD81F31695CC2FF9E514A4EDCF4521A4B7BCEDEDE7F21600B6E119FDFD17E",
   "directlinkAdUrl": "https://example-directlink-ad.com/?ref=gamenuke"
 }
