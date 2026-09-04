@@ -14,16 +14,24 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONObject
 
 /**
  * High-Performance Dual-Engine Macro Coordinator for Game Nuke.
  *
- * Engine selection:
- * 1. Shizuku / ADB Privileged Engine: ~0ms input injection via privileged binder/shell.
- *    Bypasses Android gesture pacing limits, achieving up to 60+ clicks/second for fast-hand combos.
- * 2. Universal Accessibility Service Engine: Fallback using Android dispatchGesture API.
+ * Engine selection (priority order):
+ * 1. Shizuku / iADB / Daemon Privileged Engine: ~0ms input injection via privileged shell.
+ *    Bypasses Android gesture pacing limits, achieving up to 60+ taps/second.
+ * 2. Accessibility Service Engine: Universal fallback using Android dispatchGesture API.
+ *    Works on all Android 11+ devices without root or Shizuku.
+ *
+ * Thread safety model:
+ * - All StateFlow updates are atomic.
+ * - Shell commands run on Dispatchers.IO (never blocks main thread).
+ * - Accessibility gesture dispatch runs on Dispatchers.Main (required by Android API).
+ * - Macro loop runs on Dispatchers.Default with proper coroutine cancellation.
  */
 class NukeMacroController private constructor(private val context: Context) {
 
@@ -43,7 +51,8 @@ class NukeMacroController private constructor(private val context: Context) {
         val loopCount: Int = 0, // 0 = infinite
         val currentLoop: Int = 0,
         val speedMultiplier: Float = 1.0f,
-        val profileName: String = "Default Combo"
+        val profileName: String = "Default Combo",
+        val lastError: String? = null
     )
 
     enum class MacroEngine {
@@ -52,6 +61,7 @@ class NukeMacroController private constructor(private val context: Context) {
         SHIZUKU_PRIVILEGED
     }
 
+    // SupervisorJob ensures child coroutine failures don't cancel the parent scope.
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
     private val prefs: SharedPreferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
 
@@ -59,12 +69,14 @@ class NukeMacroController private constructor(private val context: Context) {
     val state: StateFlow<MacroState> = _state.asStateFlow()
 
     private var executionJob: Job? = null
-    private val adbManager = AdbManager.getInstance(context)
 
     companion object {
         private const val TAG = "NukeMacroController"
         private const val PREFS_NAME = "NukeMacroPrefs"
         private const val KEY_PROFILES = "macro_profiles_json"
+
+        // Minimum interval to prevent system ANR from overly rapid taps.
+        private const val MIN_TAP_INTERVAL_MS = 16L
 
         @Volatile
         private var instance: NukeMacroController? = null
@@ -77,16 +89,20 @@ class NukeMacroController private constructor(private val context: Context) {
     }
 
     init {
-        detectBestEngine()
+        // Run engine detection on IO thread — never on main thread to avoid StrictMode violations.
+        scope.launch(Dispatchers.IO) {
+            detectBestEngine()
+        }
         loadDefaultProfile()
     }
 
     /**
-     * Determine best available injection engine (Shizuku > Accessibility > None)
+     * Determine best available injection engine (Shizuku/iADB/Daemon > Accessibility > None).
+     * Safe to call from any thread.
      */
     fun detectBestEngine(): MacroEngine {
         val hasPrivileged = runCatching {
-            NukeConnectionManager.isConnected() || adbManager.isConnected()
+            NukeConnectionManager.isConnected()
         }.getOrDefault(false)
 
         val engine = when {
@@ -94,7 +110,7 @@ class NukeMacroController private constructor(private val context: Context) {
             NukeMacroService.isServiceRunning -> MacroEngine.ACCESSIBILITY
             else -> MacroEngine.NONE
         }
-        _state.update { it.copy(activeEngine = engine) }
+        _state.update { it.copy(activeEngine = engine, lastError = null) }
         return engine
     }
 
@@ -135,51 +151,65 @@ class NukeMacroController private constructor(private val context: Context) {
     }
 
     /**
-     * Start execution of configured macro points
+     * Start execution. Returns true if macro started, false if no engine is available.
      */
     fun startMacro(): Boolean {
+        // Re-detect engine on each start to pick up newly granted permissions.
         val engine = detectBestEngine()
         if (engine == MacroEngine.NONE) {
-            Log.w(TAG, "Cannot start macro: no engine ready (neither Shizuku nor Accessibility)")
+            Log.w(TAG, "Cannot start macro: no engine available (enable Accessibility Service or Shizuku)")
+            _state.update { it.copy(lastError = "No engine available. Enable Accessibility Service or connect Shizuku.") }
             return false
         }
 
-        // If no tap points are configured, auto-add a sensible default so first-use just works.
-        // The user can then drag the pin overlay to the desired screen position.
-        val currentPoints = _state.value.points
-        if (currentPoints.isEmpty()) {
+        // Auto-add a default point at 75%/65% screen if no points configured.
+        if (_state.value.points.isEmpty()) {
             val dm = context.resources.displayMetrics
             addPoint(dm.widthPixels * 0.75f, dm.heightPixels * 0.65f, 60L)
             Log.d(TAG, "Auto-added default macro point at 75%/65% screen position")
         }
 
         stopMacro()
-
-        _state.update { it.copy(isRunning = true, isPaused = false, currentLoop = 0) }
+        _state.update { it.copy(isRunning = true, isPaused = false, currentLoop = 0, lastError = null) }
 
         executionJob = scope.launch {
             var loop = 0
             val targetLoops = _state.value.loopCount
             val speed = _state.value.speedMultiplier
 
-            while (isActive && _state.value.isRunning && (targetLoops == 0 || loop < targetLoops)) {
-                loop++
-                _state.update { it.copy(currentLoop = loop) }
+            try {
+                while (isActive && _state.value.isRunning &&
+                    (targetLoops == 0 || loop < targetLoops)) {
+                    loop++
+                    _state.update { it.copy(currentLoop = loop) }
 
-                val activePoints = _state.value.points
-                for (point in activePoints) {
-                    if (!isActive || !_state.value.isRunning) break
+                    val activePoints = _state.value.points.toList() // snapshot to avoid CME
+                    for (point in activePoints) {
+                        if (!isActive || !_state.value.isRunning) break
 
-                    // Execute click via best available engine
-                    executeClick(point.x, point.y, point.holdDurationMs)
+                        val success = executeClick(point.x, point.y, point.holdDurationMs)
 
-                    // Delay interval scaled by speed multiplier
-                    val scaledDelay = (point.delayAfterMs / speed).toLong().coerceAtLeast(8L)
-                    delay(scaledDelay)
+                        // Enforce minimum interval + speed-scaled delay to prevent ANR.
+                        val scaledDelay = (point.delayAfterMs / speed)
+                            .toLong()
+                            .coerceAtLeast(MIN_TAP_INTERVAL_MS)
+                        delay(scaledDelay)
+
+                        if (!success) {
+                            // Engine became unavailable mid-run, abort gracefully.
+                            Log.w(TAG, "Macro engine unavailable mid-run, stopping")
+                            break
+                        }
+                    }
                 }
+            } catch (e: Exception) {
+                if (isActive) {
+                    Log.e(TAG, "Macro execution error", e)
+                    _state.update { it.copy(lastError = "Macro stopped: ${e.message}") }
+                }
+            } finally {
+                _state.update { it.copy(isRunning = false, isPaused = false) }
             }
-
-            _state.update { it.copy(isRunning = false, isPaused = false) }
         }
 
         return true
@@ -191,34 +221,44 @@ class NukeMacroController private constructor(private val context: Context) {
         _state.update { it.copy(isRunning = false, isPaused = false) }
     }
 
-    private suspend fun executeClick(x: Float, y: Float, holdMs: Long) {
+    /**
+     * Execute a single tap with engine fallback.
+     * - Shell commands run on Dispatchers.IO.
+     * - Accessibility gestures dispatched on Dispatchers.Main.
+     *
+     * Returns true if the tap was successfully dispatched.
+     */
+    private suspend fun executeClick(x: Float, y: Float, holdMs: Long): Boolean {
         val dm = context.resources.displayMetrics
-        val safeX = x.coerceIn(0f, dm.widthPixels.toFloat())
-        val safeY = y.coerceIn(0f, dm.heightPixels.toFloat())
-        val safeHold = holdMs.coerceIn(10L, 2000L)
+        val safeX = x.coerceIn(0f, dm.widthPixels.toFloat() - 1f)
+        val safeY = y.coerceIn(0f, dm.heightPixels.toFloat() - 1f)
+        val safeHold = holdMs.coerceIn(10L, 500L)
 
-        val engine = _state.value.activeEngine
-        var executed = false
+        // --- Engine 1: Privileged shell (Shizuku / iADB / Daemon / ADB) ---
+        if (NukeConnectionManager.isConnected()) {
+            val result = withContext(Dispatchers.IO) {
+                runCatching {
+                    NukeConnectionManager.executeCommand(
+                        "input tap ${safeX.toInt()} ${safeY.toInt()}",
+                        timeoutMs = 800L
+                    )
+                }.getOrNull()
+            }
+            if (result?.isSuccess == true) return true
+            // Shell failed (permission lost, etc.) — fall through to accessibility.
+            Log.d(TAG, "Shell tap failed, falling back to Accessibility")
+        }
 
-        if (engine == MacroEngine.SHIZUKU_PRIVILEGED || NukeConnectionManager.isConnected()) {
-            // Instant 0ms input tap via privileged shell/binder (Shizuku, iAdb, Daemon, or ADB)
-            val cmdRes = runCatching {
-                NukeConnectionManager.executeCommand("input tap ${safeX.toInt()} ${safeY.toInt()}", 1_000L)
-            }.getOrNull()
-
-            if (cmdRes != null && cmdRes.isSuccess) {
-                executed = true
+        // --- Engine 2: Accessibility Service ---
+        if (NukeMacroService.isServiceRunning) {
+            return withContext(Dispatchers.Main) {
+                NukeMacroService.performTap(safeX, safeY, safeHold)
             }
         }
 
-        if (!executed && (engine == MacroEngine.ACCESSIBILITY || NukeMacroService.isServiceRunning)) {
-            NukeMacroService.performTap(safeX, safeY, safeHold)
-        }
+        return false
     }
 
-    /**
-     * Save current profile to preferences
-     */
     fun saveCurrentProfile() {
         runCatching {
             val arr = JSONArray()

@@ -1,9 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!--
+    NukeMacroService Accessibility Configuration.
+
+    Minimal footprint design:
+    - accessibilityEventTypes="typeWindowStateChanged" — the absolute minimum valid
+      single-flag value. Our onAccessibilityEvent() handler is a no-op, so we never
+      actually process any event data. Using the smallest valid flag avoids AAPT error.
+    - canPerformGestures="true" — required for dispatchGesture() API (Android 7+).
+    - canRetrieveWindowContent="false" — we never read screen content; minimizes overhead.
+    - notificationTimeout="0" — no event batching since we dispatch, not listen.
+-->
 <accessibility-service xmlns:android="http://schemas.android.com/apk/res/android"
-    android:accessibilityEventTypes="typeAllMask"
+    android:accessibilityEventTypes="typeWindowStateChanged"
     android:accessibilityFeedbackType="feedbackGeneric"
-    android:accessibilityFlags="flagDefault|flagRetrieveInteractiveWindows"
+    android:accessibilityFlags="flagDefault"
     android:canPerformGestures="true"
-    android:canRetrieveWindowContent="true"
+    android:canRetrieveWindowContent="false"
     android:description="@string/nuke_macro_accessibility_desc"
-    android:notificationTimeout="50" />
+    android:notificationTimeout="0" />

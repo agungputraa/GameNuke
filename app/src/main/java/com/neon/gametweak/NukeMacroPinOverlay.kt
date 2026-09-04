@@ -7,13 +7,14 @@ import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
-import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.TextView
 import kotlinx.coroutines.CoroutineScope
@@ -25,197 +26,348 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 /**
- * Tactical In-Game Floating Macro Reticle & Draggable Pin Overlay.
+ * Multi-Pin Draggable Macro HUD Overlay.
  *
- * Allows gamers to visually drag a precision target pin directly over any skill,
- * attack, or action button in-game, showing live feedback, speed selector,
- * and rapid-fire execution animation.
+ * Each macro tap point gets its own independent floating pin that the user can:
+ * - Drag freely anywhere on screen
+ * - Add/remove via the control panel
+ * - See numbered (●1 ●2 ●3…) for easy identification
+ *
+ * A separate, independently draggable control panel provides:
+ * - Run / Stop toggle
+ * - Add Pin (+) button
+ * - Remove Last Pin (−) button
+ * - Speed selector (1× → 2× → 3× → 5×)
+ * - Close button
+ *
+ * Each pin lives in its own WindowManager view so they can be positioned
+ * completely independently without interfering with each other.
  */
 class NukeMacroPinOverlay(private val context: Context) {
 
     private val windowManager = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val controller = NukeMacroController.getInstance(context)
+    private val mainHandler = Handler(Looper.getMainLooper())
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
 
-    private var rootView: FrameLayout? = null
-    private var pulseAnimator: ObjectAnimator? = null
-    private var stateObserverJob: Job? = null
+    // One WindowManager view per pin
+    private val pinViews = mutableMapOf<Int, View>()
+    private val pinParams = mutableMapOf<Int, WindowManager.LayoutParams>()
+    private val pinAnimators = mutableMapOf<Int, ObjectAnimator>()
 
-    private var initialX = 0
-    private var initialY = 0
-    private var initialTouchX = 0f
-    private var initialTouchY = 0f
+    // Control panel
+    private var controlPanel: View? = null
+    private var controlPanelParams: WindowManager.LayoutParams? = null
+    private var stateObserverJob: Job? = null
+    private var runToggleBtn: TextView? = null
 
     val isShowing: Boolean
-        get() = rootView != null
+        get() = controlPanel != null
+
+    private val density: Float
+        get() = context.resources.displayMetrics.density
+
+    // ──────────────────────────────────────────────────────
+    // PUBLIC API
+    // ──────────────────────────────────────────────────────
 
     fun show() {
-        if (rootView != null) return
+        if (controlPanel != null) return
 
-        val dm = context.resources.displayMetrics
-        val density = dm.density
+        // Ensure at least 1 tap point exists
+        if (controller.state.value.points.isEmpty()) {
+            val dm = context.resources.displayMetrics
+            controller.addPoint(dm.widthPixels * 0.5f, dm.heightPixels * 0.55f, 60L)
+        }
 
-        // Retrieve existing point or default to 75% width, 65% height
-        val currentPoint = controller.state.value.points.firstOrNull() ?: controller.addPoint(
-            dm.widthPixels * 0.75f,
-            dm.heightPixels * 0.65f,
-            60L
-        )
+        showControlPanel()
+        refreshAllPins()
+        observeState()
+    }
 
-        val pinSizePx = (56 * density).toInt()
-        val totalWidthPx = (150 * density).toInt()
-        val totalHeightPx = (110 * density).toInt()
+    fun hide() {
+        stateObserverJob?.cancel()
+        stateObserverJob = null
+        controller.stopMacro()
+        removeControlPanel()
+        removeAllPinViews()
+    }
 
-        val params = WindowManager.LayoutParams(
-            totalWidthPx,
-            totalHeightPx,
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
-                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-            else
-                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
-            PixelFormat.TRANSLUCENT
-        ).apply {
+    fun release() {
+        hide()
+        scope.cancel()
+    }
+
+    // ──────────────────────────────────────────────────────
+    // CONTROL PANEL
+    // ──────────────────────────────────────────────────────
+
+    private fun showControlPanel() {
+        val d = density
+        val panelW = (200 * d).toInt()
+        val panelH = WindowManager.LayoutParams.WRAP_CONTENT
+
+        val params = makeOverlayParams(panelW, panelH).apply {
             gravity = Gravity.TOP or Gravity.START
-            x = (currentPoint.x - (totalWidthPx / 2f)).toInt().coerceIn(0, dm.widthPixels - totalWidthPx)
-            y = (currentPoint.y - (pinSizePx / 2f)).toInt().coerceIn(0, dm.heightPixels - totalHeightPx)
+            x = (48 * d).toInt()
+            y = (48 * d).toInt()
         }
 
-        val container = FrameLayout(context).apply {
-            clipChildren = false
-            clipToPadding = false
+        val panel = buildControlPanel(params)
+        runCatching { windowManager.addView(panel, params) }
+        controlPanel = panel
+        controlPanelParams = params
+    }
+
+    private fun buildControlPanel(params: WindowManager.LayoutParams): LinearLayout {
+        val d = density
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = 14f * d
+            setColor(Color.parseColor("#f0060e0b"))
+            setStroke((1.2f * d).toInt(), Color.parseColor("#4400ff88"))
         }
 
-        // 1. Draggable Pin Target (Reticle)
-        val targetPin = FrameLayout(context).apply {
-            val pinBg = GradientDrawable().apply {
-                shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#990a1612")) // Dark translucent cyber green
-                setStroke((2.5f * density).toInt(), Color.parseColor("#00ff88")) // Neon green
-            }
-            background = pinBg
-
-            val pinLabel = TextView(context).apply {
-                text = "🎯 #1"
-                setTextColor(Color.parseColor("#00ff88"))
-                textSize = 11f
-                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-            }
-            addView(pinLabel, FrameLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                Gravity.CENTER
-            ))
+        val panel = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = bg
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+            elevation = 8f * d
         }
 
-        val pinParams = FrameLayout.LayoutParams(pinSizePx, pinSizePx).apply {
-            gravity = Gravity.TOP or Gravity.CENTER_HORIZONTAL
-        }
-        container.addView(targetPin, pinParams)
-
-        // 2. Control Pill (Run/Stop, Speed, Close)
-        val controlCard = LinearLayout(context).apply {
+        // Title row
+        val titleRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding((6 * density).toInt(), (4 * density).toInt(), (6 * density).toInt(), (4 * density).toInt())
+        }
+        val title = makeTv("⚡ MACRO", 10.5f, "#00ff88", bold = true)
+        title.setPadding((4 * d).toInt(), 0, 0, 0)
+        titleRow.addView(title, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
 
-            val cardBg = GradientDrawable().apply {
+        // Close button
+        val closeBtn = makeTv("✕", 12f, "#667a8a", bold = true).apply {
+            setPadding((6 * d).toInt(), (2 * d).toInt(), (2 * d).toInt(), (2 * d).toInt())
+            setOnClickListener { hide() }
+        }
+        titleRow.addView(closeBtn)
+        panel.addView(titleRow)
+
+        // Divider
+        panel.addView(makeDivider())
+
+        // Run / Stop row
+        val runRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, (4 * d).toInt(), 0, (4 * d).toInt())
+        }
+
+        val runBtn = makeTv("▶ RUN", 11.5f, "#00ff88", bold = true).apply {
+            background = GradientDrawable().apply {
                 shape = GradientDrawable.RECTANGLE
-                cornerRadius = 14f * density
-                setColor(Color.parseColor("#ea060f0c"))
-                setStroke((1f * density).toInt(), Color.parseColor("#3300ff88"))
+                cornerRadius = 8f * d
+                setColor(Color.parseColor("#2200ff88"))
+                setStroke((1f * d).toInt(), Color.parseColor("#5500ff88"))
             }
-            background = cardBg
+            setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
+            gravity = Gravity.CENTER
+            setOnClickListener {
+                if (controller.state.value.isRunning) controller.stopMacro()
+                else { controller.detectBestEngine(); controller.startMacro() }
+            }
+        }
+        this.runToggleBtn = runBtn
+        runRow.addView(runBtn, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        // Speed button
+        val speedBtn = makeTv("1×", 11f, "#00d4ff", bold = true).apply {
+            setPadding((10 * d).toInt(), (6 * d).toInt(), (10 * d).toInt(), (6 * d).toInt())
+            setOnClickListener {
+                val next = when (controller.state.value.speedMultiplier) {
+                    1.0f -> 2.0f; 2.0f -> 3.0f; 3.0f -> 5.0f; else -> 1.0f
+                }
+                controller.setSpeedMultiplier(next)
+                text = "${next.toInt()}×"
+            }
+        }
+        runRow.addView(speedBtn)
+        panel.addView(runRow)
+
+        panel.addView(makeDivider())
+
+        // Pin management row
+        val pinRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, (2 * d).toInt(), 0, (2 * d).toInt())
         }
 
-        // Toggle Run/Stop Button
-        val runToggleBtn = TextView(context).apply {
-            text = if (controller.state.value.isRunning) "⏸" else "▶"
-            setTextColor(Color.parseColor("#00ff88"))
-            textSize = 13f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding((8 * density).toInt(), (3 * density).toInt(), (8 * density).toInt(), (3 * density).toInt())
+        val pinLabel = makeTv("PINS", 9.5f, "#667a8a", bold = true)
+        pinLabel.setPadding((4 * d).toInt(), 0, 0, 0)
+        pinRow.addView(pinLabel, LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f))
+
+        // Remove pin button
+        val removeBtn = makeTv("−", 16f, "#ff4466", bold = true).apply {
+            setPadding((10 * d).toInt(), (2 * d).toInt(), (10 * d).toInt(), (2 * d).toInt())
             setOnClickListener {
-                if (controller.state.value.isRunning) {
-                    controller.stopMacro()
-                } else {
-                    controller.detectBestEngine()
-                    controller.startMacro()
+                val points = controller.state.value.points
+                if (points.size > 1) {
+                    val last = points.last()
+                    removePinView(last.id)
+                    controller.removePoint(last.id)
                 }
             }
         }
-        controlCard.addView(runToggleBtn)
+        pinRow.addView(removeBtn)
 
-        // Speed Multiplier Button
-        val speedBtn = TextView(context).apply {
-            val currentSpeed = controller.state.value.speedMultiplier
-            text = "${currentSpeed.toInt()}x"
-            setTextColor(Color.parseColor("#00e5ff"))
-            textSize = 10.5f
-            typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding((6 * density).toInt(), (3 * density).toInt(), (6 * density).toInt(), (3 * density).toInt())
+        // Add pin button
+        val addBtn = makeTv("+", 16f, "#00ff88", bold = true).apply {
+            setPadding((10 * d).toInt(), (2 * d).toInt(), (10 * d).toInt(), (2 * d).toInt())
             setOnClickListener {
-                val nextSpeed = when (controller.state.value.speedMultiplier) {
-                    1.0f -> 2.0f
-                    2.0f -> 3.0f
-                    3.0f -> 5.0f
-                    else -> 1.0f
+                if (controller.state.value.points.size < 8) { // max 8 pins
+                    val dm = context.resources.displayMetrics
+                    val offset = controller.state.value.points.size * (60 * density).toInt()
+                    val newPoint = controller.addPoint(
+                        (dm.widthPixels * 0.5f + offset).coerceAtMost(dm.widthPixels * 0.85f),
+                        dm.heightPixels * 0.55f,
+                        60L
+                    )
+                    addPinView(newPoint)
                 }
-                controller.setSpeedMultiplier(nextSpeed)
-                text = "${nextSpeed.toInt()}x"
             }
         }
-        controlCard.addView(speedBtn)
+        pinRow.addView(addBtn)
+        panel.addView(pinRow)
 
-        // Close Button
-        val closeBtn = TextView(context).apply {
-            text = "✕"
-            setTextColor(Color.parseColor("#889aa7a2"))
-            textSize = 11f
+        // Make control panel itself draggable
+        makeDraggable(panel, params, onDragEnd = null)
+        return panel
+    }
+
+    private fun removeControlPanel() {
+        controlPanel?.let { runCatching { windowManager.removeView(it) } }
+        controlPanel = null
+        controlPanelParams = null
+        runToggleBtn = null
+    }
+
+    // ──────────────────────────────────────────────────────
+    // PIN VIEWS
+    // ──────────────────────────────────────────────────────
+
+    private fun refreshAllPins() {
+        val currentPoints = controller.state.value.points
+        // Remove views for deleted points
+        val currentIds = currentPoints.map { it.id }.toSet()
+        pinViews.keys.toList().forEach { id ->
+            if (id !in currentIds) removePinView(id)
+        }
+        // Add views for new points
+        currentPoints.forEach { point ->
+            if (point.id !in pinViews) addPinView(point)
+        }
+    }
+
+    private fun addPinView(point: NukeMacroController.MacroPoint) {
+        val d = density
+        val pinSize = (52 * d).toInt()
+        val dm = context.resources.displayMetrics
+
+        val params = makeOverlayParams(pinSize, pinSize).apply {
+            gravity = Gravity.TOP or Gravity.START
+            x = (point.x - pinSize / 2f).toInt().coerceIn(0, dm.widthPixels - pinSize)
+            y = (point.y - pinSize / 2f).toInt().coerceIn(0, dm.heightPixels - pinSize)
+        }
+
+        val pinNumber = point.id
+        val pin = buildPinView(pinNumber, point, params)
+        runCatching { windowManager.addView(pin, params) }
+        pinViews[pinNumber] = pin
+        pinParams[pinNumber] = params
+    }
+
+    private fun buildPinView(
+        id: Int,
+        point: NukeMacroController.MacroPoint,
+        params: WindowManager.LayoutParams
+    ): FrameLayout {
+        val d = density
+        val colors = listOf("#00ff88", "#00d4ff", "#ffcc00", "#ff4466", "#cc88ff", "#ff8800", "#44ffcc", "#ff88cc")
+        val color = colors[(id - 1) % colors.size]
+
+        val bg = GradientDrawable().apply {
+            shape = GradientDrawable.OVAL
+            setColor(Color.parseColor("#cc040c09"))
+            setStroke((2f * d).toInt(), Color.parseColor(color))
+        }
+
+        val pin = FrameLayout(context).apply {
+            background = bg
+            clipChildren = false
+        }
+
+        val label = TextView(context).apply {
+            text = "●$id"
+            setTextColor(Color.parseColor(color))
+            textSize = 10f
             typeface = android.graphics.Typeface.DEFAULT_BOLD
-            setPadding((6 * density).toInt(), (3 * density).toInt(), (6 * density).toInt(), (3 * density).toInt())
-            setOnClickListener {
-                controller.stopMacro()
-                hide()
-            }
+            gravity = Gravity.CENTER
         }
-        controlCard.addView(closeBtn)
+        pin.addView(label, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            Gravity.CENTER
+        ))
 
-        val cardParams = FrameLayout.LayoutParams(
-            ViewGroup.LayoutParams.WRAP_CONTENT,
-            ViewGroup.LayoutParams.WRAP_CONTENT
-        ).apply {
-            gravity = Gravity.BOTTOM or Gravity.CENTER_HORIZONTAL
+        // Pulse animation — started/stopped based on macro run state
+        val animator = ObjectAnimator.ofFloat(pin, View.SCALE_X, 1.0f, 1.2f, 1.0f).apply {
+            duration = 280L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
         }
-        container.addView(controlCard, cardParams)
+        val animatorY = ObjectAnimator.ofFloat(pin, View.SCALE_Y, 1.0f, 1.2f, 1.0f).apply {
+            duration = 280L
+            repeatCount = ValueAnimator.INFINITE
+            repeatMode = ValueAnimator.REVERSE
+        }
+        // Store both using the X animator; we control Y manually
+        pinAnimators[id] = animator
+        if (controller.state.value.isRunning) {
+            animator.start(); animatorY.start()
+        }
 
-        // Drag-to-Move gesture on the Reticle Pin
-        targetPin.setOnTouchListener { _, event ->
+        // Drag to reposition pin
+        var initX = 0; var initY = 0
+        var initTouchX = 0f; var initTouchY = 0f
+        pin.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    initialX = params.x
-                    initialY = params.y
-                    initialTouchX = event.rawX
-                    initialTouchY = event.rawY
+                    initX = params.x; initY = params.y
+                    initTouchX = event.rawX; initTouchY = event.rawY
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = (initialX + (event.rawX - initialTouchX)).toInt()
-                    params.y = (initialY + (event.rawY - initialTouchY)).toInt()
-                    runCatching { windowManager.updateViewLayout(container, params) }
-
-                    // Compute target coordinates in screen space
-                    val centerX = params.x + (totalWidthPx / 2f)
-                    val centerY = params.y + (pinSizePx / 2f)
-                    controller.updatePointCoordinates(1, centerX, centerY)
+                    params.x = (initX + (event.rawX - initTouchX)).toInt()
+                    params.y = (initY + (event.rawY - initTouchY)).toInt()
+                    if (pinViews[id] != null) {
+                        runCatching { windowManager.updateViewLayout(pin, params) }
+                    }
+                    // Update the logical tap coordinate to the center of the pin
+                    val dm = context.resources.displayMetrics
+                    val pinSize = pin.width.takeIf { it > 0 } ?: (52 * d).toInt()
+                    controller.updatePointCoordinates(id,
+                        params.x + pinSize / 2f,
+                        params.y + pinSize / 2f
+                    )
                     true
                 }
                 MotionEvent.ACTION_UP -> {
-                    val centerX = params.x + (totalWidthPx / 2f)
-                    val centerY = params.y + (pinSizePx / 2f)
-                    controller.updatePointCoordinates(1, centerX, centerY)
+                    val dm = context.resources.displayMetrics
+                    val pinSize = pin.width.takeIf { it > 0 } ?: (52 * d).toInt()
+                    controller.updatePointCoordinates(id,
+                        params.x + pinSize / 2f,
+                        params.y + pinSize / 2f
+                    )
                     controller.saveCurrentProfile()
                     true
                 }
@@ -223,51 +375,120 @@ class NukeMacroPinOverlay(private val context: Context) {
             }
         }
 
-        // Pulse animation when macro is active
-        pulseAnimator = ObjectAnimator.ofFloat(targetPin, View.SCALE_X, 1.0f, 1.15f, 1.0f).apply {
-            duration = 320L
-            repeatCount = ValueAnimator.INFINITE
-            repeatMode = ValueAnimator.REVERSE
-        }
+        return pin
+    }
 
-        // Observe macro state to update UI elements live
+    private fun removePinView(id: Int) {
+        pinAnimators.remove(id)?.cancel()
+        pinViews.remove(id)?.let { runCatching { windowManager.removeView(it) } }
+        pinParams.remove(id)
+    }
+
+    private fun removeAllPinViews() {
+        pinAnimators.values.forEach { it.cancel() }
+        pinAnimators.clear()
+        pinViews.values.forEach { runCatching { windowManager.removeView(it) } }
+        pinViews.clear()
+        pinParams.clear()
+    }
+
+    // ──────────────────────────────────────────────────────
+    // STATE OBSERVER
+    // ──────────────────────────────────────────────────────
+
+    private fun observeState() {
         stateObserverJob = scope.launch {
             controller.state.collectLatest { state ->
-                runToggleBtn.text = if (state.isRunning) "⏸" else "▶"
-                if (state.isRunning) {
-                    runToggleBtn.setTextColor(Color.parseColor("#ff0055"))
-                    if (pulseAnimator?.isStarted != true) {
-                        pulseAnimator?.start()
-                    }
-                } else {
-                    runToggleBtn.setTextColor(Color.parseColor("#00ff88"))
-                    pulseAnimator?.cancel()
-                    targetPin.scaleX = 1.0f
-                    targetPin.scaleY = 1.0f
+                // Update run button label and color
+                runToggleBtn?.apply {
+                    text = if (state.isRunning) "⏸ STOP" else "▶ RUN"
+                    setTextColor(Color.parseColor(if (state.isRunning) "#ff4466" else "#00ff88"))
                 }
+
+                // Update pulse on all pins
+                pinViews.keys.forEach { id ->
+                    val animator = pinAnimators[id] ?: return@forEach
+                    if (state.isRunning) {
+                        if (!animator.isStarted) animator.start()
+                    } else {
+                        animator.cancel()
+                        pinViews[id]?.scaleX = 1f
+                        pinViews[id]?.scaleY = 1f
+                    }
+                }
+
+                // Sync pin views with current point list
+                refreshAllPins()
             }
         }
+    }
 
-        runCatching {
-            windowManager.addView(container, params)
-            rootView = container
+    // ──────────────────────────────────────────────────────
+    // DRAG HELPER
+    // ──────────────────────────────────────────────────────
+
+    private fun makeDraggable(
+        view: View,
+        params: WindowManager.LayoutParams,
+        onDragEnd: (() -> Unit)?
+    ) {
+        var initX = 0; var initY = 0
+        var initTX = 0f; var initTY = 0f
+        view.setOnTouchListener { _, event ->
+            when (event.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    initX = params.x; initY = params.y
+                    initTX = event.rawX; initTY = event.rawY
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    params.x = (initX + (event.rawX - initTX)).toInt()
+                    params.y = (initY + (event.rawY - initTY)).toInt()
+                    if (controlPanel != null) runCatching { windowManager.updateViewLayout(view, params) }
+                    true
+                }
+                MotionEvent.ACTION_UP -> { onDragEnd?.invoke(); true }
+                else -> false
+            }
         }
     }
 
-    fun hide() {
-        pulseAnimator?.cancel()
-        pulseAnimator = null
-        stateObserverJob?.cancel()
-        stateObserverJob = null
+    // ──────────────────────────────────────────────────────
+    // VIEW FACTORIES
+    // ──────────────────────────────────────────────────────
 
-        rootView?.let { view ->
-            runCatching { windowManager.removeView(view) }
+    private fun makeTv(text: String, size: Float, color: String, bold: Boolean = false): TextView {
+        return TextView(context).apply {
+            this.text = text
+            setTextColor(Color.parseColor(color))
+            textSize = size
+            if (bold) typeface = android.graphics.Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
         }
-        rootView = null
     }
 
-    fun release() {
-        hide()
-        scope.cancel()
+    private fun makeDivider(): View {
+        return View(context).apply {
+            setBackgroundColor(Color.parseColor("#1a334433"))
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, 1
+            ).apply {
+                topMargin = (4 * density).toInt()
+                bottomMargin = (4 * density).toInt()
+            }
+        }
+    }
+
+    private fun makeOverlayParams(w: Int, h: Int): WindowManager.LayoutParams {
+        return WindowManager.LayoutParams(
+            w, h,
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
+                WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+            else
+                @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
+            WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+            PixelFormat.TRANSLUCENT
+        )
     }
 }
