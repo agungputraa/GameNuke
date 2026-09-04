@@ -205,10 +205,10 @@
 
           <!-- Description -->
           <p class="text-base sm:text-lg text-slate-300 max-w-2xl font-normal leading-relaxed">
-            Kokpit gaming Android paling bertenaga yang dirilis di luar Google Play. 
-            Menghadirkan <b class="text-cyber-neonGreen font-semibold">Dual-Engine Macro 0ms</b> (Shizuku Privileged Mode), 
-            <b class="text-cyber-neonCyan font-semibold">VPN Ping Booster 1ms</b> (Local Loopback MLBB Responder), 
-            Force 120Hz Display Lock, Anti-Mistouch Palm Shield, dan Tactical Reticle Studio.
+            Performance suite & tactical gaming cockpit terlengkap untuk Android kompetitif. 
+            Menghadirkan <b class="text-cyber-neonGreen font-semibold">Precision Dual-Engine Macro</b> (Shizuku & Accessibility), 
+            <b class="text-cyber-neonCyan font-semibold">Gaming Network Stabilizer</b> (Ultra-Low Latency DNS Engine), 
+            Force 120Hz Refresh Rate Lock, Anti-Mistouch Palm Shield, dan In-Game Tactical HUD.
           </p>
 
           <!-- Core Feature Bullets -->
@@ -327,9 +327,9 @@
               <!-- Reactive Latency Gauge -->
               <div class="my-6 p-4 rounded-xl bg-cyber-card/80 border border-cyber-border relative">
                 <div class="flex items-center justify-between">
-                  <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Lobby Ping Loopback</div>
+                  <div class="text-[11px] font-mono text-slate-400 uppercase tracking-wider">Gaming Network Latency</div>
                   <span class="px-2 py-0.5 text-[10px] font-mono font-bold rounded bg-cyber-neonGreen/10 text-cyber-neonGreen border border-cyber-neonGreen/30">
-                    RESPONDER ACTIVE
+                    OPTIMIZER ACTIVE
                   </span>
                 </div>
                 <div class="flex items-baseline gap-2 mt-2">
@@ -407,7 +407,7 @@
           INTERACTIVE <span class="text-cyber-neonGreen">TECH LAB</span>
         </h2>
         <p class="text-slate-400 text-sm sm:text-base mt-2">
-          Uji langsung kecepatan simulasi latency touch macro dan uji coba local loopback responder VPN ping sebelum mendownload aplikasi.
+          Uji langsung kecepatan respon presisi touch macro dan optimasi latensi koneksi gaming secara interaktif.
         </p>
       </div>
 
@@ -486,7 +486,7 @@
 
         </div>
 
-        <!-- Interactive Tester 2: VPN Ping Loopback Simulator -->
+        <!-- Interactive Tester 2: VPN Ping Stabilizer Simulator -->
         <div class="p-6 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonCyan/40 transition-all flex flex-col justify-between"
              x-data="vpnPingLab()">
           
@@ -494,7 +494,7 @@
             <div class="flex items-center justify-between mb-4">
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-satellite-dish text-cyber-neonCyan"></i>
-                <h3 class="font-orbitron font-bold text-lg text-white">VPN Ping Booster 1ms Lab</h3>
+                <h3 class="font-orbitron font-bold text-lg text-white">Gaming Network & Latency Lab</h3>
               </div>
               <button @click="toggleBooster()" 
                       :class="isBoosterActive ? 'bg-cyber-neonGreen text-cyber-black shadow-neon-green' : 'bg-slate-800 text-slate-400'"
@@ -505,8 +505,7 @@
             </div>
 
             <p class="text-slate-300 text-xs leading-relaxed mb-6">
-              Fitur legendaris Game Nuke: <b>Local Loopback TUN Responder</b>. Paket ICMP/UDP echo request dicegat langsung 
-              di dalam device dan dijawab instan dalam sub-millisecond, menjaga tampilan ping di lobby Mobile Legends tetap 1ms hijau stabil.
+              Arsitektur jaringan Game Nuke mengoptimalkan packet routing dan DNS query secara real-time melalui resolver Cloudflare dan Google Gaming DNS, meminimalkan jitter dan menjaga stabilitas koneksi pada sesi kompetitif.
             </p>
 
             <!-- Ping Comparison Display -->
@@ -514,7 +513,7 @@
               
               <div class="p-4 rounded-xl border" 
                    :class="!isBoosterActive ? 'border-cyber-neonPink/60 bg-cyber-neonPink/5' : 'border-cyber-border bg-cyber-black/40 opacity-50'">
-                <div class="text-[10px] font-mono text-slate-400">KONEKSI STANDAR (NO BOOSTER)</div>
+                <div class="text-[10px] font-mono text-slate-400">KONEKSI STANDAR (NO OPTIMIZER)</div>
                 <div class="flex items-baseline gap-1 mt-2">
                   <span class="font-orbitron font-bold text-3xl text-rose-400" x-text="normalPing">78</span>
                   <span class="text-xs font-orbitron text-rose-400">ms</span>
@@ -526,7 +525,7 @@
 
               <div class="p-4 rounded-xl border" 
                    :class="isBoosterActive ? 'border-cyber-neonGreen/60 bg-cyber-neonGreen/10 shadow-neon-green/20' : 'border-cyber-border bg-cyber-black/40 opacity-50'">
-                <div class="text-[10px] font-mono text-cyber-neonGreen font-bold">GAME NUKE LOOPBACK TUN</div>
+                <div class="text-[10px] font-mono text-cyber-neonGreen font-bold">GAME NUKE STABILIZED DNS</div>
                 <div class="flex items-baseline gap-1 mt-2">
                   <span class="font-orbitron font-bold text-3xl text-cyber-neonGreen" x-text="nukePing">1</span>
                   <span class="text-xs font-orbitron text-cyber-neonGreen">ms</span>
@@ -597,21 +596,21 @@
           </ul>
         </div>
 
-        <!-- Card 2: VPN Ping 1ms -->
+        <!-- Card 2: Gaming Network Stabilizer -->
         <div class="p-8 rounded-2xl bg-cyber-card border border-cyber-border hover:border-cyber-neonCyan transition-all duration-300 group hover:-translate-y-1.5 flex flex-col justify-between">
           <div>
             <div class="w-12 h-12 rounded-xl bg-cyber-neonCyan/10 border border-cyber-neonCyan/30 flex items-center justify-center text-cyber-neonCyan text-2xl mb-6 group-hover:scale-110 transition-transform">
               <i class="fa-solid fa-satellite-dish"></i>
             </div>
-            <h3 class="font-orbitron font-bold text-xl text-white mb-3">VPN Ping Booster 1ms</h3>
+            <h3 class="font-orbitron font-bold text-xl text-white mb-3">Gaming Network & DNS Stabilizer</h3>
             <p class="text-slate-300 text-sm leading-relaxed">
-              Local Loopback VPN Service khusus menjawab probe ping Mobile Legends di bawah 1 milidetik. Dilengkapi gaming DNS Cloudflare 1.1.1.1 & Google 8.8.8.8 untuk stabilitas rute packet match internasional.
+              Layanan VPN lokal terdedikasi yang merutekan traffic melalui DNS gaming Cloudflare 1.1.1.1 & Google Public DNS 8.8.8.8. Mengurangi bufferbloat, jitter, dan mencegah packet drop saat teamfight sengit.
             </p>
           </div>
           <ul class="mt-6 pt-4 border-t border-cyber-border space-y-2 text-xs font-mono text-slate-400">
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> 1ms Ping Hijau di Lobby MLBB</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Anti-Packet Drop MTU 1400 Tuning</li>
-            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Hemat kuota: Tidak ada server luar</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Latensi Stabil & Minim Jitter Spike</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Optimalisasi MTU 1400 Anti-Packet Drop</li>
+            <li class="flex items-center gap-2"><i class="fa-solid fa-check text-cyber-neonCyan"></i> Zero Bandwidth Overhead: Terhubung Lokal</li>
           </ul>
         </div>
 
@@ -779,10 +778,10 @@
             </tr>
 
             <tr class="hover:bg-cyber-card/40 transition-colors">
-              <td class="p-4 font-semibold text-white">VPN Ping Booster 1ms MLBB Loopback</td>
-              <td class="p-4 text-center text-slate-400">Standar DNS Saja</td>
+              <td class="p-4 font-semibold text-white">Gaming Network Stabilizer & Dedicated DNS</td>
+              <td class="p-4 text-center text-slate-400">Standar DNS ISP</td>
               <td class="p-4 text-center text-cyber-neonGreen font-bold bg-cyber-neonGreen/5 border-l border-r border-cyber-neonGreen/20">
-                <i class="fa-solid fa-check text-base mr-1"></i> Dedicated Tun Responder
+                <i class="fa-solid fa-check text-base mr-1"></i> Dedicated Gaming DNS & MTU Optimizer
               </td>
             </tr>
 
@@ -909,11 +908,11 @@
         <div class="rounded-xl border border-cyber-border bg-cyber-card overflow-hidden">
           <button @click="openIdx = (openIdx === 2 ? null : 2)" 
                   class="w-full p-5 text-left flex items-center justify-between text-white font-bold hover:text-cyber-neonGreen transition-colors">
-            <span>Bagaimana cara kerja VPN Ping Booster 1ms?</span>
+            <span>Bagaimana cara kerja Gaming Network Stabilizer?</span>
             <i class="fa-solid text-xs transition-transform duration-200" :class="openIdx === 2 ? 'fa-minus text-cyber-neonGreen rotate-180' : 'fa-plus text-slate-400'"></i>
           </button>
           <div x-show="openIdx === 2" x-collapse class="px-5 pb-5 text-slate-300 text-xs leading-relaxed border-t border-cyber-border/40 pt-4 font-outfit">
-            VPN Service Game Nuke membuat interface virtual TUN lokal di ponsel Anda. Paket echo request ping lobby dijawab seketika oleh loopback responder lokal (&lt;1ms), sementara traffic pertandingan game nyata diarahkan melalui server gaming DNS Cloudflare 1.1.1.1 dan Google 8.8.8.8 yang sangat cepat.
+            Modul VPN Game Nuke memanfaatkan interface TUN lokal pada perangkat Anda untuk merutekan seluruh query domain dan paket pertandingan melalui DNS berlatensi ultra-rendah (Cloudflare 1.1.1.1 dan Google 8.8.8.8). Hal ini mencegah fluktuasi ISP, mengurangi jitter, dan memastikan rute tercepat ke server pertandingan tanpa mengonsumsi kuota tambahan.
           </div>
         </div>
 

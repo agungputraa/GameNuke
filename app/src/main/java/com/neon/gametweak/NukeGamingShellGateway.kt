@@ -24,7 +24,12 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
         return probe().also { supportCache[key] = CachedSupport(it, now) }
     }
 
-    fun connected(): Boolean = adb.isConnected()
+    /**
+     * Returns true if ANY privileged shell backend is available (iADB, Shizuku, Daemon, or ADB).
+     * Previously this only checked ADB transport, causing all features guarded by connected()
+     * to silently return null even when Shizuku or iADB were running.
+     */
+    fun connected(): Boolean = NukeConnectionManager.isConnected()
 
     fun readDisplaySize(): NukeCommandResult = adb.executeCommand(
         "wm size", "/", 4_000L, 8_192,

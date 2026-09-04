@@ -1,12 +1,17 @@
-# --- Google Play & AdMob ---
--keep class com.google.android.gms.ads.** { *; }
--keep class com.google.android.gms.common.** { *; }
+# =============================================================================
+# Game Nuke Premium - ProGuard / R8 Configuration
+# =============================================================================
+# CRITICAL: The old `-keep class kotlinx.coroutines.** { *; }` rule caused a
+# StackOverflowError crash. Vungle SDK classes and retained coroutine internals
+# created a recursive call cycle under R8. Now using MINIMAL targeted keeps.
+# =============================================================================
+
+# --- Google Play Core ---
+-keep class com.google.android.gms.** { *; }
 -keep class com.google.android.play.core.** { *; }
 -keep interface com.google.android.play.core.** { *; }
 -dontwarn com.google.android.play.core.**
-
-# --- App Integrity & Anti-Tamper ---
--keep class com.neon.gametweak.IntegrityGuard { *; }
+-dontwarn com.google.android.gms.**
 
 # --- Keep Annotations ---
 -keepclasseswithmembers class * {
@@ -17,27 +22,109 @@
 }
 -keep @androidx.annotation.Keep class * { *; }
 
-# --- Strip debug logs in release ---
+# --- Strip verbose logs in release (keeps ERROR + WARN for crash diagnostics) ---
 -assumenosideeffects class android.util.Log {
     public static *** d(...);
     public static *** v(...);
+    public static *** i(...);
 }
 
-# --- Obfuscation & Anti-Decompilation ---
--repackageclasses 'com.neon.gametweak.obf'
--allowaccessmodification
--renamesourcefileattribute SourceFile
--keepattributes Exceptions, InnerClasses, Signature, *Annotation*, EnclosingMethod
+# --- Obfuscation config ---
+# Only third-party libs get repackaged. App classes keep their names so that
+# the AndroidManifest component references always resolve correctly.
+-keepattributes Exceptions, InnerClasses, Signature, *Annotation*, EnclosingMethod, SourceFile, LineNumberTable
 -dontwarn java.lang.invoke.**
+-dontwarn sun.misc.Unsafe
 
-# --- Kotlin & Coroutines ---
+# ── App classes: keep names so AndroidManifest + reflection always work ──────
+-keep class com.neon.gametweak.NukeApplication { *; }
+-keep class com.neon.gametweak.SplashActivity { *; }
+-keep class com.neon.gametweak.MainActivity { *; }
+-keep class com.neon.gametweak.FloatingBoosterService { *; }
+-keep class com.neon.gametweak.NukeWebServerService { *; }
+-keep class com.neon.gametweak.NukeMacroService { *; }
+-keep class com.neon.gametweak.NukeVpnService { *; }
+-keep class com.neon.gametweak.NukeVpnTrampolineActivity { *; }
+-keep class com.neon.gametweak.GameLaunchSplashActivity { *; }
+-keep class com.neon.gametweak.CallShieldRoleActivity { *; }
+-keep class com.neon.gametweak.NukeCallScreeningService { *; }
+-keep class com.neon.gametweak.PairingReceiver { *; }
+
+# ── Singletons & state objects (accessed from coroutines/lambdas by reference) ─
+-keep class com.neon.gametweak.NukeRemoteConfigRepository { *; }
+-keep class com.neon.gametweak.NukeAdManager { *; }
+-keep class com.neon.gametweak.ConsentManager { *; }
+-keep class com.neon.gametweak.NukeRuntimeState { *; }
+-keep class com.neon.gametweak.NukeConnectionManager { *; }
+-keep class com.neon.gametweak.NukeMacroController { *; }
+-keep class com.neon.gametweak.NukeAppUpdater { *; }
+-keep class com.neon.gametweak.NukeToast { *; }
+-keep class com.neon.gametweak.Tx { *; }
+-keep class com.neon.gametweak.SafePreferences { *; }
+-keep class com.neon.gametweak.NukeAdBlockDetector { *; }
+-keep class com.neon.gametweak.AppUpdateController { *; }
+-keep class com.neon.gametweak.IntegrityGuard { *; }
+-keep class com.neon.gametweak.NukeAdbOrchestrator { *; }
+-keep class com.neon.gametweak.NukeDisplayProfileController { *; }
+-keep class com.neon.gametweak.AdbManager { *; }
+-keep class com.neon.gametweak.LocalWebServer { *; }
+
+# ── AIDL / Parcelable (IPC) ───────────────────────────────────────────────────
+-keep class com.neon.gametweak.IShellService* { *; }
+-keep interface com.neon.gametweak.IShellService* { *; }
+-keep class com.neon.gametweak.ShellUserService { *; }
+-keep class com.neon.gametweak.ShellResult { *; }
+-keepclassmembers class com.neon.gametweak.ShellResult {
+    public static final android.os.Parcelable$Creator *;
+}
+
+# ── Data classes in StateFlows ────────────────────────────────────────────────
+# Kotlin data classes must keep their component() functions & copy() for StateFlow.
+-keepclassmembers class com.neon.gametweak.** {
+    ** component*();
+    ** copy(...);
+}
+
+# ── App Process Entrypoint Daemon ─────────────────────────────────────────────
+-keep class com.neon.gametweak.NukeShellDaemon {
+    public static void main(java.lang.String[]);
+}
+
+# --- Kotlin ---
 -keep class kotlin.Metadata { *; }
--keep class kotlinx.coroutines.** { *; }
+-keep class kotlin.reflect.** { *; }
+-dontwarn kotlin.**
+
+# --- Kotlin Coroutines ---
+# SIGSEGV FIX: kotlinx.coroutines uses sun.misc.Unsafe to access fields by offset.
+# If R8 renames or removes volatile fields, Unsafe.objectFieldOffset() returns wrong
+# offsets → SEGV_ACCERR crash in DefaultDispatcher thread at startup.
+# We MUST keep: class names (for Unsafe lookup) + volatile fields (for correct offsets).
+# We do NOT keep all members (to avoid Vungle StackOverflow conflict from old rules).
+-keepnames class kotlinx.coroutines.**
+-keepclassmembers class kotlinx.coroutines.** {
+    volatile <fields>;
+    <init>(...);
+}
+-keepclassmembernames class kotlinx.** {
+    volatile <fields>;
+}
+-keepnames class kotlinx.coroutines.internal.MainDispatcherFactory {}
+-keepnames class kotlinx.coroutines.CoroutineExceptionHandler {}
+-keepclassmembers class kotlinx.coroutines.internal.MainDispatcherLoader {
+    public static <fields>;
+}
 -dontwarn kotlinx.coroutines.**
 
 # --- Jetpack Compose ---
 -keep class androidx.compose.runtime.** { *; }
+-keep class androidx.compose.ui.** { *; }
+-keep class androidx.compose.foundation.** { *; }
 -dontwarn androidx.compose.**
+
+# --- AndroidX Lifecycle ---
+-keep class androidx.lifecycle.** { *; }
+-dontwarn androidx.lifecycle.**
 
 # --- Shizuku API (v13.1.5) ---
 -keep class dev.rikka.shizuku.** { *; }
@@ -52,18 +139,6 @@
 -keep interface com.iadb.** { *; }
 -dontwarn com.iadb.**
 
-# --- AIDL Interfaces & UserService IPC ---
--keep class com.neon.gametweak.IShellService* { *; }
--keep interface com.neon.gametweak.IShellService* { *; }
--keep class com.neon.gametweak.ShellUserService { *; }
--keep class com.neon.gametweak.ShellResult { *; }
--keepclassmembers class com.neon.gametweak.ShellResult {
-    public static final android.os.Parcelable$Creator *;
-}
-
-# --- Local Web Server ---
--keep class com.neon.gametweak.LocalWebServer { *; }
-
 # --- ADB engine (pure Java) + crypto ---
 -keep class io.github.muntashirakon.adb.** { *; }
 -keep class io.github.muntashirakon.crypto.** { *; }
@@ -74,18 +149,14 @@
 -dontwarn org.conscrypt.**
 -dontwarn javax.naming.**
 
-# --- App Process Entrypoint Daemon ---
--keep class com.neon.gametweak.NukeShellDaemon {
-    public static void main(java.lang.String[]);
-}
-
-# --- OkHttp & TLS Platforms ---
+# --- OkHttp & TLS ---
 -dontwarn org.openjsse.**
 -dontwarn okhttp3.internal.platform.**
 -dontwarn okhttp3.**
 -dontwarn okio.**
 
-# --- Vungle Ads SDK ---
+# --- Vungle Ads SDK: full keep to prevent internal StackOverflow ---
 -keep class com.vungle.** { *; }
+-keepclassmembers class com.vungle.** { *; }
+-keep interface com.vungle.** { *; }
 -dontwarn com.vungle.**
-

@@ -143,6 +143,7 @@ class FloatingBoosterService : Service() {
     private val moduleAddFailures = ConcurrentHashMap<String, Int>()
     private var wikiOverlay: NukeWikiOverlayView? = null
     private var fpsOverlay: NukeFpsOverlayView? = null
+    private var macroPinOverlay: NukeMacroPinOverlay? = null
 
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
@@ -176,6 +177,18 @@ class FloatingBoosterService : Service() {
         Tx.setLang(validLanguage(prefs.safeString(K_LANG, "en")))
         prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
         publishRuntime(null)
+
+        // Sync VPN and Macro states in real-time to Floating HUD Compose cards
+        scope.launch {
+            NukeVpnService.status.collect { vpn ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vpn_boost" to vpn.isConnected)) }
+            }
+        }
+        scope.launch {
+            NukeMacroController.getInstance(applicationContext).state.collect { macro ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("macro" to macro.isRunning)) }
+            }
+        }
 
         // Ensure local REST API server is alive while gaming HUD service runs
         kotlin.concurrent.thread(name = "Nuke-HudLocalApiServer", isDaemon = true) {
@@ -846,11 +859,18 @@ class FloatingBoosterService : Service() {
         }
     }
 
+    private fun executePrivilegedScript(script: String, timeoutMs: Long = 4_000L): NukeCommandResult? {
+        val res = NukeConnectionManager.executeCommand(script, timeoutMs)
+        if (res != null) return res
+        val adb = AdbManager.getInstance(applicationContext)
+        return runCatching { adb.executeCommand(script, "/", timeoutMs) }.getOrNull()
+    }
+
     private fun handleQuickAction(action: String) {
         // Optimistic UI state update immediately (0ms visual feedback!)
         val currentActive = composeHudState.value.quickToolStates[action] ?: false
         val nextVal = !currentActive
-        if (action != "deep_clean" && action != "screenshot") {
+        if (action != "deep_clean" && action != "screenshot" && action != "vpn_boost" && action != "macro") {
             prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
             composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
         }
@@ -1194,24 +1214,29 @@ class FloatingBoosterService : Service() {
             }
             "macro" -> {
                 val controller = NukeMacroController.getInstance(applicationContext)
+                if (macroPinOverlay == null) {
+                    macroPinOverlay = NukeMacroPinOverlay(applicationContext)
+                }
+
                 if (controller.state.value.isRunning) {
                     controller.stopMacro()
                     toastOutcome("Macro Fast-Hand: STOPPED")
                 } else {
                     val engine = controller.detectBestEngine()
                     if (engine == NukeMacroController.MacroEngine.NONE) {
-                        toastStatus("Aktifkan Shizuku atau Accessibility Service untuk Macro", long = true)
+                        if (!NukeMacroService.isAccessibilityPermissionGranted(applicationContext)) {
+                            toastStatus("Aktifkan Game Nuke Macro di Aksesibilitas atau jalankan Shizuku", long = true)
+                            NukeMacroService.openAccessibilitySettings(applicationContext)
+                        } else {
+                            toastStatus("Sambungkan Shizuku atau izinkan Aksesibilitas", long = true)
+                        }
                     } else {
-                        if (controller.state.value.points.isEmpty()) {
-                            val dm = resources.displayMetrics
-                            val cx = dm.widthPixels * 0.75f
-                            val cy = dm.heightPixels * 0.65f
-                            controller.addPoint(cx, cy, 60L)
-                            controller.addPoint(cx - 80f, cy - 80f, 60L)
+                        if (macroPinOverlay?.isShowing != true) {
+                            macroPinOverlay?.show()
                         }
                         controller.startMacro()
                         val engineName = if (engine == NukeMacroController.MacroEngine.SHIZUKU_PRIVILEGED) "0ms Shizuku" else "Accessibility"
-                        toastOutcome("Macro Fast-Hand: ACTIVE ($engineName)")
+                        toastOutcome("Macro Fast-Hand: ACTIVE ($engineName) • Target Pin ON")
                     }
                 }
             }
@@ -1221,40 +1246,109 @@ class FloatingBoosterService : Service() {
                     toastOutcome("VPN Ping Booster: OFF")
                 } else {
                     val prepareIntent = NukeVpnService.prepare(applicationContext)
-                    if (prepareIntent != null) {
-                        prepareIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                        startActivity(prepareIntent)
-                        toastStatus("Izinkan izin VPN untuk Ping Booster", long = true)
-                    } else {
+                    if (prepareIntent == null) {
+                        // Already granted
                         NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.TURBO_1MS)
-                        toastOutcome("VPN Ping Turbo: 1ms LOCKED")
+                        toastOutcome("VPN Ping Booster: 1ms LOCKED")
+                    } else {
+                        // Launch transparent trampoline to show system VPN dialog
+                        // without any visible app redirect or transition flash.
+                        val intent = Intent(applicationContext, NukeVpnTrampolineActivity::class.java).apply {
+                            addFlags(
+                                Intent.FLAG_ACTIVITY_NEW_TASK or
+                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                                Intent.FLAG_ACTIVITY_NO_ANIMATION
+                            )
+                        }
+                        startActivity(intent)
                     }
                 }
             }
             "fps_lock" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
-                    val hz = if (nextVal) "120" else "0"
-                    val script = """
-                        settings put system peak_refresh_rate $hz 2>/dev/null
-                        settings put system min_refresh_rate $hz 2>/dev/null
-                        settings put system user_refresh_rate $hz 2>/dev/null
-                    """.trimIndent()
-                    adb.executeCommand(script, "/", 3_000L)
+                    val script = if (nextVal) {
+                        """
+                            # AOSP Universal
+                            settings put system peak_refresh_rate 120.0 2>/dev/null
+                            settings put system min_refresh_rate 120.0 2>/dev/null
+                            settings put system peak_refresh_rate 120 2>/dev/null
+                            settings put system min_refresh_rate 120 2>/dev/null
+                            settings put system user_refresh_rate 120 2>/dev/null
+                            settings put secure user_refresh_rate 120 2>/dev/null
+
+                            # Xiaomi HyperOS & MIUI (Bypass Joyose thermal limit throttling)
+                            settings put secure miui_refresh_rate 120 2>/dev/null
+                            settings put system miui_refresh_rate 120 2>/dev/null
+                            settings put system thermal_limit_refresh_rate 120 2>/dev/null
+                            settings put system thermal_limit_refresh_rate 0 2>/dev/null
+                            settings put system power_save_refresh_rate 1 2>/dev/null
+
+                            # Samsung OneUI (2 = High 120Hz lock)
+                            settings put secure refresh_rate_mode 2 2>/dev/null
+                            settings put system refresh_rate_mode 2 2>/dev/null
+                            settings put system high_refresh_rate_mode 1 2>/dev/null
+
+                            # OnePlus / OPPO / Realme (2 = 120Hz mode)
+                            settings put global oneplus_screen_refresh_rate 2 2>/dev/null
+                            settings put system oplus_customize_refresh_rate 2 2>/dev/null
+                            settings put system lock_refresh_rate 120 2>/dev/null
+                            settings put system customize_refresh_rate 120 2>/dev/null
+
+                            # Asus ROG Phone
+                            settings put system fps_mode 2 2>/dev/null
+                            settings put system refresh_rate 120 2>/dev/null
+
+                            # Prevent video/game frame rate downscale matching
+                            cmd display set-match-content-frame-rate-pref 0 2>/dev/null
+
+                            # SurfaceFlinger high refresh rate hint
+                            setprop debug.sf.fps 120 2>/dev/null
+                            setprop debug.sf.max_fps 120 2>/dev/null
+                            setprop persist.sys.fps 120 2>/dev/null
+                            service call SurfaceFlinger 1035 i32 1 2>/dev/null
+                        """.trimIndent()
+                    } else {
+                        """
+                            # AOSP Restore
+                            settings put system peak_refresh_rate 120.0 2>/dev/null
+                            settings put system min_refresh_rate 60.0 2>/dev/null
+                            settings put system peak_refresh_rate 120 2>/dev/null
+                            settings put system min_refresh_rate 60 2>/dev/null
+                            settings put system user_refresh_rate 0 2>/dev/null
+                            settings put secure user_refresh_rate 0 2>/dev/null
+
+                            # Xiaomi Restore
+                            settings put secure miui_refresh_rate 0 2>/dev/null
+                            settings put system miui_refresh_rate 0 2>/dev/null
+                            settings delete system thermal_limit_refresh_rate 2>/dev/null
+
+                            # Samsung Restore (1 = Adaptive)
+                            settings put secure refresh_rate_mode 1 2>/dev/null
+                            settings put system refresh_rate_mode 1 2>/dev/null
+
+                            # OnePlus / OPPO Restore (0 = Auto)
+                            settings put global oneplus_screen_refresh_rate 0 2>/dev/null
+                            settings put system oplus_customize_refresh_rate 0 2>/dev/null
+                            settings put system lock_refresh_rate 0 2>/dev/null
+
+                            # Restore display match content frame rate
+                            cmd display set-match-content-frame-rate-pref 1 2>/dev/null
+                        """.trimIndent()
+                    }
+                    executePrivilegedScript(script, 4_000L)
                     withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (nextVal) "Display Refresh: LOCKED 120Hz" else "Display Refresh: DYNAMIC AUTO")
+                        toastOutcome(if (nextVal) "Display Refresh: LOCKED 120Hz (Multi-OEM)" else "Display Refresh: DYNAMIC AUTO")
                     }
                 }
             }
             "anti_mistouch" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val script = if (nextVal) {
                         "settings put secure edge_touch_prevention 1 2>/dev/null ; settings put system edge_mistouch_prevention 1 2>/dev/null"
                     } else {
                         "settings put secure edge_touch_prevention 0 2>/dev/null ; settings put system edge_mistouch_prevention 0 2>/dev/null"
                     }
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Anti-Mistouch Palm Shield: ON" else "Anti-Mistouch: OFF")
                     }
@@ -3216,6 +3310,7 @@ class FloatingBoosterService : Service() {
         removeAllWindowsImmediate()
         wikiOverlay?.hide(); wikiOverlay = null
         fpsOverlay?.hide(); fpsOverlay = null
+        macroPinOverlay?.release(); macroPinOverlay = null
         NukeAudioBooster.disableBoost()
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }

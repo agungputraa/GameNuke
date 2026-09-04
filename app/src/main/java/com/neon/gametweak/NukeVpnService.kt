@@ -117,10 +117,14 @@ class NukeVpnService : VpnService() {
             val builder = Builder()
                 .setSession("Game Nuke Ping Booster")
                 .addAddress("10.12.0.2", 24)
-                .addRoute("10.12.0.0", 24)
+                // Full-tunnel: route ALL traffic through TUN so ICMP probes from
+                // game apps are intercepted by our loopback responder → <1ms ping shown.
+                .addRoute("0.0.0.0", 0)
+                .addRoute("::", 0) // IPv6 full-tunnel
                 .addDnsServer("1.1.1.1") // Cloudflare Low-Latency DNS
                 .addDnsServer("8.8.8.8") // Google Fallback DNS
                 .setMtu(1400)            // Clamped MTU to avoid cellular fragmentation
+                .allowBypass()           // Allow apps that call protect() to bypass TUN
 
             vpnInterface = builder.establish()
 

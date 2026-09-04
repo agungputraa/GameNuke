@@ -126,10 +126,11 @@ class AdbManager private constructor(context: Context) {
     fun isLocalBinaryAvailable(): Boolean = true
 
     fun isConnected(): Boolean {
-        if (NukeConnectionManager.isConnected()) { connectedFlag = true; return true }
-        if (NukeDaemonClient.ping()) { connectedFlag = true; return true }
+        // NOTE: Do NOT call NukeDaemonClient.ping() here.
+        // Daemon is a completely separate transport checked by NukeConnectionManager.
+        // Calling ping() here blocks 1200ms when daemon is not running, causing UI freezes.
         return try {
-            val m = manager() ?: return false
+            val m = manager() ?: return connectedFlag
             val ok = m.isConnected
             connectedFlag = ok
             ok
@@ -394,7 +395,7 @@ class AdbManager private constructor(context: Context) {
      * parent shell, so even commands containing `exit` are isolated inside a subshell. The reader is
      * bounded and the transport is destroyed on timeout to avoid hanging UI/coroutine work forever.
      */
-    private fun executeCommandDirect(
+    fun executeCommandDirect(
         command: String,
         dir: String? = "/",
         timeoutMs: Long = 7_500L,

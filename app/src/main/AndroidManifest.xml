@@ -148,6 +148,14 @@
                 android:resource="@xml/nuke_macro_accessibility_config" />
         </service>
 
+        <activity
+            android:name=".NukeVpnTrampolineActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:finishOnTaskLaunch="true"
+            android:theme="@style/Theme.Nuke.FloatingPanel" />
+
         <service
             android:name=".NukeVpnService"
             android:exported="false"

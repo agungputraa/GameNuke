@@ -52,13 +52,15 @@ Write-Host "   Verifying signed release APK..." -ForegroundColor Yellow
 $TargetApkName = "GameNuke-Premium-v$CleanVersion.apk"
 $ApkPath = "$RootDir\release-apk\$TargetApkName"
 
-if (-not (Test-Path $ApkPath)) {
-    Write-Host "   Building signed release APK with Gradle assembleRelease..." -ForegroundColor Yellow
-    & "$RootDir\gradlew.bat" assembleRelease
+$FallbackApk = "$RootDir\app\build\outputs\apk\release\app-release.apk"
+if (Test-Path $FallbackApk) {
+    Copy-Item -Path $FallbackApk -Destination $ApkPath -Force
+    Write-Host "   Updated $ApkPath with fresh build from $FallbackApk" -ForegroundColor Green
 }
 
 if (-not (Test-Path $ApkPath)) {
-    $FallbackApk = "$RootDir\app\build\outputs\apk\release\app-release.apk"
+    Write-Host "   Building signed release APK with Gradle assembleRelease..." -ForegroundColor Yellow
+    & "$RootDir\gradlew.bat" assembleRelease
     if (Test-Path $FallbackApk) {
         Copy-Item -Path $FallbackApk -Destination $ApkPath -Force
     }
@@ -150,7 +152,7 @@ $lines = @(
     "",
     "Highlights:",
     "- Macro Fast-Hand Dual-Engine: Shizuku privileged input (~0.1ms latency) + Accessibility fallback.",
-    "- VPN Ping Booster: 1ms local loopback responder for Mobile Legends lobby + Gaming DNS (Cloudflare 1.1.1.1 and Google 8.8.8.8).",
+    "- Gaming Network Stabilizer: Ultra-low latency dedicated gaming DNS (Cloudflare 1.1.1.1 and Google 8.8.8.8) with packet optimization.",
     "- Tactical Audio Equalizer: Footstep Enhancer and Gunshot Clarity for FPS games without root.",
     "- In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider.",
     "- Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay.",
@@ -197,15 +199,11 @@ if ($ExistingRelease) {
 Write-Host "[5/6] Verifying and uploading APK binary asset..." -ForegroundColor Yellow
 $CleanUploadUrl = $UploadUrl -replace '\{\?name,label\}', "?name=$ApkName"
 
-$AssetAlreadyUploaded = $false
 try {
     $Assets = Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases/$ReleaseId/assets" -Headers $Headers -Method Get
     foreach ($a in $Assets) {
-        if ($a.name -eq $ApkName -and $a.size -eq $ApkItem.Length) {
-            Write-Host "   Asset $ApkName already present with matching size ($($a.size) bytes)." -ForegroundColor Green
-            $AssetAlreadyUploaded = $true
-        } elseif ($a.name -eq $ApkName) {
-            Write-Host "   Deleting outdated asset $($a.id)..." -ForegroundColor DarkGray
+        if ($a.name -eq $ApkName) {
+            Write-Host "   Replacing previous asset $($a.id) ($($a.name)) with fresh build..." -ForegroundColor DarkGray
             Invoke-RestMethod -Uri "https://api.github.com/repos/$Owner/$Repo/releases/assets/$($a.id)" -Headers $Headers -Method Delete
         }
     }

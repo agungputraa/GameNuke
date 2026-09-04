@@ -138,16 +138,19 @@ class NukeMacroController private constructor(private val context: Context) {
      * Start execution of configured macro points
      */
     fun startMacro(): Boolean {
-        val currentPoints = _state.value.points
-        if (currentPoints.isEmpty()) {
-            Log.w(TAG, "Cannot start macro: no points configured")
-            return false
-        }
-
         val engine = detectBestEngine()
         if (engine == MacroEngine.NONE) {
             Log.w(TAG, "Cannot start macro: no engine ready (neither Shizuku nor Accessibility)")
             return false
+        }
+
+        // If no tap points are configured, auto-add a sensible default so first-use just works.
+        // The user can then drag the pin overlay to the desired screen position.
+        val currentPoints = _state.value.points
+        if (currentPoints.isEmpty()) {
+            val dm = context.resources.displayMetrics
+            addPoint(dm.widthPixels * 0.75f, dm.heightPixels * 0.65f, 60L)
+            Log.d(TAG, "Auto-added default macro point at 75%/65% screen position")
         }
 
         stopMacro()
@@ -163,7 +166,8 @@ class NukeMacroController private constructor(private val context: Context) {
                 loop++
                 _state.update { it.copy(currentLoop = loop) }
 
-                for (point in currentPoints) {
+                val activePoints = _state.value.points
+                for (point in activePoints) {
                     if (!isActive || !_state.value.isRunning) break
 
                     // Execute click via best available engine
@@ -194,17 +198,20 @@ class NukeMacroController private constructor(private val context: Context) {
         val safeHold = holdMs.coerceIn(10L, 2000L)
 
         val engine = _state.value.activeEngine
-        if (engine == MacroEngine.SHIZUKU_PRIVILEGED) {
-            // Instant 0ms input tap via privileged shell/binder
+        var executed = false
+
+        if (engine == MacroEngine.SHIZUKU_PRIVILEGED || NukeConnectionManager.isConnected()) {
+            // Instant 0ms input tap via privileged shell/binder (Shizuku, iAdb, Daemon, or ADB)
             val cmdRes = runCatching {
-                adbManager.executeCommand("input tap ${safeX.toInt()} ${safeY.toInt()}", "/", 1_500L)
+                NukeConnectionManager.executeCommand("input tap ${safeX.toInt()} ${safeY.toInt()}", 1_000L)
             }.getOrNull()
 
-            if (cmdRes == null || !cmdRes.isSuccess) {
-                // Fallback to accessibility if shell hit an unexpected glitch
-                NukeMacroService.performTap(safeX, safeY, safeHold)
+            if (cmdRes != null && cmdRes.isSuccess) {
+                executed = true
             }
-        } else if (engine == MacroEngine.ACCESSIBILITY) {
+        }
+
+        if (!executed && (engine == MacroEngine.ACCESSIBILITY || NukeMacroService.isServiceRunning)) {
             NukeMacroService.performTap(safeX, safeY, safeHold)
         }
     }

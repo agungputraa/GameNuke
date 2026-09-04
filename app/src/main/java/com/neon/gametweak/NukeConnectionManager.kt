@@ -34,11 +34,12 @@ object NukeConnectionManager {
                 Backend.NONE -> return Backend.NONE
             }
         }
-        // Default priority: IADB (most stable) -> SHIZUKU -> DAEMON -> NONE
+        // Default priority: IADB (most stable) -> SHIZUKU -> DAEMON -> ADB_NATIVE -> NONE
         return when {
             NukeIadbBridge.isConnected() -> Backend.IADB
             NukeShizukuBridge.isConnected() -> Backend.SHIZUKU
             NukeDaemonClient.ping() -> Backend.DAEMON
+            NukeApplication.instance?.let { runCatching { AdbManager.getInstance(it).isConnected() }.getOrDefault(false) } == true -> Backend.ADB_NATIVE
             else -> Backend.NONE
         }
     }
@@ -69,7 +70,15 @@ object NukeConnectionManager {
                 NukeDaemonClient.execute(command, timeoutMs, maxOutputChars)
             }.onFailure { Log.w(TAG, "Daemon execute failed: ${it.message}") }.getOrNull()
 
-            Backend.ADB_NATIVE, Backend.NONE -> null
+            Backend.ADB_NATIVE -> runCatching {
+                val ctx = NukeApplication.instance ?: return null
+                val adb = AdbManager.getInstance(ctx)
+                if (adb.isConnected()) {
+                    adb.executeCommandDirect(command, "/", timeoutMs, maxOutputChars)
+                } else null
+            }.onFailure { Log.w(TAG, "AdbManager execute failed: ${it.message}") }.getOrNull()
+
+            Backend.NONE -> null
         }
     }
 

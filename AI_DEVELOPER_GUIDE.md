@@ -75,33 +75,51 @@ c:\ProyekAndroid\GameNukePrem\
 
 ## 🎮 4. Deep Dive: The 5 Pro Gaming Engines
 
-### 1. Dual-Engine Macro (`NukeMacroController.kt` & `NukeMacroService.kt`)
-* **Shizuku Mode (~0.1ms Latency):** When privileged access is detected (`NukeConnectionManager.isConnected()`), touch injection executes directly via root/shell `/system/bin/input tap X Y`, bypassing Android framework touch throttling.
-* **Accessibility Mode (~35ms Latency):** When Shizuku is not running, falls back to `AccessibilityService.dispatchGesture()`. Zero setup required for casual users.
-* Includes coordinate bounds clamping (`clampX`, `clampY`), delay intervals, and multi-tap loops.
+### 1. Dual-Engine Macro & Floating Draggable Pin (`NukeMacroController.kt`, `NukeMacroService.kt`, `NukeMacroPinOverlay.kt`)
+* **Shizuku Mode (~0.1ms Latency):** When privileged access is detected (`NukeConnectionManager.isConnected()`), touch injection executes directly via `NukeConnectionManager.executeCommand("input tap X Y")`, bypassing Android framework touch throttling.
+* **Accessibility Mode (~35ms Latency):** When Shizuku is not running, falls back to `NukeMacroService.performTap()` via `AccessibilityService.dispatchGesture(..., handler = Looper.getMainLooper())`. Zero setup required for casual users.
+* **Floating Draggable Pin (`NukeMacroPinOverlay.kt`):** Spawns a draggable cyber reticle (`🎯 #1`) on top of the game. Gamers can position it precisely over their skill or attack button. When the macro executes, the reticle pulses with a neon green animation. Includes a mini control card with [▶/⏸], speed multiplier (1x, 2x, 5x MAX), and close button [✕].
 
-### 2. 1ms VPN Ping Booster (`NukeVpnService.kt`)
-* **The Problem:** In Mobile Legends, high ping causes match delay and ping jitter.
-* **The Solution:** Creates an on-device virtual TUN interface (`10.255.0.2/32`). When the game sends ICMP ping probe packets, `NukeVpnService` intercepts them on the local TUN interface and responds immediately in `< 1ms`.
-* **Real Game Routing:** Real game match traffic is forwarded through high-speed gaming DNS resolvers (**Cloudflare 1.1.1.1** and **Google 8.8.8.8**) with MTU 1400 tuning.
+### 2. 1ms VPN Ping Booster & Permission Trampoline (`NukeVpnService.kt` & `NukeVpnTrampolineActivity.kt`)
+* **The Problem:** In Mobile Legends, high ping causes match delay and ping jitter. Starting `VpnService` from background overlays drops the Android VPN permission dialog on Android 10-16.
+* **The Solution:**
+  - `NukeVpnTrampolineActivity` is a transparent activity (`@style/Theme.Nuke.FloatingPanel`) that prepares VPN via `VpnService.prepare(this)` and registers an `ActivityResultLauncher`.
+  - Android displays the official system VPN dialog: *"Game Nuke wants to set up a VPN connection..."*.
+  - When approved (`RESULT_OK`), `NukeVpnService.startBoost()` launches the foreground TUN responder.
+  - The local TUN interface (`10.255.0.2/32`) answers MLBB ICMP ping packets in `< 1ms` while real game match traffic is forwarded through high-speed gaming DNS (**Cloudflare 1.1.1.1** and **Google 8.8.8.8**).
+  - Floating HUD state is synchronized directly via `NukeVpnService.status` StateFlow.
 
-### 3. Tactical Footstep Equalizer (`NukeAudioBooster.kt`)
+### 3. Universal Multi-OEM 120Hz Refresh Rate Lock (`FloatingBoosterService.kt`)
+* **The Problem:** Setting `settings put system peak_refresh_rate 120` fails on many modern phones because:
+  - AOSP requires float format `120.0` for `peak_refresh_rate` and `min_refresh_rate`.
+  - Xiaomi/HyperOS Joyose daemon limits frame rates to 60Hz when games start.
+  - Samsung OneUI requires `refresh_rate_mode 2`.
+  - OnePlus/OPPO requires `oneplus_screen_refresh_rate 2`.
+* **The Solution:** Executes a comprehensive multi-vendor payload via `executePrivilegedScript`:
+  - AOSP: `peak_refresh_rate 120.0`, `min_refresh_rate 120.0`, `user_refresh_rate 120`.
+  - Xiaomi/HyperOS: `miui_refresh_rate 120`, `thermal_limit_refresh_rate 120`, `thermal_limit_refresh_rate 0`, `power_save_refresh_rate 1`.
+  - Samsung OneUI: `refresh_rate_mode 2`, `high_refresh_rate_mode 1`.
+  - OnePlus/OPPO/Realme: `oneplus_screen_refresh_rate 2`, `lock_refresh_rate 120`, `oplus_customize_refresh_rate 2`.
+  - Display downscale prevention: `cmd display set-match-content-frame-rate-pref 0`.
+  - SurfaceFlinger high FPS rendering hints and properties.
+
+### 4. Tactical Footstep Equalizer (`NukeAudioBooster.kt`)
 * Uses Android's native `android.media.audiofx.Equalizer` and `LoudnessEnhancer` on AudioSession 0 (global system mix).
 * Cuts sub-bass rumble (<300Hz) from explosions and amplifies 1kHz - 4kHz frequencies where enemy footsteps, grass rustling, and weapon reload clicks reside.
 * Runs 100% natively without Root.
 
-### 4. Floating PiP Wiki Browser (`NukeWikiOverlayView.kt`)
+### 5. Floating PiP Wiki Browser (`NukeWikiOverlayView.kt`)
 * Spawns a floating, draggable `WebView` overlay with opacity control (slider from 20% to 100%).
 * Gamers can check counter item builds (e.g. Athena's Shield vs Radiant Armor in MLBB) without leaving the game or risking AFK disconnects.
 * Includes quick bookmark buttons and minimize bubble.
 
-### 5. Hardware-Accurate FPS Chip (`NukeFpsOverlayView.kt`)
+### 6. Hardware-Accurate FPS Chip (`NukeFpsOverlayView.kt`)
 * Hooks into Android's `Choreographer.postFrameCallback()` to calculate genuine rendered frame rate every second.
 * Displays current FPS, color-coded stability (Neon Green >= 90, Cyan >= 55, Red < 55), and real-time battery thermal data.
 
 ---
 
-## 🛰️ 5. Edge CDN In-App Updater & Dual-Sync Automation
+## 🛰️ 5. Edge CDN In-App Updater & Release Protocol
 
 ### The 60 Requests/Hour Rate Limit Problem
 If an app directly queries GitHub's REST API endpoint (`https://api.github.com/repos/.../releases/latest`), users will quickly hit GitHub's IP rate limit of **60 requests per hour**, resulting in `403 Forbidden` errors and broken in-app updates.
@@ -111,8 +129,14 @@ If an app directly queries GitHub's REST API endpoint (`https://api.github.com/r
 2. Because GitHub Pages is edge-cached by Cloudflare, this endpoint supports **millions of concurrent hits** with zero rate-limit restrictions.
 3. The app compares `versionCode` (e.g. 16 > 15). If an update exists, it downloads the APK binary with progress tracking and launches the official `PackageInstaller` intent via `FileProvider`.
 
+### Iterative Versioning Rule (CRITICAL)
+> [!IMPORTANT]
+> **DO NOT bump `versionCode` or `versionName` for routine bug fixes or internal testing.**
+> Keep the current version (e.g. `versionCode = 16`, `versionName = "2.3.0-prem"`).
+> Overwrite the APK asset on tag `v2.3.0-prem` until the user explicitly requests a production version bump!
+
 ### Dual-Sync Release Automation
-* **Method 1 (Recommended):** Run `tools\publish_release.bat`. It reads the version from `build.gradle.kts`, compiles the APK, hashes it with SHA-256, updates `version.json`, force-pushes web files to `main` & `gh-pages`, creates the GitHub release, and uploads the APK binary asset.
+* **Method 1 (Recommended):** Run `tools\publish_release.bat`. It compiles the APK, hashes it with SHA-256, updates `version.json`, force-pushes web files to `main` & `gh-pages`, creates/updates the GitHub release, and uploads the APK binary asset.
 * **Method 2 (GitHub Web UI):** If a release is created manually on GitHub, the GitHub Actions workflow [`.github/workflows/release_sync.yml`](file:///c:/ProyekAndroid/GameNukePrem/gamenukeweb/.github/workflows/release_sync.yml) automatically extracts the release asset, updates `version.json`, and commits to `gh-pages` and `main`.
 
 ---
@@ -137,5 +161,7 @@ If a future developer or AI wants to add a new tool to the floating HUD:
 | :--- | :--- | :--- |
 | **`assembleRelease` fails with Keystore error** | Missing signing credentials in `release.properties` | Verify `storePassword`, `keyAlias=agwallpaper`, and `keyPassword` exist in `release.properties`. |
 | **Shizuku Macro shows "Permission Denied"** | Shizuku app is not running on device | Guide user to launch Shizuku and start service via Wireless Debugging, or let the app automatically fallback to `AccessibilityService`. |
-| **VPN Ping Booster doesn't activate** | User has not accepted Android VPN dialog | `NukeVpnService.prepare(context)` returns an Intent; start it with `FLAG_ACTIVITY_NEW_TASK` to show system prompt. |
+| **VPN Ping Booster dialog doesn't appear** | Service attempted background launch | Use `NukeVpnTrampolineActivity` which uses `ActivityResultLauncher` to show the official Android VPN prompt. |
+| **120Hz doesn't lock on Xiaomi / POCO** | Joyose throttles refresh rate | The multi-OEM locker automatically writes `thermal_limit_refresh_rate 120` & `0` and `miui_refresh_rate 120`. |
 | **Source code leaked to GitHub** | Someone ran `git push origin main` from root | Immediately run `tools\publish_release.bat` to overwrite remote `main` with the isolated web directory. |
+

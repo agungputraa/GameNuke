@@ -42,6 +42,8 @@ class NukeMacroService : AccessibilityService() {
             context.startActivity(intent)
         }
 
+        private val mainHandler = android.os.Handler(android.os.Looper.getMainLooper())
+
         /**
          * Dispatch a low-latency simulated tap at (x, y) coordinates.
          */
@@ -60,7 +62,7 @@ class NukeMacroService : AccessibilityService() {
                 override fun onCancelled(gestureDescription: GestureDescription?) {
                     onComplete?.invoke(false)
                 }
-            }, null)
+            }, mainHandler)
         }
 
         /**
@@ -87,7 +89,7 @@ class NukeMacroService : AccessibilityService() {
                 override fun onCancelled(gestureDescription: GestureDescription?) {
                     onComplete?.invoke(false)
                 }
-            }, null)
+            }, mainHandler)
         }
     }
 
