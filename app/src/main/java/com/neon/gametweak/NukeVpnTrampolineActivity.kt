@@ -16,8 +16,8 @@ class NukeVpnTrampolineActivity : ComponentActivity() {
         ActivityResultContracts.StartActivityForResult()
     ) { result ->
         if (result.resultCode == Activity.RESULT_OK) {
-            NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.TURBO_1MS)
-            NukeToast.success(applicationContext, "VPN Ping Booster: 1ms LOCKED")
+            NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.PING_BOOST)
+            NukeToast.success(applicationContext, "VPN Ping Boost: ACTIVE ⚡")
         } else {
             NukeToast.error(applicationContext, "Izin VPN ditolak pengguna")
         }
@@ -37,8 +37,8 @@ class NukeVpnTrampolineActivity : ComponentActivity() {
             }
         } else {
             // Already granted
-            NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.TURBO_1MS)
-            NukeToast.success(applicationContext, "VPN Ping Booster: 1ms LOCKED")
+            NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.PING_BOOST)
+            NukeToast.success(applicationContext, "VPN Ping Boost: ACTIVE ⚡")
             finish()
         }
     }

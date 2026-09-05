@@ -35,9 +35,9 @@ data class NukeDeviceProfile(
             val hint = when (maker.lowercase()) {
                 "xiaomi", "redmi", "poco" ->
                     "If extended control is restricted, also enable USB debugging (Security settings) in Developer options."
-                "oppo", "oneplus" ->
+                "oppo", "oneplus", "realme" ->
                     "If extended control is limited, check Developer options for Permission monitoring and disable it while Device Control is active."
-                "huawei" ->
+                "huawei", "honor" ->
                     "If Device Control randomly stops, enable the vendor debugging option that stays available while USB mode is Charge only."
                 "meizu" ->
                     "If extended control is limited, check Developer options and temporarily disable the vendor restriction that blocks debugging commands."
@@ -45,6 +45,14 @@ data class NukeDeviceProfile(
                     "Keep Wireless debugging enabled during the session; vendor background limits can stop discovery."
                 "samsung" ->
                     "Wireless debugging is supported on Android 11+; keep Game Nuke unrestricted from battery optimization if discovery is interrupted."
+                "transsion", "tecno", "infinix", "itel" ->
+                    "On HiOS/XOS, exclude Game Nuke from Phone Master auto-freeze to ensure seamless background wireless ADB and HUD stability."
+                "asus", "rog" ->
+                    "ROG Phone / Armoury Crate: Game Nuke works alongside Game Genie. Ensure background execution is set to Unrestricted."
+                "motorola", "lenovo" ->
+                    "Moto ReadyFor / Gametime: Wireless debugging operates natively on Android 11+ with capability-probed fallback."
+                "google" ->
+                    "Google Pixel: Pure AOSP wireless debugging supported natively across Android 11 through Android 16/17."
                 else ->
                     "Android 11+ Wireless debugging is capability-probed; rejected OEM commands automatically fall back."
             }

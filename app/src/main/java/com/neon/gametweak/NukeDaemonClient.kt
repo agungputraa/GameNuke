@@ -2,6 +2,7 @@ package com.neon.gametweak
 
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
+import android.os.Looper
 import android.os.SystemClock
 import android.util.Base64
 import java.io.BufferedReader
@@ -14,6 +15,11 @@ object NukeDaemonClient {
     @Volatile private var lastPing = false
 
     fun ping(force: Boolean = false): Boolean {
+        // If called from Main UI Thread, NEVER execute blocking UNIX domain socket I/O!
+        // A failed socket connect blocks 1200ms when daemon is not running, causing UI freezes/ANR.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            return lastPing
+        }
         val now = SystemClock.elapsedRealtime()
         if (!force && now - lastPingAt < PING_CACHE_MS) return lastPing
         val ok = runCatching { request("PING", 1200) }.getOrNull()?.startsWith("PONG|") == true

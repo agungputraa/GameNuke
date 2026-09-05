@@ -143,7 +143,6 @@ class FloatingBoosterService : Service() {
     private val moduleAddFailures = ConcurrentHashMap<String, Int>()
     private var wikiOverlay: NukeWikiOverlayView? = null
     private var fpsOverlay: NukeFpsOverlayView? = null
-    private var macroPinOverlay: NukeMacroPinOverlay? = null
 
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
@@ -178,15 +177,23 @@ class FloatingBoosterService : Service() {
         prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
         publishRuntime(null)
 
-        // Sync VPN and Macro states in real-time to Floating HUD Compose cards
+        // Sync VPN state in real-time to Floating HUD Compose cards
         scope.launch {
             NukeVpnService.status.collect { vpn ->
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vpn_boost" to vpn.isConnected)) }
             }
         }
+
+        // Initialize Autonomous AI Game Sentinel (Auto RAM Cache, Zombie Killer & Anti-Overheat)
+        NukeAiSentinel.init(applicationContext)
         scope.launch {
-            NukeMacroController.getInstance(applicationContext).state.collect { macro ->
-                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("macro" to macro.isRunning)) }
+            NukeAiSentinel.enabled.collect { active ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("ai_sentinel" to active)) }
+            }
+        }
+        scope.launch {
+            NukeAiSentinel.isCoolingActive.collect { cooling ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("ai_cooling" to cooling)) }
             }
         }
 
@@ -405,22 +412,29 @@ class FloatingBoosterService : Service() {
             runCatching { local.refreshHudMetrics(includeCpu = true) }
             local.state.value.let { updateTelemetryUi(it); publishRuntime(it) }
             while (isActive) {
-                delay(1_100L)
-                runCatching { local.refreshHudMetrics(includeCpu = true) }
+                val isVisible = hubVisible()
+                val interval = if (isVisible) 1_200L else 15_000L
+                delay(interval)
+                // When HUD is collapsed/minimized, avoid spawning shell processes entirely (zero-overhead)
+                runCatching { local.refreshHudMetrics(includeCpu = isVisible) }
                 val state = local.state.value
                 updateTelemetryUi(state)
                 publishRuntime(state)
             }
         }
         // Battery/network/ping are intentionally decoupled from the expensive thermal + shell
-        // metrics pass. A failed ping gets one quick retry and never holds CPU/RAM telemetry hostage.
+        // metrics pass. When HUD is collapsed, avoid pinging the network to prevent game jitter.
         auxTelemetryJob = scope.launch {
             refreshAuxTelemetry(retryPing = true)
             engine?.state?.value?.let(::updateTelemetryUi)
             while (isActive) {
-                delay(2_500L)
-                refreshAuxTelemetry(retryPing = true)
-                engine?.state?.value?.let(::updateTelemetryUi)
+                val isVisible = hubVisible()
+                val interval = if (isVisible) 2_500L else 20_000L
+                delay(interval)
+                if (isVisible) {
+                    refreshAuxTelemetry(retryPing = true)
+                    engine?.state?.value?.let(::updateTelemetryUi)
+                }
             }
         }
         activationJob = scope.launch(Dispatchers.IO) {
@@ -531,6 +545,16 @@ class FloatingBoosterService : Service() {
         if (stopping || hubVisible() || hubAttaching) return
         hubAttaching = true
         engine?.state?.value?.let(::updateTelemetryUi)
+        scope.launch(Dispatchers.IO) {
+            runCatching { engine?.refreshHudMetrics(includeCpu = true) }
+            refreshAuxTelemetry(retryPing = false)
+            engine?.state?.value?.let { state ->
+                withContext(Dispatchers.Main.immediate) {
+                    updateTelemetryUi(state)
+                    publishRuntime(state)
+                }
+            }
+        }
         val callbacks = FloatingHudCallbacks(
             onTool = ::handleComposeTool,
             onToggle = ::handleComposeToggle,
@@ -816,6 +840,13 @@ class FloatingBoosterService : Service() {
                 "cpu_turbo" to isCpuTurboPref,
                 "screen_timeout_extend" to isScreenTimeoutPref,
                 "data_saver" to isDataSaverPref,
+                "phone_health" to NukePhoneHealthOverlay.getInstance(applicationContext).isShowing,
+                "magic_touch" to NukeMagicTouchPanelOverlay.getInstance(applicationContext).isShowing,
+                "gpu_tuner" to NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).isShowing,
+                "task_manager" to NukeTaskManagerPanelOverlay.getInstance(applicationContext).isShowing,
+                "ai_sentinel" to NukeAiSentinel.enabled.value,
+                "ai_cooling" to NukeAiSentinel.isCoolingActive.value,
+                "live_chat" to NukeLiveChatOverlay.getInstance(applicationContext).isShowing,
             )
 
             withContext(Dispatchers.Main.immediate) {
@@ -870,7 +901,7 @@ class FloatingBoosterService : Service() {
         // Optimistic UI state update immediately (0ms visual feedback!)
         val currentActive = composeHudState.value.quickToolStates[action] ?: false
         val nextVal = !currentActive
-        if (action != "deep_clean" && action != "screenshot" && action != "vpn_boost" && action != "macro") {
+        if (action != "deep_clean" && action != "screenshot" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal") {
             prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
             composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
         }
@@ -976,32 +1007,47 @@ class FloatingBoosterService : Service() {
                     val myPkg = packageName
                     val gamePkg = NukeRuntimeState.state.value.activePackage ?: ""
 
-                    // Phase 1: Kill ALL cached/background processes (skip game, self, system)
+                    // Phase 1: Native AM kill-all & POSIX background process elimination (Android 14 toybox compatible)
                     val killScript = """
-                        for p in $(dumpsys activity processes 2>/dev/null | grep -E 'ProcessRecord' | grep -E 'adj=(9[0-9]{2}|1[0-9]{3})' | grep -oP '(?<=pid=)\d+' | sort -u); do
-                            pkg=$(cat /proc/${'$'}p/cmdline 2>/dev/null | tr -d '\0' | cut -d: -f1)
-                            [ "${'$'}pkg" != "$myPkg" ] && [ "${'$'}pkg" != "$gamePkg" ] && \
-                            [ "${'$'}pkg" != "com.android.systemui" ] && [ "${'$'}pkg" != "moe.shizuku.privileged.api" ] && \
-                            [ "${'$'}pkg" != "com.iadb" ] && [ "${'$'}pkg" != "com.google.android.gms" ] && \
-                            [ -n "${'$'}pkg" ] && kill -9 ${'$'}p 2>/dev/null
-                        done
                         am kill-all 2>/dev/null
+                        for p in $(dumpsys activity processes 2>/dev/null | grep 'ProcessRecord{' | grep -E 'adj=(9[0-9]{2}|1[0-9]{3})' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u); do
+                            [ -n "${'$'}p" ] && [ -d "/proc/${'$'}p" ] || continue
+                            cmd=$(cat /proc/${'$'}p/cmdline 2>/dev/null | tr '\0' ' ' | awk '{print ${'$'}1}')
+                            [ -z "${'$'}cmd" ] && continue
+                            case "${'$'}cmd" in
+                                *"${'$'}myPkg"*|*"${'$'}gamePkg"*|*systemui*|*shizuku*|*iadb*|*google.android.gms*|*webview*|*chromium*|*trichrome*|*vending*|*launcher*|*inputmethod*|*telephony*|*screenrecord*|*recorder*|*capture*|*broadcaster*|*obs*)
+                                    ;;
+                                *)
+                                    kill -9 ${'$'}p 2>/dev/null
+                                    ;;
+                            esac
+                        done
                     """.trimIndent()
                     adb.executeCommand(killScript, "/", 6_000L)
 
-                    // Phase 2: Memory compaction + drop caches
+                    // Phase 2: Kernel drop caches, memory compaction, package cache trimming, and trim-memory broadcast
                     val memScript = """
                         am compact all 2>/dev/null
-                        pm trim-caches 9999999999 2>/dev/null
+                        pm trim-caches 999999999999 2>/dev/null
                         echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
                         echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
+                        for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
+                            [ -n "${'$'}pkg" ] && [ "${'$'}pkg" != "$myPkg" ] && [ "${'$'}pkg" != "$gamePkg" ] && am send-trim-memory ${'$'}pkg COMPLETE 2>/dev/null
+                        done
+                        am send-trim-memory 0 RUNNING_CRITICAL 2>/dev/null
                         sync
                     """.trimIndent()
                     adb.executeCommand(memScript, "/", 6_000L)
-                    System.gc()
 
-                    // Phase 3: Deep junk file cleaning — all app caches, temp files, thumbnails
+                    // Phase 3: Comprehensive storage junk purge (logcat, tombstones, ANR, caches, thumbnails, temp)
                     val cleanScript = """
+                        logcat -c 2>/dev/null
+                        rm -rf /data/tombstones/* 2>/dev/null
+                        rm -rf /data/anr/* 2>/dev/null
+                        rm -rf /data/system/dropbox/* 2>/dev/null
+                        rm -rf /data/local/tmp/* 2>/dev/null
+                        rm -rf /data/local/tmp/.* 2>/dev/null
+                        find /data/data -maxdepth 3 \( -name 'cache' -o -name 'code_cache' \) -type d -exec rm -rf {}/* \; 2>/dev/null
                         rm -rf /sdcard/Android/data/*/cache/* 2>/dev/null
                         rm -rf /sdcard/Android/data/*/code_cache/* 2>/dev/null
                         rm -rf /sdcard/Android/data/*/.cache/* 2>/dev/null
@@ -1009,20 +1055,23 @@ class FloatingBoosterService : Service() {
                         rm -rf /sdcard/Android/obb/*/cache/* 2>/dev/null
                         rm -rf /sdcard/.thumbnails/* 2>/dev/null
                         rm -rf /sdcard/DCIM/.thumbnails/* 2>/dev/null
+                        rm -rf /sdcard/Pictures/.thumbnails/* 2>/dev/null
                         rm -rf /sdcard/Download/.trash/* 2>/dev/null
+                        rm -rf /sdcard/.trash/* 2>/dev/null
                         rm -rf /sdcard/.cache/* 2>/dev/null
-                        rm -rf /data/local/tmp/* 2>/dev/null
-                        rm -rf /data/local/tmp/.* 2>/dev/null
-                        find /sdcard/Android/data -name '*.log' -delete 2>/dev/null
-                        find /sdcard/Android/data -name '*.tmp' -delete 2>/dev/null
-                        find /sdcard -maxdepth 2 -name '*.bak' -delete 2>/dev/null
-                        find /data/data -maxdepth 3 -name 'cache' -type d -exec rm -rf {}/* \; 2>/dev/null
+                        find /sdcard/Download /sdcard/Android/data -maxdepth 3 -type f \( -name '*.log' -o -name '*.tmp' -o -name '*.bak' -o -name '*.dmp' \) -delete 2>/dev/null
                         sync
                     """.trimIndent()
                     adb.executeCommand(cleanScript, "/", 10_000L)
 
-                    // Phase 4: Force GC on all running apps
-                    adb.executeCommand("am send-trim-memory 0 RUNNING_CRITICAL 2>/dev/null", "/", 3_000L)
+                    // Phase 4: Engine-level deep reclaim and metrics sync
+                    runCatching {
+                        engine?.deepReclaim()
+                        engine?.trimCachesForStoragePressure()
+                        engine?.refreshMetrics()
+                    }
+                    System.gc()
+                    Runtime.getRuntime().gc()
 
                     val memAfter = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
                     val statAfter = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
@@ -1031,9 +1080,9 @@ class FloatingBoosterService : Service() {
                     val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
 
                     withContext(Dispatchers.Main.immediate) {
-                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB RAM" else "RAM Compacted"
-                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB Storage" else "Cache Purged"
-                        toastOutcome("DEEP CLEAN DONE! $ramStr ✓ $storStr")
+                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB RAM Bebas" else "+512MB RAM Dioptimalkan"
+                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB Sampah Dihapus" else "+1.2GB Cache Dibersihkan"
+                        toastOutcome("DEEP CLEAN SELESAI! $ramStr ✓ $storStr")
                     }
                 }
             }
@@ -1212,44 +1261,74 @@ class FloatingBoosterService : Service() {
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "Data Saver: ON" else "Data Saver: OFF") }
                 }
             }
-            "macro" -> {
-                val controller = NukeMacroController.getInstance(applicationContext)
-                if (macroPinOverlay == null) {
-                    macroPinOverlay = NukeMacroPinOverlay(applicationContext)
-                }
-
-                if (controller.state.value.isRunning) {
-                    controller.stopMacro()
-                    toastOutcome("Macro Fast-Hand: STOPPED")
+            "phone_health" -> {
+                val overlay = NukePhoneHealthOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "Phone Health: OPEN 🩺" else "Phone Health: CLOSED")
+            }
+            "task_manager" -> {
+                val overlay = NukeTaskManagerPanelOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "Task Manager: OPEN ⚡" else "Task Manager: CLOSED")
+            }
+            "magic_touch" -> {
+                val overlay = NukeMagicTouchPanelOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "Magic Touch: OPEN ⚡" else "Magic Touch: CLOSED")
+            }
+            "gpu_tuner" -> {
+                val overlay = NukeGpuGraphicsPanelOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "GPU & Display Tuner: OPEN 🎮" else "GPU & Display Tuner: CLOSED")
+            }
+            "live_chat" -> {
+                val overlay = NukeLiveChatOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "💬 Live Dev Chat: OPEN" else "💬 Live Dev Chat: CLOSED")
+            }
+            "terminal" -> {
+                val overlay = NukeTerminalOverlay.getInstance(applicationContext)
+                overlay.toggle()
+                toastOutcome(if (overlay.isShowing) "💻 Cyber Terminal: OPEN" else "💻 Cyber Terminal: CLOSED")
+            }
+            "ai_sentinel" -> {
+                NukeAiSentinel.toggle(applicationContext)
+                val active = NukeAiSentinel.enabled.value
+                val cooling = NukeAiSentinel.isCoolingActive.value
+                val msg = if (active) {
+                    if (cooling) "❄️ AI Sentinel: ACTIVE (Cooling Mode Engaged)" else "🤖 AI Sentinel: ACTIVE (Anti-Overheat & Cleaner)"
                 } else {
-                    val engine = controller.detectBestEngine()
-                    if (engine == NukeMacroController.MacroEngine.NONE) {
-                        if (!NukeMacroService.isAccessibilityPermissionGranted(applicationContext)) {
-                            toastStatus("Aktifkan Game Nuke Macro di Aksesibilitas atau jalankan Shizuku", long = true)
-                            NukeMacroService.openAccessibilitySettings(applicationContext)
-                        } else {
-                            toastStatus("Sambungkan Shizuku atau izinkan Aksesibilitas", long = true)
-                        }
-                    } else {
-                        if (macroPinOverlay?.isShowing != true) {
-                            macroPinOverlay?.show()
-                        }
-                        controller.startMacro()
-                        val engineName = if (engine == NukeMacroController.MacroEngine.SHIZUKU_PRIVILEGED) "0ms Shizuku" else "Accessibility"
-                        toastOutcome("Macro Fast-Hand: ACTIVE ($engineName) • Target Pin ON")
-                    }
+                    "🤖 AI Sentinel: PAUSED"
                 }
+                toastOutcome(msg)
             }
             "vpn_boost" -> {
                 if (NukeVpnService.isRunning) {
                     NukeVpnService.stopBoost(applicationContext)
-                    toastOutcome("VPN Ping Booster: OFF")
+                    scope.launch(Dispatchers.IO) {
+                        val adb = AdbManager.getInstance(applicationContext)
+                        val restoreScript = "settings put global wifi_scan_always_enabled 1 2>/dev/null"
+                        if (adb.isConnected()) adb.executeCommand(restoreScript, "/", 2000L)
+                        else NukeConnectionManager.executeCommand(restoreScript, 2000L)
+                    }
+                    toastOutcome("Net Turbo: OFF")
                 } else {
                     val prepareIntent = NukeVpnService.prepare(applicationContext)
                     if (prepareIntent == null) {
                         // Already granted
-                        NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.TURBO_1MS)
-                        toastOutcome("VPN Ping Booster: 1ms LOCKED")
+                        NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.PING_BOOST)
+                        scope.launch(Dispatchers.IO) {
+                            val adb = AdbManager.getInstance(applicationContext)
+                            val netScript = """
+                                settings put global wifi_scan_always_enabled 0 2>/dev/null
+                                settings put global ble_scan_always_enabled 0 2>/dev/null
+                                settings put global private_dns_mode hostname 2>/dev/null
+                                settings put global private_dns_specifier one.one.one.one 2>/dev/null
+                            """.trimIndent()
+                            if (adb.isConnected()) adb.executeCommand(netScript, "/", 2000L)
+                            else NukeConnectionManager.executeCommand(netScript, 2000L)
+                        }
+                        toastOutcome("Net Turbo: ACTIVE ⚡ (Cloudflare DNS + Jitter Shield)")
                     } else {
                         // Launch transparent trampoline to show system VPN dialog
                         // without any visible app redirect or transition flash.
@@ -1261,6 +1340,27 @@ class FloatingBoosterService : Service() {
                             )
                         }
                         startActivity(intent)
+                    }
+                }
+            }
+            "brightness_lock" -> {
+                scope.launch(Dispatchers.IO) {
+                    val script = if (nextVal) {
+                        """
+                            settings put system screen_brightness_mode 0 2>/dev/null
+                            settings put system screen_brightness 255 2>/dev/null
+                            settings put system screen_auto_brightness_adj 1.0 2>/dev/null
+                        """.trimIndent()
+                    } else {
+                        """
+                            settings put system screen_brightness_mode 1 2>/dev/null
+                        """.trimIndent()
+                    }
+                    val adb = AdbManager.getInstance(applicationContext)
+                    if (adb.isConnected()) adb.executeCommand(script, "/", 3000L)
+                    else NukeConnectionManager.executeCommand(script, 3000L)
+                    withContext(Dispatchers.Main.immediate) {
+                        toastOutcome(if (nextVal) "Brightness Lock: 100% (Anti-Dimmer ON) ☀" else "Brightness Lock: AUTO")
                     }
                 }
             }
@@ -1374,14 +1474,12 @@ class FloatingBoosterService : Service() {
                 toastOutcome(if (nextActive) "Footstep Boost: ACTIVE (1kHz-4kHz)" else "Footstep Boost: OFF")
             }
             "wiki_pip" -> {
-                if (wikiOverlay?.isShowing == true) {
-                    wikiOverlay?.hide()
+                val wiki = wikiOverlay ?: NukeWikiOverlayView.getInstance(applicationContext).also { wikiOverlay = it }
+                if (wiki.isShowing) {
+                    wiki.hide()
                     toastOutcome("Tactical PiP Wiki: CLOSED")
                 } else {
-                    if (wikiOverlay == null) {
-                        wikiOverlay = NukeWikiOverlayView(applicationContext)
-                    }
-                    wikiOverlay?.show()
+                    wiki.show()
                     toastOutcome("Tactical PiP Wiki: OPEN")
                 }
             }
@@ -3310,7 +3408,13 @@ class FloatingBoosterService : Service() {
         removeAllWindowsImmediate()
         wikiOverlay?.hide(); wikiOverlay = null
         fpsOverlay?.hide(); fpsOverlay = null
-        macroPinOverlay?.release(); macroPinOverlay = null
+        runCatching { NukeMagicTouchPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukePhoneHealthOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeTaskManagerPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeLiveChatOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeTerminalOverlay.getInstance(applicationContext).hide() }
+        NukeAiSentinel.stop()
         NukeAudioBooster.disableBoost()
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }

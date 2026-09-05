@@ -345,53 +345,268 @@ class LocalWebServer private constructor(private val context: Context) {
                     """.trimIndent())
                 }
 
-                "/api/overlay" -> {
-                    val action = getParam("action")?.lowercase() ?: if (method == "POST") "toggle" else "status"
-                    when (action) {
-                        "start" -> {
-                            if (!OverlayPermissionController.hasOverlayPermission(context)) {
-                                sendJsonResponse(out, """{"success":false,"error":"Overlay permission (SYSTEM_ALERT_WINDOW) not granted"}""", 403)
-                            } else {
-                                val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
-                                    this.action = FloatingBoosterService.ACTION_SHOW_OVERLAY
-                                    putExtra(FloatingBoosterService.EXTRA_USER_REQUESTED, true)
-                                }
-                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(hudIntent) else context.startService(hudIntent)
-                                sendJsonResponse(out, """{"success":true,"action":"start","overlay_active":true}""")
+                "/api/panel", "/api/panel/open", "/api/panel/close", "/api/panel/toggle",
+                "/api/hud", "/api/hud/open", "/api/hud/close", "/api/hud/toggle", "/api/overlay" -> {
+                    val targetPanel = (getParam("name") ?: getParam("panel") ?: if (path.startsWith("/api/hud")) "hud" else "hud").lowercase()
+                    val op = when (path) {
+                        "/api/panel/open", "/api/hud/open" -> "open"
+                        "/api/panel/close", "/api/hud/close" -> "close"
+                        "/api/panel/toggle", "/api/hud/toggle" -> "toggle"
+                        else -> (getParam("action")?.lowercase() ?: if (method == "POST") "toggle" else "status")
+                    }
+
+                    when (targetPanel) {
+                        "phone_health", "health" -> {
+                            val overlay = NukePhoneHealthOverlay.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
                             }
+                            sendJsonResponse(out, """{"success":true,"panel":"phone_health","action":"$op","is_showing":$willShow}""")
                         }
-                        "stop" -> {
-                            val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
-                                this.action = FloatingBoosterService.ACTION_STOP_OVERLAY
+                        "task_manager", "tasks", "process_killer" -> {
+                            val overlay = NukeTaskManagerPanelOverlay.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
                             }
-                            context.startService(hudIntent)
-                            sendJsonResponse(out, """{"success":true,"action":"stop","overlay_active":false}""")
+                            sendJsonResponse(out, """{"success":true,"panel":"task_manager","action":"$op","is_showing":$willShow}""")
                         }
-                        "toggle" -> {
-                            val isRunning = NukeRuntimeState.state.value.overlayRunning
-                            if (isRunning) {
-                                val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
-                                    this.action = FloatingBoosterService.ACTION_STOP_OVERLAY
-                                }
-                                context.startService(hudIntent)
-                                sendJsonResponse(out, """{"success":true,"action":"stopped","overlay_active":false}""")
-                            } else {
-                                if (!OverlayPermissionController.hasOverlayPermission(context)) {
-                                    sendJsonResponse(out, """{"success":false,"error":"Overlay permission (SYSTEM_ALERT_WINDOW) not granted"}""", 403)
-                                } else {
-                                    val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
-                                        this.action = FloatingBoosterService.ACTION_SHOW_OVERLAY
-                                        putExtra(FloatingBoosterService.EXTRA_USER_REQUESTED, true)
+                        "magic_touch", "touch" -> {
+                            val overlay = NukeMagicTouchPanelOverlay.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
+                            }
+                            sendJsonResponse(out, """{"success":true,"panel":"magic_touch","action":"$op","is_showing":$willShow}""")
+                        }
+                        "gpu_tuner", "gpu" -> {
+                            val overlay = NukeGpuGraphicsPanelOverlay.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
+                            }
+                            sendJsonResponse(out, """{"success":true,"panel":"gpu_tuner","action":"$op","is_showing":$willShow}""")
+                        }
+                        "wiki_pip", "wiki" -> {
+                            val overlay = NukeWikiOverlayView.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
+                            }
+                            sendJsonResponse(out, """{"success":true,"panel":"wiki_pip","action":"$op","is_showing":$willShow}""")
+                        }
+                        "fps_overlay", "fps" -> {
+                            val overlay = NukeFpsOverlayView.getInstance(context)
+                            val willShow = when (op) { "open", "start" -> true; "close", "stop" -> false; "toggle" -> !overlay.isShowing; else -> overlay.isShowing }
+                            when (op) {
+                                "open", "start" -> overlay.show()
+                                "close", "stop" -> overlay.hide()
+                                "toggle" -> overlay.toggle()
+                            }
+                            sendJsonResponse(out, """{"success":true,"panel":"fps_overlay","action":"$op","is_showing":$willShow}""")
+                        }
+                        else -> { // Default: Main Floating HUD Cockpit
+                            when (op) {
+                                "open", "start" -> {
+                                    if (!OverlayPermissionController.hasOverlayPermission(context)) {
+                                        sendJsonResponse(out, """{"success":false,"error":"Overlay permission (SYSTEM_ALERT_WINDOW) not granted"}""", 403)
+                                    } else {
+                                        val targetPkg = getParam("package")?.takeIf(::validPackage) ?: context.packageName
+                                        val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
+                                            this.action = FloatingBoosterService.ACTION_SHOW_OVERLAY
+                                            putExtra(FloatingBoosterService.EXTRA_USER_REQUESTED, true)
+                                            putExtra(FloatingBoosterService.EXTRA_TARGET_PACKAGE, targetPkg)
+                                        }
+                                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(hudIntent) else context.startService(hudIntent)
+                                        sendJsonResponse(out, """{"success":true,"panel":"hud","action":"open","target_package":"$targetPkg","overlay_active":true}""")
                                     }
-                                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(hudIntent) else context.startService(hudIntent)
-                                    sendJsonResponse(out, """{"success":true,"action":"started","overlay_active":true}""")
                                 }
+                                "close", "stop" -> {
+                                    val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
+                                        this.action = FloatingBoosterService.ACTION_STOP_OVERLAY
+                                    }
+                                    context.startService(hudIntent)
+                                    sendJsonResponse(out, """{"success":true,"panel":"hud","action":"close","overlay_active":false}""")
+                                }
+                                "toggle" -> {
+                                    val isRunning = NukeRuntimeState.state.value.overlayRunning
+                                    val targetPkg = getParam("package")?.takeIf(::validPackage) ?: context.packageName
+                                    val hudIntent = Intent(context, FloatingBoosterService::class.java).apply {
+                                        this.action = if (isRunning) FloatingBoosterService.ACTION_STOP_OVERLAY else FloatingBoosterService.ACTION_SHOW_OVERLAY
+                                        putExtra(FloatingBoosterService.EXTRA_USER_REQUESTED, true)
+                                        if (!isRunning) {
+                                            putExtra(FloatingBoosterService.EXTRA_TARGET_PACKAGE, targetPkg)
+                                        }
+                                    }
+                                    if (isRunning) {
+                                        context.startService(hudIntent)
+                                        sendJsonResponse(out, """{"success":true,"panel":"hud","action":"stopped","overlay_active":false}""")
+                                    } else {
+                                        if (!OverlayPermissionController.hasOverlayPermission(context)) {
+                                            sendJsonResponse(out, """{"success":false,"error":"Overlay permission (SYSTEM_ALERT_WINDOW) not granted"}""", 403)
+                                        } else {
+                                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(hudIntent) else context.startService(hudIntent)
+                                            sendJsonResponse(out, """{"success":true,"panel":"hud","action":"started","target_package":"$targetPkg","overlay_active":true}""")
+                                        }
+                                    }
+                                }
+                                else -> {
+                                    sendJsonResponse(out, """{"success":true,"panel":"hud","overlay_active":${NukeRuntimeState.state.value.overlayRunning}}""")
+                                }
+                            }
+                        }
+                    }
+                }
+
+                "/api/action", "/api/action/trigger" -> {
+                    val actionId = (getParam("action") ?: getParam("id") ?: "").lowercase()
+                    when (actionId) {
+                        "kill_hogs", "sweep", "ram_clean" -> {
+                            coroutineScope.launch {
+                                NukeAiSentinel.triggerManualSweep(context)
+                            }
+                            sendJsonResponse(out, """{"success":true,"action":"kill_hogs","status":"sweep_triggered"}""")
+                        }
+                        "net_turbo", "vpn_boost" -> {
+                            val active = NukeVpnService.isRunning
+                            if (active) NukeVpnService.stopBoost(context)
+                            else NukeVpnService.startBoost(context, NukeVpnService.BoostMode.PING_BOOST)
+                            sendJsonResponse(out, """{"success":true,"action":"net_turbo","active":${!active}}""")
+                        }
+                        "brightness_lock" -> {
+                            runCatching {
+                                Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS_MODE, Settings.System.SCREEN_BRIGHTNESS_MODE_MANUAL)
+                                Settings.System.putInt(context.contentResolver, Settings.System.SCREEN_BRIGHTNESS, 255)
+                            }
+                            if (isOnline) {
+                                runCatching {
+                                    adb.executeCommand("settings put system screen_brightness_mode 0")
+                                    adb.executeCommand("settings put system screen_brightness 255")
+                                }
+                            }
+                            sendJsonResponse(out, """{"success":true,"action":"brightness_lock","brightness":255}""")
+                        }
+                        "footstep_boost" -> {
+                            val active = NukeAudioBooster.toggleFootstepBoost(context)
+                            sendJsonResponse(out, """{"success":true,"action":"footstep_boost","active":$active}""")
+                        }
+                        "dnd" -> {
+                            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+                            val hasPolicy = nm?.isNotificationPolicyAccessGranted == true
+                            if (hasPolicy) {
+                                val currentInterruptionFilter = nm?.currentInterruptionFilter ?: NotificationManager.INTERRUPTION_FILTER_ALL
+                                val nextFilter = if (currentInterruptionFilter == NotificationManager.INTERRUPTION_FILTER_ALL) NotificationManager.INTERRUPTION_FILTER_PRIORITY else NotificationManager.INTERRUPTION_FILTER_ALL
+                                nm?.setInterruptionFilter(nextFilter)
+                                sendJsonResponse(out, """{"success":true,"action":"dnd","dnd_active":${nextFilter != NotificationManager.INTERRUPTION_FILTER_ALL}}""")
+                            } else {
+                                sendJsonResponse(out, """{"success":false,"error":"DND permission not granted"}""", 403)
                             }
                         }
                         else -> {
-                            sendJsonResponse(out, """{"success":true,"overlay_active":${NukeRuntimeState.state.value.overlayRunning}}""")
+                            sendJsonResponse(out, """{"success":false,"error":"Unknown action. Supported: kill_hogs, net_turbo, brightness_lock, footstep_boost, dnd"}""", 400)
                         }
                     }
+                }
+
+                "/api/sentinel" -> {
+                    val enableParam = getParam("enabled") ?: getParam("enable")
+                    if (enableParam != null) {
+                        val enable = enableParam.toBooleanStrictOrNull() ?: true
+                        NukeAiSentinel.setEnabled(context, enable)
+                        sendJsonResponse(out, """{"success":true,"enabled":$enable}""")
+                        return
+                    }
+                    if (getParam("action") == "sweep") {
+                        coroutineScope.launch {
+                            NukeAiSentinel.triggerManualSweep(context)
+                        }
+                        sendJsonResponse(out, """{"success":true,"action":"sweep_triggered"}""")
+                        return
+                    }
+                    val json = """
+                        {
+                            "enabled": ${NukeAiSentinel.enabled.value},
+                            "is_sweeping": ${NukeAiSentinel.isSweeping.value},
+                            "zombies_killed": ${NukeAiSentinel.zombieKilledCount.value},
+                            "reclaimed_ram_mb": ${NukeAiSentinel.reclaimedRamMb.value},
+                            "last_action": "${NukeAiSentinel.lastActionText.value.replace("\"", "\\\"")}",
+                            "active_game": "${NukeAiSentinel.activeGame.value.replace("\"", "\\\"")}"
+                        }
+                    """.trimIndent()
+                    sendJsonResponse(out, json)
+                }
+
+                "/api/health/diagnostics" -> {
+                    val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
+                    val bIntent = context.registerReceiver(null, ifilter)
+                    val bLevel = bIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) ?: 0
+                    val bScale = bIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
+                    val bPct = if (bScale > 0) (bLevel * 100 / bScale) else bLevel
+                    val bTempC = (bIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10.0f
+                    val bVoltV = (bIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0) / 1000.0f
+                    val bStatus = bIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
+                    val isChg = bStatus == BatteryManager.BATTERY_STATUS_CHARGING || bStatus == BatteryManager.BATTERY_STATUS_FULL
+
+                    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                    val memInfo = ActivityManager.MemoryInfo().also { runCatching { am?.getMemoryInfo(it) } }
+                    val totalRamMb = memInfo.totalMem / (1024 * 1024)
+                    val availRamMb = memInfo.availMem / (1024 * 1024)
+                    val usedRamPct = if (totalRamMb > 0) (((totalRamMb - availRamMb) * 100) / totalRamMb).toInt() else 0
+
+                    val stat = StatFs(Environment.getDataDirectory().path)
+                    val totalStGb = (stat.blockCountLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
+                    val freeStGb = (stat.availableBlocksLong * stat.blockSizeLong) / (1024 * 1024 * 1024)
+                    val stUsedPct = if (totalStGb > 0) (((totalStGb - freeStGb) * 100) / totalStGb).toInt() else 0
+
+                    val json = """
+                        {
+                            "battery": {
+                                "level_percent": $bPct,
+                                "temperature_c": $bTempC,
+                                "voltage_v": $bVoltV,
+                                "is_charging": $isChg
+                            },
+                            "memory": {
+                                "total_mb": $totalRamMb,
+                                "available_mb": $availRamMb,
+                                "used_percent": $usedRamPct
+                            },
+                            "storage": {
+                                "total_gb": $totalStGb,
+                                "available_gb": $freeStGb,
+                                "used_percent": $stUsedPct
+                            },
+                            "sentinel_active": ${NukeAiSentinel.enabled.value},
+                            "vpn_turbo_active": ${NukeVpnService.isRunning}
+                        }
+                    """.trimIndent()
+                    sendJsonResponse(out, json)
+                }
+
+                "/api/network/turbo" -> {
+                    val enableParam = getParam("enable") ?: getParam("enabled")
+                    if (enableParam != null) {
+                        val enable = enableParam.toBooleanStrictOrNull() ?: true
+                        if (enable) {
+                            NukeVpnService.startBoost(context, NukeVpnService.BoostMode.PING_BOOST)
+                        } else {
+                            NukeVpnService.stopBoost(context)
+                        }
+                        sendJsonResponse(out, """{"success":true,"active":$enable}""")
+                        return
+                    }
+                    sendJsonResponse(out, """{"running":${NukeVpnService.isRunning},"mode":"${NukeVpnService.status.value.mode.name}","ping_ms":${NukeVpnService.status.value.measuredPingMs}}""")
                 }
 
                 "/api/thermal" -> {
@@ -782,11 +997,18 @@ class LocalWebServer private constructor(private val context: Context) {
                 { "path": "/api/status", "methods": ["GET"], "description": "Returns system health, app version, backend status, and uptime." },
                 { "path": "/api/telemetry", "methods": ["GET"], "description": "Real-time hardware metrics: CPU load, RAM usage, storage, battery, display refresh rate." },
                 { "path": "/api/stream", "methods": ["GET"], "description": "Server-Sent Events (SSE) live telemetry stream (1 Hz update rate)." },
+                { "path": "/api/panel?name={hud|phone_health|magic_touch|gpu_tuner|wiki_pip|fps_overlay}&action={open|close|toggle|status}", "methods": ["POST", "GET"], "description": "Unified Floating Panel Control API: Open, close, or toggle any Game Nuke floating panel or cockpit HUD even when app is closed." },
+                { "path": "/api/panel/open?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to open a specific floating overlay." },
+                { "path": "/api/panel/close?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to close a specific floating overlay." },
+                { "path": "/api/panel/toggle?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to toggle a specific floating overlay." },
+                { "path": "/api/action/trigger?action={kill_hogs|net_turbo|brightness_lock|footstep_boost|dnd}", "methods": ["POST", "GET"], "description": "Trigger tactical in-game actions: kill RAM/CPU zombies, enable VPN ping boost, lock brightness, or toggle footstep audio booster." },
+                { "path": "/api/sentinel?action={sweep}&enabled={true|false}", "methods": ["POST", "GET"], "description": "AI Sentinel Autonomous Optimizer status, toggle, and on-demand sweep trigger." },
+                { "path": "/api/health/diagnostics", "methods": ["GET"], "description": "Deep hardware diagnostics: battery thermals, voltage, RAM and zRAM usage, internal storage, and CPU state." },
+                { "path": "/api/network/turbo?enable={true|false}", "methods": ["POST", "GET"], "description": "Control VPN Ping Optimizer and low-latency gaming DNS." },
                 { "path": "/api/exec?cmd={command}", "methods": ["POST", "GET"], "description": "Execute a shell command with elevated privileges (Shizuku / Wireless ADB) and return exit code, output, and execution time." },
                 { "path": "/api/device", "methods": ["GET"], "description": "Hardware and OS specifications (Model, Brand, Android Version, SDK, ABIs)." },
                 { "path": "/api/thermal", "methods": ["GET"], "description": "Hardware thermal throttling status, thermal headroom, and battery temperature." },
                 { "path": "/api/packages/info?package={pkg}", "methods": ["GET"], "description": "Inspect package details: version, targetSdk, system status, and game classification." },
-                { "path": "/api/overlay?action={start|stop|toggle|status}", "methods": ["POST", "GET"], "description": "Control or inspect the floating Gaming Cockpit HUD overlay." },
                 { "path": "/api/integrity?action={check|disable}", "methods": ["POST", "GET"], "description": "Check network integrity and resolve Private DNS ad-blocking." },
                 { "path": "/api/battery/profile?mode={performance|balanced|powersave}", "methods": ["POST", "GET"], "description": "Get or apply system power and refresh rate profiles." },
                 { "path": "/api/toast?message={text}", "methods": ["POST", "GET"], "description": "Dispatch a local toast notification directly on the device." },
@@ -832,4 +1054,7 @@ class LocalWebServer private constructor(private val context: Context) {
         out.write(response.toByteArray(Charsets.UTF_8))
         out.flush()
     }
+
+    private fun validPackage(value: String): Boolean =
+        value.length in 3..220 && value.matches(Regex("^[A-Za-z0-9_]+(\\.[A-Za-z0-9_]+)+$"))
 }

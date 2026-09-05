@@ -3,6 +3,7 @@ package com.neon.gametweak
 import android.app.Activity
 import android.content.Context
 import android.content.Intent
+import android.os.Looper
 import android.provider.Settings
 import android.util.Log
 import androidx.compose.animation.AnimatedVisibility
@@ -11,7 +12,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -104,22 +104,27 @@ object NukeAdBlockDetector {
                 Settings.Global.getString(context.contentResolver, "private_dns_specifier")
             }.getOrNull().orEmpty().trim()
 
-            val isConnected = (adbManager != null && adbManager.isConnected()) || NukeConnectionManager.isConnected()
-            if (isConnected) {
-                val shellMode = runCatching {
-                    val res = adbManager?.executeCommand("settings get global private_dns_mode", "/", 2_000L, 512)
-                        ?: NukeConnectionManager.executeCommand("settings get global private_dns_mode", 2_000L, 512)
-                    res?.output?.trim()?.takeIf { it.isNotBlank() && it != "null" }
-                }.getOrNull()
+            // ContentResolver reading is instantaneous and non-blocking.
+            // Elevated shell commands take substantial time. NEVER run shell on the UI thread!
+            val isMainThread = Looper.myLooper() == Looper.getMainLooper()
+            if (!isMainThread) {
+                val isConnected = (adbManager != null && adbManager.isConnected()) || NukeConnectionManager.isConnected()
+                if (isConnected) {
+                    val shellMode = runCatching {
+                        val res = adbManager?.executeCommand("settings get global private_dns_mode", "/", 2_000L, 512)
+                            ?: NukeConnectionManager.executeCommand("settings get global private_dns_mode", 2_000L, 512)
+                        res?.output?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+                    }.getOrNull()
 
-                val shellSpecifier = runCatching {
-                    val res = adbManager?.executeCommand("settings get global private_dns_specifier", "/", 2_000L, 512)
-                        ?: NukeConnectionManager.executeCommand("settings get global private_dns_specifier", 2_000L, 512)
-                    res?.output?.trim()?.takeIf { it.isNotBlank() && it != "null" }
-                }.getOrNull()
+                    val shellSpecifier = runCatching {
+                        val res = adbManager?.executeCommand("settings get global private_dns_specifier", "/", 2_000L, 512)
+                            ?: NukeConnectionManager.executeCommand("settings get global private_dns_specifier", 2_000L, 512)
+                        res?.output?.trim()?.takeIf { it.isNotBlank() && it != "null" }
+                    }.getOrNull()
 
-                if (!shellMode.isNullOrBlank()) mode = shellMode
-                if (!shellSpecifier.isNullOrBlank()) specifier = shellSpecifier
+                    if (!shellMode.isNullOrBlank()) mode = shellMode
+                    if (!shellSpecifier.isNullOrBlank()) specifier = shellSpecifier
+                }
             }
 
             val lowerSpecifier = specifier.lowercase()
@@ -224,7 +229,7 @@ fun NukeAdBlockDetectedDialog(
             modifier = Modifier
                 .widthIn(max = 420.dp)
                 .fillMaxWidth(0.92f)
-                .clip(CutCornerShape(topStart = 18.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 18.dp))
+                .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -237,7 +242,7 @@ fun NukeAdBlockDetectedDialog(
                 .border(
                     1.dp,
                     Brush.verticalGradient(listOf(Color(0xFFFF4B55).copy(alpha = 0.85f), Color(0xFF5A1B20))),
-                    CutCornerShape(topStart = 18.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 18.dp)
+                    RoundedCornerShape(20.dp)
                 )
                 .padding(18.dp)
         ) {
@@ -260,9 +265,9 @@ fun NukeAdBlockDetectedDialog(
                         Box(
                             modifier = Modifier
                                 .size(36.dp)
-                                .clip(CutCornerShape(6.dp))
+                                .clip(RoundedCornerShape(8.dp))
                                 .background(Color(0xFFFF4B55).copy(alpha = 0.18f))
-                                .border(1.dp, Color(0xFFFF4B55), CutCornerShape(6.dp)),
+                                .border(1.dp, Color(0xFFFF4B55), RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -306,9 +311,9 @@ fun NukeAdBlockDetectedDialog(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp))
+                        .clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF260F12))
-                        .border(0.8.dp, Color(0xFFFF4B55).copy(alpha = 0.45f), CutCornerShape(topStart = 6.dp, bottomEnd = 6.dp))
+                        .border(0.8.dp, Color(0xFFFF4B55).copy(alpha = 0.45f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 12.dp, vertical = 8.dp)
                 ) {
                     Row(
@@ -334,9 +339,9 @@ fun NukeAdBlockDetectedDialog(
                         }
                         Box(
                             modifier = Modifier
-                                .clip(CutCornerShape(2.dp))
+                                .clip(RoundedCornerShape(4.dp))
                                 .background(Color(0xFFFF4B55).copy(alpha = 0.25f))
-                                .border(0.6.dp, Color(0xFFFF4B55), CutCornerShape(2.dp))
+                                .border(0.6.dp, Color(0xFFFF4B55), RoundedCornerShape(4.dp))
                                 .padding(horizontal = 5.dp, vertical = 2.dp)
                         ) {
                             Text(
@@ -366,9 +371,9 @@ fun NukeAdBlockDetectedDialog(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(CutCornerShape(6.dp))
+                            .clip(RoundedCornerShape(8.dp))
                             .background(Color(0xFF0F1E19))
-                            .border(0.8.dp, Neon.Accent, CutCornerShape(6.dp))
+                            .border(0.8.dp, Neon.Accent, RoundedCornerShape(8.dp))
                             .padding(10.dp)
                     ) {
                         Row(
@@ -401,7 +406,7 @@ fun NukeAdBlockDetectedDialog(
                             modifier = Modifier
                                 .weight(1.3f)
                                 .height(44.dp)
-                                .clip(CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(
                                     Brush.horizontalGradient(
                                         listOf(
@@ -410,7 +415,7 @@ fun NukeAdBlockDetectedDialog(
                                         )
                                     )
                                 )
-                                .border(1.dp, Neon.Accent, CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
+                                .border(1.dp, Neon.Accent, RoundedCornerShape(12.dp))
                                 .clickable {
                                     isExecuting = true
                                     executionMessage = Tx.t("Memulihkan konfigurasi jaringan...", "Restoring network configuration...")
@@ -465,9 +470,9 @@ fun NukeAdBlockDetectedDialog(
                             modifier = Modifier
                                 .weight(1f)
                                 .height(44.dp)
-                                .clip(CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
+                                .clip(RoundedCornerShape(12.dp))
                                 .background(Color(0xFF181012))
-                                .border(0.8.dp, Color(0xFF5A2A2E), CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
+                                .border(0.8.dp, Color(0xFF5A2A2E), RoundedCornerShape(12.dp))
                                 .clickable { onDismiss() },
                             contentAlignment = Alignment.Center
                         ) {

@@ -338,16 +338,22 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
             result.output.contains("set-mode", ignoreCase = true)
     }
 
+    @Volatile private var lastDumpsysCpuAt = 0L
+    @Volatile private var cachedDumpsysCpu: Int? = null
+
     /**
      * Whole-device CPU utilisation. /proc/stat delta is preferred because it is lightweight and
-     * consistent when shell can read it. dumpsys cpuinfo is a truthful OEM fallback.
+     * consistent when shell can read it. dumpsys cpuinfo is a rate-limited OEM fallback.
      */
     @Synchronized
     fun readCpuLoadPercent(): Int? {
         if (!connected()) return null
 
+        // 1. Try zero-overhead local /proc/stat reading first (0 shell processes, 0ms latency)
+        NukeLocalCpuSampler.readPercent()?.let { return it }
+
         fun procSample(): CpuSample? {
-            val result = adb.executeCommand("cat /proc/stat", "/", 1_500L, 8_192)
+            val result = adb.executeCommand("cat /proc/stat", "/", 1_200L, 8_192)
             if (!result.isSuccess) return null
             val aggregate = result.output.lineSequence().firstOrNull { line -> line.trimStart().startsWith("cpu ") }
                 ?: return null
@@ -367,31 +373,37 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
                 .roundToInt().coerceIn(0, 100)
         }
 
+        // 2. Sample via ADB /proc/stat
         val first = procSample()
         if (first != null) {
             val previous = lastCpuSample
             lastCpuSample = first
-            if (previous != null) fromDelta(previous, first)?.let { return it }
-            try { Thread.sleep(120L) } catch (_: InterruptedException) { Thread.currentThread().interrupt() }
-            val second = procSample()
-            if (second != null) {
-                lastCpuSample = second
-                fromDelta(first, second)?.let { return it }
+            if (previous != null) {
+                fromDelta(previous, first)?.let { return it }
             }
         }
 
-        val result = adb.executeCommand("dumpsys cpuinfo", "/", 3_500L, 32_768)
-        if (!result.isSuccess) return null
+        // 3. Fallback dumpsys cpuinfo — strictly rate-limited (max once per 8s) to prevent CPU spikes & heat
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastDumpsysCpuAt < 8_000L && cachedDumpsysCpu != null) {
+            return cachedDumpsysCpu
+        }
+
+        val result = adb.executeCommand("dumpsys cpuinfo", "/", 2_500L, 16_384)
+        if (!result.isSuccess) return cachedDumpsysCpu
         val patterns = listOf(
             Regex("([0-9]+(?:\\.[0-9]+)?)%\\s+TOTAL:", RegexOption.IGNORE_CASE),
             Regex("TOTAL:\\s*([0-9]+(?:\\.[0-9]+)?)%", RegexOption.IGNORE_CASE),
         )
         for (pattern in patterns) {
             pattern.find(result.output)?.groupValues?.getOrNull(1)?.toFloatOrNull()?.let {
-                return it.roundToInt().coerceIn(0, 100)
+                val value = it.roundToInt().coerceIn(0, 100)
+                lastDumpsysCpuAt = now
+                cachedDumpsysCpu = value
+                return value
             }
         }
-        return null
+        return cachedDumpsysCpu
     }
 
     fun beginFrameTimestats(): NukeCommandResult = adb.executeCommand(

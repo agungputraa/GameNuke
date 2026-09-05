@@ -22,7 +22,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
@@ -171,6 +170,8 @@ class MainActivity : ComponentActivity() {
             }
         }
 
+        checkLiveChatIntent(intent)
+
         // First-frame-first bootstrap: avoid competing with Compose/layout on cold launch.
         window.decorView.postDelayed({
             if (!isFinishing && !isDestroyed) {
@@ -187,6 +188,25 @@ class MainActivity : ComponentActivity() {
                 }
             }
         }, 700L)
+    }
+
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        checkLiveChatIntent(intent)
+    }
+
+    private fun checkLiveChatIntent(intent: Intent?) {
+        val openChat = intent?.getBooleanExtra(NukeLiveChatNotifier.EXTRA_OPEN_LIVE_CHAT, false) == true ||
+                intent?.action == "com.neon.gametweak.ACTION_OPEN_LIVE_CHAT"
+        if (openChat) {
+            NukeLiveChatNotifier.cancelNotification(this)
+            window.decorView.postDelayed({
+                if (!isFinishing && !isDestroyed) {
+                    NukeLiveChatOverlay.getInstance(applicationContext).show()
+                }
+            }, 350L)
+        }
     }
 
     private fun scheduleDisplayRecovery() {
@@ -306,11 +326,16 @@ fun BannerAdView() {
         }
     }
 
-    AndroidView(
+    Box(
         modifier = Modifier.fillMaxWidth(),
-        factory = { container },
-        update = { }
-    )
+        contentAlignment = Alignment.Center
+    ) {
+        AndroidView(
+            modifier = Modifier.wrapContentSize(),
+            factory = { container },
+            update = { }
+        )
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -398,43 +423,44 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
                                 modifier = Modifier
-                                    .size(86.dp)
-                                    .clip(CutCornerShape(topStart = 18.dp, bottomEnd = 18.dp))
+                                    .size(78.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
                                     .background(Color(0xFF08140F))
-                                    .border(1.dp, Color(0xFF35C99B).copy(alpha = 0.52f), CutCornerShape(topStart = 18.dp, bottomEnd = 18.dp)),
+                                    .border(1.dp, Color(0xFF35C99B).copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Image(
                                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo_nuke),
                                     contentDescription = "Game Nuke",
                                     modifier = Modifier
-                                        .size(64.dp)
-                                        .clip(CutCornerShape(topStart = 10.dp, bottomEnd = 10.dp)),
+                                        .size(56.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)),
                                 )
                             }
-                            Spacer(modifier = Modifier.height(14.dp))
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.width(20.dp).height(2.dp).background(Color(0xFF35C99B)))
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    "GAME NUKE",
-                                    color = Color.White,
-                                    fontSize = 18.sp,
-                                    fontWeight = FontWeight.Black,
-                                    letterSpacing = 3.sp,
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Box(Modifier.width(20.dp).height(2.dp).background(Color(0xFF35C99B)))
-                            }
-                            Spacer(modifier = Modifier.height(4.dp))
+                            Spacer(modifier = Modifier.height(12.dp))
                             Text(
-                                "ENTERPRISE EDITION · v${BuildConfig.VERSION_NAME}",
-                                color = Color(0xFF35C99B),
-                                fontSize = 10.sp,
+                                "GAME NUKE",
+                                color = Color.White,
+                                fontSize = 18.sp,
                                 fontWeight = FontWeight.Bold,
-                                letterSpacing = 2.sp,
-                                fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                                letterSpacing = 1.2.sp,
                             )
+                            Spacer(modifier = Modifier.height(5.dp))
+                            Box(
+                                modifier = Modifier
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF35C99B).copy(alpha = 0.12f))
+                                    .border(0.8.dp, Color(0xFF35C99B).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            ) {
+                                Text(
+                                    "ENTERPRISE EDITION · v${BuildConfig.VERSION_NAME}",
+                                    color = Color(0xFF35C99B),
+                                    fontSize = 9.5.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    letterSpacing = 0.8.sp,
+                                )
+                            }
                         }
                     }
 
@@ -570,12 +596,11 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 Spacer(Modifier.width(10.dp))
                                 Column {
                                     Text(
-                                        "GAME NUKE // SYSTEM",
-                                        color = Color(0xFF797983),
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 11.sp,
-                                        letterSpacing = 1.6.sp,
-                                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                                        "GAME NUKE",
+                                        color = Color(0xFF94A3B8),
+                                        fontWeight = FontWeight.SemiBold,
+                                        fontSize = 10.sp,
+                                        letterSpacing = 1.sp,
                                     )
                                     Text(
                                         when (route) {
@@ -588,10 +613,10 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                             "dev" -> "Agung Dev"
                                             else -> Tx.t("Dokumentasi", "Documentation")
                                         },
-                                        fontWeight = FontWeight.Black,
+                                        fontWeight = FontWeight.Bold,
                                         color = Color.White,
                                         fontSize = 17.sp,
-                                        letterSpacing = 0.7.sp,
+                                        letterSpacing = 0.3.sp,
                                     )
                                 }
                             }
@@ -733,39 +758,36 @@ fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
+            .padding(horizontal = 10.dp, vertical = 2.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
             .clickable(onClick = onClick)
-            .padding(vertical = 14.dp, horizontal = 24.dp),
+            .padding(vertical = 11.dp, horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(2.dp, 18.dp)
-                .background(accent),
-        )
-        Spacer(modifier = Modifier.width(14.dp))
-        Box(
-            modifier = Modifier
-                .size(36.dp)
-                .background(Color(0xFF111118), CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-                .border(1.dp, accent.copy(alpha = 0.25f), CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp)),
+                .size(34.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+                .background(Color(0xFF101714))
+                .border(0.8.dp, accent.copy(alpha = 0.20f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(18.dp))
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(17.dp))
         }
         Spacer(modifier = Modifier.width(14.dp))
         Text(
             title,
             color = Color.White,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.Bold,
-            letterSpacing = 0.5.sp,
+            fontSize = 13.5.sp,
+            fontWeight = FontWeight.Medium,
+            letterSpacing = 0.2.sp,
         )
         Spacer(modifier = Modifier.weight(1f))
         Icon(
             Icons.Rounded.ChevronRight,
             contentDescription = null,
-            tint = Color(0xFF555555),
-            modifier = Modifier.size(18.dp),
+            tint = Color(0xFF4A5568),
+            modifier = Modifier.size(17.dp),
         )
     }
 }
@@ -775,13 +797,13 @@ fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White,
     val uriHandler = LocalUriHandler.current
     Box(
         modifier = Modifier
-            .size(width = 66.dp, height = 48.dp)
-            .clip(CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
-            .background(Color(0xFF0C1411))
-            .border(1.2.dp, borderAccent.copy(alpha = 0.5f), CutCornerShape(topStart = 8.dp, bottomEnd = 8.dp))
+            .size(width = 66.dp, height = 44.dp)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .background(Color(0xFF0F1714))
+            .border(0.8.dp, borderAccent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
             .clickable { runCatching { uriHandler.openUri(url) } },
         contentAlignment = Alignment.Center,
     ) {
-        Icon(icon, contentDescription = null, tint = brandTint, modifier = Modifier.size(26.dp))
+        Icon(icon, contentDescription = null, tint = brandTint, modifier = Modifier.size(22.dp))
     }
 }

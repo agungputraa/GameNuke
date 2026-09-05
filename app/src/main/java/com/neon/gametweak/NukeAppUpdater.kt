@@ -34,6 +34,7 @@ object NukeAppUpdater {
     private const val TAG = "NukeAppUpdater"
 
     // Primary Edge CDN endpoints
+    private const val CUSTOM_DOMAIN_ENDPOINT = "https://gamenukeofficial.com/version.json"
     private const val PRIMARY_ENDPOINT = "https://agungputraa.github.io/GameNuke/version.json"
     private const val CDN_FALLBACK_ENDPOINT = "https://cdn.jsdelivr.net/gh/agungputraa/GameNuke@gh-pages/version.json"
 
@@ -89,7 +90,7 @@ object NukeAppUpdater {
     }
 
     private fun fetchRemoteVersion(): UpdateInfo? {
-        val endpoints = listOf(PRIMARY_ENDPOINT, CDN_FALLBACK_ENDPOINT)
+        val endpoints = listOf(CUSTOM_DOMAIN_ENDPOINT, PRIMARY_ENDPOINT, CDN_FALLBACK_ENDPOINT)
         for (endpoint in endpoints) {
             try {
                 val url = URL("$endpoint?t=${System.currentTimeMillis()}")

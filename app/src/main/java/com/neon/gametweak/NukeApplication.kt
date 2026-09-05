@@ -52,6 +52,9 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
             runCatching { AdbManager.getInstance(applicationContext).warmUpKeyMaterial() }
         }
 
+        // Initialize Autonomous AI Game Sentinel
+        runCatching { NukeAiSentinel.init(this) }
+
         // Keep local REST API server running in background if enabled.
         // Must use startForegroundService() on Android 8+ so the system knows
         // the service will call startForeground() within 5 s of creation.
@@ -97,6 +100,20 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
     private fun installCrashBreadcrumbGuard() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            // Prevent silent force-close from third-party Ad SDK BadTokenException or Chromium WebView internal crashes
+            val isRecoverableAdCrash = error is android.view.WindowManager.BadTokenException ||
+                    error.javaClass.name.contains("BadTokenException") ||
+                    error.stackTrace.any { 
+                        it.className.contains("vungle", ignoreCase = true) ||
+                        it.className.contains("chromium", ignoreCase = true) ||
+                        it.className.contains("ViewRootImpl", ignoreCase = true)
+                    }
+
+            if (isRecoverableAdCrash) {
+                android.util.Log.e("GameNukeCrashGuard", "Shielded app from third-party ad/window crash on thread ${thread.name}", error)
+                return@setDefaultUncaughtExceptionHandler
+            }
+
             runCatching {
                 val file = java.io.File(filesDir, "last_fatal.txt")
                 file.writeText(

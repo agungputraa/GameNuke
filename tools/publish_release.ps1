@@ -91,17 +91,27 @@ if (Test-Path $VersionJsonPath) {
     $vJson.publishedAt = (Get-Date -Format "yyyy-MM-dd")
     $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
     
+    $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
     $vJson.releaseNotes = @(
+        "Enterprise Live Chat: Direct support desk connected to Agung Developer with instant optimistic delete & edit",
+        "Closed-App Push Notifications: Background delivery for developer live chat replies even when recent apps are cleared",
+        "Streamlined HUD Cockpit: Smooth horizontal scroll action bar with Modules, Deep Clean, Live Chat, and Terminal",
+        "Deep Clean System Purge: Comprehensive RAM compaction and storage junk purge (logcat, tombstones, ANR, caches)",
         "Dual-Engine Macro: Shizuku privileged input (~0.1ms latency) + Accessibility fallback",
         "VPN Ping Booster: 1ms MLBB Lobby Loopback responder + Gaming DNS (Cloudflare and Google)",
         "Tactical Audio Equalizer: Footstep Enhancer and Gunshot Clarity for FPS games without root",
         "In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider",
-        "Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay",
-        "Touch Turbo and Anti-Mistouch Edge Shield for competitive 4-finger claw grip",
-        "Unlimited In-App Updater via Edge CDN: Automatic background checks without Google Play delays"
+        "Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay"
     )
     
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
+    Copy-Item -Path $VersionJsonPath -Destination "$RootDir\version.json" -Force
+    if (Test-Path "$RootDir\gamenukeweb\index.html") {
+        Copy-Item -Path "$RootDir\gamenukeweb\index.html" -Destination "$RootDir\index.html" -Force
+    }
+    if (Test-Path "$RootDir\gamenukeweb\CNAME") {
+        Copy-Item -Path "$RootDir\gamenukeweb\CNAME" -Destination "$RootDir\CNAME" -Force
+    }
 }
 
 # 5. Deploy gamenukeweb to GitHub main and gh-pages branches (STRICT WEB ISOLATION)

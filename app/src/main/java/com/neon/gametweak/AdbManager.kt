@@ -5,6 +5,7 @@ import android.net.nsd.NsdManager
 import android.net.nsd.NsdServiceInfo
 import android.net.wifi.WifiManager
 import android.os.Build
+import android.os.Looper
 import io.github.muntashirakon.adb.AdbStream
 import java.io.FileWriter
 import java.net.InetAddress
@@ -72,6 +73,7 @@ class AdbManager private constructor(context: Context) {
     @Volatile private var latestConnectEndpoint: AdbEndpoint? = null
     @Volatile private var connectedFlag = false
     @Volatile private var authorizationRevokedHint = prefs.safeBoolean("authorization_revoked_hint", false)
+    private val initServerRunning = AtomicBoolean(false)
 
     companion object {
         private const val PAIR_ENDPOINT_TTL_MS = 45_000L
@@ -126,9 +128,13 @@ class AdbManager private constructor(context: Context) {
     fun isLocalBinaryAvailable(): Boolean = true
 
     fun isConnected(): Boolean {
-        // NOTE: Do NOT call NukeDaemonClient.ping() here.
-        // Daemon is a completely separate transport checked by NukeConnectionManager.
-        // Calling ping() here blocks 1200ms when daemon is not running, causing UI freezes.
+        // NOTE: If called on Main UI Thread, NEVER call m.isConnected directly!
+        // In libadb, m.isConnected takes a synchronized lock on AbsAdbConnectionManager.
+        // If autoConnect() or connect() is active on background thread, calling m.isConnected
+        // from the UI thread freezes the entire application, triggering an ANR.
+        if (Looper.myLooper() == Looper.getMainLooper()) {
+            return connectedFlag
+        }
         return try {
             val m = manager() ?: return connectedFlag
             val ok = m.isConnected
@@ -377,12 +383,32 @@ class AdbManager private constructor(context: Context) {
                     .putBoolean("daemon_ever_started", true)
                     .putLong("daemon_start_time", System.currentTimeMillis())
                     .apply()
+                disablePhantomProcessKiller()
                 return true
             }
             try { Thread.sleep(150L) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
         }
         writeTraceLog("PERSISTENT CORE BOOTSTRAP: daemon did not respond after 2.4s")
         return false
+    }
+
+    /**
+     * Android 12+ (API 31-36+) Phantom Process Killer automatically terminates child background
+     * processes spawned by shell/ADB if they exceed 32 processes or consume significant memory.
+     * This bypass guarantees that game-nuke-core and background tasks stay 100% alive.
+     */
+    fun disablePhantomProcessKiller() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val cmd = """
+                /system/bin/device_config set_sync_disabled_for_tests persistent 2>/dev/null
+                /system/bin/device_config put activity_manager max_phantom_processes 2147483647 2>/dev/null
+                settings put global settings_enable_monitor_phantom_procs false 2>/dev/null
+            """.trimIndent()
+            runCatching {
+                executeCommandDirect(cmd, timeoutMs = 2_500L, maxOutputChars = 256)
+                writeTraceLog("PHANTOM PROCESS KILLER: disabled for Android 12+")
+            }
+        }
     }
 
 
@@ -476,7 +502,9 @@ class AdbManager private constructor(context: Context) {
     }
 
     fun initServer() {
+        if (!initServerRunning.compareAndSet(false, true)) return
         thread(name = "Nuke-ADB-AutoConnect", isDaemon = true) {
+            try {
             // Step 1: Always ping the local Unix socket daemon first.
             // The daemon communicates via abstract socket — works without WiFi.
             // This is the Shizuku model: WiFi only needed for initial pairing.
@@ -545,12 +573,15 @@ class AdbManager private constructor(context: Context) {
                     return@thread
                 }
 
-                try {
-                    Thread.sleep(450L + attempt * 500L)
-                } catch (_: InterruptedException) {
-                    Thread.currentThread().interrupt()
-                    return@thread
+                    try {
+                        Thread.sleep(450L + attempt * 500L)
+                    } catch (_: InterruptedException) {
+                        Thread.currentThread().interrupt()
+                        return@thread
+                    }
                 }
+            } finally {
+                initServerRunning.set(false)
             }
         }
     }
@@ -707,6 +738,7 @@ class AdbManager private constructor(context: Context) {
                 clearAuthorizationRevokedHint()
                 saveTarget(formatTarget(host, port))
                 ensurePersistentCore()
+                disablePhantomProcessKiller()
                 "connected to ${formatTarget(host, port)} // persistent core ${if (NukeDaemonClient.ping()) "online" else "pending"}"
             } else {
                 "failed to connect to ${formatTarget(host, port)}"

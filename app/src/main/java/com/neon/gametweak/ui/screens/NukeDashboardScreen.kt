@@ -41,7 +41,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.CutCornerShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.material.icons.Icons
@@ -142,8 +141,8 @@ private data class CommandCenterTelemetry(
     val iadbAvailable: Boolean = false,
 )
 
-private val ReactorShape = CutCornerShape(topStart = 24.dp, topEnd = 5.dp, bottomStart = 5.dp, bottomEnd = 24.dp)
-private val ReactorSmall = CutCornerShape(topStart = 12.dp, topEnd = 2.dp, bottomStart = 2.dp, bottomEnd = 12.dp)
+private val ReactorShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+private val ReactorSmall = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
 
 /**
  * Main Game Nuke command center. The first screen is deliberately not a collection of generic
@@ -203,9 +202,7 @@ fun DashboardScreen(
     }
 
     fun handleToolClick(action: () -> Unit) {
-        val check = NukeAdBlockDetector.checkStatus(context, adbManager)
-        if (check.isDetected || adBlockStatus.isDetected) {
-            if (check.isDetected) adBlockStatus = check
+        if (adBlockStatus.isDetected) {
             showAdBlockDialog = true
             NukeToast.error(
                 context,
@@ -235,9 +232,9 @@ fun DashboardScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(CutCornerShape(topStart = 10.dp, bottomEnd = 10.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                         .background(Color(0xFF281013))
-                        .border(1.dp, Color(0xFFFF4B55), CutCornerShape(topStart = 10.dp, bottomEnd = 10.dp))
+                        .border(1.dp, Color(0xFFFF4B55), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
                         .clickable { showAdBlockDialog = true }
                         .padding(12.dp)
                 ) {
@@ -248,39 +245,39 @@ fun DashboardScreen(
                         Box(
                             modifier = Modifier
                                 .size(34.dp)
-                                .clip(CutCornerShape(6.dp))
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
                                 .background(Color(0xFFFF4B55).copy(alpha = 0.2f))
-                                .border(0.8.dp, Color(0xFFFF4B55), CutCornerShape(6.dp)),
+                                .border(0.8.dp, Color(0xFFFF4B55), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(Icons.Rounded.Warning, contentDescription = null, tint = Color(0xFFFF4B55), modifier = Modifier.size(18.dp))
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
-                                Tx.t("ADBLOCK AKTIF · TOOLS TERKUNCI", "ADBLOCK ACTIVE · TOOLS LOCKED"),
+                                Tx.t("AdBlock Terdeteksi · Fitur Terbatas", "AdBlock Active · Tools Locked"),
                                 color = Color(0xFFFF7A85),
-                                fontSize = 11.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.5.sp
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.3.sp
                             )
                             Spacer(Modifier.height(1.dp))
                             Text(
-                                Tx.t("Filter: %s · Klik DISABLE untuk pulihkan", "Filter: %s · Tap DISABLE to restore").format(adBlockStatus.detectedDnsSpecifier.ifBlank { "AdBlock" }),
+                                Tx.t("Filter: %s · Ketuk untuk panduan", "Filter: %s · Tap to resolve").format(adBlockStatus.detectedDnsSpecifier.ifBlank { "AdBlock" }),
                                 color = Color(0xFFD6C2C4),
-                                fontSize = 9.sp
+                                fontSize = 10.sp
                             )
                         }
                         Box(
                             modifier = Modifier
-                                .clip(CutCornerShape(4.dp))
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                 .background(Color(0xFFFF4B55))
-                                .padding(horizontal = 8.dp, vertical = 4.dp)
+                                .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Text(
-                                Tx.t("DISABLE", "DISABLE"),
+                                Tx.t("RESOLVE", "RESOLVE"),
                                 color = Color.White,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Bold
                             )
                         }
                     }
@@ -361,62 +358,61 @@ private fun ReactorCommandHero(
     onArm: () -> Unit,
     onAdb: () -> Unit,
 ) {
-    val infinite = rememberInfiniteTransition(label = "reactor")
-    val pulse by infinite.animateFloat(
-        0.44f, 0.72f,
-        animationSpec = infiniteRepeatable(tween(2400, easing = FastOutSlowInEasing), RepeatMode.Reverse),
-        label = "reactorPulse",
-    )
     val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFC857)
 
     Box(
         Modifier.fillMaxWidth()
             .clip(ReactorShape)
             .background(
-                Brush.horizontalGradient(
+                Brush.verticalGradient(
                     listOf(
-                        accent.copy(alpha = 0.18f),
-                        Color(0xFF0B1A15),
-                        Color(0xFF040A08),
-                        Color(0xFF10101A),
+                        Color(0xFF0F1B16),
+                        Color(0xFF08110D),
                     ),
                 ),
             )
-            .border(1.dp, accent.copy(alpha = 0.42f + pulse * 0.26f), ReactorShape)
-            .padding(16.dp),
+            .border(0.8.dp, accent.copy(alpha = 0.30f), ReactorShape)
+            .padding(18.dp),
     ) {
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
-                    Modifier.size(62.dp)
-                        .clip(CutCornerShape(topStart = 19.dp, topEnd = 2.dp, bottomStart = 2.dp, bottomEnd = 19.dp))
-                        .background(Brush.radialGradient(listOf(accent.copy(alpha = 0.28f + pulse * .12f), Color(0xFF07100D), Color(0xFF020504))))
-                        .border(1.dp, accent.copy(alpha = .58f), ReactorSmall),
+                    Modifier.size(54.dp)
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                        .background(accent.copy(alpha = 0.12f))
+                        .border(0.8.dp, accent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("GN", color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Black)
-                        Text("CORE", color = accent, fontSize = 7.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.4.sp)
-                    }
+                    Icon(
+                        Icons.Rounded.Gamepad,
+                        contentDescription = null,
+                        tint = accent,
+                        modifier = Modifier.size(28.dp),
+                    )
                 }
-                Spacer(Modifier.width(12.dp))
+                Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(Tx.t("PUSAT KOMANDO NUKLIR", "NUCLEAR COMMAND CENTER"), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+                    Text(
+                        Tx.t("Pusat Komando", "Command Center"),
+                        color = Color.White,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        letterSpacing = 0.3.sp,
+                    )
+                    Spacer(Modifier.height(3.dp))
+                    Text(
+                        if (telemetry.adbConnected) "${telemetry.connectionMode} • ${Tx.t("Siap", "Ready")}" else Tx.t("Mode Standar Siap", "Standard Mode Ready"),
+                        color = accent,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.SemiBold,
+                    )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        if (telemetry.adbConnected) "${telemetry.connectionMode} ${Tx.t("SIAP", "READY")}" else Tx.t("KONTROL STANDAR SIAP", "STANDARD CONTROL READY"),
-                        color = accent,
-                        fontSize = 9.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        letterSpacing = .8.sp,
-                    )
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${Tx.t("kontrol gaming adaptif", "adaptive gaming control")}",
+                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${Tx.t("Mesin optimasi gaming adaptif", "Adaptive gaming optimization engine")}",
                         color = Neon.TextDim,
                         fontSize = 10.sp,
-                        maxLines = 2,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                     )
                 }
             }
@@ -425,23 +421,33 @@ private fun ReactorCommandHero(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(Tx.t("KESIAPAN", "READINESS"), color = Neon.TextDim, fontSize = 8.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                        Text(
+                            Tx.t("Kesiapan Sistem", "System Readiness"),
+                            color = Neon.TextDim,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Medium,
+                        )
                         Spacer(Modifier.weight(1f))
-                        Text("$readyCount / 4", color = accent, fontSize = 10.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+                        Text(
+                            "$readyCount / 4",
+                            color = accent,
+                            fontSize = 11.sp,
+                            fontWeight = FontWeight.Bold,
+                        )
                     }
-                    Spacer(Modifier.height(5.dp))
+                    Spacer(Modifier.height(6.dp))
                     SegmentedProgress(readiness, accent)
                 }
             }
 
-            Spacer(Modifier.height(12.dp))
+            Spacer(Modifier.height(14.dp))
             val activity = LocalContext.current.findActivity()
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ReactorButton(
-                    Tx.t("MULAI SESI GAME", "ARM GAME SESSION"),
+                    Tx.t("Mulai Sesi Game", "Launch Game Session"),
                     Icons.Rounded.PlayArrow,
                     Neon.Accent,
-                    Modifier.weight(1.45f),
+                    Modifier.weight(1.4f),
                 ) {
                     if (activity != null) {
                         NukeAdManager.showInterstitial(activity) { onArm() }
@@ -450,7 +456,7 @@ private fun ReactorCommandHero(
                     }
                 }
                 ReactorButton(
-                    if (telemetry.adbConnected) Tx.t("KONTROL AKTIF", "CONTROL READY") else Tx.t("HUBUNGKAN", "CONNECT"),
+                    if (telemetry.adbConnected) Tx.t("Terkoneksi", "Connected") else Tx.t("Hubungkan", "Connect"),
                     Icons.Rounded.DeveloperMode,
                     accent,
                     Modifier.weight(1f),
@@ -467,34 +473,56 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
     val ram = telemetry.ramUsedPercent
     Box(
         Modifier.fillMaxWidth().clip(ReactorShape)
-            .background(Brush.verticalGradient(listOf(Color(0xFF0B1814), Color(0xFF050908))))
-            .border(1.dp, Color(0xFF1A493C), ReactorShape)
-            .padding(horizontal = 12.dp, vertical = 13.dp),
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        Color(0xFF0F1814),
+                        Color(0xFF070E0B),
+                    )
+                )
+            )
+            .border(0.8.dp, Color(0xFF1E3A30), ReactorShape)
+            .padding(horizontal = 14.dp, vertical = 16.dp),
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             AnimatedSpeedometer(
-                label = Tx.t("BEBAN CPU", "CPU LOAD"),
+                label = Tx.t("Beban CPU", "CPU Load"),
                 value = cpu,
                 valueText = telemetry.cpuLoad?.let { "$it%" } ?: "--",
                 accent = Color(0xFF35F2FF),
                 modifier = Modifier.weight(1f),
             )
-            Column(Modifier.width(92.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(Tx.t("REAKTOR", "REACTOR"), color = Neon.TextDim, fontSize = 7.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
-                Spacer(Modifier.height(4.dp))
+            Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(
+                    modifier = Modifier
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                        .background(if (telemetry.temperatureC > 43f) Color(0xFFFF5D67).copy(alpha = 0.15f) else Neon.Accent.copy(alpha = 0.12f))
+                        .border(0.8.dp, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67).copy(alpha = 0.4f) else Neon.Accent.copy(alpha = 0.3f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                        .padding(horizontal = 8.dp, vertical = 3.dp),
+                ) {
+                    Text(
+                        if (telemetry.temperatureC > 43f) Tx.t("SUHU TINGGI", "HIGH TEMP") else Tx.t("OPTIMAL", "OPTIMAL"),
+                        color = if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent,
+                        fontSize = 9.sp,
+                        fontWeight = FontWeight.Bold,
+                        textAlign = TextAlign.Center,
+                    )
+                }
+                Spacer(Modifier.height(6.dp))
                 Text(
-                    if (telemetry.temperatureC > 43f) Tx.t("PROTEKSI\nSUHU", "THERMAL\nGUARD") else Tx.t("SISTEM\nNOMINAL", "SYSTEM\nNOMINAL"),
-                    color = if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent,
-                    fontSize = 12.sp,
-                    textAlign = TextAlign.Center,
-                    fontWeight = FontWeight.Black,
-                    lineHeight = 14.sp,
+                    "${telemetry.currentHz} Hz",
+                    color = Color.White,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
                 )
-                Spacer(Modifier.height(4.dp))
-                Text("${telemetry.currentHz} / ${telemetry.maxHz} HZ", color = Color.White, fontSize = 8.sp, fontFamily = FontFamily.Monospace)
+                Text(
+                    Tx.t("Refresh Rate", "Refresh Rate"),
+                    color = Neon.TextDim,
+                    fontSize = 9.sp,
+                )
             }
             AnimatedSpeedometer(
-                label = Tx.t("PENGGUNAAN RAM", "RAM USAGE"),
+                label = Tx.t("Penggunaan RAM", "RAM Usage"),
                 value = ram,
                 valueText = "$ram%",
                 accent = Neon.Accent,
@@ -518,33 +546,24 @@ private fun AnimatedSpeedometer(
         label = "gauge-$label",
     )
     Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.size(112.dp), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(108.dp), contentAlignment = Alignment.Center) {
             Canvas(Modifier.fillMaxSize()) {
-                val stroke = 7.dp.toPx()
-                val start = 145f
-                val sweep = 250f
+                val stroke = 8.dp.toPx()
+                val start = 140f
+                val sweep = 260f
                 drawArc(
-                    color = Color(0xFF1B2C27), startAngle = start, sweepAngle = sweep,
+                    color = Color(0xFF14221C), startAngle = start, sweepAngle = sweep,
                     useCenter = false, style = Stroke(stroke, cap = StrokeCap.Round),
                 )
                 drawArc(
-                    brush = Brush.sweepGradient(listOf(accent.copy(alpha = .25f), accent)),
+                    brush = Brush.sweepGradient(listOf(accent.copy(alpha = .30f), accent)),
                     startAngle = start, sweepAngle = sweep * (animated / 100f),
                     useCenter = false, style = Stroke(stroke, cap = StrokeCap.Round),
                 )
-                val radius = size.minDimension * .40f
-                for (i in 0..10) {
-                    val angle = Math.toRadians((start + sweep * (i / 10f)).toDouble())
-                    val c = Offset(size.width / 2f, size.height / 2f)
-                    val outer = Offset(c.x + cos(angle).toFloat() * radius, c.y + sin(angle).toFloat() * radius)
-                    val innerR = radius - if (i % 5 == 0) 8.dp.toPx() else 5.dp.toPx()
-                    val inner = Offset(c.x + cos(angle).toFloat() * innerR, c.y + sin(angle).toFloat() * innerR)
-                    drawLine(if (i / 10f <= animated / 100f) accent.copy(alpha = .78f) else Color(0xFF355047), inner, outer, strokeWidth = 1.2.dp.toPx())
-                }
             }
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(valueText, color = accent, fontSize = 21.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
-                Text(label, color = Neon.TextDim, fontSize = 7.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace, letterSpacing = 1.1.sp)
+                Text(valueText, color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                Text(label, color = Neon.TextDim, fontSize = 10.sp, fontWeight = FontWeight.Medium)
             }
         }
     }
@@ -675,42 +694,42 @@ private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
 @Composable
 private fun MetricTile(label: String, value: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier) {
     Column(
-        modifier.clip(ReactorSmall).background(Color(0xFF07100D)).border(1.dp, Color(0xFF173A31), ReactorSmall).padding(9.dp),
+        modifier.clip(ReactorSmall).background(Color(0xFF0C1613)).border(0.8.dp, Color(0xFF1B382F), ReactorSmall).padding(10.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = accent, modifier = Modifier.size(13.dp))
-            Spacer(Modifier.width(5.dp))
-            Text(label, color = Neon.TextDim, fontSize = 6.7.sp, fontFamily = FontFamily.Monospace, letterSpacing = .8.sp, maxLines = 1)
+            Icon(icon, null, tint = accent, modifier = Modifier.size(14.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(label, color = Neon.TextDim, fontSize = 10.sp, fontWeight = FontWeight.Medium, maxLines = 1)
         }
-        Spacer(Modifier.height(4.dp))
-        Text(value, color = accent, fontSize = 10.5.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Spacer(Modifier.height(5.dp))
+        Text(value, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
 @Composable
 private fun ReactorButton(text: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
-        modifier.height(44.dp).clip(ReactorSmall).background(accent.copy(alpha = .10f))
-            .border(1.dp, accent.copy(alpha = .55f), ReactorSmall).clickable(onClick = onClick).padding(horizontal = 11.dp),
+        modifier.height(44.dp).clip(ReactorSmall).background(accent.copy(alpha = .14f))
+            .border(0.8.dp, accent.copy(alpha = .40f), ReactorSmall).clickable(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
-        Icon(icon, null, tint = accent, modifier = Modifier.size(17.dp))
-        Spacer(Modifier.width(7.dp))
-        Text(text, color = accent, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp, maxLines = 1)
+        Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
+        Spacer(Modifier.width(8.dp))
+        Text(text, color = accent, fontSize = 11.5.sp, fontWeight = FontWeight.Bold, maxLines = 1)
     }
 }
 
 @Composable
 private fun SectionRail(title: String, meta: String) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.width(18.dp).height(2.dp).background(Neon.Accent))
-        Spacer(Modifier.width(7.dp))
-        Text(title, color = Color.White, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = 1.2.sp)
+        Box(Modifier.width(3.dp).height(14.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(1.dp)).background(Neon.Accent))
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.weight(1f).height(1.dp).background(Color(0xFF1B493C)))
-        Spacer(Modifier.width(8.dp))
-        Text(meta, color = Neon.TextDim, fontSize = 6.7.sp, fontFamily = FontFamily.Monospace)
+        Text(title, color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Bold, letterSpacing = 0.4.sp)
+        Spacer(Modifier.width(10.dp))
+        Box(Modifier.weight(1f).height(1.dp).background(Color(0xFF1E352C)))
+        Spacer(Modifier.width(10.dp))
+        Text(meta, color = Neon.TextDim, fontSize = 10.sp, fontWeight = FontWeight.Medium)
     }
 }
 
@@ -719,7 +738,7 @@ private fun SegmentedProgress(progress: Float, accent: Color) {
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
         repeat(12) { index ->
             val on = (index + 1) / 12f <= progress + .02f
-            Box(Modifier.weight(1f).height(4.dp).clip(CutCornerShape(1.dp)).background(if (on) accent else Color(0xFF1D2A26)))
+            Box(Modifier.weight(1f).height(4.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp)).background(if (on) accent else Color(0xFF1A2824)))
         }
     }
 }
@@ -822,7 +841,7 @@ private fun NukeConnectionSelectorDialog(
                 .widthIn(max = 440.dp)
                 .fillMaxWidth(0.92f)
                 .heightIn(max = 600.dp)
-                .clip(CutCornerShape(topStart = 20.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 20.dp))
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
                 .background(
                     Brush.verticalGradient(
                         listOf(
@@ -833,11 +852,11 @@ private fun NukeConnectionSelectorDialog(
                     )
                 )
                 .border(
-                    1.dp,
-                    Brush.verticalGradient(listOf(Neon.Accent.copy(alpha = 0.6f), Color(0xFF1B493C))),
-                    CutCornerShape(topStart = 20.dp, topEnd = 6.dp, bottomStart = 6.dp, bottomEnd = 20.dp)
+                    0.8.dp,
+                    Brush.verticalGradient(listOf(Neon.Accent.copy(alpha = 0.5f), Color(0xFF1B493C))),
+                    androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
                 )
-                .padding(16.dp)
+                .padding(18.dp)
         ) {
             Column(
                 modifier = Modifier
@@ -852,38 +871,38 @@ private fun NukeConnectionSelectorDialog(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Column(Modifier.weight(1f)) {
+                        Text(
+                            Tx.t("KONTROL PERANGKAT", "DEVICE CONTROL"),
+                            color = Color.White,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 1.sp,
+                            maxLines = 1
+                        )
+                        Spacer(Modifier.height(4.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                Tx.t("JEMBATAN KONTROL PERANGKAT", "DEVICE CONTROL BRIDGES"),
-                                color = Color.White,
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 1.sp
-                            )
-                            Spacer(Modifier.width(8.dp))
                             Box(
                                 Modifier
-                                    .clip(CutCornerShape(2.dp))
-                                    .background(Neon.Accent.copy(alpha = 0.2f))
-                                    .border(0.8.dp, Neon.Accent, CutCornerShape(2.dp))
-                                    .padding(horizontal = 6.dp, vertical = 2.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(if (telemetry.adbConnected) Neon.Accent.copy(alpha = 0.15f) else Color(0xFFFF7A59).copy(alpha = 0.15f))
+                                    .border(0.8.dp, if (telemetry.adbConnected) Neon.Accent.copy(alpha = 0.4f) else Color(0xFFFF7A59).copy(alpha = 0.4f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .padding(horizontal = 7.dp, vertical = 2.dp)
                             ) {
                                 Text(
                                     telemetry.connectionMode,
                                     color = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
-                                    fontSize = 7.5.sp,
-                                    fontWeight = FontWeight.Black,
-                                    fontFamily = FontFamily.Monospace
+                                    fontSize = 8.5.sp,
+                                    fontWeight = FontWeight.Bold,
                                 )
                             }
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (telemetry.adbConnected) Tx.t("Terhubung & Aktif", "Connected & Active") else Tx.t("Pilih Bridge Elevasi", "Select Elevated Bridge"),
+                                color = Neon.TextDim,
+                                fontSize = 9.5.sp,
+                                maxLines = 1
+                            )
                         }
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            Tx.t("Pilih framework atau bridge nirkabel untuk tuning performa perangkat", "Select elevated framework or wireless bridge for hardware tuning"),
-                            color = Neon.TextDim,
-                            fontSize = 9.5.sp,
-                            lineHeight = 13.sp
-                        )
                     }
                     IconButton(
                         onClick = onDismiss,
@@ -1047,11 +1066,11 @@ private fun ConnectionMethodCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(CutCornerShape(topStart = 12.dp, topEnd = 3.dp, bottomStart = 3.dp, bottomEnd = 12.dp))
-            .background(Color(0xFF091411))
-            .border(1.dp, Color(0xFF1E3A31), CutCornerShape(topStart = 12.dp, topEnd = 3.dp, bottomStart = 3.dp, bottomEnd = 12.dp))
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .background(Color(0xFF0C1613))
+            .border(0.8.dp, Color(0xFF1E3A31), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
             .clickable(onClick = onClick)
-            .padding(horizontal = 12.dp, vertical = 10.dp)
+            .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -1059,69 +1078,64 @@ private fun ConnectionMethodCard(
         ) {
             Box(
                 Modifier
-                    .size(36.dp)
-                    .clip(CutCornerShape(6.dp))
+                    .size(38.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
                     .background(iconTint.copy(alpha = 0.12f))
-                    .border(0.8.dp, iconTint.copy(alpha = 0.35f), CutCornerShape(6.dp)),
+                    .border(0.8.dp, iconTint.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(18.dp))
+                Icon(icon, contentDescription = null, tint = iconTint, modifier = Modifier.size(20.dp))
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    Text(
+                        title,
+                        color = Color.White,
+                        fontSize = 12.5.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
-                    ) {
-                        Text(
-                            title,
-                            color = Color.White,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        if (tag != null) {
-                            Spacer(Modifier.width(6.dp))
-                            Box(
-                                Modifier
-                                    .clip(CutCornerShape(2.dp))
-                                    .background(iconTint.copy(alpha = 0.2f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(tag, color = iconTint, fontSize = 6.5.sp, fontWeight = FontWeight.Black)
-                            }
-                        }
-                    }
+                    )
                     Spacer(Modifier.width(6.dp))
                     Box(
                         Modifier
-                            .clip(CutCornerShape(2.dp))
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                             .background(badgeColor.copy(alpha = 0.15f))
-                            .border(0.6.dp, badgeColor.copy(alpha = 0.7f), CutCornerShape(2.dp))
-                            .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                            .border(0.8.dp, badgeColor.copy(alpha = 0.6f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                            .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             badge,
                             color = badgeColor,
-                            fontSize = 7.sp,
+                            fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
                             maxLines = 1
                         )
                     }
                 }
-                Spacer(Modifier.height(3.dp))
+                if (tag != null) {
+                    Spacer(Modifier.height(3.dp))
+                    Box(
+                        Modifier
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                            .background(iconTint.copy(alpha = 0.18f))
+                            .padding(horizontal = 5.dp, vertical = 1.5.dp)
+                    ) {
+                        Text(tag, color = iconTint, fontSize = 7.5.sp, fontWeight = FontWeight.Bold)
+                    }
+                }
+                Spacer(Modifier.height(4.dp))
                 Text(
                     description,
                     color = Neon.TextDim,
-                    fontSize = 9.5.sp,
-                    lineHeight = 13.sp
+                    fontSize = 10.sp,
+                    lineHeight = 14.sp
                 )
             }
         }

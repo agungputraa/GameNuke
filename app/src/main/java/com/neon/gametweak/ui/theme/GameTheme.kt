@@ -44,30 +44,8 @@ object Neon {
     val Outline     = NukeOutline
     val TextDim     = NukeTextSecondary
 }
-val HudShape = GenericShape { size, _ ->
-    val cut = 18f
-    val bite = 7f
-    moveTo(cut, 0f)
-    lineTo(size.width - bite, 0f)
-    lineTo(size.width, bite)
-    lineTo(size.width, size.height - cut)
-    lineTo(size.width - cut, size.height)
-    lineTo(bite, size.height)
-    lineTo(0f, size.height - bite)
-    lineTo(0f, cut)
-    close()
-}
-
-val HudShapeSmall = GenericShape { size, _ ->
-    val cut = 10f
-    moveTo(cut, 0f)
-    lineTo(size.width, 0f)
-    lineTo(size.width, size.height - cut)
-    lineTo(size.width - cut, size.height)
-    lineTo(0f, size.height)
-    lineTo(0f, cut)
-    close()
-}
+val HudShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
+val HudShapeSmall = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
 
 @Composable
 fun HudHeader(
@@ -82,21 +60,22 @@ fun HudHeader(
     ) {
         Box(
             Modifier
-                .width(3.dp)
-                .height(24.dp)
-                .background(accent.copy(alpha = 0.72f))
+                .width(3.5.dp)
+                .height(20.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
+                .background(accent)
         )
-        Spacer(Modifier.width(9.dp))
+        Spacer(Modifier.width(10.dp))
         if (icon != null) {
             Box(
                 modifier = Modifier
                     .size(28.dp)
                     .clip(HudShapeSmall)
-                    .background(accent.copy(alpha = 0.08f))
-                    .border(1.dp, accent.copy(alpha = 0.24f), HudShapeSmall),
+                    .background(accent.copy(alpha = 0.12f))
+                    .border(0.8.dp, accent.copy(alpha = 0.28f), HudShapeSmall),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, null, tint = accent, modifier = Modifier.size(15.dp))
+                Icon(icon, null, tint = accent, modifier = Modifier.size(16.dp))
             }
             Spacer(Modifier.width(8.dp))
         }
@@ -104,37 +83,37 @@ fun HudHeader(
             Text(
                 title,
                 color = Color.White,
-                fontSize = 13.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 2.2.sp,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.Bold,
+                letterSpacing = 0.3.sp,
             )
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     subtitle,
-                    color = accent.copy(alpha = 0.82f),
+                    color = accent.copy(alpha = 0.85f),
                     fontSize = 11.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 1.2.sp,
+                    letterSpacing = 0.2.sp,
                 )
             }
         }
         Spacer(Modifier.weight(1f))
         Box(
             Modifier
-                .width(42.dp)
+                .width(36.dp)
                 .height(1.dp)
                 .background(
                     Brush.horizontalGradient(
-                        listOf(Color.Transparent, accent.copy(alpha = 0.42f))
+                        listOf(Color.Transparent, accent.copy(alpha = 0.35f))
                     )
                 )
         )
         Spacer(Modifier.width(6.dp))
         Box(
             Modifier
-                .size(5.dp)
+                .size(6.dp)
                 .clip(androidx.compose.foundation.shape.CircleShape)
-                .background(accent.copy(alpha = 0.78f))
+                .background(accent.copy(alpha = 0.75f))
         )
     }
 }
@@ -147,21 +126,20 @@ fun HudCard(
     modifier: Modifier = Modifier,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    val borderAlpha = if (pulsing) 0.62f else 0.46f
+    val borderAlpha = if (pulsing) 0.40f else 0.22f
     Column(
         modifier = modifier
             .clip(HudShape)
             .background(
-                Brush.linearGradient(
+                Brush.verticalGradient(
                     listOf(
-                        accent.copy(alpha = 0.055f),
                         background,
-                        Color(0xFF030A07),
+                        Color(0xFF090E0C),
                     )
                 )
             )
-            .border(1.dp, accent.copy(alpha = borderAlpha * 0.72f), HudShape)
-            .padding(14.dp),
+            .border(0.8.dp, accent.copy(alpha = borderAlpha), HudShape)
+            .padding(16.dp),
         content = content,
     )
 }
@@ -176,26 +154,24 @@ fun HudStatChip(
     Box(
         modifier = modifier
             .clip(HudShapeSmall)
-            .background(Neon.BgCardL)
-            .border(1.dp, accent.copy(alpha = 0.35f), HudShapeSmall)
-            .padding(horizontal = 10.dp, vertical = 6.dp),
+            .background(Color(0xFF0D1512))
+            .border(0.8.dp, accent.copy(alpha = 0.24f), HudShapeSmall)
+            .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
         Column {
             Text(
                 label,
                 color = Neon.TextDim,
-                fontSize = 11.sp,
-                fontWeight = FontWeight.Bold,
-                fontFamily = FontFamily.Monospace,
-                letterSpacing = 2.sp,
+                fontSize = 10.sp,
+                fontWeight = FontWeight.SemiBold,
+                letterSpacing = 0.5.sp,
             )
             Spacer(Modifier.height(2.dp))
             Text(
                 value,
                 color = accent,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Black,
-                fontFamily = FontFamily.Monospace,
+                fontSize = 15.sp,
+                fontWeight = FontWeight.Bold,
             )
         }
     }
@@ -214,28 +190,27 @@ fun HudButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(46.dp),
+        modifier = modifier.height(44.dp),
         shape = HudShapeSmall,
         colors = ButtonDefaults.buttonColors(
-            containerColor = effectiveAccent.copy(alpha = 0.085f),
+            containerColor = effectiveAccent.copy(alpha = 0.12f),
             contentColor = effectiveAccent,
-            disabledContainerColor = Neon.BgCardL,
+            disabledContainerColor = Color(0xFF0D1512),
             disabledContentColor = Neon.TextDim,
         ),
-        border = androidx.compose.foundation.BorderStroke(1.dp, effectiveAccent.copy(alpha = 0.48f)),
-        contentPadding = PaddingValues(horizontal = 14.dp),
+        border = androidx.compose.foundation.BorderStroke(0.8.dp, effectiveAccent.copy(alpha = 0.35f)),
+        contentPadding = PaddingValues(horizontal = 16.dp),
     ) {
         if (icon != null) {
-            Icon(icon, null, tint = effectiveAccent, modifier = Modifier.size(15.dp))
-            Spacer(Modifier.width(6.dp))
+            Icon(icon, null, tint = effectiveAccent, modifier = Modifier.size(16.dp))
+            Spacer(Modifier.width(8.dp))
         }
         Text(
             text,
             color = effectiveAccent,
-            fontSize = 11.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp,
-            fontFamily = FontFamily.Monospace,
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp,
             maxLines = 1,
             overflow = TextOverflow.Ellipsis,
         )
@@ -311,24 +286,23 @@ fun HudStatusPill(
     Row(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
-            .clip(HudShapeSmall)
-            .background(Neon.BgCardL)
-            .border(1.dp, color.copy(alpha = 0.45f), HudShapeSmall)
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+            .background(Color(0xFF0D1512))
+            .border(0.8.dp, color.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
         Box(
             modifier = Modifier
                 .size(6.dp)
-                .background(color.copy(alpha = if (online) 0.88f else 0.5f), androidx.compose.foundation.shape.CircleShape)
+                .background(color, androidx.compose.foundation.shape.CircleShape)
         )
         Spacer(Modifier.width(6.dp))
         Text(
             label,
             color = color,
-            fontSize = 9.sp,
-            fontWeight = FontWeight.Black,
-            letterSpacing = 2.sp,
-            fontFamily = FontFamily.Monospace,
+            fontSize = 11.sp,
+            fontWeight = FontWeight.SemiBold,
+            letterSpacing = 0.4.sp,
         )
     }
 }

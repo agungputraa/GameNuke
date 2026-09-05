@@ -32,6 +32,8 @@
     <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW" />
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
     <!-- User-started, user-visible gaming HUD session. Required for reliable long sessions. -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_SPECIAL_USE" />
@@ -100,6 +102,20 @@
             </intent-filter>
         </receiver>
 
+        <!-- Exported Inter-Process REST & Broadcast API Receiver for External Apps & Automation -->
+        <receiver
+            android:name=".NukeExternalApiReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="com.neon.gametweak.ACTION_OPEN_HUD" />
+                <action android:name="com.neon.gametweak.ACTION_CLOSE_HUD" />
+                <action android:name="com.neon.gametweak.ACTION_TOGGLE_HUD" />
+                <action android:name="com.neon.gametweak.ACTION_OPEN_PANEL" />
+                <action android:name="com.neon.gametweak.ACTION_KILL_HOGS" />
+                <action android:name="com.neon.gametweak.ACTION_NET_TURBO" />
+            </intent-filter>
+        </receiver>
+
 
         <activity
             android:name=".CallShieldRoleActivity"
@@ -136,17 +152,6 @@
             android:foregroundServiceType="dataSync"
             android:stopWithTask="false" />
 
-        <service
-            android:name=".NukeMacroService"
-            android:exported="true"
-            android:permission="android.permission.BIND_ACCESSIBILITY_SERVICE">
-            <intent-filter>
-                <action android:name="android.accessibilityservice.AccessibilityService" />
-            </intent-filter>
-            <meta-data
-                android:name="android.accessibilityservice"
-                android:resource="@xml/nuke_macro_accessibility_config" />
-        </service>
 
         <activity
             android:name=".NukeVpnTrampolineActivity"
@@ -159,10 +164,14 @@
         <service
             android:name=".NukeVpnService"
             android:exported="false"
+            android:foregroundServiceType="specialUse"
             android:permission="android.permission.BIND_VPN_SERVICE">
             <intent-filter>
                 <action android:name="android.net.VpnService" />
             </intent-filter>
+            <property
+                android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE"
+                android:value="VPN Ping Optimizer for gaming sessions" />
         </service>
 
         <provider
@@ -202,6 +211,15 @@
             android:exported="true"
             android:multiprocess="false"
             android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" />
+
+        <receiver
+            android:name=".NukeLiveChatReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.neon.gametweak.ACTION_POLL_TELEGRAM" />
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+            </intent-filter>
+        </receiver>
 
     </application>
 </manifest>

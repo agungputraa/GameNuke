@@ -12,7 +12,9 @@ import android.os.Handler
 import android.os.IBinder
 import android.os.Looper
 import android.os.SystemClock
+import android.util.Log
 import androidx.core.app.NotificationCompat
+import androidx.core.app.ServiceCompat
 
 /**
  * Foreground service that keeps LocalWebServer (REST API & Web UI) alive even when
@@ -30,6 +32,7 @@ import androidx.core.app.NotificationCompat
 class NukeWebServerService : Service() {
 
     companion object {
+        private const val TAG                  = "NukeWebServerService"
         private const val CHANNEL_ID           = "nuke_api_server"
         private const val NOTIF_ID             = 8801
         private const val WATCHDOG_INTERVAL_MS = 15_000L
@@ -99,16 +102,18 @@ class NukeWebServerService : Service() {
     private fun startForegroundSafely() {
         runCatching {
             val notification = buildNotification()
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-                startForeground(
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                ServiceCompat.startForeground(
+                    this,
                     NOTIF_ID,
                     notification,
                     android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
                 )
             } else {
+                @Suppress("DEPRECATION")
                 startForeground(NOTIF_ID, notification)
             }
-        }
+        }.onFailure { Log.w(TAG, "Failed startForegroundSafely: ${it.message}") }
     }
 
     private fun buildNotification(): Notification {

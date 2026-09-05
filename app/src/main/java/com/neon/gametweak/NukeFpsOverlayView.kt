@@ -16,6 +16,7 @@ import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.LinearLayout
 import android.widget.TextView
+import androidx.core.content.ContextCompat
 
 /**
  * Real-Time Hardware Performance & FPS Floating Overlay Chip.
@@ -77,6 +78,23 @@ class NukeFpsOverlayView(private val context: Context) {
         }
     }
 
+    companion object {
+        @Volatile
+        private var instance: NukeFpsOverlayView? = null
+
+        fun getInstance(context: Context): NukeFpsOverlayView {
+            return instance ?: synchronized(this) {
+                instance ?: NukeFpsOverlayView(context.applicationContext).also {
+                    instance = it
+                }
+            }
+        }
+    }
+
+    fun toggle() {
+        if (isShowing) hide() else show()
+    }
+
     fun show() {
         if (rootChip != null) return
 
@@ -97,35 +115,39 @@ class NukeFpsOverlayView(private val context: Context) {
             gravity = Gravity.TOP or Gravity.START
             x = 40
             y = 160
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+            }
         }
 
+        val d = context.resources.displayMetrics.density
         val bgDrawable = GradientDrawable().apply {
-            setColor(Color.argb(220, 11, 17, 32))
-            cornerRadius = 24f
-            setStroke(2, Color.parseColor("#00ff88"))
+            setColor(Color.argb(235, 8, 12, 16)) // Obsidian Cyber Glass
+            cornerRadius = 10f * d
+            setStroke((1.2f * d).toInt(), Color.parseColor("#3300FF88"))
         }
 
         val chip = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             background = bgDrawable
-            setPadding(20, 12, 20, 12)
+            setPadding((10 * d).toInt(), (6 * d).toInt(), (10 * d).toInt(), (6 * d).toInt())
             gravity = Gravity.CENTER_VERTICAL
             elevation = 12f
         }
 
         val fpsView = TextView(context).apply {
             text = "120 FPS"
-            setTextColor(Color.parseColor("#00ff88"))
-            textSize = 13f
+            setTextColor(Color.parseColor("#00FF88"))
+            textSize = 12f
             paint.isFakeBoldText = true
-            setPadding(0, 0, 12, 0)
+            setPadding(0, 0, (8 * d).toInt(), 0)
         }
         fpsTextView = fpsView
 
         val statsView = TextView(context).apply {
             text = "36.5°C • 120Hz"
-            setTextColor(Color.parseColor("#94a3b8"))
-            textSize = 10f
+            setTextColor(Color.parseColor("#94A3B8"))
+            textSize = 9.5f
         }
         statsTextView = statsView
 
@@ -143,16 +165,20 @@ class NukeFpsOverlayView(private val context: Context) {
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    params.x = initialX + (event.rawX - initialTouchX).toInt()
-                    params.y = initialY + (event.rawY - initialTouchY).toInt()
-                    windowManager.updateViewLayout(chip, params)
+                    val dm = context.resources.displayMetrics
+                    params.x = (initialX + (event.rawX - initialTouchX).toInt()).coerceIn(0, (dm.widthPixels - (120 * d).toInt()).coerceAtLeast(0))
+                    params.y = (initialY + (event.rawY - initialTouchY).toInt()).coerceIn(0, (dm.heightPixels - (50 * d).toInt()).coerceAtLeast(0))
+                    runCatching { windowManager.updateViewLayout(chip, params) }
                     true
                 }
                 else -> false
             }
         }
 
-        windowManager.addView(chip, params)
+        val added = runCatching { windowManager.addView(chip, params) }.isSuccess
+        if (!added) {
+            return
+        }
         rootChip = chip
 
         // Start sampling
@@ -161,7 +187,12 @@ class NukeFpsOverlayView(private val context: Context) {
         Choreographer.getInstance().postFrameCallback(frameCallback)
 
         try {
-            context.registerReceiver(batteryReceiver, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            ContextCompat.registerReceiver(
+                context,
+                batteryReceiver,
+                IntentFilter(Intent.ACTION_BATTERY_CHANGED),
+                ContextCompat.RECEIVER_NOT_EXPORTED
+            )
         } catch (e: Throwable) {
             // ignore
         }

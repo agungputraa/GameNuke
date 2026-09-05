@@ -13,7 +13,11 @@
 -dontwarn com.google.android.play.core.**
 -dontwarn com.google.android.gms.**
 
-# --- Keep Annotations ---
+# --- Keep Annotations & WebView JavaScript Bridge ---
+-keepattributes JavascriptInterface
+-keepclassmembers class * {
+    @android.webkit.JavascriptInterface <methods>;
+}
 -keepclasseswithmembers class * {
     @androidx.annotation.Keep <methods>;
 }
@@ -21,6 +25,11 @@
     @androidx.annotation.Keep <fields>;
 }
 -keep @androidx.annotation.Keep class * { *; }
+
+# --- Liftoff Monetize / Vungle SDK ---
+-dontwarn com.vungle.**
+-keep class com.vungle.** { *; }
+-keepclassmembers class com.vungle.** { *; }
 
 # --- Strip verbose logs in release (keeps ERROR + WARN for crash diagnostics) ---
 -assumenosideeffects class android.util.Log {
@@ -68,6 +77,12 @@
 -keep class com.neon.gametweak.NukeDisplayProfileController { *; }
 -keep class com.neon.gametweak.AdbManager { *; }
 -keep class com.neon.gametweak.LocalWebServer { *; }
+-keep class com.neon.gametweak.NukeLiveChatNotifier { *; }
+-keep class com.neon.gametweak.NukeLiveChatReceiver { *; }
+-keep class com.neon.gametweak.NukeLiveChatScheduler { *; }
+-keep class com.neon.gametweak.NukeLiveChatRepository { *; }
+-keep class com.neon.gametweak.NukeLiveChatOverlay { *; }
+-keep class com.neon.gametweak.NukeChatMessage { *; }
 
 # ── AIDL / Parcelable (IPC) ───────────────────────────────────────────────────
 -keep class com.neon.gametweak.IShellService* { *; }

@@ -81,7 +81,8 @@ object NukeAdManager {
     private var rewardedAd: RewardedAd? = null
     private var rewardedLoading = false
 
-    private var isShowingFullScreen = false
+    @Volatile var isShowingFullScreen = false
+    fun isAdShowing(): Boolean = isShowingFullScreen
     private var navigationCount = 0
     private var lastFullScreenTimeMs = 0L
 
@@ -422,19 +423,27 @@ object NukeAdManager {
             return
         }
 
+        if (activity.isFinishing || activity.isDestroyed) {
+            Log.w(TAG, "Activity finishing or destroyed, skipping rewarded ad")
+            onProceedToGame(true)
+            return
+        }
+
         val ad = rewardedAd
         if (ad == null || !ad.canPlayAd()) {
             Log.d(TAG, "Rewarded ad not ready, proceeding gracefully without blocking user")
             loadRewardedInternal(context)
-            // Fail-safe: jangan bikin booster macet!
             grantBoosterVipPass(context, 10L * 60L * 1000L)
             onProceedToGame(true)
             return
         }
 
+        isShowingFullScreen = true
         rewardedAd = null
         val appCtx = activity.applicationContext
         var earnedReward = false
+        val mainHandler = Handler(Looper.getMainLooper())
+
         ad.adListener = object : RewardedAdListener {
             override fun onAdLoaded(baseAd: BaseAd) {}
             override fun onAdFailedToLoad(baseAd: BaseAd, error: VungleError) {}
@@ -445,7 +454,9 @@ object NukeAdManager {
                 if (earnedReward) {
                     grantBoosterVipPass(appCtx)
                 }
-                onProceedToGame(earnedReward)
+                mainHandler.post {
+                    runCatching { onProceedToGame(earnedReward) }
+                }
             }
             override fun onAdRewarded(baseAd: BaseAd) {
                 earnedReward = true
@@ -457,9 +468,10 @@ object NukeAdManager {
             override fun onAdFailedToPlay(baseAd: BaseAd, error: VungleError) {
                 isShowingFullScreen = false
                 loadRewardedInternal(appCtx)
-                // Fail-safe: jangan bikin booster macet!
                 grantBoosterVipPass(appCtx, 10L * 60L * 1000L)
-                onProceedToGame(true)
+                mainHandler.post {
+                    runCatching { onProceedToGame(true) }
+                }
             }
         }
         runCatching {
@@ -469,7 +481,9 @@ object NukeAdManager {
             isShowingFullScreen = false
             loadRewardedInternal(activity.applicationContext)
             grantBoosterVipPass(appCtx, 10L * 60L * 1000L)
-            onProceedToGame(true)
+            mainHandler.post {
+                runCatching { onProceedToGame(true) }
+            }
         }
     }
 
@@ -535,7 +549,12 @@ object NukeAdManager {
                     Log.d(TAG, "Banner loaded ✓")
                     container.post {
                         container.removeAllViews()
-                        container.addView(bannerView)
+                        val lp = FrameLayout.LayoutParams(
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            FrameLayout.LayoutParams.WRAP_CONTENT,
+                            android.view.Gravity.CENTER
+                        )
+                        container.addView(bannerView, lp)
                     }
                 }
                 override fun onAdFailedToLoad(baseAd: BaseAd, error: VungleError) {

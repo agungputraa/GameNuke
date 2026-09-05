@@ -17,7 +17,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CutCornerShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Extension
 import androidx.compose.material.icons.rounded.Security
@@ -88,8 +88,8 @@ fun NukeModuleShopScreen() {
         item {
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Neon.BgCard, CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
-                    .border(1.dp, Neon.Outline, CutCornerShape(topStart = 16.dp, bottomEnd = 16.dp))
+                    .background(Neon.BgCard, RoundedCornerShape(16.dp))
+                    .border(1.dp, Neon.Outline, RoundedCornerShape(16.dp))
                     .padding(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -134,8 +134,8 @@ fun NukeModuleShopScreen() {
                     val active = selectedCategory == category
                     Box(
                         modifier = Modifier.width(92.dp)
-                            .background(if (active) Neon.Accent.copy(alpha = .14f) else Neon.BgCardL, CutCornerShape(7.dp))
-                            .border(1.dp, if (active) Neon.Accent.copy(alpha = .55f) else Neon.Outline, CutCornerShape(7.dp))
+                            .background(if (active) Neon.Accent.copy(alpha = .14f) else Neon.BgCardL, RoundedCornerShape(8.dp))
+                            .border(1.dp, if (active) Neon.Accent.copy(alpha = .55f) else Neon.Outline, RoundedCornerShape(8.dp))
                             .clickable { selectedCategory = category }
                             .padding(vertical = 9.dp),
                         contentAlignment = Alignment.Center,
@@ -157,8 +157,8 @@ fun NukeModuleShopScreen() {
             val checked = NukeModuleCatalog.isEnabled(prefs, module.id)
             Row(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Neon.BgCard, CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp))
-                    .border(1.dp, if (checked) Neon.Accent.copy(alpha = .30f) else Neon.Outline, CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp))
+                    .background(Neon.BgCard, RoundedCornerShape(12.dp))
+                    .border(1.dp, if (checked) Neon.Accent.copy(alpha = .30f) else Neon.Outline, RoundedCornerShape(12.dp))
                     .padding(horizontal = 14.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
@@ -203,8 +203,8 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
 
     Column(
         modifier = Modifier.fillMaxWidth()
-            .background(Neon.BgCard, CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp))
-            .border(1.dp, Neon.Accent.copy(alpha = .28f), CutCornerShape(topStart = 12.dp, bottomEnd = 12.dp))
+            .background(Neon.BgCard, RoundedCornerShape(12.dp))
+            .border(1.dp, Neon.Accent.copy(alpha = .28f), RoundedCornerShape(12.dp))
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -228,8 +228,8 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                 val active = style == index
                 Box(
                     modifier = Modifier.weight(1f)
-                        .background(if (active) Neon.Accent.copy(alpha = .14f) else Neon.BgInset, CutCornerShape(6.dp))
-                        .border(1.dp, if (active) Neon.Accent.copy(alpha = .55f) else Neon.Outline, CutCornerShape(6.dp))
+                        .background(if (active) Neon.Accent.copy(alpha = .14f) else Neon.BgInset, RoundedCornerShape(8.dp))
+                        .border(1.dp, if (active) Neon.Accent.copy(alpha = .55f) else Neon.Outline, RoundedCornerShape(8.dp))
                         .clickable {
                             style = index
                             prefs.edit().putInt("cross_type", index).apply()

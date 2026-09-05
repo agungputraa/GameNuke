@@ -592,6 +592,7 @@ class NukePerformanceEngine(
 
     private fun isSafeBackgroundCandidate(packageName: String): Boolean {
         if (packageName == appContext.packageName || packageName == targetPackage) return false
+        if (NukeScreenRecordGuardian.isProtected(packageName)) return false
         val lower = packageName.lowercase()
         if (lower == "android" || lower.startsWith("com.android.") ||
             lower.startsWith("com.google.android.gms") || lower.startsWith("com.google.android.gsf") ||
