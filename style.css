@@ -1,0 +1,56 @@
+/* Game Nuke Premium — Custom Cyber Gaming Styles */
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+::-webkit-scrollbar-track {
+  background: #030712;
+}
+::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #00ff88;
+}
+
+/* Cyber Scanline Subtle Texture */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 0, 0, 0.12),
+    rgba(0, 0, 0, 0.12) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  pointer-events: none;
+  z-index: 99;
+}
+
+/* Glassmorphism utility */
+.cyber-glass {
+  background: rgba(11, 17, 32, 0.75);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(30, 41, 59, 0.8);
+}
+
+/* Glow animation keyframes */
+@keyframes neonPulse {
+  0%, 100% {
+    box-shadow: 0 0 20px -5px rgba(0, 255, 136, 0.4), 0 0 10px -3px rgba(0, 255, 136, 0.3);
+  }
+  50% {
+    box-shadow: 0 0 35px 0px rgba(0, 255, 136, 0.6), 0 0 15px -1px rgba(0, 255, 136, 0.5);
+  }
+}
+
+.animate-neon-pulse {
+  animation: neonPulse 2.5s infinite ease-in-out;
+}

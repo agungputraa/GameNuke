@@ -1,0 +1,1450 @@
+<!DOCTYPE html>
+<html lang="id" class="scroll-smooth" x-data="gameNukeApp()" x-init="initApp()">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Game Nuke Premium — Android Gaming Optimizer & Tactical Suite Official</title>
+  <meta name="description" content="Portal resmi Game Nuke Premium APK v2.3.0. Tingkatkan performa gaming Android ke titik maksimal: AI Sentinel Thermal Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, Tactical Audio DSP, dan Live Support Agung Developer.">
+  <meta name="keywords" content="game nuke premium, game booster android terbaik, game nuke play store, macro gaming fast hand, vpn ping booster mlbb, deep clean ram android, force 120hz android, game turbo non root, agung developer, gamenukeofficial">
+  <meta name="author" content="Agung Developer">
+  <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
+  <meta name="theme-color" content="#05080F">
+
+  <!-- GEO Location Optimization -->
+  <meta name="geo.region" content="ID">
+  <meta name="geo.placename" content="Indonesia">
+  <meta name="geo.position" content="-6.2088;106.8456">
+  <meta name="ICBM" content="-6.2088, 106.8456">
+
+  <!-- Canonical & Alternate -->
+  <link rel="canonical" href="https://gamenukeofficial.com/">
+  <link rel="alternate" hreflang="id" href="https://gamenukeofficial.com/">
+  <link rel="alternate" hreflang="x-default" href="https://gamenukeofficial.com/">
+
+  <!-- Open Graph / Facebook -->
+  <meta property="og:site_name" content="Game Nuke Official">
+  <meta property="og:title" content="Game Nuke Premium — Android Gaming Optimizer">
+  <meta property="og:description" content="Optimasi performa gaming Android tingkat hardware tanpa root. AI Cooling, Dual-Engine Macro 0.1ms, Tactical Audio DSP, dan Live Support Agung Developer.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://gamenukeofficial.com/">
+  <meta property="og:image" content="https://gamenukeofficial.com/assets/logo_nuke.png">
+  <meta property="og:image:width" content="512">
+  <meta property="og:image:height" content="512">
+  <meta property="og:locale" content="id_ID">
+
+  <!-- Twitter Cards -->
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Game Nuke Premium — Tactical Android Gaming Suite">
+  <meta name="twitter:description" content="Tingkatkan performa gaming Android: AI Sentinel Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, dan Tactical Audio DSP.">
+  <meta name="twitter:image" content="https://gamenukeofficial.com/assets/logo_nuke.png">
+
+  <!-- Favicon using official app logo -->
+  <link rel="icon" type="image/png" href="assets/logo_nuke.png">
+  <link rel="apple-touch-icon" href="assets/logo_nuke.png">
+
+  <!-- Auto-Detect Language Script (Runs before rendering to prevent flash) -->
+  <script>
+    (function autoDetectUserLanguage() {
+      try {
+        var savedLang = localStorage.getItem('gn_user_lang');
+        var hasCookie = document.cookie.indexOf('googtrans=') !== -1;
+        
+        if (!hasCookie) {
+          var browserLang = (navigator.language || navigator.userLanguage || 'id').toLowerCase();
+          var primaryLang = browserLang.split('-')[0];
+          var supportedLangs = ['en', 'es', 'pt', 'th', 'vi', 'tl', 'ms', 'ru', 'ja', 'ko', 'zh', 'ar', 'de', 'fr', 'hi'];
+          
+          if (primaryLang && primaryLang !== 'id') {
+            var targetLang = supportedLangs.indexOf(primaryLang) !== -1 ? primaryLang : 'en';
+            var cookieVal = '/id/' + targetLang;
+            document.cookie = 'googtrans=' + cookieVal + '; path=/; max-age=31536000';
+            document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + window.location.hostname + '; max-age=31536000';
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
+
+  <!-- Google Fonts: Space Grotesk, Sora, Plus Jakarta Sans, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Sora:wght@600;700;800&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" integrity="sha512-DTOQO9RWCH3ppGqcWaEA1BIZOC6xxalwEsw9c2QQeAIftl+Vegovlnee1c9QX4TctnWMn13TZye+giMm8e2LwA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            display: ['"Space Grotesk"', 'sans-serif'],
+            sora: ['"Sora"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            obsidian: {
+              950: '#030509',
+              900: '#05080F',
+              850: '#080D18',
+              800: '#0D1527',
+              750: '#131F38',
+              700: '#1A2A4C',
+            },
+            accent: {
+              emerald: '#00FF9D',
+              cyan: '#00E5FF',
+              amber: '#FFB800',
+              purple: '#8B5CF6',
+              rose: '#F43F5E',
+            }
+          },
+          keyframes: {
+            subtleFloat: {
+              'from, to': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-6px)' },
+            }
+          },
+          animation: {
+            'subtle-float': 'subtleFloat 5s ease-in-out infinite',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Alpine.js CDN -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.8/dist/cdn.min.js"></script>
+
+  <style>
+    body {
+      background-color: #05080F;
+      color: #F8FAFC;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+    .panel-glass {
+      background: rgba(8, 13, 24, 0.78);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border: 1px solid rgba(255, 255, 255, 0.07);
+    }
+    .panel-glass-hover {
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .panel-glass-hover:hover {
+      background: rgba(13, 21, 39, 0.92);
+      border-color: rgba(0, 255, 157, 0.25);
+      transform: translateY(-2px);
+    }
+    .text-gradient-emerald {
+      background: linear-gradient(135deg, #FFFFFF 15%, #00FF9D 65%, #00E5FF);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    ::-webkit-scrollbar {
+      width: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #05080F;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #1B2B48;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #2C4370;
+    }
+    [x-cloak] { display: none !important; }
+
+    /* Clean Google Translate Integration (Hides ugly iframe banners & tooltips) */
+    .goog-te-banner-frame.skiptranslate,
+    .goog-te-banner-frame,
+    iframe.goog-te-banner-frame {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+    }
+    body {
+      top: 0px !important;
+      position: static !important;
+    }
+    .goog-tooltip,
+    .goog-tooltip:hover {
+      display: none !important;
+    }
+    .goog-text-highlight {
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #google_translate_element,
+    .skiptranslate {
+      display: none;
+    }
+    .VIpgJd-ZVi9od-ORHb-OEVmcd,
+    .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+      display: none !important;
+    }
+  </style>
+
+  <!-- Schema.org JSON-LD Structured Data -->
+  <script type="application/ld+json">
+  {
+    "@context": "https://schema.org",
+    "@type": "SoftwareApplication",
+    "name": "Game Nuke Premium",
+    "operatingSystem": "Android 11, 12, 13, 14, 15, 16",
+    "applicationCategory": "GameApplication, UtilitiesApplication",
+    "softwareVersion": "2.3.0-prem",
+    "fileSize": "28.6MB",
+    "author": {
+      "@type": "Person",
+      "name": "Agung Developer",
+      "url": "https://gamenukeofficial.com/"
+    },
+    "offers": {
+      "@type": "Offer",
+      "price": "0",
+      "priceCurrency": "USD",
+      "availability": "https://schema.org/InStock"
+    },
+    "aggregateRating": {
+      "@type": "AggregateRating",
+      "ratingValue": "4.9",
+      "reviewCount": "24600",
+      "bestRating": "5",
+      "worstRating": "1"
+    }
+  }
+  </script>
+</head>
+<body class="min-h-screen text-slate-100 antialiased selection:bg-accent-emerald selection:text-obsidian-950 pb-16 sm:pb-0">
+
+  <!-- Google Translate Hidden Element for API callback -->
+  <div id="google_translate_element" style="display:none;"></div>
+
+  <!-- Ambient Light Orbs -->
+  <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[850px] h-[400px] bg-gradient-to-b from-accent-emerald/8 via-accent-cyan/5 to-transparent blur-[140px] pointer-events-none -z-10"></div>
+  <div class="fixed bottom-0 right-0 w-[500px] h-[500px] bg-gradient-to-tl from-indigo-500/8 via-transparent to-transparent blur-[160px] pointer-events-none -z-10"></div>
+
+  <!-- ── Top Notification Ribbon ── -->
+  <div class="bg-obsidian-950/95 border-b border-white/5 py-2 px-4 text-xs">
+    <div class="max-w-7xl mx-auto flex items-center justify-between gap-4">
+      <div class="flex items-center gap-2 overflow-hidden truncate">
+        <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/30 font-mono text-[10px] font-semibold tracking-wide uppercase shrink-0">
+          <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-ping"></span>
+          BUILD RESMI
+        </span>
+        <span class="hidden sm:inline text-slate-400">Versi Terverifikasi:</span>
+        <span class="font-semibold text-white font-mono" x-text="'v' + (versionData.versionName || '2.3.0-prem')">v2.3.0-prem</span>
+        <span class="text-slate-400 hidden md:inline">— AI Sentinel Thermal Guard & Shizuku 0.1ms Engine.</span>
+      </div>
+      <div class="flex items-center gap-3 shrink-0">
+        <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="text-slate-400 hover:text-white transition flex items-center gap-1.5 text-[11px]">
+          <i class="fa-brands fa-google-play text-accent-cyan"></i>
+          <span class="hidden sm:inline">Play Store Edition</span>
+        </a>
+        <span class="text-slate-700">|</span>
+        <button @click="openModal('contact')" class="text-accent-emerald hover:underline text-[11px] font-semibold flex items-center gap-1">
+          <i class="fa-solid fa-headset"></i> Live Support
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Sticky Navigation Bar ── -->
+  <header class="sticky top-0 z-40 bg-obsidian-900/85 backdrop-blur-xl border-b border-white/5 transition-all">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      
+      <!-- Brand Identity -->
+      <a href="#" class="flex items-center gap-2.5 group">
+        <div class="relative w-9 h-9 rounded-xl overflow-hidden p-0.5 bg-gradient-to-tr from-accent-emerald via-accent-cyan to-transparent shadow-md shadow-accent-emerald/15 transition duration-300">
+          <img src="assets/logo_nuke.png" alt="Game Nuke Logo" class="w-full h-full object-cover rounded-[9px]" onerror="this.src='favicon.png'">
+        </div>
+        <div>
+          <div class="flex items-center gap-1.5">
+            <span class="font-display font-bold text-base sm:text-lg tracking-tight text-white">GAME NUKE</span>
+            <span class="px-1.5 py-0.2 rounded text-[9px] font-extrabold tracking-widest bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 uppercase">PREMIUM</span>
+          </div>
+          <p class="text-[10px] text-slate-400 font-mono tracking-tight -mt-0.5">by Agung Developer</p>
+        </div>
+      </a>
+
+      <!-- Desktop Navigation Links -->
+      <nav class="hidden lg:flex items-center gap-1 bg-obsidian-850/90 px-3 py-1.5 rounded-full border border-white/5 text-xs font-medium">
+        <a href="#fitur" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">Fitur Utama</a>
+        <a href="#perbandingan" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">Web vs Play Store</a>
+        <a href="#telemetri" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">Cockpit HUD</a>
+        <a href="#instalasi" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">Panduan Pasang</a>
+        <a href="#faq" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">FAQ</a>
+      </nav>
+
+      <!-- Desktop Action Buttons & Language Switcher -->
+      <div class="hidden sm:flex items-center gap-2.5">
+        
+        <!-- Language Selector Dropdown -->
+        <div class="relative" x-data="{ langOpen: false }">
+          <button @click="langOpen = !langOpen" class="px-2.5 py-1.5 rounded-xl text-xs font-mono font-medium bg-obsidian-800 text-slate-200 border border-slate-700/60 hover:border-slate-500 hover:text-white transition flex items-center gap-1.5" title="Ganti Bahasa / Change Language">
+            <i class="fa-solid fa-globe text-accent-cyan text-xs"></i>
+            <span x-text="currentLangLabel">BAHASA</span>
+            <i class="fa-solid fa-chevron-down text-[9px] text-slate-400"></i>
+          </button>
+          
+          <div x-show="langOpen" @click.outside="langOpen = false" x-transition class="absolute right-0 mt-1.5 w-44 rounded-xl bg-obsidian-850 border border-white/10 shadow-2xl p-1.5 z-50 space-y-0.5 text-xs font-sans" x-cloak>
+            <button @click="changeLanguage('id'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇮🇩 Bahasa Indonesia</span>
+            </button>
+            <button @click="changeLanguage('en'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇺🇸 English</span>
+            </button>
+            <button @click="changeLanguage('es'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇪🇸 Español</span>
+            </button>
+            <button @click="changeLanguage('pt'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇧🇷 Português</span>
+            </button>
+            <button @click="changeLanguage('th'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇹🇭 ภาษาไทย</span>
+            </button>
+            <button @click="changeLanguage('vi'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇻🇳 Tiếng Việt</span>
+            </button>
+            <button @click="changeLanguage('tl'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇵🇭 Filipino</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Play Store Button -->
+        <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-obsidian-800 text-slate-200 border border-slate-700/60 hover:border-slate-500 hover:text-white transition flex items-center gap-1.5">
+          <i class="fa-brands fa-google-play text-accent-cyan text-xs"></i>
+          <span>Play Store</span>
+        </a>
+
+        <!-- Primary Download Button -->
+        <button @click="triggerDownloadFlow()" class="relative group overflow-hidden px-4 py-2 rounded-xl text-xs font-display font-bold bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 hover:shadow-lg hover:shadow-accent-emerald/20 active:scale-95 transition-all flex items-center gap-2">
+          <i class="fa-solid fa-download text-xs"></i>
+          <span>Download Game Nuke Premium</span>
+          <span class="text-[10px] px-1.5 py-0.2 bg-black/20 rounded font-mono" x-text="versionData.apkSizeMb ? versionData.apkSizeMb + ' MB' : '28 MB'">28 MB</span>
+        </button>
+      </div>
+
+      <!-- Mobile Hamburger Button -->
+      <button @click="mobileMenuOpen = !mobileMenuOpen" class="lg:hidden p-2 rounded-xl bg-obsidian-800 border border-white/10 text-slate-300 hover:text-white focus:outline-none" aria-label="Menu navigasi">
+        <i class="fa-solid text-sm" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+      </button>
+    </div>
+
+    <!-- Mobile Slide-Down Menu Drawer -->
+    <div x-show="mobileMenuOpen" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="opacity-0 -translate-y-2" x-transition:enter-end="opacity-100 translate-y-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="opacity-100 translate-y-0" x-transition:leave-end="opacity-0 -translate-y-2" class="lg:hidden border-b border-white/10 bg-obsidian-850/98 backdrop-blur-2xl px-5 py-4 space-y-3" x-cloak>
+      <div class="grid grid-cols-2 gap-2 text-xs font-medium">
+        <a @click="mobileMenuOpen = false" href="#fitur" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2">
+          <i class="fa-solid fa-microchip text-accent-emerald"></i> Fitur Utama
+        </a>
+        <a @click="mobileMenuOpen = false" href="#perbandingan" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2">
+          <i class="fa-solid fa-code-compare text-accent-cyan"></i> Web vs Store
+        </a>
+        <a @click="mobileMenuOpen = false" href="#telemetri" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2">
+          <i class="fa-solid fa-gauge-high text-accent-amber"></i> Cockpit HUD
+        </a>
+        <a @click="mobileMenuOpen = false" href="#instalasi" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-check text-accent-emerald"></i> Panduan Pasang
+        </a>
+        <a @click="mobileMenuOpen = false" href="#faq" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2">
+          <i class="fa-solid fa-circle-question text-accent-cyan"></i> Tanya Jawab
+        </a>
+        <button @click="mobileMenuOpen = false; openModal('contact')" class="p-2.5 rounded-lg bg-obsidian-800 text-slate-300 hover:text-white flex items-center gap-2 text-left">
+          <i class="fa-solid fa-address-book text-accent-purple"></i> Kontak Developer
+        </button>
+      </div>
+
+      <!-- Mobile Language Switcher Row -->
+      <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+        <span class="text-slate-400 font-medium">Bahasa / Language:</span>
+        <div class="flex items-center gap-1 font-mono text-[11px]">
+          <button @click="changeLanguage('id')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">ID</button>
+          <button @click="changeLanguage('en')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">EN</button>
+          <button @click="changeLanguage('es')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">ES</button>
+          <button @click="changeLanguage('pt')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">PT</button>
+          <button @click="changeLanguage('th')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">TH</button>
+        </div>
+      </div>
+
+      <!-- Mobile Action Buttons -->
+      <div class="space-y-2 pt-2 border-t border-white/5">
+        <button @click="mobileMenuOpen = false; triggerDownloadFlow()" class="w-full py-2.5 rounded-xl font-display font-bold text-xs bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md flex items-center justify-center gap-2">
+          <i class="fa-solid fa-download"></i>
+          <span>Download Game Nuke Premium</span>
+          <span class="text-[10px] px-1.5 py-0.2 bg-black/20 rounded font-mono" x-text="versionData.apkSizeMb ? versionData.apkSizeMb + ' MB' : '28 MB'">28 MB</span>
+        </button>
+        <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="w-full py-2.5 rounded-xl font-medium text-xs bg-obsidian-800 text-slate-200 border border-slate-700/80 flex items-center justify-center gap-2">
+          <i class="fa-brands fa-google-play text-accent-cyan"></i>
+          <span>Pasang di Google Play Store</span>
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ── Hero Section ── -->
+  <section class="relative pt-10 pb-16 lg:pt-16 lg:pb-24 overflow-hidden">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-10 items-center">
+        
+        <!-- Left Column: Value Proposition -->
+        <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
+          
+          <!-- Official Engine Badge -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-obsidian-800 border border-accent-emerald/30 shadow-inner">
+            <span class="w-2 h-2 rounded-full bg-accent-emerald animate-ping"></span>
+            <span class="text-xs font-semibold text-slate-200">Optimasi Hardware Android Resmi</span>
+            <span class="text-slate-600">•</span>
+            <span class="text-xs font-mono text-accent-cyan">Bebas Root</span>
+          </div>
+
+          <!-- Main Headline: Punchy, Elite & Professional -->
+          <h1 class="font-display font-bold text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.12]">
+            Performa Gaming Maksimal. <br>
+            <span class="text-gradient-emerald">Stabil Tanpa Lag.</span> <br>
+            <span class="text-slate-200">Dingin Lebih Lama.</span>
+          </h1>
+
+          <!-- Subheadline: Natural, Authoritative & Benefit-Driven -->
+          <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto lg:mx-0 leading-relaxed font-sans">
+            Solusi peningkatan performa hardware untuk <span class="text-slate-200 font-semibold">Mobile Legends, Free Fire, PUBG Mobile, & Genshin Impact</span>. Ditenagai AI Sentinel penjaga suhu, respon sentuh 0.1ms, peredam ping, dan equalizer audio spasial tanpa memodifikasi berkas game.
+          </p>
+
+          <!-- Dual CTAs: Balanced & Professional -->
+          <div class="space-y-3.5 pt-1">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-center lg:justify-start gap-3">
+              
+              <!-- Primary Download Button -->
+              <button @click="triggerDownloadFlow()" class="px-5 py-3 rounded-xl bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 font-display font-bold text-sm shadow-lg shadow-accent-emerald/20 hover:shadow-accent-emerald/35 hover:-translate-y-0.5 active:translate-y-0 transition-all flex items-center justify-center gap-2.5">
+                <i class="fa-solid fa-download text-sm"></i>
+                <span>Download Game Nuke Premium</span>
+                <span class="px-2 py-0.5 rounded bg-black/20 text-[11px] font-mono" x-text="versionData.apkSizeMb ? versionData.apkSizeMb + ' MB' : '28 MB'">28 MB</span>
+              </button>
+
+              <!-- Secondary Google Play Button -->
+              <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="px-4 py-3 rounded-xl bg-obsidian-850 hover:bg-obsidian-800 text-slate-200 border border-slate-700/80 hover:border-slate-500 transition-all flex items-center justify-center gap-2.5">
+                <i class="fa-brands fa-google-play text-lg text-accent-cyan"></i>
+                <div class="text-left leading-tight">
+                  <div class="text-[10px] text-slate-400">Dapatkan di</div>
+                  <div class="font-display font-semibold text-xs text-white">Google Play</div>
+                </div>
+              </a>
+
+            </div>
+
+            <!-- Fast Specs Pill -->
+            <div class="flex flex-wrap items-center justify-center lg:justify-start gap-3 text-xs text-slate-400 pt-1">
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-shield-halved text-accent-emerald"></i> Paket Biner Terverifikasi
+              </span>
+              <span>•</span>
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-microchip text-accent-cyan"></i> Target SDK 36 (Android 11–16)
+              </span>
+              <span>•</span>
+              <span class="flex items-center gap-1.5">
+                <i class="fa-solid fa-code-branch text-accent-amber"></i> Build <span x-text="versionData.versionName || 'v2.3.0-prem'">v2.3.0-prem</span>
+              </span>
+            </div>
+          </div>
+
+          <!-- Feature Quick Numbers -->
+          <div class="grid grid-cols-3 gap-3 pt-3 max-w-md mx-auto lg:mx-0">
+            <div class="panel-glass p-3 rounded-xl text-center">
+              <div class="font-display font-bold text-base sm:text-lg text-accent-emerald">0.1 ms</div>
+              <div class="text-[11px] text-slate-400">Macro Latency</div>
+            </div>
+            <div class="panel-glass p-3 rounded-xl text-center">
+              <div class="font-display font-bold text-base sm:text-lg text-accent-cyan">120 Hz</div>
+              <div class="text-[11px] text-slate-400">Display Lock</div>
+            </div>
+            <div class="panel-glass p-3 rounded-xl text-center">
+              <div class="font-display font-bold text-base sm:text-lg text-accent-amber">-5.8°C</div>
+              <div class="text-[11px] text-slate-400">Thermal Guard</div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Right Column: Interactive Cockpit Telemetry -->
+        <div class="lg:col-span-5">
+          <div class="relative mx-auto max-w-md lg:max-w-none">
+            
+            <div class="panel-glass rounded-2xl p-5 sm:p-6 border border-white/10 shadow-2xl relative overflow-hidden">
+              
+              <!-- Window Header -->
+              <div class="flex items-center justify-between pb-3.5 border-b border-white/5">
+                <div class="flex items-center gap-2">
+                  <span class="w-2.5 h-2.5 rounded-full bg-red-500/80"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-yellow-500/80"></span>
+                  <span class="w-2.5 h-2.5 rounded-full bg-green-500/80"></span>
+                  <span class="text-xs font-mono text-slate-400 ml-1.5">NUKE_TELEMETRY</span>
+                </div>
+                <div class="flex items-center gap-1 px-2 py-0.5 rounded-full bg-accent-emerald/10 border border-accent-emerald/30 text-[10px] font-mono text-accent-emerald">
+                  <span class="w-1.5 h-1.5 rounded-full bg-accent-emerald animate-ping"></span>
+                  LIVE 60FPS
+                </div>
+              </div>
+
+              <!-- HUD Metrics -->
+              <div class="py-4 space-y-3">
+                
+                <!-- Frame Rate -->
+                <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian-950/70 border border-white/5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-accent-emerald/10 border border-accent-emerald/30 flex items-center justify-center text-accent-emerald text-sm">
+                      <i class="fa-solid fa-gauge-high"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-white">Choreographer Render Rate</div>
+                      <div class="text-[11px] text-slate-400">Jitter-Free Surface Flinger</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-display font-bold text-xl text-accent-emerald" x-text="simulatedFps">120</div>
+                    <div class="text-[10px] font-mono text-slate-400">FPS STABLE</div>
+                  </div>
+                </div>
+
+                <!-- Thermal Sensor -->
+                <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian-950/70 border border-white/5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan text-sm">
+                      <i class="fa-solid fa-snowflake"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-white">AI Sentinel Thermal Guard</div>
+                      <div class="text-[11px] text-slate-400">Peredam Panas Otomatis</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-display font-bold text-xl text-accent-cyan" x-text="simulatedTemp">35.4°C</div>
+                    <div class="text-[10px] font-mono text-slate-400">OPTIMAL COOL</div>
+                  </div>
+                </div>
+
+                <!-- Memory Compaction -->
+                <div class="flex items-center justify-between p-3 rounded-xl bg-obsidian-950/70 border border-white/5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-accent-amber/10 border border-accent-amber/30 flex items-center justify-center text-accent-amber text-sm">
+                      <i class="fa-solid fa-broom"></i>
+                    </div>
+                    <div>
+                      <div class="text-xs font-semibold text-white">Dynamic RAM Compaction</div>
+                      <div class="text-[11px] text-slate-400">Pembersihan Cache Beban Liar</div>
+                    </div>
+                  </div>
+                  <div class="text-right">
+                    <div class="font-display font-bold text-xl text-accent-amber">+4.8 GB</div>
+                    <div class="text-[10px] font-mono text-slate-400">TERALOKASI</div>
+                  </div>
+                </div>
+
+                <!-- Shizuku Privileged Subsystem -->
+                <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 flex items-center justify-between text-xs">
+                  <div class="flex items-center gap-2 text-slate-300">
+                    <i class="fa-solid fa-terminal text-accent-emerald"></i>
+                    <span>Shizuku / iAdb Subsystem:</span>
+                  </div>
+                  <span class="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-accent-emerald/15 text-accent-emerald border border-accent-emerald/30">
+                    PRIVILEGED 0.1ms
+                  </span>
+                </div>
+
+              </div>
+
+              <!-- Simulation Notice -->
+              <div class="pt-2 flex items-center justify-between text-[11px] text-slate-400 border-t border-white/5">
+                <span class="flex items-center gap-1 text-slate-400">
+                  <i class="fa-solid fa-circle-info text-accent-cyan"></i> Sampling Rate: 1000ms
+                </span>
+                <span class="text-accent-emerald font-medium">Siap Peluncuran Game</span>
+              </div>
+
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Edition Comparison Section: Web vs Google Play Store ── -->
+  <section id="perbandingan" class="py-14 bg-obsidian-850/60 border-y border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
+      <div class="text-center max-w-2xl mx-auto space-y-2.5 mb-10">
+        <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+          PERBANDINGAN EDISI
+        </span>
+        <h2 class="font-display font-bold text-2xl sm:text-3xl text-white">
+          Pilih Edisi Sesuai Kebutuhan Gaming Anda
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Game Nuke hadir dalam dua jalur distribusi resmi. Edisi Portal Web dirancang tanpa restriksi kebijakan untuk performa gaming penuh, sementara versi Google Play Store ditujukan untuk instalasi standar.
+        </p>
+      </div>
+
+      <!-- Comparison Cards -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-4xl mx-auto items-stretch">
+        
+        <!-- Card 1: Portal Web Edition -->
+        <div class="relative panel-glass rounded-2xl p-6 border-2 border-accent-emerald/40 shadow-xl flex flex-col justify-between overflow-hidden">
+          
+          <div class="absolute top-0 right-0 bg-gradient-to-l from-accent-emerald to-accent-cyan text-obsidian-950 text-[10px] font-bold uppercase tracking-wider px-3 py-0.5 rounded-bl-lg font-display">
+            EDISI PERFORMA PENUH
+          </div>
+
+          <div class="space-y-5">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-accent-emerald/20 text-accent-emerald">
+                  PORTAL WEB
+                </span>
+                <span class="text-xs text-slate-400 font-mono">v2.3.0-prem</span>
+              </div>
+              <h3 class="font-display font-bold text-xl text-white mt-1.5">Game Nuke Premium Edition</h3>
+              <p class="text-xs text-slate-400 mt-1">
+                Edisi terlengkap dengan fitur tingkat hardware penuh tanpa dibatasi restriksi kebijakan toko aplikasi.
+              </p>
+            </div>
+
+            <!-- Feature Check List -->
+            <ul class="space-y-2.5 text-xs text-slate-300">
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Dual-Engine Macro 0.1ms:</strong> Eksekusi makro presisi via Shizuku Privileged Shell & Accessibility Service tanpa delay.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Deep Clean & Memory Compaction:</strong> Membersihkan cache sistem dan tombstones hingga ke tingkat RAM fisik.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Tactical Audio Equalizer:</strong> Penajaman frekuensi langkah kaki (footstep) & arah tembakan berbasis hardware DSP.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">In-Game Floating PiP Wiki:</strong> Overlay taktis transparan yang dapat diatur tingkat opasitasnya saat bermain.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Gaming DNS & Loopback Stabilizer:</strong> Konfigurasi Cloudflare 1.1.1.1 & Google DNS untuk stabilitas sinyal.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-circle-check text-accent-emerald mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Auto-Update Terpadu:</strong> Notifikasi pembaruan instan begitu build baru rilis di portal resmi.</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Bottom Button -->
+          <div class="pt-5 mt-5 border-t border-white/5">
+            <button @click="triggerDownloadFlow()" class="w-full py-3 rounded-xl font-display font-bold text-xs bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-download text-xs"></i>
+              <span>Download Game Nuke Premium</span>
+            </button>
+            <p class="text-[10px] text-center text-slate-400 mt-1.5">Dukungan penuh untuk Android 11 hingga Android 16</p>
+          </div>
+
+        </div>
+
+        <!-- Card 2: Google Play Store Edition -->
+        <div class="panel-glass rounded-2xl p-6 border border-white/10 flex flex-col justify-between">
+          <div class="space-y-5">
+            <div>
+              <div class="flex items-center gap-2">
+                <span class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-slate-800 text-slate-300">
+                  PLAY STORE
+                </span>
+                <span class="text-xs text-slate-500 font-mono">Standar Terverifikasi</span>
+              </div>
+              <h3 class="font-display font-bold text-xl text-white mt-1.5">Game Nuke Play Store Edition</h3>
+              <p class="text-xs text-slate-400 mt-1">
+                Edisi terstandarisasi yang mematuhi batasan kebijakan Google Play Store untuk pengguna kasual.
+              </p>
+            </div>
+
+            <!-- Feature Check List -->
+            <ul class="space-y-2.5 text-xs text-slate-300">
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-check text-slate-400 mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Standard RAM Booster:</strong> Pembersihan memori latar belakang standar sesuai pedoman Android.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-check text-slate-400 mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Game Space Launcher:</strong> Peluncur game terpusat dengan deteksi otomatis aplikasi terpasang.</span>
+              </li>
+              <li class="flex items-start gap-2.5">
+                <i class="fa-solid fa-check text-slate-400 mt-0.5 text-sm shrink-0"></i>
+                <span><strong class="text-white">Hardware Health Telemetry:</strong> Informasi spesifikasi perangkat, kapasitas baterai, dan resolusi display.</span>
+              </li>
+              <li class="flex items-start gap-2.5 text-slate-500">
+                <i class="fa-solid fa-xmark text-slate-600 mt-0.5 text-sm shrink-0"></i>
+                <span class="line-through">Dual-Engine Macro Shizuku 0.1ms (Dibatasi kebijakan Google Play)</span>
+              </li>
+              <li class="flex items-start gap-2.5 text-slate-500">
+                <i class="fa-solid fa-xmark text-slate-600 mt-0.5 text-sm shrink-0"></i>
+                <span class="line-through">Tactical Audio Gunshot/Footstep DSP (Hanya tersedia di Web)</span>
+              </li>
+              <li class="flex items-start gap-2.5 text-slate-500">
+                <i class="fa-solid fa-xmark text-slate-600 mt-0.5 text-sm shrink-0"></i>
+                <span class="line-through">Deep System Purge & Logcat Clean (Dibatasi Sandbox Toko Aplikasi)</span>
+              </li>
+            </ul>
+          </div>
+
+          <!-- Bottom Button -->
+          <div class="pt-5 mt-5 border-t border-white/5">
+            <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="w-full py-3 rounded-xl font-display font-bold text-xs bg-obsidian-800 text-white border border-slate-700/80 hover:border-slate-500 transition flex items-center justify-center gap-2">
+              <i class="fa-brands fa-google-play text-accent-cyan text-xs"></i>
+              <span>Pasang via Google Play Store</span>
+            </a>
+            <p class="text-[10px] text-center text-slate-500 mt-1.5">Dukungan instalasi resmi bersertifikasi Play Protect</p>
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── 6 Core Capabilities ── -->
+  <section id="fitur" class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Title -->
+      <div class="text-center max-w-2xl mx-auto space-y-2 mb-12">
+        <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20">
+          TEKNOLOGI PERFORMA RESMI
+        </span>
+        <h2 class="font-display font-bold text-2xl sm:text-4xl text-white">
+          6 Pilar Keunggulan Game Nuke
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Dikembangkan dengan optimasi sistem operasi Android murni tanpa injeksi memori atau manipulasi berkas game.
+        </p>
+      </div>
+
+      <!-- Feature Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+        
+        <!-- Feature 1 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-emerald/10 border border-accent-emerald/30 flex items-center justify-center text-accent-emerald text-base">
+              <i class="fa-solid fa-shield-virus"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">Autonomous AI Sentinel & Cooling</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Memantau beban thread CPU dan suhu perangkat secara real-time. Jika suhu baterai mendekati batas kritis, AI Sentinel secara otomatis membersihkan cache beban liar di background untuk menjaga kestabilan chipset tanpa frame drop.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-accent-emerald">
+            <span>Thermal Throttling Guard</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- Feature 2 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-cyan/10 border border-accent-cyan/30 flex items-center justify-center text-accent-cyan text-base">
+              <i class="fa-solid fa-bolt-lightning"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">Dual-Engine Macro 0.1ms</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Mengeksekusi kombo multi-tap ultra cepat untuk game MOBA dan Battle Royale. Mendukung dua jalur eksekusi: jalur prioritas Shizuku shell (latensi ~0.1ms) dan fallback Accessibility Service tanpa memerlukan root perangkat.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-accent-cyan">
+            <span>Sub-Millisecond Tap Execution</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- Feature 3 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-amber/10 border border-accent-amber/30 flex items-center justify-center text-accent-amber text-base">
+              <i class="fa-solid fa-wifi"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">Gaming Network & DNS Stabilizer</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Meredam fluktuasi ping pada jaringan Wi-Fi maupun seluler. Dilengkapi konfigurasi rute Gaming DNS (Cloudflare 1.1.1.1 dan Google DNS) dengan tunnel loopback lokal untuk menjaga stabilitas respon game kompetitif.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-accent-amber">
+            <span>Network Jitter Mitigation</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- Feature 4 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-purple/10 border border-accent-purple/30 flex items-center justify-center text-accent-purple text-base">
+              <i class="fa-solid fa-headphones-simple"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">Tactical Audio Equalizer</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Algoritma pemrosesan akustik khusus genre FPS tanpa root. Mengisolasi spektrum frekuensi suara langkah kaki lawan (footstep) dan arah tembakan dengan meredam kebisingan latar belakang suara ledakan ambient.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-accent-purple">
+            <span>Footstep Clarity DSP</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- Feature 5 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-teal-400/10 border border-teal-400/30 flex items-center justify-center text-teal-400 text-base">
+              <i class="fa-solid fa-chart-line"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">Choreographer Hardware FPS</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Overlay floating FPS yang membaca langsung dari siklus render VSYNC Android Choreographer. Memberikan angka framerate akurat 1:1, status GPU render, dan deteksi frame drop tanpa membebani performa grafis perangkat Anda.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-teal-400">
+            <span>1:1 VSYNC Pipeline Display</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+        <!-- Feature 6 -->
+        <div class="panel-glass panel-glass-hover p-5 rounded-2xl flex flex-col justify-between">
+          <div class="space-y-3">
+            <div class="w-10 h-10 rounded-xl bg-accent-rose/10 border border-accent-rose/30 flex items-center justify-center text-accent-rose text-base">
+              <i class="fa-solid fa-window-restore"></i>
+            </div>
+            <h3 class="font-display font-bold text-lg text-white">In-Game Floating PiP Wiki & HUD</h3>
+            <p class="text-xs text-slate-400 leading-relaxed">
+              Cockpit overlay melayang di atas game Anda. Buka panduan build item counter, catatan strategi taktis, kalkulator cooldown, hingga chat langsung dengan Agung Developer tanpa perlu keluar atau minimize aplikasi game.
+            </p>
+          </div>
+          <div class="pt-3 mt-3 border-t border-white/5 flex items-center justify-between text-[11px] font-mono text-accent-rose">
+            <span>Transparent Tactical Cockpit</span>
+            <i class="fa-solid fa-arrow-right text-[10px]"></i>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Benchmark & Real Telemetry Section ── -->
+  <section id="telemetri" class="py-14 bg-obsidian-850/50 border-y border-white/5">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+        
+        <!-- Text Left -->
+        <div class="lg:col-span-6 space-y-5">
+          <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20">
+            DATA HASIL PENGUJIAN
+          </span>
+          <h2 class="font-display font-bold text-2xl sm:text-3xl text-white leading-tight">
+            Performa Konsisten dari Awal Hingga Akhir Sesi
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            Diuji pada chipset Dimensity, Snapdragon, dan Exynos di perangkat HyperOS, OneUI, ColorOS, dan Pixel Android 11–16. Game Nuke menjaga kestabilan VSYNC tanpa fluktuasi mendadak.
+          </p>
+
+          <!-- Benchmark Metrics -->
+          <div class="space-y-2.5 pt-1">
+            <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-1">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-slate-300">Stabilitas Frame Rate (Free Fire & MLBB 120 FPS)</span>
+                <span class="text-accent-emerald font-mono">Tinggi & Konsisten</span>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-accent-emerald to-accent-cyan h-full rounded-full" style="width: 98%"></div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-1">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-slate-300">Peredaman Suhu Chipset saat Sesi Gaming 2 Jam</span>
+                <span class="text-accent-cyan font-mono">-5.8°C Dingin</span>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-accent-cyan to-blue-500 h-full rounded-full" style="width: 84%"></div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-1">
+              <div class="flex justify-between text-xs font-medium">
+                <span class="text-slate-300">Respon Sentuh & Eksekusi Kombo Macro</span>
+                <span class="text-accent-amber font-mono">0.1ms Ultra Cepat</span>
+              </div>
+              <div class="w-full bg-obsidian-800 h-1.5 rounded-full overflow-hidden">
+                <div class="bg-gradient-to-r from-accent-amber to-orange-500 h-full rounded-full" style="width: 96%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Telemetry Card Right -->
+        <div class="lg:col-span-6">
+          <div class="panel-glass rounded-2xl p-5 sm:p-6 border border-white/10 space-y-4">
+            <div class="flex items-center justify-between pb-3 border-b border-white/5">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-microchip text-accent-emerald"></i>
+                <span class="font-display font-bold text-white text-sm">Game Nuke Cockpit Engine</span>
+              </div>
+              <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-obsidian-800 text-slate-300">SECURE SHELL</span>
+            </div>
+
+            <div class="grid grid-cols-2 gap-3">
+              <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-0.5">
+                <span class="text-[10px] text-slate-400">Status RAM</span>
+                <div class="font-display font-semibold text-sm text-white">Dynamic Compaction</div>
+                <div class="text-[10px] text-accent-emerald font-mono">Zero Background Leaks</div>
+              </div>
+              <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-0.5">
+                <span class="text-[10px] text-slate-400">Audio DSP</span>
+                <div class="font-display font-semibold text-sm text-white">Spatial Footsteps</div>
+                <div class="text-[10px] text-accent-cyan font-mono">Hardware Level Filter</div>
+              </div>
+              <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-0.5">
+                <span class="text-[10px] text-slate-400">Macro Layer</span>
+                <div class="font-display font-semibold text-sm text-white">Dual Subsystem</div>
+                <div class="text-[10px] text-accent-amber font-mono">Shizuku + A11y</div>
+              </div>
+              <div class="p-3 rounded-xl bg-obsidian-950/70 border border-white/5 space-y-0.5">
+                <span class="text-[10px] text-slate-400">Standar Keamanan</span>
+                <div class="font-display font-semibold text-sm text-white">OS-Level Compliance</div>
+                <div class="text-[10px] text-accent-emerald font-mono">Berkas Game Utuh</div>
+              </div>
+            </div>
+
+            <div class="p-3 rounded-xl bg-obsidian-900 border border-white/5 flex items-center justify-between text-xs">
+              <span class="text-slate-400 font-mono text-[11px]">Status Hak Akses:</span>
+              <span class="text-accent-emerald font-semibold flex items-center gap-1.5 text-xs">
+                <i class="fa-solid fa-circle-check"></i> Standard & Shizuku Siap
+              </span>
+            </div>
+
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── 3-Step Installation Guide ── -->
+  <section id="instalasi" class="py-16">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Section Header -->
+      <div class="text-center max-w-2xl mx-auto space-y-2 mb-12">
+        <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-cyan/10 text-accent-cyan border border-accent-cyan/20">
+          PANDUAN PEMASANGAN
+        </span>
+        <h2 class="font-display font-bold text-2xl sm:text-3xl text-white">
+          3 Langkah Mudah Memasang Game Nuke
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Tidak memerlukan keahlian rumit. Unduh paket biner resmi, berikan otorisasi instalasi peramban standar, dan Game Nuke siap digunakan.
+        </p>
+      </div>
+
+      <!-- Steps Grid -->
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        
+        <div class="panel-glass p-5 rounded-2xl space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-accent-emerald/15 border border-accent-emerald/30 text-accent-emerald font-display font-bold text-base flex items-center justify-center">
+            01
+          </div>
+          <h3 class="font-display font-bold text-base text-white">Download APK Resmi</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Klik tombol Download Game Nuke Premium di portal ini untuk mengunduh paket instalasi biner terbaru.
+          </p>
+          <div class="pt-1">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono text-accent-emerald">
+              <i class="fa-solid fa-check"></i> Ukuran efisien (~28 MB)
+            </span>
+          </div>
+        </div>
+
+        <div class="panel-glass p-5 rounded-2xl space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-accent-cyan/15 border border-accent-cyan/30 text-accent-cyan font-display font-bold text-base flex items-center justify-center">
+            02
+          </div>
+          <h3 class="font-display font-bold text-base text-white">Izinkan Instalasi Sumber Ini</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Buka file APK dari bar notifikasi atau folder Download. Jika sistem Android menampilkan prompt konfirmasi, pilih <strong class="text-white">"Izinkan dari Sumber Ini"</strong>.
+          </p>
+          <div class="pt-1">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono text-accent-cyan">
+              <i class="fa-solid fa-shield"></i> Standar keamanan resmi Android
+            </span>
+          </div>
+        </div>
+
+        <div class="panel-glass p-5 rounded-2xl space-y-3">
+          <div class="w-10 h-10 rounded-xl bg-accent-amber/15 border border-accent-amber/30 text-accent-amber font-display font-bold text-base flex items-center justify-center">
+            03
+          </div>
+          <h3 class="font-display font-bold text-base text-white">Buka & Aktifkan Boost</h3>
+          <p class="text-xs text-slate-400 leading-relaxed">
+            Buka aplikasi Game Nuke, pilih game kompetitif favorit Anda, ketuk tombol <strong>BOOST</strong>, dan rasakan stabilitas performa yang responsif serta sejuk.
+          </p>
+          <div class="pt-1">
+            <span class="inline-flex items-center gap-1.5 text-[11px] font-mono text-accent-amber">
+              <i class="fa-solid fa-gamepad"></i> Langsung aktif seketika
+            </span>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Interactive FAQ Section ── -->
+  <section id="faq" class="py-14 bg-obsidian-850/50 border-y border-white/5">
+    <div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      
+      <!-- Header -->
+      <div class="text-center space-y-2 mb-10">
+        <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-purple/10 text-accent-purple border border-accent-purple/20">
+          PERTANYAAN UMUM
+        </span>
+        <h2 class="font-display font-bold text-2xl sm:text-3xl text-white">
+          Pertanyaan yang Sering Diajukan
+        </h2>
+        <p class="text-xs sm:text-sm text-slate-400">
+          Semua hal yang perlu Anda ketahui mengenai keamanan, arsitektur sistem, dan penggunaan Game Nuke Premium.
+        </p>
+      </div>
+
+      <!-- Accordion -->
+      <div class="space-y-3">
+        
+        <!-- FAQ 1 -->
+        <div class="panel-glass rounded-xl overflow-hidden border border-white/5">
+          <button @click="toggleFaq(1)" class="w-full p-4 text-left font-display font-bold text-sm text-white flex items-center justify-between gap-3">
+            <span>Bagaimana standar kepatuhan dan integritas keamanan Game Nuke?</span>
+            <i class="fa-solid transition-transform duration-200 text-accent-emerald text-xs" :class="activeFaq === 1 ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          <div x-show="activeFaq === 1" x-collapse class="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/5 pt-3" x-cloak>
+            Game Nuke beroperasi secara eksklusif pada lapisan sistem operasi Android (OS-Level Architecture). Aplikasi tidak melakukan injeksi kode ke biner game, tidak memodifikasi berkas instalasi APK game, dan tidak memanipulasi memori runtime aplikasi game. Seluruh proses tuning memanfaatkan API resmi Android bawaan (Android Choreographer, Binder RPC, AudioEffect DSP, dan DNS resolver) sehingga menjunjung tinggi integritas akun dan standar permainan kompetitif.
+          </div>
+        </div>
+
+        <!-- FAQ 2 -->
+        <div class="panel-glass rounded-xl overflow-hidden border border-white/5">
+          <button @click="toggleFaq(2)" class="w-full p-4 text-left font-display font-bold text-sm text-white flex items-center justify-between gap-3">
+            <span>Apa perbedaan versi portal website ini dengan yang ada di Google Play Store?</span>
+            <i class="fa-solid transition-transform duration-200 text-accent-emerald text-xs" :class="activeFaq === 2 ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          <div x-show="activeFaq === 2" x-collapse class="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/5 pt-3" x-cloak>
+            Edisi Google Play Store adalah rilis standar yang disesuaikan dengan regulasi kebijakan toko aplikasi. Sedangkan edisi Portal Web adalah edisi performa penuh tanpa batasan: dilengkapi Dual-Engine Macro 0.1ms via Shizuku shell, isolasi akustik Tactical Audio Footstep DSP, Deep RAM Compaction pembersih beban liar, dan jendela melayang In-Game PiP Tactical Wiki.
+          </div>
+        </div>
+
+        <!-- FAQ 3 -->
+        <div class="panel-glass rounded-xl overflow-hidden border border-white/5">
+          <button @click="toggleFaq(3)" class="w-full p-4 text-left font-display font-bold text-sm text-white flex items-center justify-between gap-3">
+            <span>Apakah memerlukan akses Root (SuperSU / Magisk / KernelSU)?</span>
+            <i class="fa-solid transition-transform duration-200 text-accent-emerald text-xs" :class="activeFaq === 3 ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          <div x-show="activeFaq === 3" x-collapse class="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/5 pt-3" x-cloak>
+            Tidak memerlukan akses Root sama sekali. Seluruh fitur utama berjalan langsung tanpa hak akses istimewa. Untuk eksekusi makro berlatensi sub-milidetik (0.1ms), Game Nuke mendukung koneksi nirkabel Shizuku / iAdb melalui opsi Wireless Debugging bawaan Developer Options Android.
+          </div>
+        </div>
+
+        <!-- FAQ 4 -->
+        <div class="panel-glass rounded-xl overflow-hidden border border-white/5">
+          <button @click="toggleFaq(4)" class="w-full p-4 text-left font-display font-bold text-sm text-white flex items-center justify-between gap-3">
+            <span>Bagaimana jika ada pembaruan versi baru di portal resmi?</span>
+            <i class="fa-solid transition-transform duration-200 text-accent-emerald text-xs" :class="activeFaq === 4 ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          <div x-show="activeFaq === 4" x-collapse class="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/5 pt-3" x-cloak>
+            Aplikasi Game Nuke telah dilengkapi subsistem Auto In-App Updater. Setiap kali ada build rilis baru yang diunggah ke portal resmi, aplikasi Anda akan langsung mendeteksi dan menampilkan dialog pembaruan 1-klik tanpa perlu mencari berkas instalasi secara manual.
+          </div>
+        </div>
+
+        <!-- FAQ 5 -->
+        <div class="panel-glass rounded-xl overflow-hidden border border-white/5">
+          <button @click="toggleFaq(5)" class="w-full p-4 text-left font-display font-bold text-sm text-white flex items-center justify-between gap-3">
+            <span>Bagaimana cara berkonsultasi langsung dengan pengembang jika ada kendala?</span>
+            <i class="fa-solid transition-transform duration-200 text-accent-emerald text-xs" :class="activeFaq === 5 ? 'fa-chevron-up' : 'fa-chevron-down'"></i>
+          </button>
+          <div x-show="activeFaq === 5" x-collapse class="px-4 pb-4 text-xs text-slate-400 leading-relaxed border-t border-white/5 pt-3" x-cloak>
+            Anda dapat memanfaatkan fitur Live Chat bawaan aplikasi untuk berkomunikasi langsung dengan Agung Developer, atau melalui saluran media sosial resmi di TikTok (@gamenukeofficial), Instagram (@agungeka_22), atau YouTube (@neoncoreofficialpro).
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ── Bottom CTA Banner ── -->
+  <section class="py-14 relative overflow-hidden">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="panel-glass rounded-2xl p-7 sm:p-10 text-center border-2 border-accent-emerald/30 shadow-xl relative overflow-hidden">
+        
+        <div class="relative z-10 space-y-4 max-w-xl mx-auto">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-tr from-accent-emerald to-accent-cyan p-0.5 mx-auto shadow-md">
+            <img src="assets/logo_nuke.png" alt="Logo" class="w-full h-full object-cover rounded-[13px]" onerror="this.src='favicon.png'">
+          </div>
+
+          <h2 class="font-display font-bold text-2xl sm:text-3xl text-white">
+            Tingkatkan Stabilitas Gaming Anda Sekarang
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-400">
+            Nikmati kestabilan frame rate dan keunggulan taktis tingkat profesional. Bebas malware, terverifikasi aman, dan langsung aktif.
+          </p>
+
+          <div class="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <button @click="triggerDownloadFlow()" class="w-full sm:w-auto px-6 py-3.5 rounded-xl font-display font-bold text-xs sm:text-sm bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md hover:shadow-lg transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-download"></i>
+              <span>Download Game Nuke Premium</span>
+              <span class="px-1.5 py-0.2 bg-black/20 rounded font-mono text-xs">28 MB</span>
+            </button>
+            <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="w-full sm:w-auto px-5 py-3.5 rounded-xl font-display font-semibold text-xs sm:text-sm bg-obsidian-800 text-white border border-slate-700 hover:border-slate-500 transition flex items-center justify-center gap-2">
+              <i class="fa-brands fa-google-play text-accent-cyan"></i>
+              <span>Google Play Edition</span>
+            </a>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ── Footer ── -->
+  <footer class="bg-obsidian-950 border-t border-white/5 pt-10 pb-8 text-xs text-slate-400">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
+      
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+        
+        <!-- Col 1: About -->
+        <div class="md:col-span-2 space-y-3">
+          <div class="flex items-center gap-2.5">
+            <img src="assets/logo_nuke.png" alt="Logo" class="w-7 h-7 rounded-lg" onerror="this.src='favicon.png'">
+            <span class="font-display font-bold text-sm text-white tracking-wide">GAME NUKE OFFICIAL</span>
+          </div>
+          <p class="text-slate-400 text-xs leading-relaxed max-w-sm">
+            Portal resmi distribusi Game Nuke Premium Suite oleh Agung Developer. Didedikasikan untuk menghadirkan pengalaman gaming Android kelas flagship yang stabil, dingin, dan responsif.
+          </p>
+          <div class="flex items-center gap-2 pt-1">
+            <a href="https://www.tiktok.com/@gamenukeofficial" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-obsidian-800 border border-white/5 flex items-center justify-center text-slate-300 hover:text-white hover:border-accent-emerald/40 transition" title="TikTok">
+              <i class="fa-brands fa-tiktok text-xs"></i>
+            </a>
+            <a href="https://www.instagram.com/agungeka_22" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-obsidian-800 border border-white/5 flex items-center justify-center text-slate-300 hover:text-white hover:border-accent-emerald/40 transition" title="Instagram">
+              <i class="fa-brands fa-instagram text-xs"></i>
+            </a>
+            <a href="https://www.youtube.com/@neoncoreofficialpro" target="_blank" rel="noopener" class="w-7 h-7 rounded-lg bg-obsidian-800 border border-white/5 flex items-center justify-center text-slate-300 hover:text-white hover:border-accent-emerald/40 transition" title="YouTube">
+              <i class="fa-brands fa-youtube text-xs"></i>
+            </a>
+          </div>
+        </div>
+
+        <!-- Col 2: Navigation Links -->
+        <div class="space-y-2.5">
+          <div class="font-display font-semibold text-white text-xs">Navigasi Cepat</div>
+          <ul class="space-y-1.5 text-xs">
+            <li><a href="#fitur" class="hover:text-white transition">Fitur Utama</a></li>
+            <li><a href="#perbandingan" class="hover:text-white transition">Perbandingan Edisi</a></li>
+            <li><a href="#telemetri" class="hover:text-white transition">Cockpit Telemetri</a></li>
+            <li><a href="#instalasi" class="hover:text-white transition">Panduan Pemasangan</a></li>
+            <li><a href="#faq" class="hover:text-white transition">FAQ & Bantuan</a></li>
+          </ul>
+        </div>
+
+        <!-- Col 3: Legal & Modals -->
+        <div class="space-y-2.5">
+          <div class="font-display font-semibold text-white text-xs">Informasi Legal</div>
+          <ul class="space-y-1.5 text-xs">
+            <li><button @click="openModal('privacy')" class="hover:text-white transition text-left">Kebijakan Privasi</button></li>
+            <li><button @click="openModal('terms')" class="hover:text-white transition text-left">Ketentuan Layanan</button></li>
+            <li><button @click="openModal('disclaimer')" class="hover:text-white transition text-left">Disclaimer Resmi</button></li>
+            <li><button @click="openModal('contact')" class="hover:text-white transition text-left text-accent-emerald">Kontak Pengembang</button></li>
+            <li><a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="hover:text-white transition text-accent-cyan">Edisi Google Play</a></li>
+          </ul>
+        </div>
+
+      </div>
+
+      <!-- Copyright Bar -->
+      <div class="pt-6 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-slate-500">
+        <div>
+          &copy; 2026 Game Nuke Premium by Agung Developer. Hak cipta dilindungi.
+        </div>
+        <div class="flex items-center gap-3">
+          <span>Domain Resmi: <strong class="text-slate-400">gamenukeofficial.com</strong></span>
+          <span>•</span>
+          <span>Indonesia (ID)</span>
+        </div>
+      </div>
+
+    </div>
+  </footer>
+
+  <!-- ── Mobile Sticky Bottom Action Bar ── -->
+  <div class="fixed bottom-0 left-0 right-0 z-40 bg-obsidian-950/94 backdrop-blur-2xl border-t border-white/10 p-2.5 sm:hidden flex items-center gap-2">
+    <button @click="triggerDownloadFlow()" class="flex-1 py-2.5 px-3 rounded-xl font-display font-bold text-xs bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition">
+      <i class="fa-solid fa-download text-xs"></i>
+      <span>Download Game Nuke Premium</span>
+    </button>
+    <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="p-2.5 rounded-xl bg-obsidian-800 text-white border border-slate-700/80 flex items-center justify-center shrink-0 active:scale-95 transition" title="Google Play Store">
+      <i class="fa-brands fa-google-play text-accent-cyan text-sm"></i>
+    </a>
+  </div>
+
+  <!-- ── Modals (Alpine.js) ── -->
+
+  <!-- 1. Privacy Policy Modal -->
+  <div x-show="activeModal === 'privacy'" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-md" x-cloak>
+    <div @click.outside="closeModal()" class="panel-glass max-w-xl w-full max-h-[80vh] rounded-2xl p-6 overflow-y-auto border border-white/10 space-y-3">
+      <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+        <h3 class="font-display font-bold text-lg text-white flex items-center gap-2">
+          <i class="fa-solid fa-user-shield text-accent-emerald"></i> Kebijakan Privasi
+        </h3>
+        <button @click="closeModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-2.5 leading-relaxed">
+        <p><strong>1. Pengumpulan Data:</strong> Game Nuke Premium tidak mengumpulkan, menyimpan, atau memperjualbelikan data pribadi, berkas galeri, kontak, atau riwayat penjelajahan Anda.</p>
+        <p><strong>2. Telemetri Perangkat:</strong> Aplikasi membaca metrik hardware lokal seperti suhu baterai, persentase RAM, dan framerate VSYNC semata-mata untuk ditampilkan di layar HUD Anda secara lokal.</p>
+        <p><strong>3. Komunikasi Live Support:</strong> Pesan yang dikirim melalui fitur Live Chat ke Agung Developer diteruskan secara aman ke portal pengembang resmi untuk keperluan bantuan teknis.</p>
+        <p><strong>4. Izin Sistem:</strong> Izin aksesibilitas atau Shizuku digunakan secara eksklusif untuk fungsi simulasi tap macro yang diaktifkan sendiri oleh pengguna.</p>
+      </div>
+      <div class="pt-3 border-t border-white/5 text-right">
+        <button @click="closeModal()" class="px-4 py-1.5 rounded-lg bg-obsidian-800 text-white text-xs font-semibold hover:bg-obsidian-750">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Terms of Service Modal -->
+  <div x-show="activeModal === 'terms'" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-md" x-cloak>
+    <div @click.outside="closeModal()" class="panel-glass max-w-xl w-full max-h-[80vh] rounded-2xl p-6 overflow-y-auto border border-white/10 space-y-3">
+      <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+        <h3 class="font-display font-bold text-lg text-white flex items-center gap-2">
+          <i class="fa-solid fa-file-contract text-accent-cyan"></i> Ketentuan Layanan
+        </h3>
+        <button @click="closeModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-2.5 leading-relaxed">
+        <p><strong>1. Lisensi Penggunaan:</strong> Game Nuke Premium disediakan sebagai utilitas peningkatan performa perangkat untuk hiburan dan produktivitas gaming.</p>
+        <p><strong>2. Batasan Tanggung Jawab:</strong> Pengembang tidak bertanggung jawab atas penyalahgunaan fitur perangkat di luar rekomendasi pabrikan atau ketidakcocokan pada custom ROM yang tidak standar.</p>
+        <p><strong>3. Integritas Aplikasi:</strong> Dilarang merekayasa balik (reverse engineering) dengan tujuan menyisipkan malware atau mendistribusikan ulang versi yang telah dimodifikasi secara ilegal.</p>
+      </div>
+      <div class="pt-3 border-t border-white/5 text-right">
+        <button @click="closeModal()" class="px-4 py-1.5 rounded-lg bg-obsidian-800 text-white text-xs font-semibold hover:bg-obsidian-750">Tutup</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Official Disclaimer Modal -->
+  <div x-show="activeModal === 'disclaimer'" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-md" x-cloak>
+    <div @click.outside="closeModal()" class="panel-glass max-w-xl w-full max-h-[80vh] rounded-2xl p-6 overflow-y-auto border border-white/10 space-y-3">
+      <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+        <h3 class="font-display font-bold text-lg text-white flex items-center gap-2">
+          <i class="fa-solid fa-triangle-exclamation text-accent-amber"></i> Disclaimer Resmi
+        </h3>
+        <button @click="closeModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+      <div class="text-xs text-slate-300 space-y-2.5 leading-relaxed">
+        <p>Game Nuke adalah aplikasi utilitas independen dan <strong>BUKAN</strong> bagian dari MOONTON, Garena, KRAFTON, Hoyoverse, atau pengembang game lainnya.</p>
+        <p>Game Nuke tidak menyediakan cheat, manipulasi server, atau script injeksi. Aplikasi hanya mengoptimalkan alokasi resource perangkat Android (RAM, DNS, Audio DSP, dan Display Choreographer) agar game dapat berjalan optimal pada kapabilitas hardware bawaan sistem.</p>
+      </div>
+      <div class="pt-3 border-t border-white/5 text-right">
+        <button @click="closeModal()" class="px-4 py-1.5 rounded-lg bg-obsidian-800 text-white text-xs font-semibold hover:bg-obsidian-750">Saya Mengerti</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Developer Contact Modal -->
+  <div x-show="activeModal === 'contact'" x-transition class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-obsidian-950/80 backdrop-blur-md" x-cloak>
+    <div @click.outside="closeModal()" class="panel-glass max-w-md w-full rounded-2xl p-5 sm:p-6 border border-white/10 space-y-4">
+      <div class="flex items-center justify-between border-b border-white/5 pb-2.5">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-accent-emerald/15 text-accent-emerald flex items-center justify-center text-sm">
+            <i class="fa-solid fa-code"></i>
+          </div>
+          <div>
+            <h3 class="font-display font-bold text-base text-white">Agung Developer</h3>
+            <p class="text-[10px] text-slate-400 font-mono">Official Creator of Game Nuke</p>
+          </div>
+        </div>
+        <button @click="closeModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark text-base"></i>
+        </button>
+      </div>
+
+      <div class="space-y-2 text-xs">
+        <a href="https://www.tiktok.com/@gamenukeofficial" target="_blank" rel="noopener" class="p-2.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-750 border border-white/5 flex items-center justify-between text-slate-200 hover:text-white transition">
+          <span class="flex items-center gap-2.5 font-medium">
+            <i class="fa-brands fa-tiktok text-sm text-pink-400"></i> TikTok Resmi
+          </span>
+          <span class="font-mono text-slate-400 text-[11px]">@gamenukeofficial</span>
+        </a>
+        <a href="https://www.instagram.com/agungeka_22" target="_blank" rel="noopener" class="p-2.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-750 border border-white/5 flex items-center justify-between text-slate-200 hover:text-white transition">
+          <span class="flex items-center gap-2.5 font-medium">
+            <i class="fa-brands fa-instagram text-sm text-purple-400"></i> Instagram Pribadi
+          </span>
+          <span class="font-mono text-slate-400 text-[11px]">@agungeka_22</span>
+        </a>
+        <a href="https://www.youtube.com/@neoncoreofficialpro" target="_blank" rel="noopener" class="p-2.5 rounded-xl bg-obsidian-800 hover:bg-obsidian-750 border border-white/5 flex items-center justify-between text-slate-200 hover:text-white transition">
+          <span class="flex items-center gap-2.5 font-medium">
+            <i class="fa-brands fa-youtube text-sm text-red-500"></i> YouTube Channel
+          </span>
+          <span class="font-mono text-slate-400 text-[11px]">@neoncoreofficialpro</span>
+        </a>
+      </div>
+
+      <div class="pt-2 text-center">
+        <p class="text-[11px] text-slate-400">Hubungi langsung via media sosial resmi atau fitur <strong>Live Chat</strong> di dalam aplikasi Game Nuke untuk bantuan teknis instan.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Alpine.js Logic Script & Language Translation Bridge ── -->
+  <script>
+    function gameNukeApp() {
+      return {
+        mobileMenuOpen: false,
+        activeModal: null,
+        activeFaq: 1,
+        simulatedFps: 120,
+        simulatedTemp: '35.4°C',
+        currentLangLabel: 'ID',
+        versionData: {
+          versionCode: 16,
+          versionName: '2.3.0-prem',
+          appName: 'Game Nuke Premium',
+          apkSizeMb: '28.6',
+          publishedAt: '2026-09-05',
+          downloadUrl: 'https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk',
+          directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
+        },
+
+        initApp() {
+          // Detect current language label from cookie or storage
+          try {
+            var match = document.cookie.match(/googtrans=\/id\/([a-z]{2})/i);
+            if (match && match[1]) {
+              this.currentLangLabel = match[1].toUpperCase();
+            } else {
+              var saved = localStorage.getItem('gn_user_lang');
+              if (saved) this.currentLangLabel = saved.toUpperCase();
+            }
+          } catch(e) {}
+
+          // Fetch live version metadata automatically
+          fetch('version.json?v=' + Date.now())
+            .then(res => res.json())
+            .then(data => {
+              if (data && data.versionName) {
+                this.versionData = Object.assign(this.versionData, data);
+              }
+            })
+            .catch(err => console.log('Using bundled telemetry'));
+
+          // Subtle real-time telemetry fluctuation
+          setInterval(() => {
+            const fpsValues = [119, 120, 120, 120, 120, 118, 120];
+            this.simulatedFps = fpsValues[Math.floor(Math.random() * fpsValues.length)];
+            const temps = ['35.2°C', '35.4°C', '35.1°C', '35.5°C', '35.3°C'];
+            this.simulatedTemp = temps[Math.floor(Math.random() * temps.length)];
+          }, 2500);
+        },
+
+        changeLanguage(langCode) {
+          try {
+            localStorage.setItem('gn_user_lang', langCode);
+            if (langCode === 'id') {
+              // Delete googtrans cookie to restore native Indonesian
+              document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+              document.cookie = 'googtrans=; path=/; domain=' + window.location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            } else {
+              var cookieVal = '/id/' + langCode;
+              document.cookie = 'googtrans=' + cookieVal + '; path=/; max-age=31536000';
+              document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + window.location.hostname + '; max-age=31536000';
+            }
+            window.location.reload();
+          } catch(e) {}
+        },
+
+        openModal(name) {
+          this.activeModal = name;
+        },
+
+        closeModal() {
+          this.activeModal = null;
+        },
+
+        toggleFaq(index) {
+          this.activeFaq = (this.activeFaq === index) ? null : index;
+        },
+
+        /* Tab-Under Directlink Monetization Flow with Anti-Bypass Session Token:
+           1. Generates session verification token in sessionStorage
+           2. Opens download.html with auth token in a NEW tab
+           3. After 2 seconds, redirects the OLD/CURRENT tab to sponsor directlink
+           Result: User downloads cleanly on new tab; sponsor impressions are captured;
+           direct bypass crawlers are forced to enter through index.html.
+        */
+        triggerDownloadFlow() {
+          const directlink = this.versionData.directlinkAdUrl || 'https://dulyhagglermounting.com/2082665';
+          const sessionAuth = 'gn_sess_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+
+          try {
+            sessionStorage.setItem('gn_download_session', sessionAuth);
+            sessionStorage.setItem('gn_session_timestamp', Date.now().toString());
+          } catch(e) {}
+
+          // 1. Open official masked download portal in new tab with session token
+          try {
+            window.open('download.html?auth=' + encodeURIComponent(sessionAuth), '_blank');
+          } catch (e) {
+            window.location.href = 'download.html?auth=' + encodeURIComponent(sessionAuth);
+            return;
+          }
+
+          // 2. Redirect old/current tab to sponsor directlink after 2 seconds
+          setTimeout(() => {
+            window.location.href = directlink;
+          }, 2000);
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Translate Official Free API -->
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'id',
+        includedLanguages: 'id,en,es,pt,th,vi,tl,ms,ru,ja,ko,zh-CN,ar,de,fr,hi',
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
+
+</body>
+</html>
