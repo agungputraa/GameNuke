@@ -5,7 +5,7 @@
   "publishedAt": "2026-09-05",
   "minAndroidVersion": 11,
   "targetSdk": 36,
-  "apkSizeMb": "24.3",
+  "apkSizeMb": "28.6",
   "releaseNotes": [
     "Enterprise Live Chat: Direct support desk connected to Agung Developer with instant optimistic delete & edit",
     "Closed-App Push Notifications: Background delivery for developer live chat replies even when recent apps are cleared",
@@ -17,7 +17,7 @@
     "In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider",
     "Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay"
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0-prem.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk",
   "sha256": "E6E43E057293C63D44EBDC81051BF04902B2F22CED7892EF5EB75FC78186813C",
   "directlinkAdUrl": "https://dulyhagglermounting.com/2082665"
 }
