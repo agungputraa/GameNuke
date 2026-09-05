@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="id" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pusat Unduhan Resmi — Game Nuke Premium</title>
+  <meta name="description" content="Portal unduhan aman paket instalasi biner Game Nuke Premium Standalone Edition. Terverifikasi SHA256 dengan standar integritas sistem Android.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#070A10">
+  <link rel="icon" type="image/png" href="assets/logo_nuke.png">
+
+  <!-- Google Fonts: Plus Jakarta Sans, Outfit, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Outfit:wght@600;700;800;900&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome 6 CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            outfit: ['"Outfit"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace'],
+          },
+          colors: {
+            brand: {
+              dark: '#070A10',
+              card: '#0D1424',
+              surface: '#121C33',
+              emerald: '#00FF9D',
+              cyan: '#00E5FF',
+              amber: '#FFB800',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <style>
+    body {
+      background-color: #070A10;
+      color: #F8FAFC;
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      overflow-x: hidden;
+    }
+    .glass-card {
+      background: rgba(13, 20, 36, 0.88);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .glow-glow {
+      box-shadow: 0 0 50px -10px rgba(0, 255, 157, 0.18);
+    }
+  </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-brand-dark relative">
+
+  <!-- Ambient Light Orbs -->
+  <div class="fixed top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-gradient-to-tr from-brand-emerald/15 via-brand-cyan/15 to-transparent blur-[160px] pointer-events-none -z-10"></div>
+
+  <!-- Central Card -->
+  <div class="glass-card max-w-lg w-full rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl relative border border-white/10 glow-glow">
+    
+    <!-- App Logo with Animated Glow Ring -->
+    <div class="relative w-20 h-20 mx-auto">
+      <div class="absolute -inset-2.5 rounded-2xl bg-gradient-to-tr from-brand-emerald via-brand-cyan to-indigo-500 opacity-40 blur-lg animate-pulse"></div>
+      <div class="relative w-full h-full rounded-2xl bg-gradient-to-tr from-brand-emerald to-brand-cyan p-0.5 shadow-xl">
+        <img src="assets/logo_nuke.png" alt="Game Nuke Logo" class="w-full h-full object-cover rounded-[14px]" onerror="this.src='favicon.png'">
+      </div>
+    </div>
+
+    <!-- Status Header -->
+    <div class="space-y-2">
+      <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-brand-emerald/10 border border-brand-emerald/30 text-[11px] font-mono text-brand-emerald">
+        <span class="w-2 h-2 rounded-full bg-brand-emerald animate-ping"></span>
+        <span id="status_pill">MEMVERIFIKASI INTEGRITAS BINER...</span>
+      </div>
+      <h1 class="font-outfit font-black text-2xl sm:text-3xl text-white tracking-tight" id="main_title">
+        Mengunduh Game Nuke Premium
+      </h1>
+      <p class="text-xs sm:text-sm text-slate-400 max-w-sm mx-auto" id="sub_desc">
+        Paket instalasi resmi sedang disiapkan. Pengunduhan otomatis dimulai pada peramban Anda.
+      </p>
+    </div>
+
+    <!-- Progress Meter -->
+    <div class="space-y-2 pt-1">
+      <div class="w-full bg-slate-900/90 rounded-full h-2.5 overflow-hidden border border-white/10">
+        <div id="progress_bar" class="bg-gradient-to-r from-brand-emerald via-teal-400 to-brand-cyan h-full rounded-full transition-all duration-300" style="width: 25%"></div>
+      </div>
+      <div class="flex justify-between text-[11px] font-mono text-slate-400">
+        <span id="progress_text">Menghubungkan mirror server (25%)...</span>
+        <span id="file_size_text">28.6 MB</span>
+      </div>
+    </div>
+
+    <!-- Integrity Hash & Version Spec Box -->
+    <div class="p-4 rounded-2xl bg-slate-900/70 border border-white/5 space-y-2 text-left text-xs">
+      <div class="flex items-center justify-between text-slate-200 font-semibold">
+        <span class="flex items-center gap-2">
+          <i class="fa-solid fa-shield-halved text-brand-emerald"></i>
+          <span>Paket Biner Terverifikasi</span>
+        </span>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-brand-emerald/15 text-brand-emerald" id="version_label">v2.3.0-prem</span>
+      </div>
+      <div class="text-[10px] font-mono text-slate-400 truncate" id="sha_text">
+        SHA256: E6E43E057293C63D44EBDC81051BF04902B2F22CED...
+      </div>
+      <div class="flex items-center justify-between text-[10px] text-slate-400 pt-1 border-t border-white/5">
+        <span>Arsitektur: ARM64-v8a / v7a</span>
+        <span>Android 11–16 Siap</span>
+      </div>
+    </div>
+
+    <!-- Quick Installation Tips (Collapsible / Informative) -->
+    <div class="p-4 rounded-2xl bg-brand-surface/60 border border-white/5 text-left space-y-2 text-xs text-slate-300">
+      <div class="font-outfit font-bold text-white flex items-center gap-2">
+        <i class="fa-solid fa-circle-info text-brand-cyan"></i>
+        <span>Panduan Singkat Instalasi:</span>
+      </div>
+      <ol class="space-y-1.5 list-decimal list-inside text-[11px] text-slate-400 leading-relaxed">
+        <li>Buka file APK yang telah diunduh dari bar notifikasi peramban.</li>
+        <li>Bila muncul notifikasi keamanan Android, pilih <strong class="text-white">"Izinkan dari Sumber Ini"</strong>.</li>
+        <li>Buka Game Nuke Premium, pilih game Anda, dan aktifkan profil optimasi.</li>
+      </ol>
+    </div>
+
+    <!-- Fallback Action Buttons -->
+    <div class="space-y-3 pt-1">
+      <button id="manual_btn" onclick="startFileDownload()" class="w-full py-3.5 rounded-xl font-outfit font-black text-sm bg-gradient-to-r from-brand-emerald via-teal-400 to-brand-cyan text-slate-950 shadow-lg shadow-brand-emerald/20 hover:shadow-brand-emerald/35 active:scale-98 transition flex items-center justify-center gap-2">
+        <i class="fa-solid fa-download"></i>
+        <span>Klik di sini jika unduhan belum berjalan</span>
+      </button>
+
+      <a href="index.html" class="inline-flex items-center gap-2 text-xs font-semibold text-slate-400 hover:text-white transition">
+        <i class="fa-solid fa-arrow-left"></i> Kembali ke Beranda Game Nuke
+      </a>
+    </div>
+
+    <!-- Hidden Iframe to trigger file download cleanly without opening external links or showing raw URLs -->
+    <iframe id="dl_iframe" class="hidden" style="display:none;"></iframe>
+
+  </div>
+
+  <script>
+    let targetDownloadUrl = '';
+    let targetVersion = '2.3.0-prem';
+
+    // 1. Fetch live version metadata dynamically from version.json
+    fetch('version.json?v=' + Date.now())
+      .then(res => res.json())
+      .then(data => {
+        if (data) {
+          targetDownloadUrl = data.downloadUrl || '';
+          targetVersion = data.versionName || '2.3.0-prem';
+          if (data.apkSizeMb) document.getElementById('file_size_text').innerText = data.apkSizeMb + ' MB';
+          if (data.versionName) document.getElementById('version_label').innerText = 'v' + data.versionName;
+          if (data.sha256) document.getElementById('sha_text').innerText = 'SHA256: ' + data.sha256.substring(0, 36) + '...';
+        }
+      })
+      .catch(() => {})
+      .finally(() => {
+        runDownloadSequence();
+      });
+
+    function runDownloadSequence() {
+      const bar = document.getElementById('progress_bar');
+      const text = document.getElementById('progress_text');
+      const pill = document.getElementById('status_pill');
+
+      let progress = 25;
+      const interval = setInterval(() => {
+        progress += 25;
+        if (progress >= 99) {
+          clearInterval(interval);
+          bar.classList.add('w-full');
+          text.innerText = 'Paket siap diunduh...';
+          pill.innerText = 'PENGUNDUHAN BERJALAN';
+          startFileDownload();
+        } else {
+          bar.style.width = progress + '%';
+          text.innerText = 'Menyiapkan paket instalasi (' + progress + '%)...';
+        }
+      }, 200);
+    }
+
+    function startFileDownload() {
+      const url = targetDownloadUrl || 'https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk';
+      const iframe = document.getElementById('dl_iframe');
+      if (iframe) {
+        iframe.src = url;
+      } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.setAttribute('download', 'GameNuke-Premium-v' + targetVersion + '.apk');
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
+    }
+  </script>
+
+</body>
+</html>

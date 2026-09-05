@@ -109,6 +109,9 @@ if (Test-Path $VersionJsonPath) {
     if (Test-Path "$RootDir\gamenukeweb\index.html") {
         Copy-Item -Path "$RootDir\gamenukeweb\index.html" -Destination "$RootDir\index.html" -Force
     }
+    if (Test-Path "$RootDir\gamenukeweb\download.html") {
+        Copy-Item -Path "$RootDir\gamenukeweb\download.html" -Destination "$RootDir\download.html" -Force
+    }
     if (Test-Path "$RootDir\gamenukeweb\CNAME") {
         Copy-Item -Path "$RootDir\gamenukeweb\CNAME" -Destination "$RootDir\CNAME" -Force
     }
