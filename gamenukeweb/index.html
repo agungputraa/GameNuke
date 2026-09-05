@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
   <title>Game Nuke Premium — Android Gaming Optimizer & Tactical Suite Official</title>
-  <meta name="description" content="Portal resmi Game Nuke Premium APK v2.3.0. Suite optimasi performa gaming Android tingkat hardware: AI Sentinel Thermal Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, Tactical Audio DSP, dan Live Support Agung Developer.">
+  <meta name="description" content="Portal resmi Game Nuke Premium APK v2.3.0. Tingkatkan performa gaming Android ke titik maksimal: AI Sentinel Thermal Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, Tactical Audio DSP, dan Live Support Agung Developer.">
   <meta name="keywords" content="game nuke premium, game booster android terbaik, game nuke play store, macro gaming fast hand, vpn ping booster mlbb, deep clean ram android, force 120hz android, game turbo non root, agung developer, gamenukeofficial">
   <meta name="author" content="Agung Developer">
   <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1">
@@ -23,7 +23,7 @@
 
   <!-- Open Graph / Facebook -->
   <meta property="og:site_name" content="Game Nuke Official">
-  <meta property="og:title" content="Game Nuke Premium — Android Gaming Optimizer & Tactical Suite">
+  <meta property="og:title" content="Game Nuke Premium — Android Gaming Optimizer">
   <meta property="og:description" content="Optimasi performa gaming Android tingkat hardware tanpa root. AI Cooling, Dual-Engine Macro 0.1ms, Tactical Audio DSP, dan Live Support Agung Developer.">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://gamenukeofficial.com/">
@@ -35,12 +35,35 @@
   <!-- Twitter Cards -->
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="Game Nuke Premium — Tactical Android Gaming Suite">
-  <meta name="twitter:description" content="Suite gaming Android profesional: AI Sentinel Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, dan Tactical Audio DSP.">
+  <meta name="twitter:description" content="Tingkatkan performa gaming Android: AI Sentinel Cooling, Dual-Engine Macro 0.1ms, DNS Ping Stabilizer, dan Tactical Audio DSP.">
   <meta name="twitter:image" content="https://gamenukeofficial.com/assets/logo_nuke.png">
 
   <!-- Favicon using official app logo -->
   <link rel="icon" type="image/png" href="assets/logo_nuke.png">
   <link rel="apple-touch-icon" href="assets/logo_nuke.png">
+
+  <!-- Auto-Detect Language Script (Runs before rendering to prevent flash) -->
+  <script>
+    (function autoDetectUserLanguage() {
+      try {
+        var savedLang = localStorage.getItem('gn_user_lang');
+        var hasCookie = document.cookie.indexOf('googtrans=') !== -1;
+        
+        if (!hasCookie) {
+          var browserLang = (navigator.language || navigator.userLanguage || 'id').toLowerCase();
+          var primaryLang = browserLang.split('-')[0];
+          var supportedLangs = ['en', 'es', 'pt', 'th', 'vi', 'tl', 'ms', 'ru', 'ja', 'ko', 'zh', 'ar', 'de', 'fr', 'hi'];
+          
+          if (primaryLang && primaryLang !== 'id') {
+            var targetLang = supportedLangs.indexOf(primaryLang) !== -1 ? primaryLang : 'en';
+            var cookieVal = '/id/' + targetLang;
+            document.cookie = 'googtrans=' + cookieVal + '; path=/; max-age=31536000';
+            document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + window.location.hostname + '; max-age=31536000';
+          }
+        }
+      } catch (e) {}
+    })();
+  </script>
 
   <!-- Google Fonts: Space Grotesk, Sora, Plus Jakarta Sans, JetBrains Mono -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -137,6 +160,36 @@
       background: #2C4370;
     }
     [x-cloak] { display: none !important; }
+
+    /* Clean Google Translate Integration (Hides ugly iframe banners & tooltips) */
+    .goog-te-banner-frame.skiptranslate,
+    .goog-te-banner-frame,
+    iframe.goog-te-banner-frame {
+      display: none !important;
+      visibility: hidden !important;
+      height: 0 !important;
+    }
+    body {
+      top: 0px !important;
+      position: static !important;
+    }
+    .goog-tooltip,
+    .goog-tooltip:hover {
+      display: none !important;
+    }
+    .goog-text-highlight {
+      background-color: transparent !important;
+      border: none !important;
+      box-shadow: none !important;
+    }
+    #google_translate_element,
+    .skiptranslate {
+      display: none;
+    }
+    .VIpgJd-ZVi9od-ORHb-OEVmcd,
+    .VIpgJd-ZVi9od-aZ2wEe-wOHMyf {
+      display: none !important;
+    }
   </style>
 
   <!-- Schema.org JSON-LD Structured Data -->
@@ -171,6 +224,9 @@
   </script>
 </head>
 <body class="min-h-screen text-slate-100 antialiased selection:bg-accent-emerald selection:text-obsidian-950 pb-16 sm:pb-0">
+
+  <!-- Google Translate Hidden Element for API callback -->
+  <div id="google_translate_element" style="display:none;"></div>
 
   <!-- Ambient Light Orbs -->
   <div class="fixed top-0 left-1/2 -translate-x-1/2 w-[850px] h-[400px] bg-gradient-to-b from-accent-emerald/8 via-accent-cyan/5 to-transparent blur-[140px] pointer-events-none -z-10"></div>
@@ -228,15 +284,49 @@
         <a href="#faq" class="px-3 py-1 rounded-full text-slate-300 hover:text-white hover:bg-white/5 transition">FAQ</a>
       </nav>
 
-      <!-- Desktop Action Buttons -->
+      <!-- Desktop Action Buttons & Language Switcher -->
       <div class="hidden sm:flex items-center gap-2.5">
+        
+        <!-- Language Selector Dropdown -->
+        <div class="relative" x-data="{ langOpen: false }">
+          <button @click="langOpen = !langOpen" class="px-2.5 py-1.5 rounded-xl text-xs font-mono font-medium bg-obsidian-800 text-slate-200 border border-slate-700/60 hover:border-slate-500 hover:text-white transition flex items-center gap-1.5" title="Ganti Bahasa / Change Language">
+            <i class="fa-solid fa-globe text-accent-cyan text-xs"></i>
+            <span x-text="currentLangLabel">BAHASA</span>
+            <i class="fa-solid fa-chevron-down text-[9px] text-slate-400"></i>
+          </button>
+          
+          <div x-show="langOpen" @click.outside="langOpen = false" x-transition class="absolute right-0 mt-1.5 w-44 rounded-xl bg-obsidian-850 border border-white/10 shadow-2xl p-1.5 z-50 space-y-0.5 text-xs font-sans" x-cloak>
+            <button @click="changeLanguage('id'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇮🇩 Bahasa Indonesia</span>
+            </button>
+            <button @click="changeLanguage('en'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇺🇸 English</span>
+            </button>
+            <button @click="changeLanguage('es'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇪🇸 Español</span>
+            </button>
+            <button @click="changeLanguage('pt'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇧🇷 Português</span>
+            </button>
+            <button @click="changeLanguage('th'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇹🇭 ภาษาไทย</span>
+            </button>
+            <button @click="changeLanguage('vi'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇻🇳 Tiếng Việt</span>
+            </button>
+            <button @click="changeLanguage('tl'); langOpen = false" class="w-full text-left px-2.5 py-1.5 rounded-lg hover:bg-white/5 flex items-center justify-between text-slate-200">
+              <span>🇵🇭 Filipino</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Play Store Button -->
         <a href="https://play.google.com/store/apps/details?id=com.neon.gametweak" target="_blank" rel="noopener" class="px-3 py-1.5 rounded-xl text-xs font-medium bg-obsidian-800 text-slate-200 border border-slate-700/60 hover:border-slate-500 hover:text-white transition flex items-center gap-1.5">
           <i class="fa-brands fa-google-play text-accent-cyan text-xs"></i>
           <span>Play Store</span>
         </a>
 
-        <!-- Primary Download Button (Balanced, Enterprise Proportions) -->
+        <!-- Primary Download Button -->
         <button @click="triggerDownloadFlow()" class="relative group overflow-hidden px-4 py-2 rounded-xl text-xs font-display font-bold bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 hover:shadow-lg hover:shadow-accent-emerald/20 active:scale-95 transition-all flex items-center gap-2">
           <i class="fa-solid fa-download text-xs"></i>
           <span>Download Game Nuke Premium</span>
@@ -273,6 +363,18 @@
         </button>
       </div>
 
+      <!-- Mobile Language Switcher Row -->
+      <div class="pt-2 border-t border-white/5 flex items-center justify-between text-xs">
+        <span class="text-slate-400 font-medium">Bahasa / Language:</span>
+        <div class="flex items-center gap-1 font-mono text-[11px]">
+          <button @click="changeLanguage('id')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">ID</button>
+          <button @click="changeLanguage('en')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">EN</button>
+          <button @click="changeLanguage('es')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">ES</button>
+          <button @click="changeLanguage('pt')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">PT</button>
+          <button @click="changeLanguage('th')" class="px-2 py-0.5 rounded bg-obsidian-800 text-slate-300 hover:text-white">TH</button>
+        </div>
+      </div>
+
       <!-- Mobile Action Buttons -->
       <div class="space-y-2 pt-2 border-t border-white/5">
         <button @click="mobileMenuOpen = false; triggerDownloadFlow()" class="w-full py-2.5 rounded-xl font-display font-bold text-xs bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md flex items-center justify-center gap-2">
@@ -296,24 +398,24 @@
         <!-- Left Column: Value Proposition -->
         <div class="lg:col-span-7 space-y-6 text-center lg:text-left">
           
-          <!-- Enterprise Status Badge -->
-          <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-obsidian-800 border border-accent-emerald/30 shadow-inner">
+          <!-- Official Engine Badge -->
+          <div class="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-obsidian-800 border border-accent-emerald/30 shadow-inner">
             <span class="w-2 h-2 rounded-full bg-accent-emerald animate-ping"></span>
-            <span class="text-xs font-semibold text-slate-200">Arsitektur Non-Invasif Berstandar Industri</span>
-            <span class="text-slate-600">|</span>
-            <span class="text-xs font-mono text-accent-cyan">Zero Code Injection</span>
+            <span class="text-xs font-semibold text-slate-200">Optimasi Hardware Android Resmi</span>
+            <span class="text-slate-600">•</span>
+            <span class="text-xs font-mono text-accent-cyan">Bebas Root</span>
           </div>
 
-          <!-- Main Headline -->
+          <!-- Main Headline: Punchy, Elite & Professional -->
           <h1 class="font-display font-bold text-3xl sm:text-5xl lg:text-6xl tracking-tight leading-[1.12]">
-            Arsitektur Gaming Android Flagship. <br>
-            <span class="text-gradient-emerald">Performa Puncak.</span> <br>
-            <span class="text-slate-200">Stabil di Setiap Detik.</span>
+            Performa Gaming Maksimal. <br>
+            <span class="text-gradient-emerald">Stabil Tanpa Lag.</span> <br>
+            <span class="text-slate-200">Dingin Lebih Lama.</span>
           </h1>
 
-          <!-- Subheadline -->
+          <!-- Subheadline: Natural, Authoritative & Benefit-Driven -->
           <p class="text-sm sm:text-base text-slate-400 max-w-xl mx-auto lg:mx-0 leading-relaxed font-sans">
-            Suite optimasi sistem operasi Android mandiri untuk <span class="text-slate-200 font-semibold">Mobile Legends, Free Fire, PUBG Mobile, & Genshin Impact</span>. Mengoptimalkan alokasi CPU thread, siklus Choreographer VSYNC, routing DNS, dan akustik spasial tanpa modifikasi biner aplikasi game.
+            Solusi peningkatan performa hardware untuk <span class="text-slate-200 font-semibold">Mobile Legends, Free Fire, PUBG Mobile, & Genshin Impact</span>. Ditenagai AI Sentinel penjaga suhu, respon sentuh 0.1ms, peredam ping, dan equalizer audio spasial tanpa memodifikasi berkas game.
           </p>
 
           <!-- Dual CTAs: Balanced & Professional -->
@@ -624,13 +726,13 @@
       <!-- Section Title -->
       <div class="text-center max-w-2xl mx-auto space-y-2 mb-12">
         <span class="px-3 py-0.5 rounded-full text-xs font-mono font-semibold bg-accent-emerald/10 text-accent-emerald border border-accent-emerald/20">
-          ARSITEKTUR PERFORMA RESMI
+          TEKNOLOGI PERFORMA RESMI
         </span>
         <h2 class="font-display font-bold text-2xl sm:text-4xl text-white">
-          6 Pilar Mesin Utama Game Nuke
+          6 Pilar Keunggulan Game Nuke
         </h2>
         <p class="text-xs sm:text-sm text-slate-400">
-          Dikembangkan dengan rekayasa sistem operasi Android murni tanpa injeksi memori atau manipulasi biner aplikasi game.
+          Dikembangkan dengan optimasi sistem operasi Android murni tanpa injeksi memori atau manipulasi berkas game.
         </p>
       </div>
 
@@ -801,7 +903,7 @@
             <div class="flex items-center justify-between pb-3 border-b border-white/5">
               <div class="flex items-center gap-2">
                 <i class="fa-solid fa-microchip text-accent-emerald"></i>
-                <span class="font-display font-bold text-white text-sm">Game Nuke Cockpit Architecture</span>
+                <span class="font-display font-bold text-white text-sm">Game Nuke Cockpit Engine</span>
               </div>
               <span class="px-2 py-0.5 rounded text-[10px] font-mono bg-obsidian-800 text-slate-300">SECURE SHELL</span>
             </div>
@@ -1220,7 +1322,7 @@
     </div>
   </div>
 
-  <!-- ── Alpine.js Logic Script: Tab-Under Monetization + Session Handshake ── -->
+  <!-- ── Alpine.js Logic Script & Language Translation Bridge ── -->
   <script>
     function gameNukeApp() {
       return {
@@ -1229,6 +1331,7 @@
         activeFaq: 1,
         simulatedFps: 120,
         simulatedTemp: '35.4°C',
+        currentLangLabel: 'ID',
         versionData: {
           versionCode: 16,
           versionName: '2.3.0-prem',
@@ -1240,6 +1343,17 @@
         },
 
         initApp() {
+          // Detect current language label from cookie or storage
+          try {
+            var match = document.cookie.match(/googtrans=\/id\/([a-z]{2})/i);
+            if (match && match[1]) {
+              this.currentLangLabel = match[1].toUpperCase();
+            } else {
+              var saved = localStorage.getItem('gn_user_lang');
+              if (saved) this.currentLangLabel = saved.toUpperCase();
+            }
+          } catch(e) {}
+
           // Fetch live version metadata automatically
           fetch('version.json?v=' + Date.now())
             .then(res => res.json())
@@ -1257,6 +1371,22 @@
             const temps = ['35.2°C', '35.4°C', '35.1°C', '35.5°C', '35.3°C'];
             this.simulatedTemp = temps[Math.floor(Math.random() * temps.length)];
           }, 2500);
+        },
+
+        changeLanguage(langCode) {
+          try {
+            localStorage.setItem('gn_user_lang', langCode);
+            if (langCode === 'id') {
+              // Delete googtrans cookie to restore native Indonesian
+              document.cookie = 'googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+              document.cookie = 'googtrans=; path=/; domain=' + window.location.hostname + '; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+            } else {
+              var cookieVal = '/id/' + langCode;
+              document.cookie = 'googtrans=' + cookieVal + '; path=/; max-age=31536000';
+              document.cookie = 'googtrans=' + cookieVal + '; path=/; domain=' + window.location.hostname + '; max-age=31536000';
+            }
+            window.location.reload();
+          } catch(e) {}
         },
 
         openModal(name) {
@@ -1303,6 +1433,18 @@
       }
     }
   </script>
+
+  <!-- Google Translate Official Free API -->
+  <script type="text/javascript">
+    function googleTranslateElementInit() {
+      new google.translate.TranslateElement({
+        pageLanguage: 'id',
+        includedLanguages: 'id,en,es,pt,th,vi,tl,ms,ru,ja,ko,zh-CN,ar,de,fr,hi',
+        autoDisplay: false
+      }, 'google_translate_element');
+    }
+  </script>
+  <script type="text/javascript" src="//translate.google.com/translate_a/element.js?cb=googleTranslateElementInit"></script>
 
 </body>
 </html>
