@@ -1,0 +1,21 @@
+{
+    "versionCode":  17,
+    "versionName":  "2.4.0-prem",
+    "appName":  "Game Nuke Premium",
+    "publishedAt":  "2026-09-07",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "28.7",
+    "releaseNotes":  [
+                         "Cyber Deck 3-Column Studio: Perfectly square, high-fidelity app drawer cards with instant 0ms in-memory cache",
+                         "Executive Stealth Cyberpunk Antivirus: Matte obsidian glass telemetry overlay with discrete emerald diagnostics",
+                         "In-Game Floating Window Engine: Hardware-accelerated windowing mode 5 with translucent letterboxing (zero gray screens)",
+                         "Zero-Drop Net Turbo VPN: Active asynchronous TUN packet processor with \u003c1ms in-memory DNS caching",
+                         "Live Chat Direct Media: Automatic recursive 302 redirect resolution for Telegram developer photo replies",
+                         "Symmetrical Tactical Cockpit: Responsive, height-aligned floating panels with pixel-perfect card layouts",
+                         "In-App Official Web Updater: Seamless version synchronization directly via gamenukeofficial.com"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.4.0-prem/GameNuke-Premium-v2.4.0.apk",
+    "sha256":  "7445B9F210EC500527545806D19105BAEC18371696A890E5FDF2FB408E509976",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665"
+}
