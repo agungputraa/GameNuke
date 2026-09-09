@@ -91,7 +91,7 @@ class NukeHudToggleView @JvmOverloads constructor(
             when {
                 busy -> Unit
                 supported -> toggle.isChecked = !toggle.isChecked
-                else -> NukeToast.unsupported(context, Tx.t("${label.text} tidak didukung di perangkat ini", "${label.text} is not supported on this device"))
+                else -> NukeToast.unsupported(context, ("${label.text} is not supported on this device"))
             }
         }
     }

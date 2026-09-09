@@ -343,6 +343,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         }
         row.addView(refreshBtn)
 
+
         // Custom styled Close Button (Never clipped/drowned)
         val closeBtn = TextView(context).apply {
             text = "✕"
@@ -1011,7 +1012,8 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 !p.startsWith("com.android.vending") &&
                 !p.startsWith("com.android.systemui") &&
                 !p.contains("launcher", ignoreCase = true) &&
-                !NukeScreenRecordGuardian.isProtected(p)
+                !NukeScreenRecordGuardian.isProtected(p) &&
+                !NukeProcessPurgeGuardian.isProtected(context, p)
             }
 
             val adb = AdbManager.getInstance(context)
@@ -1025,7 +1027,6 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 scriptBuilder.append("""
                     pm trim-caches 9999999999 2>/dev/null
                     am compact all 2>/dev/null
-                    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
                     sync
                 """.trimIndent())
 

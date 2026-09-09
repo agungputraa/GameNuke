@@ -55,8 +55,8 @@ class NotificationHelper(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) actionFlags = actionFlags or PendingIntent.FLAG_MUTABLE
             val actionPendingIntent = PendingIntent.getBroadcast(context, 0, pairIntent, actionFlags)
 
-            val remoteInput = RemoteInput.Builder(EXTRA_REPLY).setLabel(Tx.t("Masukkan Kode 6 Digit", "Enter 6-Digit Code")).build()
-            val action = NotificationCompat.Action.Builder(R.drawable.ic_game_booster_notification, Tx.t("INPUT KODE", "ENTER CODE"), actionPendingIntent)
+            val remoteInput = RemoteInput.Builder(EXTRA_REPLY).setLabel(("Enter 6-Digit Code")).build()
+            val action = NotificationCompat.Action.Builder(R.drawable.ic_game_booster_notification, ("ENTER CODE"), actionPendingIntent)
                 .addRemoteInput(remoteInput).build()
 
             builder.addAction(action)

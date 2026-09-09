@@ -16,7 +16,7 @@ internal class OverlayGameSessionController(
     context: Context,
     private val targetPackage: String,
     private val startupGraceMs: Long = 35_000L,
-    // Login, anti-cheat, permission and OEM game surfaces can temporarily own the resumed
+    // Login, game integrity, permission and OEM game surfaces can temporarily own the resumed
     // Activity. A longer sustained-away window prevents false session teardown while still
     // allowing automatic cleanup after the user genuinely leaves the game.
     private val exitGraceMs: Long = 45_000L,

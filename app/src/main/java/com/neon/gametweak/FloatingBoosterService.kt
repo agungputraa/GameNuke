@@ -91,6 +91,17 @@ class FloatingBoosterService : Service() {
         private const val K_ADAPTIVE_OWN_NETWORK = "adaptive_own_network"
         private const val K_ADAPTIVE_OWN_OEM = "adaptive_own_oem"
         private const val TOUCH_DEBOUNCE_MS = 300L
+
+        @Volatile
+        private var activeInstance: FloatingBoosterService? = null
+
+        fun collapseHub() {
+            activeInstance?.let { service ->
+                android.os.Handler(android.os.Looper.getMainLooper()).post {
+                    service.removeHubWindows()
+                }
+            }
+        }
     }
 
     private enum class EdgeDock { LEFT, RIGHT, TOP, BOTTOM }
@@ -117,6 +128,7 @@ class FloatingBoosterService : Service() {
     private var sessionJob: Job? = null
     private var switchJob: Job? = null
     @Volatile private var moduleActionJob: Job? = null
+    private val hudTools by lazy { NukeHudTools(this, scope) }
     private var stopping = false
     private var lastActionAt = 0L
     private val toggleJobs = EnumMap<FloatingHudToggle, Job>(FloatingHudToggle::class.java)
@@ -125,10 +137,16 @@ class FloatingBoosterService : Service() {
     private var monitorTouchThrough = false
     private var foregroundStarted = false
     private var lastPingMs: Long? = null
+    private val pingSamples = mutableListOf<Long?>()
+    private var pingJitterMs: Long? = null
+    private var pingProbeSuccessPercent: Int? = null
+    private var pingStabilityLabel: String = "--"
     private var pingMeasuring = false
     private var lastAutomaticAlert: String? = null
     private var batteryPercent: Int = -1
     private var batteryTempC: Float? = null
+    private var cpuTempC: Float? = null
+    private var lastCpuTempSampleAt: Long = 0L
     private var networkLabel: String = "--"
     private var wifiRssiDbm: Int? = null
     private var wifiLinkMbps: Int? = null
@@ -167,6 +185,8 @@ class FloatingBoosterService : Service() {
 
     override fun onCreate() {
         super.onCreate()
+        activeInstance = this
+        NukeAntivirusEngine.init(applicationContext)
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         composeLifecycleOwner = OverlayComposeLifecycleOwner().also { it.start() }
@@ -177,15 +197,25 @@ class FloatingBoosterService : Service() {
         prefs.registerOnSharedPreferenceChangeListener(preferenceListener)
         publishRuntime(null)
 
-        // Sync VPN state in real-time to Floating HUD Compose cards
+        scope.launch { hudTools.pingMs.collect { value -> composeHudState.update { it.copy(probeMs = value) } } }
+        scope.launch { hudTools.pingEnabled.collect { enabled -> composeHudState.update { it.copy(probeEnabled = enabled, quickToolStates = it.quickToolStates + ("ping_monitor" to enabled)) } } }
+        // Sync local network tools to floating HUD cards
         scope.launch {
-            NukeVpnService.status.collect { vpn ->
+            NukeNetPacer.status.collect { vpn ->
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vpn_boost" to vpn.isConnected)) }
             }
         }
 
         // Initialize Autonomous AI Game Sentinel (Auto RAM Cache, Zombie Killer & Anti-Overheat)
         NukeAiSentinel.init(applicationContext)
+        NukeUniversalFpsLock.init(applicationContext)
+        scope.launch(Dispatchers.IO) {
+            NukeSystemOptimizer.applyGamingOptimizations(applicationContext)
+            val savedFps = NukeUniversalFpsLock.getTargetFps(applicationContext)
+            if (savedFps > 0) {
+                NukeUniversalFpsLock.setTargetFps(applicationContext, savedFps)
+            }
+        }
         scope.launch {
             NukeAiSentinel.enabled.collect { active ->
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("ai_sentinel" to active)) }
@@ -787,10 +817,13 @@ class FloatingBoosterService : Service() {
             val batchScript = """
                 echo "bright=$(settings get system screen_brightness 2>/dev/null)"
                 echo "dark=$(cmd uimode night 2>/dev/null)"
-                echo "dpi=$(wm density 2>/dev/null)"
                 echo "hot=$(dumpsys wifi 2>/dev/null | grep -m1 -i softApState)"
+                echo "---DPI_START---"
+                wm density 2>/dev/null
+                echo "---DPI_END---"
             """.trimIndent()
-            val result = runCatching { adb.executeCommand(batchScript, "/", 4_000L).output }.getOrDefault("")
+            val privRes = executePrivilegedScript(batchScript, 4_000L)
+            val result = privRes?.output ?: runCatching { adb.executeCommand(batchScript, "/", 4_000L).output }.getOrDefault("")
             val kv = mutableMapOf<String, String>()
             result.lineSequence().forEach { line ->
                 val parts = line.split("=", limit = 2)
@@ -799,7 +832,19 @@ class FloatingBoosterService : Service() {
 
             val rawBright = kv["bright"]?.toIntOrNull()
             val brightPct = if (rawBright != null) ((rawBright / 255.0f) * 100).roundToInt().coerceIn(5, 100) else 100
-            val rawDpi = kv["dpi"]?.substringAfterLast(":")?.trim()?.toIntOrNull() ?: 400
+            
+            // Ground-truth system DPI fallback
+            val sysDpi = resources.configuration.densityDpi.takeIf { it in 120..800 } ?: 400
+            val dpiSection = result.substringAfter("---DPI_START---", "").substringBefore("---DPI_END---", "")
+            val rawDpi = when {
+                dpiSection.contains("Override density:", ignoreCase = true) -> {
+                    Regex("Override density:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(dpiSection)?.groupValues?.get(1)?.toIntOrNull() ?: sysDpi
+                }
+                dpiSection.contains("Physical density:", ignoreCase = true) -> {
+                    Regex("Physical density:\\s*(\\d+)", RegexOption.IGNORE_CASE).find(dpiSection)?.groupValues?.get(1)?.toIntOrNull() ?: sysDpi
+                }
+                else -> sysDpi
+            }
 
             // Only mark unsupported if device explicitly says so
             val unsupported = mutableSetOf<String>()
@@ -847,7 +892,14 @@ class FloatingBoosterService : Service() {
                 "ai_sentinel" to NukeAiSentinel.enabled.value,
                 "ai_cooling" to NukeAiSentinel.isCoolingActive.value,
                 "live_chat" to NukeLiveChatOverlay.getInstance(applicationContext).isShowing,
+                "game_dock" to NukeGameDockOverlay.getInstance(applicationContext).isShowing,
+                "deep_cooling" to NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).isShowing,
+                "antivirus" to NukeAntivirusFloatingOverlay.getInstance(applicationContext).isShowing,
+                "system_editor" to NukeSystemEditorFloatingOverlay.getInstance(applicationContext).isShowing,
             )
+            val dm = resources.displayMetrics
+            val minPx = minOf(dm.widthPixels, dm.heightPixels).coerceAtLeast(720)
+            val currentDp = ((minPx * 160f) / rawDpi).roundToInt().coerceIn(320, 640)
 
             withContext(Dispatchers.Main.immediate) {
                 composeHudState.update { snap ->
@@ -856,7 +908,7 @@ class FloatingBoosterService : Service() {
                         quickToolStates = snap.quickToolStates + states,
                         unsupportedQuickTools = unsupported,
                         brightnessPercent = brightPct,
-                        displayDpi = rawDpi,
+                        displayDpi = currentDp,
                     )
                 }
             }
@@ -879,13 +931,24 @@ class FloatingBoosterService : Service() {
     }
 
     private fun handleDpiSlider(dpi: Int) {
-        val targetDpi = dpi.coerceIn(320, 600)
-        composeHudState.update { it.copy(displayDpi = targetDpi) }
+        val targetDp = dpi.coerceIn(320, 640)
+        composeHudState.update { it.copy(displayDpi = targetDp) }
         scope.launch(Dispatchers.IO) {
-            val adb = AdbManager.getInstance(applicationContext)
-            adb.executeCommand("wm density $targetDpi 2>/dev/null", "/", 4_000L)
+            // Invert to match gamer Smallest Width DP expectation:
+            // higher targetDp -> lower density -> UI elements shrink, screen becomes spacious!
+            val dm = resources.displayMetrics
+            val minPx = minOf(dm.widthPixels, dm.heightPixels).coerceAtLeast(720)
+            val calculatedDensity = ((minPx * 160f) / targetDp).roundToInt().coerceIn(160, 640)
+
+            val res = executePrivilegedScript("wm density $calculatedDensity 2>/dev/null", 4_000L)
+            if (res == null || !res.isSuccess) {
+                runCatching {
+                    val adb = AdbManager.getInstance(applicationContext)
+                    adb.executeCommand("wm density $calculatedDensity 2>/dev/null", "/", 4_000L)
+                }
+            }
             withContext(Dispatchers.Main.immediate) {
-                toastOutcome("Display Density: ${targetDpi} DPI")
+                toastOutcome("Display Scale: ${targetDp} DP (Density $calculatedDensity)")
             }
         }
     }
@@ -901,11 +964,19 @@ class FloatingBoosterService : Service() {
         // Optimistic UI state update immediately (0ms visual feedback!)
         val currentActive = composeHudState.value.quickToolStates[action] ?: false
         val nextVal = !currentActive
-        if (action != "deep_clean" && action != "screenshot" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal") {
+        if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor") {
             prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
             composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
         }
 
+        if (action in setOf("app_switch", "ping_monitor", "crosshair_studio")) {
+            when (action) {
+                "app_switch" -> hudTools.openRecentApps()
+                "ping_monitor" -> hudTools.togglePing()
+                "crosshair_studio" -> openCrosshairStudio()
+            }
+            return
+        }
         when (action) {
             "game_mode" -> {
                 val local = engine ?: run { toastOutcome("Game Nuke core is not ready"); return }
@@ -918,35 +989,29 @@ class FloatingBoosterService : Service() {
                 }
             }
             "dnd" -> {
-                scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
-                    val script = if (nextVal) {
-                        "cmd notification set_interruption_filter priority 2>/dev/null || settings put global zen_mode 1 2>/dev/null || cmd notification set_zen_mode 1 2>/dev/null"
-                    } else {
-                        "cmd notification set_interruption_filter all 2>/dev/null || settings put global zen_mode 0 2>/dev/null || cmd notification set_zen_mode 0 2>/dev/null"
-                    }
-                    adb.executeCommand(script, "/", 3_000L)
-                    withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (nextVal) "Do Not Disturb: ON" else "Do Not Disturb: OFF")
-                    }
+                scope.launch {
+                    val applied = applyGamingDndShell(nextVal)
+                    toastOutcome(when {
+                        applied && nextVal -> "Gaming DND: notifications & call pop-ups silenced"
+                        applied -> "Gaming DND: restored"
+                        else -> "Gaming DND needs Notification Policy access or a privileged shell backend"
+                    })
                 }
             }
             "touch_response" -> {
-                scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
-                    val nextSpeed = if (nextVal) 7 else 0
-                    val script = """
-                        settings put system pointer_speed $nextSpeed 2>/dev/null
-                        setprop debug.touch.pressure.scale ${if (nextVal) "0.001" else "1.0"} 2>/dev/null
-                        setprop debug.touch.size.scale ${if (nextVal) "0.001" else "1.0"} 2>/dev/null
-                        setprop persist.sys.touch.response ${if (nextVal) "1" else "0"} 2>/dev/null
-                        settings put secure tap_duration_threshold 0 2>/dev/null
-                        settings put secure touch_blocking_period 0 2>/dev/null
-                    """.trimIndent()
-                    adb.executeCommand(script, "/", 3_000L)
-                    withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (nextVal) "Touch Response: HIGH SENSITIVITY" else "Touch Response: STANDARD")
-                    }
+                scope.launch {
+                    val report = NukeTouchTuningEngine.apply(
+                        context = applicationContext,
+                        pointerSpeed = if (nextVal) 7 else 0,
+                        enableVendorGameTouch = nextVal,
+                        preferLowLatencyShell = nextVal,
+                    )
+                    NukeTouchTuningEngine.updateInjectedDragProfile(
+                        if (nextVal) 72 else 50,
+                        if (nextVal) 78 else 50,
+                        antiJitter = false,
+                    )
+                    toastOutcome(if (nextVal) "Touch Boost: ${report.summary}" else "Touch Boost: STANDARD")
                 }
             }
             "net_boost" -> {
@@ -986,7 +1051,7 @@ class FloatingBoosterService : Service() {
                         // Strategy 3: Open hotspot settings UI for user
                         adb.executeCommand("am start -n com.android.settings/.TetherSettings 2>/dev/null", "/", 3_000L)
                         withContext(Dispatchers.Main.immediate) {
-                            toastOutcome("Hotspot: Buka Settings Hotspot (tap toggle)")
+                            toastOutcome("Hotspot: Opening Settings (toggle manually)")
                             // Revert UI state since we couldn't toggle programmatically
                             prefs.edit().putBoolean("nuke_quick_hotspot", false).apply()
                             composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("hotspot" to false)) }
@@ -1007,9 +1072,8 @@ class FloatingBoosterService : Service() {
                     val myPkg = packageName
                     val gamePkg = NukeRuntimeState.state.value.activePackage ?: ""
 
-                    // Phase 1: Native AM kill-all & POSIX background process elimination (Android 14 toybox compatible)
+                    // Phase 1: Safe POSIX background process elimination (Strictly protects game, screen recorders, and Game Nuke)
                     val killScript = """
-                        am kill-all 2>/dev/null
                         for p in $(dumpsys activity processes 2>/dev/null | grep 'ProcessRecord{' | grep -E 'adj=(9[0-9]{2}|1[0-9]{3})' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u); do
                             [ -n "${'$'}p" ] && [ -d "/proc/${'$'}p" ] || continue
                             cmd=$(cat /proc/${'$'}p/cmdline 2>/dev/null | tr '\0' ' ' | awk '{print ${'$'}1}')
@@ -1025,44 +1089,19 @@ class FloatingBoosterService : Service() {
                     """.trimIndent()
                     adb.executeCommand(killScript, "/", 6_000L)
 
-                    // Phase 2: Kernel drop caches, memory compaction, package cache trimming, and trim-memory broadcast
+                    // Phase 2: Memory compaction, package cache trimming, and safe trim-memory
                     val memScript = """
                         am compact all 2>/dev/null
                         pm trim-caches 999999999999 2>/dev/null
-                        echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
-                        echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
                         for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-                            [ -n "${'$'}pkg" ] && [ "${'$'}pkg" != "$myPkg" ] && [ "${'$'}pkg" != "$gamePkg" ] && am send-trim-memory ${'$'}pkg COMPLETE 2>/dev/null
+                            [ -n "${'$'}pkg" ] && [ "${'$'}pkg" != "$myPkg" ] && [ "${'$'}pkg" != "$gamePkg" ] && am send-trim-memory ${'$'}pkg RUNNING_LOW 2>/dev/null
                         done
-                        am send-trim-memory 0 RUNNING_CRITICAL 2>/dev/null
                         sync
                     """.trimIndent()
                     adb.executeCommand(memScript, "/", 6_000L)
 
-                    // Phase 3: Comprehensive storage junk purge (logcat, tombstones, ANR, caches, thumbnails, temp)
-                    val cleanScript = """
-                        logcat -c 2>/dev/null
-                        rm -rf /data/tombstones/* 2>/dev/null
-                        rm -rf /data/anr/* 2>/dev/null
-                        rm -rf /data/system/dropbox/* 2>/dev/null
-                        rm -rf /data/local/tmp/* 2>/dev/null
-                        rm -rf /data/local/tmp/.* 2>/dev/null
-                        find /data/data -maxdepth 3 \( -name 'cache' -o -name 'code_cache' \) -type d -exec rm -rf {}/* \; 2>/dev/null
-                        rm -rf /sdcard/Android/data/*/cache/* 2>/dev/null
-                        rm -rf /sdcard/Android/data/*/code_cache/* 2>/dev/null
-                        rm -rf /sdcard/Android/data/*/.cache/* 2>/dev/null
-                        rm -rf /sdcard/Android/media/*/cache/* 2>/dev/null
-                        rm -rf /sdcard/Android/obb/*/cache/* 2>/dev/null
-                        rm -rf /sdcard/.thumbnails/* 2>/dev/null
-                        rm -rf /sdcard/DCIM/.thumbnails/* 2>/dev/null
-                        rm -rf /sdcard/Pictures/.thumbnails/* 2>/dev/null
-                        rm -rf /sdcard/Download/.trash/* 2>/dev/null
-                        rm -rf /sdcard/.trash/* 2>/dev/null
-                        rm -rf /sdcard/.cache/* 2>/dev/null
-                        find /sdcard/Download /sdcard/Android/data -maxdepth 3 -type f \( -name '*.log' -o -name '*.tmp' -o -name '*.bak' -o -name '*.dmp' \) -delete 2>/dev/null
-                        sync
-                    """.trimIndent()
-                    adb.executeCommand(cleanScript, "/", 10_000L)
+                    // Phase 3: Safe storage junk purge (logcat, tombstones, ANR, public thumbnails, temp) - Never touch code_cache or game data!
+                    NukeProcessPurgeGuardian.cleanCachesSafe(applicationContext)
 
                     // Phase 4: Engine-level deep reclaim and metrics sync
                     runCatching {
@@ -1080,9 +1119,9 @@ class FloatingBoosterService : Service() {
                     val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
 
                     withContext(Dispatchers.Main.immediate) {
-                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB RAM Bebas" else "+512MB RAM Dioptimalkan"
-                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB Sampah Dihapus" else "+1.2GB Cache Dibersihkan"
-                        toastOutcome("DEEP CLEAN SELESAI! $ramStr ✓ $storStr")
+                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB RAM Freed" else "+512MB RAM Optimized"
+                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB Storage Purged" else "+1.2GB Cache Purged"
+                        toastOutcome("DEEP CLEAN COMPLETE! $ramStr ✓ $storStr")
                     }
                 }
             }
@@ -1098,18 +1137,6 @@ class FloatingBoosterService : Service() {
                     }
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Ringer: SILENT (Muted)" else "Ringer: NORMAL SOUND")
-                    }
-                }
-            }
-            "screenshot" -> {
-                scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
-                    val timestamp = System.currentTimeMillis()
-                    val path = "/sdcard/Pictures/Screenshots/GameNuke_$timestamp.png"
-                    val r = adb.executeCommand("screencap -p $path 2>/dev/null ; am broadcast -a android.intent.action.MEDIA_SCANNER_SCAN_FILE -d file://$path 2>/dev/null")
-                    withContext(Dispatchers.Main.immediate) {
-                        if (r.isSuccess) toastOutcome("Screenshot Saved: GameNuke_$timestamp.png")
-                        else toastOutcome("Screenshot Captured")
                     }
                 }
             }
@@ -1291,6 +1318,30 @@ class FloatingBoosterService : Service() {
                 overlay.toggle()
                 toastOutcome(if (overlay.isShowing) "💻 Cyber Terminal: OPEN" else "💻 Cyber Terminal: CLOSED")
             }
+            "game_dock" -> {
+                val dock = NukeGameDockOverlay.getInstance(applicationContext)
+                val showing = dock.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("game_dock" to showing)) }
+                toastOutcome(if (showing) "🚀 Cyber Deck: ACTIVE (Screen Edge)" else "🚀 Cyber Deck: CLOSED")
+            }
+            "deep_cooling" -> {
+                val overlay = NukeDeepCoolingFloatingOverlay.getInstance(applicationContext)
+                val showing = overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("deep_cooling" to showing)) }
+                toastOutcome(if (showing) "❄️ AI Deep Cooling Studio: ACTIVE" else "❄️ AI Deep Cooling Studio: CLOSED")
+            }
+            "antivirus" -> {
+                val overlay = NukeAntivirusFloatingOverlay.getInstance(applicationContext)
+                val showing = overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("antivirus" to showing)) }
+                toastOutcome(if (showing) "🛡️ Cyber Shield Sentinel: ACTIVE" else "🛡️ Cyber Shield: CLOSED")
+            }
+            "system_editor" -> {
+                val overlay = NukeSystemEditorFloatingOverlay.getInstance(applicationContext)
+                val showing = overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("system_editor" to showing)) }
+                toastOutcome(if (showing) "⚡ Device System Editor: OPEN" else "⚡ Device System Editor: CLOSED")
+            }
             "ai_sentinel" -> {
                 NukeAiSentinel.toggle(applicationContext)
                 val active = NukeAiSentinel.enabled.value
@@ -1302,46 +1353,18 @@ class FloatingBoosterService : Service() {
                 }
                 toastOutcome(msg)
             }
+
             "vpn_boost" -> {
-                if (NukeVpnService.isRunning) {
-                    NukeVpnService.stopBoost(applicationContext)
-                    scope.launch(Dispatchers.IO) {
-                        val adb = AdbManager.getInstance(applicationContext)
-                        val restoreScript = "settings put global wifi_scan_always_enabled 1 2>/dev/null"
-                        if (adb.isConnected()) adb.executeCommand(restoreScript, "/", 2000L)
-                        else NukeConnectionManager.executeCommand(restoreScript, 2000L)
-                    }
-                    toastOutcome("Net Turbo: OFF")
-                } else {
-                    val prepareIntent = NukeVpnService.prepare(applicationContext)
-                    if (prepareIntent == null) {
-                        // Already granted
-                        NukeVpnService.startBoost(applicationContext, NukeVpnService.BoostMode.PING_BOOST)
-                        scope.launch(Dispatchers.IO) {
-                            val adb = AdbManager.getInstance(applicationContext)
-                            val netScript = """
-                                settings put global wifi_scan_always_enabled 0 2>/dev/null
-                                settings put global ble_scan_always_enabled 0 2>/dev/null
-                                settings put global private_dns_mode hostname 2>/dev/null
-                                settings put global private_dns_specifier one.one.one.one 2>/dev/null
-                            """.trimIndent()
-                            if (adb.isConnected()) adb.executeCommand(netScript, "/", 2000L)
-                            else NukeConnectionManager.executeCommand(netScript, 2000L)
-                        }
-                        toastOutcome("Net Turbo: ACTIVE ⚡ (Cloudflare DNS + Jitter Shield)")
-                    } else {
-                        // Launch transparent trampoline to show system VPN dialog
-                        // without any visible app redirect or transition flash.
-                        val intent = Intent(applicationContext, NukeVpnTrampolineActivity::class.java).apply {
-                            addFlags(
-                                Intent.FLAG_ACTIVITY_NEW_TASK or
-                                Intent.FLAG_ACTIVITY_CLEAR_TOP or
-                                Intent.FLAG_ACTIVITY_NO_ANIMATION
-                            )
-                        }
-                        startActivity(intent)
+                if (NukeNetPacer.isRunning) NukeNetPacer.stopBoost(applicationContext)
+                else {
+                    NukeNetPacer.startBoost(applicationContext)
+                    scope.launch {
+                        runCatching { NukeNetPacer.connect("one.one.one.one", 443).use { } }
+                            .onSuccess { toastOutcome("Game Nuke TCP connect: ${NukeNetPacer.status.value.measuredPingMs} ms (not game latency)") }
+                            .onFailure { toastOutcome("Local network check unavailable") }
                     }
                 }
+                toastOutcome("Local network tools: " + if (NukeNetPacer.isRunning) "ON (Game Nuke connections only)" else "OFF")
             }
             "brightness_lock" -> {
                 scope.launch(Dispatchers.IO) {
@@ -1366,109 +1389,25 @@ class FloatingBoosterService : Service() {
             }
             "fps_lock" -> {
                 scope.launch(Dispatchers.IO) {
-                    val script = if (nextVal) {
-                        """
-                            # AOSP Universal
-                            settings put system peak_refresh_rate 120.0 2>/dev/null
-                            settings put system min_refresh_rate 120.0 2>/dev/null
-                            settings put system peak_refresh_rate 120 2>/dev/null
-                            settings put system min_refresh_rate 120 2>/dev/null
-                            settings put system user_refresh_rate 120 2>/dev/null
-                            settings put secure user_refresh_rate 120 2>/dev/null
-
-                            # Xiaomi HyperOS & MIUI (Bypass Joyose thermal limit throttling)
-                            settings put secure miui_refresh_rate 120 2>/dev/null
-                            settings put system miui_refresh_rate 120 2>/dev/null
-                            settings put system thermal_limit_refresh_rate 120 2>/dev/null
-                            settings put system thermal_limit_refresh_rate 0 2>/dev/null
-                            settings put system power_save_refresh_rate 1 2>/dev/null
-
-                            # Samsung OneUI (2 = High 120Hz lock)
-                            settings put secure refresh_rate_mode 2 2>/dev/null
-                            settings put system refresh_rate_mode 2 2>/dev/null
-                            settings put system high_refresh_rate_mode 1 2>/dev/null
-
-                            # OnePlus / OPPO / Realme (2 = 120Hz mode)
-                            settings put global oneplus_screen_refresh_rate 2 2>/dev/null
-                            settings put system oplus_customize_refresh_rate 2 2>/dev/null
-                            settings put system lock_refresh_rate 120 2>/dev/null
-                            settings put system customize_refresh_rate 120 2>/dev/null
-
-                            # Asus ROG Phone
-                            settings put system fps_mode 2 2>/dev/null
-                            settings put system refresh_rate 120 2>/dev/null
-
-                            # Prevent video/game frame rate downscale matching
-                            cmd display set-match-content-frame-rate-pref 0 2>/dev/null
-
-                            # SurfaceFlinger high refresh rate hint
-                            setprop debug.sf.fps 120 2>/dev/null
-                            setprop debug.sf.max_fps 120 2>/dev/null
-                            setprop persist.sys.fps 120 2>/dev/null
-                            service call SurfaceFlinger 1035 i32 1 2>/dev/null
-                        """.trimIndent()
-                    } else {
-                        """
-                            # AOSP Restore
-                            settings put system peak_refresh_rate 120.0 2>/dev/null
-                            settings put system min_refresh_rate 60.0 2>/dev/null
-                            settings put system peak_refresh_rate 120 2>/dev/null
-                            settings put system min_refresh_rate 60 2>/dev/null
-                            settings put system user_refresh_rate 0 2>/dev/null
-                            settings put secure user_refresh_rate 0 2>/dev/null
-
-                            # Xiaomi Restore
-                            settings put secure miui_refresh_rate 0 2>/dev/null
-                            settings put system miui_refresh_rate 0 2>/dev/null
-                            settings delete system thermal_limit_refresh_rate 2>/dev/null
-
-                            # Samsung Restore (1 = Adaptive)
-                            settings put secure refresh_rate_mode 1 2>/dev/null
-                            settings put system refresh_rate_mode 1 2>/dev/null
-
-                            # OnePlus / OPPO Restore (0 = Auto)
-                            settings put global oneplus_screen_refresh_rate 0 2>/dev/null
-                            settings put system oplus_customize_refresh_rate 0 2>/dev/null
-                            settings put system lock_refresh_rate 0 2>/dev/null
-
-                            # Restore display match content frame rate
-                            cmd display set-match-content-frame-rate-pref 1 2>/dev/null
-                        """.trimIndent()
-                    }
-                    executePrivilegedScript(script, 4_000L)
+                    val nextHz = NukeUniversalFpsLock.cycleNextTarget(applicationContext)
+                    val active = nextHz > 0
+                    composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("fps_lock" to active)) }
                     withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (nextVal) "Display Refresh: LOCKED 120Hz (Multi-OEM)" else "Display Refresh: DYNAMIC AUTO")
+                        toastOutcome(if (active) "FPS Lock: LOCKED $nextHz Hz (All Games)" else "FPS Lock: DYNAMIC AUTO")
                     }
                 }
             }
-            "anti_mistouch" -> {
+            "zombie_clean" -> {
                 scope.launch(Dispatchers.IO) {
-                    val script = if (nextVal) {
-                        "settings put secure edge_touch_prevention 1 2>/dev/null ; settings put system edge_mistouch_prevention 1 2>/dev/null"
-                    } else {
-                        "settings put secure edge_touch_prevention 0 2>/dev/null ; settings put system edge_mistouch_prevention 0 2>/dev/null"
-                    }
-                    executePrivilegedScript(script, 3_000L)
+                    val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
                     withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (nextVal) "Anti-Mistouch Palm Shield: ON" else "Anti-Mistouch: OFF")
+                        val freedText = if (freedMb > 0) "Freed ~${freedMb}MB RAM" else "Memory Compacted"
+                        toastOutcome("Memory Optimization: $freedText • $killed Tasks Trimmed")
                     }
                 }
             }
-            "check_update" -> {
-                NukeAppUpdater.checkForUpdates(
-                    context = applicationContext,
-                    onUpdateAvailable = { updateInfo ->
-                        toastOutcome("Update Baru: v${updateInfo.versionName}! Mengunduh APK…")
-                        NukeAppUpdater.startDownloadAndInstall(applicationContext, updateInfo)
-                    },
-                    onUpToDate = {
-                        toastOutcome("Game Nuke sudah versi terbaru!")
-                    },
-                    onError = { err ->
-                        toastOutcome("Cek update gagal: $err")
-                    }
-                )
-            }
+
+            "check_update" -> { AppUpdateController.openOfficialWebsite(applicationContext) }
             "footstep_boost" -> {
                 val nextActive = NukeAudioBooster.toggleFootstepBoost(applicationContext)
                 toastOutcome(if (nextActive) "Footstep Boost: ACTIVE (1kHz-4kHz)" else "Footstep Boost: OFF")
@@ -1580,6 +1519,18 @@ class FloatingBoosterService : Service() {
         }
     }
 
+    private suspend fun applyGamingDndShell(enabled: Boolean): Boolean = withContext(Dispatchers.IO) {
+        val script = if (enabled) {
+            "cmd notification set_interruption_filter none 2>/dev/null || settings put global zen_mode 2 2>/dev/null"
+        } else {
+            "cmd notification set_interruption_filter all 2>/dev/null || settings put global zen_mode 0 2>/dev/null"
+        }
+        NukeConnectionManager.executeCommand(script, 2_500L)?.isSuccess == true || run {
+            val adb = AdbManager.getInstance(applicationContext)
+            if (adb.isConnected()) adb.executeCommand(script, "/", 2_500L)?.isSuccess == true else false
+        }
+    }
+
     private fun handleComposeToggle(toggle: FloatingHudToggle, requested: Boolean) {
         if (toggleJobs[toggle]?.isActive == true) return
         when (toggle) {
@@ -1588,10 +1539,23 @@ class FloatingBoosterService : Service() {
             }
             FloatingHudToggle.DND -> {
                 val state = engine?.state?.value
-                if (state?.dndAccess == true) submitComposeToggle(toggle, requested) { it.setGameFocus(requested) }
-                else {
-                    if (openExternalPanelOnce(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))) {
-                        toastStatus("Opening Do Not Disturb access settings — return to Game Nuke when done", long = true)
+                when {
+                    state?.dndAccess == true -> submitComposeToggle(toggle, requested) { it.setGameFocus(requested) }
+                    NukeConnectionManager.isConnected() -> scope.launch {
+                        val applied = applyGamingDndShell(requested)
+                        if (applied) {
+                            composeHudState.update { current ->
+                                current.copy(quickToolStates = current.quickToolStates + ("dnd" to requested))
+                            }
+                            toastOutcome(if (requested) "Gaming DND enabled via ${NukeConnectionManager.connectionLabel()}" else "Gaming DND restored")
+                        } else {
+                            toastOutcome("Gaming DND command was rejected")
+                        }
+                    }
+                    else -> {
+                        if (openExternalPanelOnce(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS))) {
+                            toastStatus("Grant Do Not Disturb access once; Game Nuke will reuse it for future sessions", long = true)
+                        }
                     }
                 }
             }
@@ -2259,9 +2223,22 @@ class FloatingBoosterService : Service() {
 
     private fun openCrosshairStudio() {
         val key = "crosshair_studio"
-        if (windows.containsKey(key)) { removeWindow(key); return }
-        val view = moduleView("CROSSHAIR STUDIO", "RESTORED // NON-TOUCHABLE GAME OVERLAY")
+        if (windows.containsKey(key)) {
+            removeWindow(key)
+            return
+        }
+        val view = moduleView("CROSSHAIR STUDIO", "OBSIDIAN CALIBRATION // 1PX NUDGE")
         val content = view.findViewById<LinearLayout>(R.id.moduleActions)
+        val styles = NukeCrosshairView.Style.entries
+        val colors = intArrayOf(
+            Color.rgb(255, 45, 85),   // Neon Red
+            Color.rgb(0, 230, 118),   // Cyber Green
+            Color.rgb(0, 240, 255),   // Electric Cyan
+            Color.rgb(255, 213, 79),  // Gold
+            Color.WHITE,
+            Color.rgb(255, 60, 172),  // Hot Pink
+        )
+        val colorNames = listOf("Neon Red", "Cyber Green", "Electric Cyan", "Gold", "White", "Hot Pink")
 
         val enabled = Switch(this).apply {
             text = "Enable crosshair overlay"
@@ -2270,70 +2247,147 @@ class FloatingBoosterService : Service() {
             setOnCheckedChangeListener { _, checked ->
                 prefs.edit().putBoolean("cross_en", checked).apply()
                 syncCrosshairOverlay()
-                toastOutcome("Crosshair overlay ${if (checked) "enabled" else "disabled"}")
+                toastOutcome("Crosshair ${if (checked) "enabled" else "disabled"}")
             }
         }
         content.addView(enabled)
+
         val preview = NukeCrosshairView(this).apply {
             enabledCrosshair = true
-            style = NukeCrosshairView.Style.values()[prefs.safeInt("cross_type", 1).coerceIn(0, 3)]
-            crosshairColor = prefs.safeInt("cross_color", NukeHudPalette.Green)
+            style = styles[prefs.safeInt("cross_type", 1).coerceIn(0, styles.lastIndex)]
+            crosshairColor = prefs.safeInt("cross_color", colors[2])
             sizeDp = prefs.safeInt("cross_size", 22).toFloat()
             gapDp = prefs.safeInt("cross_gap", 6).toFloat()
             thicknessDp = prefs.safeInt("cross_thickness", 2).toFloat()
-            opacity = prefs.safeInt("cross_opacity", 95) / 100f
-            centerDot = prefs.safeBoolean("cross_dot", true)
+            opacity = prefs.safeInt("cross_opacity", 95).coerceIn(5, 100) / 100f
+            offsetXPx = prefs.safeInt("cross_x", 0).toFloat()
+            offsetYPx = prefs.safeInt("cross_y", 0).toFloat()
             outline = prefs.safeBoolean("cross_outline", true)
             background = getDrawable(R.drawable.nuke_hud_glass)
-            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(112)).apply { bottomMargin = dp(6) }
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(112)).apply {
+                bottomMargin = dp(6)
+            }
         }
         content.addView(preview)
 
-        content.addView(controlTitle("STYLE"))
-        val styles = listOf("DOT", "CROSS", "CIRCLE", "TACTIC")
-        val styleSpinner = spinner(styles, prefs.safeInt("cross_type", 1).coerceIn(0, styles.lastIndex)) { index ->
-            prefs.edit().putInt("cross_type", index).apply(); preview.style = NukeCrosshairView.Style.values()[index]; syncCrosshairOverlay()
-        }
-        content.addView(styleSpinner)
+        content.addView(controlTitle("TYPE"))
+        content.addView(
+            spinner(
+                listOf("DOT", "CLASSIC CROSS", "CIRCLE DOT", "CHEVRON", "SNIPER T", "BOX BRACKET", "DYNAMIC GAP"),
+                prefs.safeInt("cross_type", 1).coerceIn(0, styles.lastIndex),
+            ) { index ->
+                prefs.edit().putInt("cross_type", index).apply()
+                preview.style = styles[index]
+                syncCrosshairOverlay()
+            },
+        )
 
         content.addView(controlTitle("COLOR"))
-        val colorNames = listOf("Nuke Green", "Red", "Amber", "Magenta", "White", "Cyan")
-        val colors = intArrayOf(
-            NukeHudPalette.Green, Color.rgb(255, 82, 82), Color.rgb(255, 193, 7),
-            Color.rgb(230, 65, 160), Color.WHITE, Color.rgb(64, 210, 235),
-        )
-        val currentColor = prefs.safeInt("cross_color", colors[0])
-        val colorIndex = colors.indexOf(currentColor).takeIf { it >= 0 } ?: 0
-        content.addView(spinner(colorNames, colorIndex) { index -> prefs.edit().putInt("cross_color", colors[index]).apply(); preview.crosshairColor = colors[index]; syncCrosshairOverlay() })
+        val currentColor = prefs.safeInt("cross_color", colors[2])
+        val colorIndex = colors.indexOf(currentColor).takeIf { it >= 0 } ?: 2
+        content.addView(spinner(colorNames, colorIndex) { index ->
+            prefs.edit().putInt("cross_color", colors[index]).apply()
+            preview.crosshairColor = colors[index]
+            syncCrosshairOverlay()
+        })
 
-        content.addView(seekControl("SIZE", 8, 64, prefs.safeInt("cross_size", 22)) { prefs.edit().putInt("cross_size", it).apply(); preview.sizeDp = it.toFloat(); syncCrosshairOverlay() })
-        content.addView(seekControl("CENTER GAP", 0, 28, prefs.safeInt("cross_gap", 6)) { prefs.edit().putInt("cross_gap", it).apply(); preview.gapDp = it.toFloat(); syncCrosshairOverlay() })
-        content.addView(seekControl("THICKNESS", 1, 6, prefs.safeInt("cross_thickness", 2)) { prefs.edit().putInt("cross_thickness", it).apply(); preview.thicknessDp = it.toFloat(); syncCrosshairOverlay() })
-        content.addView(seekControl("OPACITY", 20, 100, prefs.safeInt("cross_opacity", 95)) { prefs.edit().putInt("cross_opacity", it).apply(); preview.opacity = it / 100f; syncCrosshairOverlay() })
-        content.addView(seekControl("X OFFSET", -300, 300, prefs.safeInt("cross_x", 0)) { prefs.edit().putInt("cross_x", it).apply(); syncCrosshairOverlay() })
-        content.addView(seekControl("Y OFFSET", -300, 300, prefs.safeInt("cross_y", 0)) { prefs.edit().putInt("cross_y", it).apply(); syncCrosshairOverlay() })
+        content.addView(seekControl("SIZE DP", 8, 64, prefs.safeInt("cross_size", 22)) {
+            prefs.edit().putInt("cross_size", it).apply()
+            preview.sizeDp = it.toFloat()
+            syncCrosshairOverlay()
+        })
+        content.addView(seekControl("THICKNESS DP", 1, 6, prefs.safeInt("cross_thickness", 2)) {
+            prefs.edit().putInt("cross_thickness", it).apply()
+            preview.thicknessDp = it.toFloat()
+            syncCrosshairOverlay()
+        })
+        content.addView(seekControl("CENTER GAP DP", 0, 28, prefs.safeInt("cross_gap", 6)) {
+            prefs.edit().putInt("cross_gap", it).apply()
+            preview.gapDp = it.toFloat()
+            syncCrosshairOverlay()
+        })
+        content.addView(seekControl("ALPHA %", 5, 100, prefs.safeInt("cross_opacity", 95)) {
+            prefs.edit().putInt("cross_opacity", it).apply()
+            preview.opacity = it / 100f
+            syncCrosshairOverlay()
+        })
 
-        val dot = CheckBox(this).apply {
-            text = "Center dot"
-            isChecked = prefs.safeBoolean("cross_dot", true)
-            styleCheck(this)
-            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("cross_dot", checked).apply(); preview.centerDot = checked; syncCrosshairOverlay(); toastOutcome("Crosshair center dot ${if (checked) "enabled" else "disabled"}") }
+        content.addView(controlTitle("1-PIXEL POSITION CALIBRATION"))
+        val positionLabel = TextView(this).apply {
+            setTextColor(NukeHudPalette.Text)
+            textSize = 9f
+            gravity = Gravity.CENTER
+            setPadding(dp(4), dp(5), dp(4), dp(5))
         }
+        fun refreshPositionLabel() {
+            positionLabel.text = "X ${prefs.safeInt("cross_x", 0)} px   •   Y ${prefs.safeInt("cross_y", 0)} px"
+            preview.offsetXPx = prefs.safeInt("cross_x", 0).toFloat()
+            preview.offsetYPx = prefs.safeInt("cross_y", 0).toFloat()
+        }
+        fun nudge(dx: Int, dy: Int) {
+            val x = (prefs.safeInt("cross_x", 0) + dx).coerceIn(-1200, 1200)
+            val y = (prefs.safeInt("cross_y", 0) + dy).coerceIn(-1200, 1200)
+            prefs.edit().putInt("cross_x", x).putInt("cross_y", y).apply()
+            refreshPositionLabel()
+            syncCrosshairOverlay()
+        }
+        fun nudgeButton(symbol: String, dx: Int, dy: Int): TextView = TextView(this).apply {
+            text = symbol
+            textSize = 14f
+            setTextColor(NukeHudPalette.Cyan)
+            gravity = Gravity.CENTER
+            typeface = android.graphics.Typeface.DEFAULT_BOLD
+            background = getDrawable(R.drawable.nuke_hud_button)
+            minWidth = dp(44)
+            minHeight = dp(36)
+            setOnClickListener { nudge(dx, dy) }
+        }
+        fun dpadRow(left: View?, middle: View?, right: View?): LinearLayout = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER
+            listOf(left, middle, right).forEach { child ->
+                val actual = child ?: View(this@FloatingBoosterService)
+                addView(actual, LinearLayout.LayoutParams(dp(48), dp(38)).apply { marginStart = dp(2); marginEnd = dp(2) })
+            }
+        }
+        content.addView(positionLabel, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(34)))
+        val centerMark = TextView(this).apply {
+            text = "◎"
+            textSize = 13f
+            setTextColor(NukeHudPalette.Muted)
+            gravity = Gravity.CENTER
+        }
+        content.addView(dpadRow(null, nudgeButton("↑", 0, -1), null))
+        content.addView(dpadRow(nudgeButton("←", -1, 0), centerMark, nudgeButton("→", 1, 0)))
+        content.addView(dpadRow(null, nudgeButton("↓", 0, 1), null))
+        refreshPositionLabel()
+
         val outline = CheckBox(this).apply {
             text = "Dark contrast outline"
             isChecked = prefs.safeBoolean("cross_outline", true)
             styleCheck(this)
-            setOnCheckedChangeListener { _, checked -> prefs.edit().putBoolean("cross_outline", checked).apply(); preview.outline = checked; syncCrosshairOverlay(); toastOutcome("Crosshair outline ${if (checked) "enabled" else "disabled"}") }
+            setOnCheckedChangeListener { _, checked ->
+                prefs.edit().putBoolean("cross_outline", checked).apply()
+                preview.outline = checked
+                syncCrosshairOverlay()
+            }
         }
-        content.addView(dot); content.addView(outline)
+        content.addView(outline)
         content.addView(actionButton("RESET CROSSHAIR") {
             prefs.edit()
-                .putInt("cross_type", 1).putInt("cross_color", colors[0])
-                .putInt("cross_size", 22).putInt("cross_gap", 6).putInt("cross_thickness", 2)
-                .putInt("cross_opacity", 95).putInt("cross_x", 0).putInt("cross_y", 0)
-                .putBoolean("cross_dot", true).putBoolean("cross_outline", true).apply()
+                .putInt("cross_type", 1)
+                .putInt("cross_color", colors[2])
+                .putInt("cross_size", 22)
+                .putInt("cross_gap", 6)
+                .putInt("cross_thickness", 2)
+                .putInt("cross_opacity", 95)
+                .putInt("cross_x", 0)
+                .putInt("cross_y", 0)
+                .putBoolean("cross_outline", true)
+                .apply()
             toastOutcome("Crosshair settings reset")
-            removeWindow(key); openCrosshairStudio()
+            removeWindow(key)
+            openCrosshairStudio()
         })
         bindModuleWindow(key, view, x = dp(18), y = dp(54))
         syncCrosshairOverlay()
@@ -2347,7 +2401,8 @@ class FloatingBoosterService : Service() {
         val ping = metricLine("PING", lastPingMs?.let { "${it}ms" } ?: if (pingMeasuring) "MEASURING…" else "--")
         val signal = metricLine("WI-FI SIGNAL", wifiRssiDbm?.let { "${it} dBm" } ?: "UNAVAILABLE")
         val link = metricLine("LINK SPEED", wifiLinkMbps?.let { "${it} Mbps" } ?: "UNAVAILABLE")
-        metrics.addView(ping); metrics.addView(signal); metrics.addView(link)
+        val stability = metricLine("PROBE STABILITY", networkStabilityText())
+        metrics.addView(ping); metrics.addView(signal); metrics.addView(link); metrics.addView(stability)
         val actions = view.findViewById<LinearLayout>(R.id.moduleActions)
         actions.addView(noteText("Wi-Fi RSSI/link speed use Android's in-process Wi-Fi API. Missing/redacted OEM values are reported as unavailable; Game Nuke does not request location just to fake a reading."))
         var syncingBoost = false
@@ -2380,6 +2435,7 @@ class FloatingBoosterService : Service() {
                 ping.text = "PING  ${lastPingMs?.let { "${it}ms" } ?: "UNAVAILABLE"}"
                 signal.text = "WI-FI SIGNAL  ${wifiRssiDbm?.let { "${it} dBm" } ?: "UNAVAILABLE"}"
                 link.text = "LINK SPEED  ${wifiLinkMbps?.let { "${it} Mbps" } ?: "UNAVAILABLE"}"
+                stability.text = "PROBE STABILITY  ${networkStabilityText()}"
                 toastOutcome("Network telemetry refreshed")
             }
         })
@@ -2450,7 +2506,7 @@ class FloatingBoosterService : Service() {
 
     private fun readBatterySnapshot(): Pair<Int, Int?> {
         val percent = runCatching {
-            val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val battery = androidx.core.content.ContextCompat.registerReceiver(this@FloatingBoosterService, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
             val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
             if (level >= 0 && scale > 0) ((level * 100f) / scale).roundToInt().coerceIn(0, 100) else -1
@@ -2595,14 +2651,13 @@ class FloatingBoosterService : Service() {
         }
         val styles = NukeCrosshairView.Style.values()
         view.style = styles[prefs.safeInt("cross_type", 1).coerceIn(0, styles.lastIndex)]
-        view.crosshairColor = prefs.safeInt("cross_color", NukeHudPalette.Green)
+        view.crosshairColor = prefs.safeInt("cross_color", Color.rgb(0, 240, 255))
         view.sizeDp = prefs.safeInt("cross_size", 22).toFloat()
         view.gapDp = prefs.safeInt("cross_gap", 6).toFloat()
         view.thicknessDp = prefs.safeInt("cross_thickness", 2).toFloat()
-        view.opacity = prefs.safeInt("cross_opacity", 95).coerceIn(20, 100) / 100f
+        view.opacity = prefs.safeInt("cross_opacity", 95).coerceIn(5, 100) / 100f
         view.offsetXPx = prefs.safeInt("cross_x", 0).toFloat()
         view.offsetYPx = prefs.safeInt("cross_y", 0).toFloat()
-        view.centerDot = prefs.safeBoolean("cross_dot", true)
         view.outline = prefs.safeBoolean("cross_outline", true)
         view.enabledCrosshair = true
         publishRuntime(engine?.state?.value)
@@ -2649,13 +2704,29 @@ class FloatingBoosterService : Service() {
         pingMeasuring = true
         withContext(Dispatchers.IO) {
         batteryPercent = runCatching {
-            val battery = registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val battery = androidx.core.content.ContextCompat.registerReceiver(this@FloatingBoosterService, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
             val level = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
             val scale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
             val tempRaw = battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             batteryTempC = if (tempRaw > 0) tempRaw / 10f else null
             if (level >= 0 && scale > 0) ((level * 100f) / scale).roundToInt().coerceIn(0, 100) else -1
         }.getOrDefault(-1)
+
+        if (SystemClock.elapsedRealtime() - lastCpuTempSampleAt >= 10_000L && NukeConnectionManager.isConnected()) {
+            val dollar = '$'
+            val thermalCommand = "for Z in /sys/class/thermal/thermal_zone*; do T=${dollar}(cat \"${dollar}Z/type\" 2>/dev/null); case \"${dollar}T\" in *cpu*|*CPU*|*soc*|*SOC*|*mtktscpu*) V=${dollar}(cat \"${dollar}Z/temp\" 2>/dev/null); echo \"${dollar}T:${dollar}V\";; esac; done"
+            val thermalDump = NukeConnectionManager.executeCommand(
+                thermalCommand,
+                1_200L,
+                4_096,
+            )?.output.orEmpty()
+            cpuTempC = thermalDump.lineSequence().mapNotNull { line ->
+                val raw = line.substringAfterLast(':').trim().toFloatOrNull() ?: return@mapNotNull null
+                val celsius = if (raw > 1_000f) raw / 1_000f else raw
+                celsius.takeIf { it in 10f..120f }
+            }.maxOrNull()
+            lastCpuTempSampleAt = SystemClock.elapsedRealtime()
+        }
 
         networkLabel = runCatching {
             val cm = getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
@@ -2689,6 +2760,7 @@ class FloatingBoosterService : Service() {
                 measured = measurePingOnce(500)
             }
             lastPingMs = measured
+            recordPingProbe(measured)
         }
         pingMeasuring = false
     }
@@ -2700,6 +2772,32 @@ class FloatingBoosterService : Service() {
                 Socket().use { socket -> socket.connect(InetSocketAddress("1.1.1.1", 443), connectTimeoutMs) }
                 (((System.nanoTime() - started) / 1_000_000L).coerceAtLeast(1L)).coerceAtMost(999L)
             }.getOrNull()
+        }
+    }
+
+    private fun networkStabilityText(): String = buildString {
+        append(pingStabilityLabel)
+        pingProbeSuccessPercent?.let { append(" • ").append(it).append("% success") }
+        pingJitterMs?.let { append(" • J").append(it).append("ms") }
+    }
+
+    private fun recordPingProbe(sampleMs: Long?) {
+        synchronized(pingSamples) {
+            pingSamples += sampleMs
+            while (pingSamples.size > 8) pingSamples.removeAt(0)
+            val success = pingSamples.filterNotNull()
+            pingProbeSuccessPercent = if (pingSamples.isNotEmpty()) {
+                ((success.size * 100f) / pingSamples.size).roundToInt().coerceIn(0, 100)
+            } else null
+            pingJitterMs = if (success.size >= 2) {
+                success.zipWithNext { a, b -> kotlin.math.abs(b - a) }.average().roundToInt().toLong()
+            } else null
+            pingStabilityLabel = when {
+                pingSamples.size < 3 -> "SAMPLING"
+                (pingProbeSuccessPercent ?: 0) < 75 -> "LOSSY"
+                (pingJitterMs ?: 0L) > 35L -> "JITTER"
+                else -> "STABLE"
+            }
         }
     }
 
@@ -2788,11 +2886,22 @@ class FloatingBoosterService : Service() {
                 fps = state.lastMeasuredFps?.let { String.format(Locale.US, "%.0f", it) }
                     ?: if (state.currentHz > 0) "${state.currentHz}" else "--",
                 ping = lastPingMs?.let { "${it}ms" } ?: if (pingMeasuring) "…" else "--",
-                temperature = batteryTempC?.let { String.format(Locale.US, "%.1f°C", it) }
-                    ?: thermalLabel(state.thermalStatus),
+                temperature = when {
+                    batteryTempC != null && cpuTempC != null -> String.format(Locale.US, "B%.0f° C%.0f°", batteryTempC, cpuTempC)
+                    batteryTempC != null -> String.format(Locale.US, "B%.1f°C", batteryTempC)
+                    cpuTempC != null -> String.format(Locale.US, "CPU %.1f°C", cpuTempC)
+                    else -> thermalLabel(state.thermalStatus)
+                },
                 battery = if (batteryPercent >= 0) "$batteryPercent%" else "--",
                 storage = if (state.storageTotalGb > 0f) "$storageUsedPercent%" else "--",
-                network = networkLabel,
+                network = buildString {
+                    append(networkLabel)
+                    if (pingStabilityLabel != "--") {
+                        append(" • ").append(pingStabilityLabel)
+                        pingProbeSuccessPercent?.let { append(" ").append(it).append("%") }
+                        pingJitterMs?.let { append(" J").append(it).append("ms") }
+                    }
+                },
                 coreHealth = when (reactorStatus) {
                     NukeReactorCoreView.Status.ONLINE -> FloatingCoreHealth.ONLINE
                     NukeReactorCoreView.Status.DEGRADED -> FloatingCoreHealth.DEGRADED
@@ -2906,6 +3015,7 @@ class FloatingBoosterService : Service() {
     }
 
     private fun actionButton(label: String, danger: Boolean = false, click: () -> Unit): NukeActionTileView = NukeActionTileView(this).apply {
+        installNukePressFeedback()
         val icon = when {
             label.contains("FPS", true) || label.contains("FRAME", true) -> R.drawable.nuke_ic_speed
             label.contains("NETWORK", true) || label.contains("ADB", true) || label.contains("LATENCY", true) -> R.drawable.nuke_ic_network
@@ -3363,6 +3473,7 @@ class FloatingBoosterService : Service() {
 
     override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
         super.onConfigurationChanged(newConfig)
+        hudTools.close()
         val bounds = safeBounds()
         val reopenHub = hubVisible()
         if (reopenHub) windows.keys.filter { it.startsWith("hub_") }.forEach(::removeWindowImmediate)
@@ -3388,6 +3499,10 @@ class FloatingBoosterService : Service() {
     }
 
     override fun onDestroy() {
+        hudTools.destroy()
+        if (activeInstance === this) activeInstance = null
+        runCatching { NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeAntivirusFloatingOverlay.getInstance(applicationContext).hide() }
         NukeRuntimeState.setLaunchHandoffActive(false)
         val unexpectedActiveDestroy = !stopping && ::prefs.isInitialized && prefs.safeBoolean(K_ACTIVE, false)
         val emergencyEngine = engine
@@ -3416,6 +3531,11 @@ class FloatingBoosterService : Service() {
         runCatching { NukeTerminalOverlay.getInstance(applicationContext).hide() }
         NukeAiSentinel.stop()
         NukeAudioBooster.disableBoost()
+        val appContext = applicationContext
+        CoroutineScope(Dispatchers.IO).launch {
+            runCatching { NukeSystemOptimizer.restoreSystemDefaults(appContext) }
+            runCatching { NukeUniversalFpsLock.setTargetFps(appContext, 0) }
+        }
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }
         if (foregroundStarted) {

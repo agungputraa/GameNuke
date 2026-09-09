@@ -26,7 +26,7 @@ object IntegrityGuard {
         else "20933dbcfd10965b35ab1f16415bc0281c7dd1b7f8f4d5400e8bc0424bbe890f"
 
     private val FRIDA_INDICATORS = listOf(
-        "frida-server", "frida-agent", "linjector", "re.frida.server", "frida-gadget",
+        "frida-server", "frida-agent", "re.frida.server", "frida-gadget",
         "xposed", "lspatch", "lsplant", "objection",
     )
 
@@ -40,7 +40,6 @@ object IntegrityGuard {
         "com.zane.apkeditor",
         "lihuandsj.com.apkeditor",
         "com.xmodgame",
-        "org.sbtools.gamehack",
         "com.android.vending.billing.InAppBillingService.LACK",
         "com.dimonvideo.luckypatcher",
         "com.chelpus.lackypatch",
@@ -53,7 +52,6 @@ object IntegrityGuard {
         "uret.jasi2169.patcher",
         "com.cigstudio.editor.no_root",
         "com.cigstudio.editor.root",
-        "org.creeplays.hack",
         "com.gameguardian",
         "com.fingersoft.hcr",
         "com.cih.game_cih",

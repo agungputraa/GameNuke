@@ -209,7 +209,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
             applyMsaa()
         })
         body.addView(space(4))
-        body.addView(buildToggleRow("GPU Turbo Performance Clock", "Boosts GPU governor for 0 frame drops", gpuTurbo) {
+        body.addView(buildToggleRow("GPU Performance Governor", "Aligns GPU clock governor for demanding rendering", gpuTurbo) {
             gpuTurbo = it
             saveSettings()
             applyGpuTurbo()
@@ -289,6 +289,8 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         })
 
         row.addView(titleCol)
+
+        // Help Button
 
         // Styled Circular Close Button
         val closeBtn = TextView(context).apply {

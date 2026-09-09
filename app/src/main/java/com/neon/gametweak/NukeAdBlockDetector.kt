@@ -280,7 +280,7 @@ fun NukeAdBlockDetectedDialog(
                         Spacer(Modifier.width(10.dp))
                         Column {
                             Text(
-                                Tx.t("ADBLOCK TERDETEKSI", "ADBLOCK DETECTED"),
+                                ("ADBLOCK DETECTED"),
                                 color = Color.White,
                                 fontSize = 13.5.sp,
                                 fontWeight = FontWeight.Black,
@@ -288,7 +288,7 @@ fun NukeAdBlockDetectedDialog(
                             )
                             Spacer(Modifier.height(1.dp))
                             Text(
-                                Tx.t("Tools & Game Panel Terkunci", "Core Tools & Game Panel Locked"),
+                                ("Core Tools & Game Panel Locked"),
                                 color = Color(0xFFFF7A85),
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Bold
@@ -298,8 +298,7 @@ fun NukeAdBlockDetectedDialog(
                     if (!isExecuting) {
                         IconButton(
                             onClick = onDismiss,
-                            modifier = Modifier.size(30.dp)
-                        ) {
+                            modifier = (Modifier.size(30.dp)).nukePressFeedback()) {
                             Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Neon.TextDim)
                         }
                     }
@@ -357,10 +356,7 @@ fun NukeAdBlockDetectedDialog(
 
                 // Core Explanation
                 Text(
-                    Tx.t(
-                        "Komponen inti tidak dapat digunakan selama sistem mendeteksi pemblokir iklan (%s). Fitur gaming dan booster tools terkunci secara otomatis.\n\nKlik DISABLE untuk memulihkan konfigurasi jaringan default dan mengaktifkan kembali seluruh tools.",
-                        "Core features cannot be used while an active ad blocker (%s) is detected. Gaming booster tools are temporarily locked.\n\nClick DISABLE to restore default network settings and unlock full tool access."
-                    ).format(detectedTarget),
+                    ("Core features cannot be used while an active ad blocker (%s) is detected. Gaming booster tools are temporarily locked.\n\nClick DISABLE to restore default network settings and unlock full tool access.").format(detectedTarget),
                     color = Color(0xFFD6C2C4),
                     fontSize = 10.5.sp,
                     lineHeight = 15.sp
@@ -386,7 +382,7 @@ fun NukeAdBlockDetectedDialog(
                                 strokeWidth = 2.dp
                             )
                             Text(
-                                executionMessage.ifBlank { Tx.t("Memulihkan konfigurasi jaringan...", "Restoring network configuration...") },
+                                executionMessage.ifBlank { ("Restoring network configuration...") },
                                 color = Neon.Accent,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold
@@ -401,7 +397,7 @@ fun NukeAdBlockDetectedDialog(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        // DISABLE Button (Primary Action: Switches to Automatic via Shell)
+                        // DISABLE Button (Primary Action: Switches to Automatic via Shell, modifier = androidx.compose.ui.Modifier.nukePressFeedback())
                         Box(
                             modifier = Modifier
                                 .weight(1.3f)
@@ -418,7 +414,7 @@ fun NukeAdBlockDetectedDialog(
                                 .border(1.dp, Neon.Accent, RoundedCornerShape(12.dp))
                                 .clickable {
                                     isExecuting = true
-                                    executionMessage = Tx.t("Memulihkan konfigurasi jaringan...", "Restoring network configuration...")
+                                    executionMessage = ("Restoring network configuration...")
                                     coroutineScope.launch {
                                         val success = NukeAdBlockDetector.disableAdBlockViaShell(
                                             context = context,
@@ -430,7 +426,7 @@ fun NukeAdBlockDetectedDialog(
                                         if (success) {
                                             NukeToast.success(
                                                 context,
-                                                Tx.t("Pengaturan jaringan berhasil dipulihkan! Memuat ulang...", "Network configuration restored! Reloading...")
+                                                ("Network configuration restored! Reloading...")
                                             )
                                             onDismiss()
                                             delay(350L)
@@ -438,7 +434,7 @@ fun NukeAdBlockDetectedDialog(
                                         } else {
                                             NukeToast.error(
                                                 context,
-                                                Tx.t("Gagal memperbarui konfigurasi jaringan. Pastikan koneksi aktif.", "Failed to update network configuration. Ensure connection is active.")
+                                                ("Failed to update network configuration. Ensure connection is active.")
                                             )
                                         }
                                     }
@@ -456,7 +452,7 @@ fun NukeAdBlockDetectedDialog(
                                     modifier = Modifier.size(16.dp)
                                 )
                                 Text(
-                                    Tx.t("DISABLE", "DISABLE"),
+                                    ("DISABLE"),
                                     color = Neon.Accent,
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Black,
@@ -477,7 +473,7 @@ fun NukeAdBlockDetectedDialog(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                Tx.t("LATER", "LATER"),
+                                ("LATER"),
                                 color = Neon.TextDim,
                                 fontSize = 11.5.sp,
                                 fontWeight = FontWeight.Bold,

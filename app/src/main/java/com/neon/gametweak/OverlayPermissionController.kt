@@ -6,30 +6,36 @@ import android.net.Uri
 import android.os.Build
 import android.provider.Settings
 
-/** Public Android overlay-consent flow; no hidden grant/bypass path. */
+/** Vendor setup is best-effort; Android's standard grant remains authoritative. */
 object OverlayPermissionController {
-    fun hasOverlayPermission(context: Context): Boolean =
-        Build.VERSION.SDK_INT < Build.VERSION_CODES.M || Settings.canDrawOverlays(context)
-
+    fun hasOverlayPermission(context: Context): Boolean = Settings.canDrawOverlays(context)
+    private fun systemProperty(name: String): String = runCatching {
+        Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as? String ?: ""
+    }.getOrDefault("")
     fun requestManualGrant(context: Context): Boolean {
-        val app = context.applicationContext
-        if (hasOverlayPermission(app) || Build.VERSION.SDK_INT < Build.VERSION_CODES.M) return true
-        return runCatching {
-            app.startActivity(
-                Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${app.packageName}"))
-                    .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK),
-            )
-            NukeToast.unsupported(
-                app,
-                Tx.t(
-                    "Izin 'Tampil di atas aplikasi lain' diperlukan. Aktifkan lalu kembali ke GAME NUKE.",
-                    "Display-over-other-apps permission is required. Enable it, then return to GAME NUKE.",
-                ),
-                long = true,
-            )
-            true
-        }.onFailure {
-            NukeToast.error(app, Tx.t("Pengaturan izin overlay gagal dibuka.", "Overlay permission settings could not be opened."), long = true)
-        }.getOrDefault(false)
+        if (hasOverlayPermission(context)) return true
+        val manufacturer = Build.MANUFACTURER.lowercase(java.util.Locale.ROOT)
+        val vendor = when {
+            systemProperty("ro.miui.ui.version.code").isNotEmpty() || manufacturer in setOf("xiaomi", "poco", "redmi") ->
+                Intent("miui.intent.action.APP_PERM_EDITOR").setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
+                    .putExtra("extra_pkgname", context.packageName)
+            systemProperty("ro.build.version.opporom").isNotEmpty() || manufacturer in setOf("oppo", "realme", "oneplus") ->
+                Intent().setClassName("com.coloros.safecenter", "com.coloros.privacypermissionsentry.PermissionTopActivity")
+            systemProperty("ro.vivo.os.version").isNotEmpty() || manufacturer in setOf("vivo", "iqoo") ->
+                Intent().setClassName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.SoftPermissionDetailActivity")
+                    .putExtra("packagename", context.packageName)
+            else -> null
+        }
+        val candidates = listOfNotNull(vendor,
+            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
+            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+        for (intent in candidates) {
+            if (runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)) {
+                NukeToast.unsupported(context, "Enable Display over other apps or Floating windows, then return to Game Nuke. On HyperOS, also check background popup permission.", long = true)
+                return true
+            }
+        }
+        NukeToast.error(context, "Overlay settings could not be opened on this device.", long = true)
+        return false
     }
 }

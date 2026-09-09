@@ -25,7 +25,7 @@
                              (document.referrer && document.referrer.indexOf(window.location.hostname) !== -1);
 
         if (!isSessionValid) {
-          // Direct bypass attempt detected: bounce back to index.html
+          // Direct alternate attempt detected: bounce back to index.html
           window.location.replace('index.html?src=session_required');
         }
       } catch (e) {
@@ -163,7 +163,7 @@
           <i class="fa-solid fa-shield-halved text-accent-emerald"></i>
           <span>Paket Biner Terverifikasi</span>
         </span>
-        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-accent-emerald/15 text-accent-emerald" id="version_label">v2.3.0-prem</span>
+        <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-accent-emerald/15 text-accent-emerald" id="version_label">v2.5.0-prem</span>
       </div>
       <div class="flex items-center justify-between text-[11px] text-slate-400 pt-1 border-t border-white/5">
         <span>Arsitektur: ARM64-v8a / v7a</span>
@@ -177,18 +177,18 @@
         <i class="fa-solid fa-circle-info text-accent-cyan"></i>
         <span>Panduan Pemasangan:</span>
       </div>
-      <ol class="space-y-1 list-decimal list-inside text-[11px] text-slate-400 leading-relaxed">
-        <li>Buka file APK yang selesai diunduh dari bar notifikasi.</li>
-        <li>Jika muncul dialog konfirmasi, pilih <strong class="text-white">"Izinkan dari Sumber Ini"</strong>.</li>
-        <li>Buka aplikasi Game Nuke dan aktifkan profil optimasi game Anda.</li>
+      <ol class="space-y-1.5 list-decimal list-inside text-[11px] text-slate-400 leading-relaxed">
+        <li>Buka file APK yang selesai diunduh dari bar notifikasi atau folder Unduhan (Download).</li>
+        <li>Jika muncul dialog konfirmasi, pilih <strong class="text-white">"Izinkan dari Sumber Ini / Tetap Install"</strong>.</li>
+        <li><strong class="text-accent-cyan">Tips Android 14/15/16:</strong> Jika perangkat Anda pernah terpasang versi Game Nuke sebelumnya dengan tanda tangan berbeda, hapus (uninstall) versi lama terlebih dahulu agar pemasangan berjalan lancar.</li>
       </ol>
     </div>
 
-    <!-- Manual Fallback Trigger -->
+    <!-- Action Buttons -->
     <div class="space-y-2 pt-1">
-      <button id="manual_btn" onclick="startFileDownload()" class="w-full py-3 rounded-xl font-display font-bold text-xs bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md shadow-accent-emerald/20 hover:shadow-accent-emerald/30 active:scale-98 transition flex items-center justify-center gap-2">
-        <i class="fa-solid fa-download"></i>
-        <span>Klik di sini jika unduhan belum berjalan</span>
+      <button id="download_btn" onclick="handleUserDownloadClick()" class="w-full py-3.5 rounded-xl font-display font-bold text-xs sm:text-sm bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-lg shadow-accent-emerald/25 hover:shadow-accent-emerald/40 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer">
+        <i class="fa-solid fa-download" id="download_btn_icon"></i>
+        <span id="download_btn_text">Unduh APK Sekarang (v2.5.0-prem)</span>
       </button>
 
       <a href="index.html" class="inline-flex items-center gap-1.5 text-[11px] font-medium text-slate-400 hover:text-white transition">
@@ -196,17 +196,40 @@
       </a>
     </div>
 
-    <!-- Hidden Iframe to trigger file download cleanly without exposing raw GitHub URL -->
-    <iframe id="dl_iframe" class="hidden" style="display:none;"></iframe>
-
     <!-- Hidden Google Translate Element -->
     <div id="google_translate_element" style="display:none;"></div>
 
   </div>
 
+  <!-- In-Page Download Confirmation Alert / Pop-Up Dialog -->
+  <div id="download_modal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md transition-opacity duration-300 hidden opacity-0">
+    <div class="panel-card max-w-sm w-full rounded-2xl p-6 text-center space-y-4 border border-accent-emerald/30 shadow-2xl shadow-accent-emerald/20 transform transition-transform duration-300 scale-95" id="modal_card">
+      <div class="w-14 h-14 mx-auto rounded-full bg-accent-emerald/15 border border-accent-emerald/30 flex items-center justify-center text-accent-emerald text-2xl shadow-lg shadow-accent-emerald/20">
+        <i class="fa-solid fa-cloud-arrow-down"></i>
+      </div>
+      <div class="space-y-1.5">
+        <h3 class="font-display font-bold text-lg text-white">Unduh Game Nuke Premium</h3>
+        <p class="text-xs text-slate-300 leading-relaxed">
+          Paket instalasi resmi <strong class="text-accent-emerald font-mono" id="modal_version_text">v2.5.0-prem</strong> siap diunduh ke memori perangkat (<span id="modal_size_text" class="font-mono text-slate-300">30.1 MB</span>).
+        </p>
+      </div>
+      <div class="space-y-2 pt-2">
+        <button id="modal_confirm_btn" onclick="handleUserDownloadClick()" class="w-full py-3.5 rounded-xl font-display font-bold text-xs sm:text-sm bg-gradient-to-r from-accent-emerald to-accent-cyan text-obsidian-950 shadow-md hover:shadow-accent-emerald/30 active:scale-98 transition flex items-center justify-center gap-2 cursor-pointer">
+          <i class="fa-solid fa-download"></i>
+          <span>Mulai Unduh APK</span>
+        </button>
+        <button onclick="closeDownloadModal()" class="w-full py-2 rounded-xl text-xs text-slate-400 hover:text-white transition cursor-pointer">
+          Batal / Nanti Saja
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script>
     let targetDownloadUrl = '';
-    let targetVersion = '2.3.0-prem';
+    let targetVersion = '2.5.0-prem';
+    let directLinkUrl = 'https://boring-active.com/laj2W6';
+    let isPackageReady = false;
 
     // Fetch live metadata dynamically from version.json
     fetch('version.json?v=' + Date.now())
@@ -214,9 +237,20 @@
       .then(data => {
         if (data) {
           targetDownloadUrl = data.downloadUrl || '';
-          targetVersion = data.versionName || '2.3.0-prem';
-          if (data.apkSizeMb) document.getElementById('file_size_text').innerText = data.apkSizeMb + ' MB';
-          if (data.versionName) document.getElementById('version_label').innerText = 'v' + data.versionName;
+          targetVersion = data.versionName || '2.5.0-prem';
+          if (data.downloadDirectlinkUrl) directLinkUrl = data.downloadDirectlinkUrl;
+          if (data.apkSizeMb) {
+            document.getElementById('file_size_text').innerText = data.apkSizeMb + ' MB';
+            const modalSize = document.getElementById('modal_size_text');
+            if (modalSize) modalSize.innerText = data.apkSizeMb + ' MB';
+            const btnText = document.getElementById('download_btn_text');
+            if (btnText && !isPackageReady) btnText.innerText = 'Unduh APK (' + data.apkSizeMb + ' MB)';
+          }
+          if (data.versionName) {
+            document.getElementById('version_label').innerText = 'v' + data.versionName;
+            const modalVer = document.getElementById('modal_version_text');
+            if (modalVer) modalVer.innerText = 'v' + data.versionName;
+          }
         }
       })
       .catch(() => {})
@@ -232,13 +266,26 @@
       let progress = 20;
       const interval = setInterval(() => {
         progress += 25;
-        if (progress >= 95) {
+        if (progress >= 100) {
           clearInterval(interval);
           bar.classList.remove('w-[20%]');
           bar.classList.add('w-full');
-          text.innerText = 'Paket siap diunduh...';
-          pill.innerText = 'PENGUNDUHAN BERJALAN';
-          startFileDownload();
+          text.innerText = 'Paket instalasi siap diunduh (100%)';
+          pill.innerText = 'PAKET SIAP DIUNDUH';
+          pill.parentElement.classList.remove('bg-accent-emerald/10');
+          pill.parentElement.classList.add('bg-accent-emerald/20', 'border-accent-emerald');
+          
+          isPackageReady = true;
+
+          // Update main button
+          const mainBtn = document.getElementById('download_btn');
+          const btnText = document.getElementById('download_btn_text');
+          const currentSize = document.getElementById('file_size_text').innerText || '30.1 MB';
+          if (btnText) btnText.innerText = 'Unduh APK Sekarang (' + currentSize + ')';
+          if (mainBtn) mainBtn.classList.add('animate-pulse');
+
+          // Buka alert/pop up modal konfirmasi unduhan
+          openDownloadModal();
         } else {
           bar.style.width = progress + '%';
           text.innerText = 'Menyiapkan paket instalasi (' + progress + '%)...';
@@ -246,18 +293,81 @@
       }, 180);
     }
 
+    function openDownloadModal() {
+      const modal = document.getElementById('download_modal');
+      const card = document.getElementById('modal_card');
+      if (modal && card) {
+        modal.classList.remove('hidden');
+        setTimeout(() => {
+          modal.classList.remove('opacity-0');
+          card.classList.remove('scale-95');
+          card.classList.add('scale-100');
+        }, 20);
+      }
+    }
+
+    function closeDownloadModal() {
+      const modal = document.getElementById('download_modal');
+      const card = document.getElementById('modal_card');
+      if (modal && card) {
+        modal.classList.add('opacity-0');
+        card.classList.remove('scale-100');
+        card.classList.add('scale-95');
+        setTimeout(() => {
+          modal.classList.add('hidden');
+        }, 250);
+      }
+    }
+
+    function handleUserDownloadClick() {
+      // 1. Tutup modal pop-up konfirmasi
+      closeDownloadModal();
+
+      // 2. Update status antarmuka
+      const pill = document.getElementById('status_pill');
+      if (pill) pill.innerText = 'PENGUNDUHAN BERJALAN';
+      const text = document.getElementById('progress_text');
+      if (text) text.innerText = 'File APK sedang diunduh. Periksa notifikasi perangkat Anda...';
+      const mainBtn = document.getElementById('download_btn');
+      const btnText = document.getElementById('download_btn_text');
+      if (mainBtn) mainBtn.classList.remove('animate-pulse');
+      if (btnText) btnText.innerText = 'Klik untuk Unduh Ulang APK';
+
+      // 3. Picu unduhan file APK
+      startFileDownload();
+
+      // 4. Buka iklan sponsor HANYA SETELAH user klik tombol/popup unduh!
+      triggerAdRedirect();
+    }
+
     function startFileDownload() {
-      const url = targetDownloadUrl || 'https://github.com/agungputraa/GameNuke/releases/download/v2.3.0-prem/GameNuke-Premium-v2.3.0.apk';
-      const iframe = document.getElementById('dl_iframe');
-      if (iframe) {
-        iframe.src = url;
-      } else {
-        const a = document.createElement('a');
-        a.href = url;
-        a.setAttribute('download', 'GameNuke-Premium-v' + targetVersion + '.apk');
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
+      const url = targetDownloadUrl || 'https://github.com/agungputraa/GameNuke/releases/download/v2.5.0-prem/GameNuke-Premium-v2.5.0.apk';
+      const a = document.createElement('a');
+      a.href = url;
+      a.setAttribute('download', 'GameNuke-Premium-v' + targetVersion + '.apk');
+      a.setAttribute('target', '_blank');
+      a.setAttribute('rel', 'noopener noreferrer');
+      document.body.appendChild(a);
+      a.click();
+      setTimeout(() => {
+        try { document.body.removeChild(a); } catch (e) {}
+      }, 1000);
+    }
+
+    function triggerAdRedirect() {
+      // Buka sponsor directlink di tab baru agar tab download dan dialog alert browser tetap utuh di tab asal!
+      try {
+        const adWin = window.open(directLinkUrl, '_blank');
+        if (!adWin || adWin.closed || typeof adWin.closed === 'undefined') {
+          // Fallback jika popup diblokir ketat oleh browser: alihkan setelah jeda aman
+          setTimeout(() => {
+            window.location.href = directLinkUrl;
+          }, 3500);
+        }
+      } catch (e) {
+        setTimeout(() => {
+          window.location.href = directLinkUrl;
+        }, 3500);
       }
     }
   </script>

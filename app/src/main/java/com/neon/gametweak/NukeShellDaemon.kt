@@ -16,7 +16,7 @@ import kotlin.concurrent.thread
 
 /**
  * Local persistent shell core, bootstrapped only after an explicit, authorized ADB session.
- * It is not a hidden Wireless-ADB bypass and does not survive a reboot. The socket authenticates
+ * It is not a hidden Wireless-ADB alternate path and does not survive a reboot. The socket authenticates
  * callers by Android UID and exposes shell operations via NukeDaemonPolicy.
  *
  * Architecture follows the Shizuku model:

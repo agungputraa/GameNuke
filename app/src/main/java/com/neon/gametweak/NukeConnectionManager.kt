@@ -73,9 +73,7 @@ object NukeConnectionManager {
             Backend.ADB_NATIVE -> runCatching {
                 val ctx = NukeApplication.instance ?: return null
                 val adb = AdbManager.getInstance(ctx)
-                if (adb.isConnected()) {
-                    adb.executeCommandDirect(command, "/", timeoutMs, maxOutputChars)
-                } else null
+                adb.executeCommandDirect(command, "/", timeoutMs, maxOutputChars)
             }.onFailure { Log.w(TAG, "AdbManager execute failed: ${it.message}") }.getOrNull()
 
             Backend.NONE -> null

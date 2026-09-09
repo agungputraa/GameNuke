@@ -102,13 +102,10 @@ fun NukeModuleShopScreen() {
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFC857))
+                    Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFB830))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        Tx.t(
-                            "Semua modul adalah fitur bawaan Game Nuke. Tidak ada script shell remote yang diunduh dan dijalankan.",
-                            "All modules are first-party Game Nuke features. No remote shell script is downloaded and executed.",
-                        ),
+                        ("All modules are first-party Game Nuke features. No remote shell script is downloaded and executed."),
                         color = Color(0xFFBACBC5), fontSize = 10.sp, lineHeight = 14.sp,
                     )
                 }
@@ -177,7 +174,7 @@ fun NukeModuleShopScreen() {
                     onCheckedChange = { enabled ->
                         NukeModuleCatalog.setEnabled(prefs, module.id, enabled)
                         revision++
-                        NukeToast.success(context, if (enabled) Tx.t("${module.title} diaktifkan", "${module.title} enabled") else Tx.t("${module.title} dinonaktifkan", "${module.title} disabled"))
+                        NukeToast.success(context, if (enabled) ("${module.title} enabled") else ("${module.title} disabled"))
                     },
                     colors = SwitchDefaults.colors(
                         checkedThumbColor = Color(0xFF07110E),
@@ -217,7 +214,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                 onCheckedChange = {
                     enabled = it
                     prefs.edit().putBoolean("cross_en", it).apply()
-                    NukeToast.success(context, if (it) Tx.t("Crosshair diaktifkan", "Crosshair enabled") else Tx.t("Crosshair dinonaktifkan", "Crosshair disabled"))
+                    NukeToast.success(context, if (it) ("Crosshair enabled") else ("Crosshair disabled"))
                 },
                 colors = SwitchDefaults.colors(checkedTrackColor = Neon.Accent),
             )
@@ -233,7 +230,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                         .clickable {
                             style = index
                             prefs.edit().putInt("cross_type", index).apply()
-                            NukeToast.success(context, Tx.t("Gaya crosshair diubah ke $name", "Crosshair style set to $name"))
+                            NukeToast.success(context, ("Crosshair style set to $name"))
                         }
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center,
@@ -249,7 +246,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
             onValueChange = { size = it },
             onValueChangeFinished = {
                 prefs.edit().putInt("cross_size", size.toInt()).apply()
-                NukeToast.success(context, Tx.t("Ukuran crosshair ${size.toInt()}", "Crosshair size set to ${size.toInt()}"))
+                NukeToast.success(context, ("Crosshair size set to ${size.toInt()}"))
             },
             valueRange = 8f..64f,
         )
@@ -259,7 +256,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
             onValueChange = { opacity = it },
             onValueChangeFinished = {
                 prefs.edit().putInt("cross_opacity", opacity.toInt()).apply()
-                NukeToast.success(context, Tx.t("Opacity crosshair ${opacity.toInt()}%", "Crosshair opacity set to ${opacity.toInt()}%"))
+                NukeToast.success(context, ("Crosshair opacity set to ${opacity.toInt()}%"))
             },
             valueRange = 20f..100f,
         )
@@ -269,7 +266,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                 onCheckedChange = {
                     dot = it
                     prefs.edit().putBoolean("cross_dot", it).apply()
-                    NukeToast.success(context, if (it) Tx.t("Titik tengah crosshair diaktifkan", "Crosshair center dot enabled") else Tx.t("Titik tengah crosshair dinonaktifkan", "Crosshair center dot disabled"))
+                    NukeToast.success(context, if (it) ("Crosshair center dot enabled") else ("Crosshair center dot disabled"))
                 },
             )
             Text("CENTER DOT", color = Color(0xFFCEDBD6), fontSize = 9.sp, fontWeight = FontWeight.Bold)

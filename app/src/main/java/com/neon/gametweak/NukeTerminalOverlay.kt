@@ -433,7 +433,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
 
             // Command Input
             commandInputEt = EditText(context).apply {
-                hint = "Ketik command shell..."
+                hint = "Enter shell command..."
                 setHintTextColor(Color.parseColor("#64748B"))
                 setTextColor(Color.WHITE)
                 textSize = 11f
@@ -538,7 +538,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 layoutParams = LinearLayout.LayoutParams((44 * d).toInt(), (34 * d).toInt())
             }
 
-            runBtn = Button(context).apply {
+            runBtn = Button(context).apply { installNukePressFeedback() }.apply {
                 text = "RUN"
                 textSize = 10.5f
                 typeface = Typeface.DEFAULT_BOLD
@@ -577,7 +577,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             append("║       ⚡ GAME NUKE CYBER TERMINAL v2.3.0            ║\n")
             append("║  Mode: ${NukeConnectionManager.connectionLabel().padEnd(16)} Status: READY                 ║\n")
             append("╚═════════════════════════════════════════════════════╝\n")
-            append("Ketik perintah shell di bawah atau tap preset chip di atas.")
+            append("Type shell command below or tap preset chips above.")
         }
         appendConsoleLine(banner, Color.parseColor("#38BDF8"), isPrompt = false)
     }
@@ -764,7 +764,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         val clip = ClipData.newPlainText("Nuke Terminal Logs", outputBuffer.toString())
         cm.setPrimaryClip(clip)
-        NukeToast.success(context, "Log terminal berhasil disalin!")
+        NukeToast.success(context, "Terminal logs copied to clipboard!")
     }
 
     private fun clearConsole() {

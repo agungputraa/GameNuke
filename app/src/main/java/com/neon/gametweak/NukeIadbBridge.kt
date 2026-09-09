@@ -104,7 +104,7 @@ object NukeIadbBridge {
     /** Check if permission has been granted. */
     fun hasPermission(): Boolean = checkSelfPermission()
 
-    /** Launch iAdb app if installed. */
+    /** Launch iAdb app if installed, or open Google Play Store. */
     fun launchApp(context: Context): Boolean = runCatching {
         val pm = context.packageManager
         val packages = listOf("com.iadb.helper", "com.smoothie.wirelessDebuggingSwitch", "com.iadb")
@@ -113,12 +113,22 @@ object NukeIadbBridge {
             intent = pm.getLaunchIntentForPackage(pkg)
             if (intent != null) break
         }
-        val finalIntent = intent ?: android.content.Intent(
-            android.content.Intent.ACTION_VIEW,
-            android.net.Uri.parse("https://github.com/FileContainer/iAdb-api")
-        )
-        finalIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(finalIntent)
+        val targetIntent = if (intent != null) {
+            intent
+        } else {
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=com.iadb.helper")).apply {
+                setPackage("com.android.vending")
+            }
+        }
+        targetIntent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+        try {
+            context.startActivity(targetIntent)
+        } catch (e: Exception) {
+            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=com.iadb.helper")).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(webIntent)
+        }
         true
     }.getOrDefault(false)
 

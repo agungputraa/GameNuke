@@ -122,11 +122,29 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
     )
 
     /**
-     * Global `am kill-all` is deliberately disabled. Even though ActivityManager normally targets
-     * cached processes, a game booster should never issue an indiscriminate kill. Use
-     * [killBackgroundPackage] on vetted user-app candidates instead.
+     * Reclaims background RAM by purging cached zombie tasks, trimming caches, and terminating
+     * non-critical social and e-commerce background consumers.
      */
-    fun killSafeBackground(): NukeCommandResult = denied("Global background kill disabled")
+    fun killSafeBackground(): NukeCommandResult = adb.executeCommand(
+        """
+            pm trim-caches 999G 2>/dev/null
+            am compact system 2>/dev/null
+            am force-stop com.facebook.katana 2>/dev/null
+            am force-stop com.facebook.orca 2>/dev/null
+            am force-stop com.instagram.android 2>/dev/null
+            am force-stop com.spotify.music 2>/dev/null
+            am force-stop com.mi.appfinder 2>/dev/null
+            am force-stop com.xiaomi.mipicks 2>/dev/null
+            am force-stop com.lazada.android 2>/dev/null
+            am force-stop com.shopee.id 2>/dev/null
+            am force-stop com.google.android.apps.photos 2>/dev/null
+            am force-stop com.microsoft.appmanager 2>/dev/null
+            sync 2>/dev/null
+        """.trimIndent(),
+        "/",
+        8_000L,
+        16_384
+    )
 
     fun readCpuProcessSnapshot(): NukeCommandResult = adb.executeCommand(
         "dumpsys cpuinfo",

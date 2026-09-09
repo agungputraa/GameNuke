@@ -23,8 +23,8 @@ class PairingReceiver : BroadcastReceiver() {
         val notif = NotificationHelper(appContext)
 
         notif.updateNotification(
-            Tx.t("Menghubungkan Device Control...", "Connecting Device Control..."),
-            Tx.t("Memvalidasi kode dan endpoint terbaru.", "Validating the code and latest endpoint."),
+            ("Connecting Device Control..."),
+            ("Validating the code and latest endpoint."),
             true,
             false,
             null,
@@ -44,7 +44,7 @@ class PairingReceiver : BroadcastReceiver() {
                         NukeToast.success(appContext, result.message, long = true)
                     }
                     notif.updateNotification(
-                        if (result.connected) Tx.t("Game Nuke Core Online", "Game Nuke Core Online") else Tx.t("Pairing Berhasil", "Pairing Successful"),
+                        if (result.connected) ("Game Nuke Core Online") else ("Pairing Successful"),
                         result.message,
                         true,
                         false,
@@ -55,10 +55,10 @@ class PairingReceiver : BroadcastReceiver() {
                     // endpoint is not cancelled by a second generation.
                 } else {
                     mainHandler.post {
-                        NukeToast.error(appContext, Tx.t("Pairing gagal: ${result.message}", "Pairing failed: ${result.message}"), long = true)
+                        NukeToast.error(appContext, ("Pairing failed: ${result.message}"), long = true)
                     }
                     notif.updateNotification(
-                        Tx.t("Pairing Gagal", "Pairing Failed"),
+                        ("Pairing Failed"),
                         result.message,
                         false,
                         false,
@@ -71,11 +71,11 @@ class PairingReceiver : BroadcastReceiver() {
                 runCatching {
                     AdbManager.getInstance(appContext).writeTraceLog("PAIR RECEIVER FATAL: $rawMessage")
                 }
-                val userMessage = Tx.t("Koneksi berhenti tak terduga. Buka ulang Wireless Debugging, buat kode baru, lalu coba lagi.", "The connection stopped unexpectedly. Reopen Wireless Debugging, generate a new code, and try again.")
+                val userMessage = ("The connection stopped unexpectedly. Reopen Wireless Debugging, generate a new code, and try again.")
                 Handler(Looper.getMainLooper()).post {
                     NukeToast.error(appContext, userMessage, long = true)
                 }
-                notif.updateNotification(Tx.t("Pairing Gagal", "Pairing Failed"), userMessage, false, false, null)
+                notif.updateNotification(("Pairing Failed"), userMessage, false, false, null)
             } finally {
                 pendingResult.finish()
             }

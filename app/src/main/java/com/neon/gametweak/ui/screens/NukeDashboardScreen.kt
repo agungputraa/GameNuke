@@ -1,5 +1,6 @@
 package com.neon.gametweak.ui.screens
 
+import com.neon.gametweak.nukePressFeedback
 import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.Context
@@ -156,6 +157,7 @@ fun DashboardScreen(
     onOpenGames: () -> Unit = {},
     onOpenCleaner: () -> Unit = {},
     onOpenMonitor: () -> Unit = {},
+    onOpenSystemEditor: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val gateway = remember(adbManager) { NukeGamingShellGateway(adbManager) }
@@ -254,7 +256,7 @@ fun DashboardScreen(
                         }
                         Column(Modifier.weight(1f)) {
                             Text(
-                                Tx.t("AdBlock Terdeteksi · Fitur Terbatas", "AdBlock Active · Tools Locked"),
+                                ("AdBlock Active · Tools Locked"),
                                 color = Color(0xFFFF7A85),
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Bold,
@@ -262,7 +264,7 @@ fun DashboardScreen(
                             )
                             Spacer(Modifier.height(1.dp))
                             Text(
-                                Tx.t("Filter: %s · Ketuk untuk panduan", "Filter: %s · Tap to resolve").format(adBlockStatus.detectedDnsSpecifier.ifBlank { "AdBlock" }),
+                                ("Filter: %s · Tap to resolve").format(adBlockStatus.detectedDnsSpecifier.ifBlank { "AdBlock" }),
                                 color = Color(0xFFD6C2C4),
                                 fontSize = 10.sp
                             )
@@ -274,7 +276,7 @@ fun DashboardScreen(
                                 .padding(horizontal = 10.dp, vertical = 5.dp)
                         ) {
                             Text(
-                                Tx.t("RESOLVE", "RESOLVE"),
+                                ("RESOLVE"),
                                 color = Color.White,
                                 fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold
@@ -296,7 +298,7 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(Tx.t("LIVE ENGINE", "LIVE ENGINE"), Tx.t("TELEMETRI SISTEM", "MEASURED TELEMETRY"))
+            SectionRail(("LIVE ENGINE"), ("MEASURED TELEMETRY"))
             Spacer(Modifier.height(8.dp))
             DualGaugeDeck(telemetry)
         }
@@ -306,7 +308,7 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(Tx.t("KESIAPAN SESI", "SESSION READINESS"), "$readyCount/4 ${Tx.t("JALUR SISTEM", "SYSTEM PATHS")}")
+            SectionRail(("SESSION READINESS"), "$readyCount/4 ${("SYSTEM PATHS")}")
             Spacer(Modifier.height(8.dp))
             ReadinessDeck(
                 context = context,
@@ -316,28 +318,31 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(Tx.t("KONTROL UTAMA", "NUKE DECK"), Tx.t("AKSES CEPAT", "HIGH-VALUE CONTROLS"))
+            SectionRail(("NUKE DECK"), ("HIGH-VALUE CONTROLS"))
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CommandTile(
-                    Tx.t("GAME SPACE", "GAME SPACE"), Tx.t("Pilih game dan aktifkan HUD", "Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
+                    ("GAME SPACE"), ("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
                     Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
                 )
                 CommandTile(
-                    Tx.t("DEEP CLEAN", "DEEP CLEAN"), Tx.t("Persiapan penyimpanan & memori", "Storage + memory preparation"), Icons.Rounded.CleaningServices,
-                    Color(0xFFFFC857), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
+                    ("DEEP CLEAN"), ("Storage + memory preparation"), Icons.Rounded.CleaningServices,
+                    Color(0xFFFFB830), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
                 )
             }
             Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(Modifier.fillMaxWidth()) {
                 CommandTile(
-                    Tx.t("SYSTEM MONITOR", "SYSTEM MONITOR"), Tx.t("Manajemen proses & memori", "Processes and memory pressure"), Icons.Rounded.Memory,
-                    Color(0xFF35F2FF), Modifier.weight(1f), { handleToolClick(onOpenMonitor) },
+                    ("SYSTEM EDITOR"), ("Find & tweak parameters safely"), Icons.Rounded.Tune,
+                    Color(0xFF00E5FF), Modifier.fillMaxWidth(), { handleToolClick(onOpenSystemEditor) },
                 )
+            }
+            Spacer(Modifier.height(8.dp))
+            Row(Modifier.fillMaxWidth()) {
                 CommandTile(
-                    Tx.t("DEVICE CONTROL", "DEVICE CONTROL"), if (telemetry.adbConnected) Tx.t("Terhubung via ${telemetry.connectionMode}", "Connected via ${telemetry.connectionMode}") else Tx.t("Pilih metode koneksi", "Select connection method"),
+                    ("DEVICE CONTROL"), if (telemetry.adbConnected) ("Connected via ${telemetry.connectionMode}") else ("Select connection method"),
                     Icons.Rounded.Adb, if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
-                    Modifier.weight(1f),
+                    Modifier.fillMaxWidth(),
                 ) {
                     showConnectionDialog = true
                 }
@@ -358,7 +363,7 @@ private fun ReactorCommandHero(
     onArm: () -> Unit,
     onAdb: () -> Unit,
 ) {
-    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFC857)
+    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB830)
 
     Box(
         Modifier.fillMaxWidth()
@@ -393,7 +398,7 @@ private fun ReactorCommandHero(
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        Tx.t("Pusat Komando", "Command Center"),
+                        ("Command Center"),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -401,14 +406,14 @@ private fun ReactorCommandHero(
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        if (telemetry.adbConnected) "${telemetry.connectionMode} • ${Tx.t("Siap", "Ready")}" else Tx.t("Mode Standar Siap", "Standard Mode Ready"),
+                        if (telemetry.adbConnected) "${telemetry.connectionMode} • ${("Ready")}" else ("Standard Mode Ready"),
                         color = accent,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${Tx.t("Mesin optimasi gaming adaptif", "Adaptive gaming optimization engine")}",
+                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${("Adaptive gaming optimization engine")}",
                         color = Neon.TextDim,
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -422,7 +427,7 @@ private fun ReactorCommandHero(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            Tx.t("Kesiapan Sistem", "System Readiness"),
+                            ("System Readiness"),
                             color = Neon.TextDim,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
@@ -444,7 +449,7 @@ private fun ReactorCommandHero(
             val activity = LocalContext.current.findActivity()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ReactorButton(
-                    Tx.t("Mulai Sesi Game", "Launch Game Session"),
+                    ("Launch Game Session"),
                     Icons.Rounded.PlayArrow,
                     Neon.Accent,
                     Modifier.weight(1.4f),
@@ -456,7 +461,7 @@ private fun ReactorCommandHero(
                     }
                 }
                 ReactorButton(
-                    if (telemetry.adbConnected) Tx.t("Terkoneksi", "Connected") else Tx.t("Hubungkan", "Connect"),
+                    if (telemetry.adbConnected) ("Connected") else ("Connect"),
                     Icons.Rounded.DeveloperMode,
                     accent,
                     Modifier.weight(1f),
@@ -486,7 +491,7 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             AnimatedSpeedometer(
-                label = Tx.t("Beban CPU", "CPU Load"),
+                label = ("CPU Load"),
                 value = cpu,
                 valueText = telemetry.cpuLoad?.let { "$it%" } ?: "--",
                 accent = Color(0xFF35F2FF),
@@ -501,7 +506,7 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
-                        if (telemetry.temperatureC > 43f) Tx.t("SUHU TINGGI", "HIGH TEMP") else Tx.t("OPTIMAL", "OPTIMAL"),
+                        if (telemetry.temperatureC > 43f) ("HIGH TEMP") else ("OPTIMAL"),
                         color = if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
@@ -516,13 +521,13 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    Tx.t("Refresh Rate", "Refresh Rate"),
+                    ("Refresh Rate"),
                     color = Neon.TextDim,
                     fontSize = 9.sp,
                 )
             }
             AnimatedSpeedometer(
-                label = Tx.t("Penggunaan RAM", "RAM Usage"),
+                label = ("RAM Usage"),
                 value = ram,
                 valueText = "$ram%",
                 accent = Neon.Accent,
@@ -573,14 +578,14 @@ private fun AnimatedSpeedometer(
 private fun TelemetryMatrix(telemetry: CommandCenterTelemetry) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetricTile(Tx.t("LAYAR", "DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF35F2FF), Modifier.weight(1f))
-            MetricTile(Tx.t("SUHU", "THERMAL"), "${"%.1f".format(telemetry.temperatureC)}°C", Icons.Rounded.Thermostat, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent, Modifier.weight(1f))
-            MetricTile(Tx.t("BATERAI", "BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFC857), Modifier.weight(1f))
+            MetricTile(("DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(("THERMAL"), "${"%.1f".format(telemetry.temperatureC)}°C", Icons.Rounded.Thermostat, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent, Modifier.weight(1f))
+            MetricTile(("BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFB830), Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetricTile(Tx.t("RAM", "RAM"), "${"%.1f".format(telemetry.ramUsedGb)}/${"%.1f".format(telemetry.ramTotalGb)}G", Icons.Rounded.Memory, Neon.Accent, Modifier.weight(1f))
-            MetricTile(Tx.t("PENYIMPANAN", "STORAGE"), "${"%.1f".format(telemetry.storageFreeGb)}G ${Tx.t("KOSONG", "FREE")}", Icons.Rounded.Storage, Color(0xFF9877FF), Modifier.weight(1f))
-            MetricTile(Tx.t("JARINGAN", "NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(("RAM"), "${"%.1f".format(telemetry.ramUsedGb)}/${"%.1f".format(telemetry.ramTotalGb)}G", Icons.Rounded.Memory, Neon.Accent, Modifier.weight(1f))
+            MetricTile(("STORAGE"), "${"%.1f".format(telemetry.storageFreeGb)}G ${("FREE")}", Icons.Rounded.Storage, Color(0xFF9877FF), Modifier.weight(1f))
+            MetricTile(("NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF35F2FF), Modifier.weight(1f))
         }
     }
 }
@@ -589,18 +594,18 @@ private fun TelemetryMatrix(telemetry: CommandCenterTelemetry) {
 private fun ReadinessDeck(context: Context, telemetry: CommandCenterTelemetry, onAdb: () -> Unit) {
     val connLabel = telemetry.connectionMode
     val connDetail = when {
-        telemetry.adbConnected -> Tx.t("via $connLabel", "via $connLabel")
-        telemetry.iadbAvailable -> Tx.t("iAdb siap · tap untuk hubungkan", "iAdb ready · tap to connect")
-        telemetry.shizukuAvailable -> Tx.t("Shizuku siap · tap untuk hubungkan", "Shizuku ready · tap to connect")
-        else -> Tx.t("Wireless ADB / Shizuku / iAdb", "Wireless ADB / Shizuku / iAdb")
+        telemetry.adbConnected -> ("via $connLabel")
+        telemetry.iadbAvailable -> ("iAdb ready · tap to connect")
+        telemetry.shizukuAvailable -> ("Shizuku ready · tap to connect")
+        else -> ("Wireless ADB / Shizuku / iAdb")
     }
     val rows = listOf(
-        ReadinessItem(Tx.t("KONTROL PERANGKAT", "DEVICE CONTROL"), telemetry.adbConnected, connDetail, Icons.Rounded.Tune, onAdb),
-        ReadinessItem(Tx.t("FLOATING HUD", "FLOATING HUD"), telemetry.overlayReady, Tx.t("Izin overlay aktif", "Overlay permission"), Icons.Rounded.Layers) {
+        ReadinessItem(("DEVICE CONTROL"), telemetry.adbConnected, connDetail, Icons.Rounded.Tune, onAdb),
+        ReadinessItem(("FLOATING HUD"), telemetry.overlayReady, ("Overlay permission"), Icons.Rounded.Layers) {
             runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))) }
         },
-        ReadinessItem(Tx.t("SESI GAMING", "SESSION TRACK"), telemetry.sessionReady, Tx.t("Sesi gaming aktif", "Gaming session active"), Icons.Rounded.Security, onAdb),
-        ReadinessItem(Tx.t("FOKUS GAME", "GAME FOCUS"), telemetry.dndReady, Tx.t("Akses mode jangan ganggu", "DND policy access"), Icons.Rounded.NotificationsOff) {
+        ReadinessItem(("SESSION TRACK"), telemetry.sessionReady, ("Gaming session active"), Icons.Rounded.Security, onAdb),
+        ReadinessItem(("GAME FOCUS"), telemetry.dndReady, ("DND policy access"), Icons.Rounded.NotificationsOff) {
             runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
         },
     )
@@ -618,11 +623,11 @@ private data class ReadinessItem(val title: String, val ready: Boolean, val deta
 
 @Composable
 private fun ReadinessTile(item: ReadinessItem, modifier: Modifier = Modifier) {
-    val accent = if (item.ready) Neon.Accent else Color(0xFFFFC857)
+    val accent = if (item.ready) Neon.Accent else Color(0xFFFFB830)
     Row(
         modifier.clip(ReactorSmall).background(Color(0xFF08110E))
             .border(1.dp, accent.copy(alpha = .28f), ReactorSmall)
-            .clickable(onClick = item.onClick).padding(10.dp),
+            .nukePressFeedback().clickable(onClick = item.onClick).padding(10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(Modifier.size(30.dp).clip(ReactorSmall).background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
@@ -641,16 +646,16 @@ private fun ReadinessTile(item: ReadinessItem, modifier: Modifier = Modifier) {
 private fun CommandTile(title: String, detail: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
         modifier.height(104.dp).clip(ReactorSmall)
-            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF0A1512), Color(0xFF050807))))
+            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF0A1512), Color(0xFF020705))))
             .border(1.dp, accent.copy(alpha = .32f), ReactorSmall)
-            .clickable(onClick = onClick).padding(12.dp),
+            .nukePressFeedback().clickable(onClick = onClick).padding(12.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Box(Modifier.size(32.dp).clip(ReactorSmall).background(accent.copy(alpha = .10f)), contentAlignment = Alignment.Center) {
                 Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.weight(1f))
-            Text(Tx.t("BUKA >", "OPEN >"), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+            Text(("OPEN >"), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.height(9.dp))
         Text(title, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = .4.sp)
@@ -661,7 +666,7 @@ private fun CommandTile(title: String, detail: String, icon: ImageVector, accent
 
 @Composable
 private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
-    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFC857)
+    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB830)
     Column(
         Modifier.fillMaxWidth().clip(ReactorShape).background(Color(0xFF050B09))
             .border(1.dp, Color(0xFF163B31), ReactorShape).padding(14.dp),
@@ -669,22 +674,16 @@ private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Tune, null, tint = accent, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
-            Text(Tx.t("INTELLIGENCE SISTEM", "NUKE INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
+            Text(("NUKE INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
             Spacer(Modifier.weight(1f))
-            Text(if (telemetry.adbConnected) Tx.t("LANJUTAN", "EXTENDED") else Tx.t("STANDAR", "STANDARD"), color = accent, fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Text(if (telemetry.adbConnected) ("EXTENDED") else ("STANDARD"), color = accent, fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
         Text(
             if (telemetry.adbConnected) {
-                Tx.t(
-                    "Kontrol perangkat aktif. Game Nuke dapat memakai optimasi yang didukung perangkat, memverifikasi hasil, mengukur telemetry, lalu memulihkan perubahan milik sesi.",
-                    "Device control is active. Game Nuke can use supported optimizations, verify results, measure telemetry, and restore session-owned changes.",
-                )
+                ("Device control is active. Game Nuke can use supported optimizations, verify results, measure telemetry, and restore session-owned changes.")
             } else {
-                Tx.t(
-                    "Game Nuke tetap memantau RAM, suhu, baterai, display, dan status sesi. Hubungkan kontrol lanjutan jika perangkat mendukung optimasi tambahan.",
-                    "Game Nuke still monitors RAM, temperature, battery, display, and session status. Connect advanced control when the device supports additional optimizations.",
-                )
+                ("Game Nuke still monitors RAM, temperature, battery, display, and session status. Connect advanced control when the device supports additional optimizations.")
             },
             color = Neon.TextDim, fontSize = 10.sp, lineHeight = 14.sp,
         )
@@ -710,7 +709,7 @@ private fun MetricTile(label: String, value: String, icon: ImageVector, accent: 
 private fun ReactorButton(text: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Row(
         modifier.height(44.dp).clip(ReactorSmall).background(accent.copy(alpha = .14f))
-            .border(0.8.dp, accent.copy(alpha = .40f), ReactorSmall).clickable(onClick = onClick).padding(horizontal = 14.dp),
+            .border(0.8.dp, accent.copy(alpha = .40f), ReactorSmall).nukePressFeedback().clickable(onClick = onClick).padding(horizontal = 14.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,
     ) {
@@ -759,7 +758,7 @@ private fun readCommandCenterTelemetry(
     val storageFree = stat?.availableBytes ?: 0L
     val storageTotal = stat?.totalBytes ?: 0L
 
-    val battery = runCatching { context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
+    val battery = runCatching { androidx.core.content.ContextCompat.registerReceiver(context, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED) }.getOrNull()
     val batteryLevel = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
     val batteryScale = battery?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
     val batteryPercent = if (batteryLevel >= 0 && batteryScale > 0) (batteryLevel * 100f / batteryScale).roundToInt().coerceIn(0, 100) else 0
@@ -872,7 +871,7 @@ private fun NukeConnectionSelectorDialog(
                 ) {
                     Column(Modifier.weight(1f)) {
                         Text(
-                            Tx.t("KONTROL PERANGKAT", "DEVICE CONTROL"),
+                            ("DEVICE CONTROL"),
                             color = Color.White,
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Black,
@@ -897,7 +896,7 @@ private fun NukeConnectionSelectorDialog(
                             }
                             Spacer(Modifier.width(6.dp))
                             Text(
-                                if (telemetry.adbConnected) Tx.t("Terhubung & Aktif", "Connected & Active") else Tx.t("Pilih Bridge Elevasi", "Select Elevated Bridge"),
+                                if (telemetry.adbConnected) ("Connected & Active") else ("Select Elevated Bridge"),
                                 color = Neon.TextDim,
                                 fontSize = 9.5.sp,
                                 maxLines = 1
@@ -906,8 +905,7 @@ private fun NukeConnectionSelectorDialog(
                     }
                     IconButton(
                         onClick = onDismiss,
-                        modifier = Modifier.size(32.dp)
-                    ) {
+                        modifier = (Modifier.size(32.dp)).nukePressFeedback()) {
                         Icon(Icons.Rounded.Close, contentDescription = "Close", tint = Neon.TextDim)
                     }
                 }
@@ -916,50 +914,50 @@ private fun NukeConnectionSelectorDialog(
 
                 // Option 1: Connect with iAdb (Primary Recommended)
                 val iadbBadge = when {
-                    isIadbConnected -> Tx.t("AKTIF", "ACTIVE")
-                    !isIadbInstalled -> Tx.t("BELUM TERPASANG", "NOT INSTALLED")
-                    !isIadbRunning -> Tx.t("OFFLINE", "OFFLINE")
-                    !isIadbPermitted -> Tx.t("BUTUH IZIN", "AUTH NEEDED")
-                    else -> Tx.t("SIAP", "READY")
+                    isIadbConnected -> ("ACTIVE")
+                    !isIadbInstalled -> ("NOT INSTALLED")
+                    !isIadbRunning -> ("OFFLINE")
+                    !isIadbPermitted -> ("AUTH NEEDED")
+                    else -> ("READY")
                 }
                 val iadbBadgeColor = when {
                     isIadbConnected -> Neon.Accent
                     !isIadbInstalled -> Color(0xFFFF5D67)
-                    !isIadbRunning || !isIadbPermitted -> Color(0xFFFFC857)
+                    !isIadbRunning || !isIadbPermitted -> Color(0xFFFFB830)
                     else -> Color(0xFF35F2FF)
                 }
                 ConnectionMethodCard(
-                    title = Tx.t("Hubungkan dengan iAdb", "Connect with iAdb"),
-                    tag = Tx.t("DIREKOMENDASIKAN", "RECOMMENDED"),
+                    title = ("Connect with iAdb"),
+                    tag = ("RECOMMENDED"),
                     badge = iadbBadge,
                     badgeColor = iadbBadgeColor,
-                    description = Tx.t("Mesin ringan stabilitas tinggi (Android 11+) tanpa ketergantungan PC / Wi-Fi setelah setup awal.", "High-stability lightweight engine (Android 11+) with zero PC / Wi-Fi dependency after initial setup."),
+                    description = ("High-stability lightweight engine (Android 11+) with zero PC / Wi-Fi dependency after initial setup."),
                     icon = Icons.Rounded.Bolt,
                     iconTint = Neon.Accent,
                     onClick = {
                         when {
                             isIadbConnected -> {
                                 NukeConnectionManager.preferredBackend = NukeConnectionManager.Backend.IADB
-                                NukeToast.success(context, Tx.t("iAdb terhubung dan aktif.", "iAdb is connected and active."))
+                                NukeToast.success(context, ("iAdb is connected and active."))
                                 onDismiss()
                             }
                             !isIadbInstalled -> {
-                                NukeToast.error(context, Tx.t("iAdb belum terpasang. Membuka halaman unduhan...", "iAdb is not installed. Opening download page..."))
+                                NukeToast.error(context, ("iAdb is not installed. Opening download page..."))
                                 NukeIadbBridge.launchApp(context)
                             }
                             !isIadbRunning -> {
-                                NukeToast.error(context, Tx.t("Layanan iAdb offline. Buka aplikasi iAdb dan jalankan layanan terlebih dahulu.", "iAdb service is offline. Please launch iAdb and start the service first."))
+                                NukeToast.error(context, ("iAdb service is offline. Please launch iAdb and start the service first."))
                                 NukeIadbBridge.launchApp(context)
                             }
                             !isIadbPermitted -> {
-                                NukeToast.success(context, Tx.t("Meminta otorisasi iAdb...", "Requesting iAdb authorization..."))
+                                NukeToast.success(context, ("Requesting iAdb authorization..."))
                                 NukeIadbBridge.requestPermission()
                                 onDismiss()
                             }
                             else -> {
                                 NukeConnectionManager.preferredBackend = NukeConnectionManager.Backend.IADB
                                 NukeIadbBridge.bindUserServiceNow()
-                                NukeToast.success(context, Tx.t("Menghubungkan ke iAdb...", "Connecting to iAdb..."))
+                                NukeToast.success(context, ("Connecting to iAdb..."))
                                 onDismiss()
                             }
                         }
@@ -968,50 +966,50 @@ private fun NukeConnectionSelectorDialog(
 
                 // Option 2: Connect with Shizuku (Alternative)
                 val shizukuBadge = when {
-                    isShizukuConnected -> Tx.t("AKTIF", "ACTIVE")
-                    !isShizukuInstalled -> Tx.t("BELUM TERPASANG", "NOT INSTALLED")
-                    !isShizukuRunning -> Tx.t("OFFLINE", "OFFLINE")
-                    !isShizukuPermitted -> Tx.t("BUTUH IZIN", "AUTH NEEDED")
-                    else -> Tx.t("SIAP", "READY")
+                    isShizukuConnected -> ("ACTIVE")
+                    !isShizukuInstalled -> ("NOT INSTALLED")
+                    !isShizukuRunning -> ("OFFLINE")
+                    !isShizukuPermitted -> ("AUTH NEEDED")
+                    else -> ("READY")
                 }
                 val shizukuBadgeColor = when {
                     isShizukuConnected -> Neon.Accent
                     !isShizukuInstalled -> Color(0xFFFF5D67)
-                    !isShizukuRunning || !isShizukuPermitted -> Color(0xFFFFC857)
+                    !isShizukuRunning || !isShizukuPermitted -> Color(0xFFFFB830)
                     else -> Color(0xFF35F2FF)
                 }
                 ConnectionMethodCard(
-                    title = Tx.t("Hubungkan dengan Shizuku", "Connect with Shizuku"),
-                    tag = Tx.t("ALTERNATIF", "ALTERNATIVE"),
+                    title = ("Connect with Shizuku"),
+                    tag = ("ALTERNATIVE"),
                     badge = shizukuBadge,
                     badgeColor = shizukuBadgeColor,
-                    description = Tx.t("Daemon sistem dengan hak istimewa — tetap aktif secara permanen saat Wi-Fi mati/hidup.", "Privileged system daemon — stays active permanently across Wi-Fi toggles and gaming sessions."),
+                    description = ("Privileged system daemon — stays active permanently across Wi-Fi toggles and gaming sessions."),
                     icon = Icons.Rounded.AdminPanelSettings,
                     iconTint = Color(0xFF35F2FF),
                     onClick = {
                         when {
                             isShizukuConnected -> {
                                 NukeConnectionManager.preferredBackend = NukeConnectionManager.Backend.SHIZUKU
-                                NukeToast.success(context, Tx.t("Shizuku terhubung dan aktif.", "Shizuku is connected and active."))
+                                NukeToast.success(context, ("Shizuku is connected and active."))
                                 onDismiss()
                             }
                             !isShizukuInstalled -> {
-                                NukeToast.error(context, Tx.t("Shizuku belum terpasang. Membuka halaman unduhan...", "Shizuku is not installed. Opening download page..."))
+                                NukeToast.error(context, ("Shizuku is not installed. Opening download page..."))
                                 NukeShizukuBridge.launchApp(context)
                             }
                             !isShizukuRunning -> {
-                                NukeToast.error(context, Tx.t("Layanan Shizuku offline. Buka Shizuku dan jalankan layanan terlebih dahulu.", "Shizuku service is offline. Please open Shizuku and start the service first."))
+                                NukeToast.error(context, ("Shizuku service is offline. Please open Shizuku and start the service first."))
                                 NukeShizukuBridge.launchApp(context)
                             }
                             !isShizukuPermitted -> {
-                                NukeToast.success(context, Tx.t("Meminta otorisasi Shizuku...", "Requesting Shizuku authorization..."))
+                                NukeToast.success(context, ("Requesting Shizuku authorization..."))
                                 NukeShizukuBridge.requestPermission()
                                 onDismiss()
                             }
                             else -> {
                                 NukeConnectionManager.preferredBackend = NukeConnectionManager.Backend.SHIZUKU
                                 NukeShizukuBridge.bindUserServiceNow()
-                                NukeToast.success(context, Tx.t("Menghubungkan ke Shizuku...", "Connecting to Shizuku..."))
+                                NukeToast.success(context, ("Connecting to Shizuku..."))
                                 onDismiss()
                             }
                         }
@@ -1020,25 +1018,25 @@ private fun NukeConnectionSelectorDialog(
 
                 // Option 3: Wireless ADB Pairing (Manual)
                 val nativeBadge = when {
-                    telemetry.connectionMode == "LOCAL CORE" -> Tx.t("TERHUBUNG", "CONNECTED")
-                    telemetry.adbConnected && telemetry.connectionMode != "SHIZUKU" && telemetry.connectionMode != "IADB" -> Tx.t("TERHUBUNG", "CONNECTED")
-                    else -> Tx.t("STANDBY", "STANDBY")
+                    telemetry.connectionMode == "LOCAL CORE" -> ("CONNECTED")
+                    telemetry.adbConnected && telemetry.connectionMode != "SHIZUKU" && telemetry.connectionMode != "IADB" -> ("CONNECTED")
+                    else -> ("STANDBY")
                 }
                 val nativeBadgeColor = when {
                     telemetry.connectionMode == "LOCAL CORE" || (telemetry.adbConnected && telemetry.connectionMode != "SHIZUKU" && telemetry.connectionMode != "IADB") -> Neon.Accent
-                    else -> Color(0xFFFFC857)
+                    else -> Color(0xFFFFB830)
                 }
                 ConnectionMethodCard(
-                    title = Tx.t("Wireless ADB Pairing", "Wireless ADB Pairing"),
-                    tag = Tx.t("MANUAL", "MANUAL"),
+                    title = ("Wireless ADB Pairing"),
+                    tag = ("MANUAL"),
                     badge = nativeBadge,
                     badgeColor = nativeBadgeColor,
-                    description = Tx.t("Koneksi manual via Opsi Pengembang (jaringan Wi-Fi + 6 digit kode pairing).", "Manual device link via Developer Options (Wi-Fi network + 6-digit pairing code)."),
+                    description = ("Manual device link via Developer Options (Wi-Fi network + 6-digit pairing code)."),
                     icon = Icons.Rounded.WifiTethering,
-                    iconTint = Color(0xFFFFC857),
+                    iconTint = Color(0xFFFFB830),
                     onClick = {
                         if (telemetry.network == "OFFLINE") {
-                            NukeToast.error(context, Tx.t("Aktifkan Wi-Fi untuk pairing Wireless ADB.", "Please enable Wi-Fi for Wireless ADB pairing."))
+                            NukeToast.error(context, ("Please enable Wi-Fi for Wireless ADB pairing."))
                         } else {
                             NukeConnectionManager.preferredBackend = NukeConnectionManager.Backend.DAEMON
                             adbManager.startNetworkScanner()
@@ -1069,7 +1067,7 @@ private fun ConnectionMethodCard(
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
             .background(Color(0xFF0C1613))
             .border(0.8.dp, Color(0xFF1E3A31), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-            .clickable(onClick = onClick)
+            .nukePressFeedback().clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {
         Row(

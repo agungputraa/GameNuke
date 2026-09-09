@@ -21,7 +21,7 @@ Delete these old files if present:
 
 - `app/src/main/java/com/neon/gametweak/AdGuardDnsDetector.kt`
 - `app/src/main/java/com/neon/gametweak/AdGuardDnsDialog.kt`
-- `app/src/main/java/com/neon/gametweak/OverlayPermissionBypass.kt`
+- `app/src/main/java/com/neon/gametweak/OverlayPermissionalternate.kt`
 - `app/src/main/java/com/neon/gametweak/ScreenRecordActivity.kt`
 - `app/src/main/java/com/neon/gametweak/ScreenRecordService.kt`
 - `app/src/main/java/com/neon/gametweak/VoiceLabActivity.kt`

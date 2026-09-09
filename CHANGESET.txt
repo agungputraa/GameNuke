@@ -1,0 +1,69 @@
+GAME NUKE — CHANGESET (relative to delivered Stage 1)
+
+1. Responsive drawer; three bottom tabs; macro entry lives in floating HUD.
+2. Four-mode cancellable macro engine, premium editor, draggable Canvas markers and connectors.
+3. Explicit accessibility setup with v2 consent and stable live HUD state.
+4. Screenshot, real edge touch guard, recent-app panel and TCP latency monitor.
+5. Shared visual tokens, font build provisioning, press/card motion, English-only UI branches.
+6. OEM settings fallback, receiver flags, cutout settings, exact-alarm guard and FGS timeout cleanup.
+7. Ten engine tests plus static validation helper and complete implementation notes.
+
+IMPORTANT: no build/device verification or bundled font binaries. Read REFACTOR_NOTES.md for all corrected examples and limitations. Min SDK remains 30 to match the Android 11-based project.
+
+MODIFIED/NEW FILES (53)
+BUILD_VALIDATION.txt
+README.md
+REFACTOR_NOTES.md
+app/build.gradle.kts
+app/nuke-fonts.gradle.kts
+app/src/main/AndroidManifest.xml
+app/src/main/java/com/neon/gametweak/AdbManager.kt
+app/src/main/java/com/neon/gametweak/AppUpdateController.kt
+app/src/main/java/com/neon/gametweak/FloatingBoosterService.kt
+app/src/main/java/com/neon/gametweak/FloatingHudCompose.kt
+app/src/main/java/com/neon/gametweak/LocalWebServer.kt
+app/src/main/java/com/neon/gametweak/MainActivity.kt
+app/src/main/java/com/neon/gametweak/NotificationHelper.kt
+app/src/main/java/com/neon/gametweak/NukeAccessibilityActivator.kt
+app/src/main/java/com/neon/gametweak/NukeAdBlockDetector.kt
+app/src/main/java/com/neon/gametweak/NukeAdbOrchestrator.kt
+app/src/main/java/com/neon/gametweak/NukeAiSentinel.kt
+app/src/main/java/com/neon/gametweak/NukeAntivirusEngine.kt
+app/src/main/java/com/neon/gametweak/NukeAudioPermissionActivity.kt
+app/src/main/java/com/neon/gametweak/NukeDeepCoolingFloatingOverlay.kt
+app/src/main/java/com/neon/gametweak/NukeHudPalette.kt
+app/src/main/java/com/neon/gametweak/NukeHudToggleView.kt
+app/src/main/java/com/neon/gametweak/NukeHudTools.kt
+app/src/main/java/com/neon/gametweak/NukeImagePickerActivity.kt
+app/src/main/java/com/neon/gametweak/NukeLiveChatOverlay.kt
+app/src/main/java/com/neon/gametweak/NukeLiveChatRepository.kt
+app/src/main/java/com/neon/gametweak/NukeLiveChatScheduler.kt
+app/src/main/java/com/neon/gametweak/NukeMacroEngine.kt
+app/src/main/java/com/neon/gametweak/NukeMacroPanel.kt
+app/src/main/java/com/neon/gametweak/NukeMacroPinView.kt
+app/src/main/java/com/neon/gametweak/NukeMacroService.kt
+app/src/main/java/com/neon/gametweak/NukeMacroSetupActivity.kt
+app/src/main/java/com/neon/gametweak/NukeModuleCatalog.kt
+app/src/main/java/com/neon/gametweak/NukeMotionFeedback.kt
+app/src/main/java/com/neon/gametweak/NukeNativeFreeformLauncher.kt
+app/src/main/java/com/neon/gametweak/NukePhoneHealthOverlay.kt
+app/src/main/java/com/neon/gametweak/NukeTerminalOverlay.kt
+app/src/main/java/com/neon/gametweak/NukeUsageAccessActivity.kt
+app/src/main/java/com/neon/gametweak/NukeWebServerService.kt
+app/src/main/java/com/neon/gametweak/OverlayPermissionController.kt
+app/src/main/java/com/neon/gametweak/PairingReceiver.kt
+app/src/main/java/com/neon/gametweak/Tx.kt
+app/src/main/java/com/neon/gametweak/ui/screens/NukeDashboardScreen.kt
+app/src/main/java/com/neon/gametweak/ui/screens/NukeModuleShopScreen.kt
+app/src/main/java/com/neon/gametweak/ui/screens/NukeUtilScreens.kt
+app/src/main/java/com/neon/gametweak/ui/theme/Color.kt
+app/src/main/java/com/neon/gametweak/ui/theme/GameTheme.kt
+app/src/main/java/com/neon/gametweak/ui/theme/Theme.kt
+app/src/main/java/com/neon/gametweak/ui/theme/Type.kt
+app/src/main/res/values/macro_strings.xml
+app/src/main/res/xml/nuke_macro_accessibility.xml
+app/src/test/java/com/neon/gametweak/NukeMacroEngineTest.kt
+tools/validate_refactor.py
+
+REMOVED IN THIS REVISION
+None; VPN/updater removals from Stage 1 are retained.

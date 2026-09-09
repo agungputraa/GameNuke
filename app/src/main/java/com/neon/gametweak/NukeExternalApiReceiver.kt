@@ -102,9 +102,9 @@ class NukeExternalApiReceiver : BroadcastReceiver() {
                 }
 
                 ACTION_NET_TURBO -> {
-                    val active = NukeVpnService.isRunning
-                    if (active) NukeVpnService.stopBoost(appContext)
-                    else NukeVpnService.startBoost(appContext, NukeVpnService.BoostMode.PING_BOOST)
+                    val active = NukeNetPacer.isRunning
+                    if (active) NukeNetPacer.stopBoost(appContext)
+                    else NukeNetPacer.startBoost(appContext, NukeNetPacer.BoostMode.PING_BOOST)
                 }
             }
         }.onFailure { e ->

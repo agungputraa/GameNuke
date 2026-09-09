@@ -1,6 +1,9 @@
 package com.neon.gametweak
 
 import android.app.Activity
+import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.result.ActivityResultLauncher
@@ -24,8 +27,6 @@ object AppUpdateController {
         private set
     @Volatile var availableVersion: String? = null
         private set
-    @Volatile var cachedCdnUpdate: NukeAppUpdater.UpdateInfo? = null
-        private set
 
     private var updateManager: AppUpdateManager? = null
     private var listener: InstallStateUpdatedListener? = null
@@ -44,7 +45,7 @@ object AppUpdateController {
         }
         listener = InstallStateUpdatedListener { state ->
             if (state.installStatus() == InstallStatus.DOWNLOADED) {
-                NukeToast.success(activity, Tx.t("Pembaruan siap dipasang", "Update is ready to install"), long = true)
+                NukeToast.success(activity, ("Update is ready to install"), long = true)
                 runCatching { updateManager?.completeUpdate() }
             }
         }
@@ -59,88 +60,43 @@ object AppUpdateController {
         launcher = null
     }
 
-    fun check(activity: Activity) {
-        // 1. Check via Edge CDN (GitHub Pages / jsDelivr) for instant website/sideload updates
-        NukeAppUpdater.checkForUpdates(
-            context = activity.applicationContext,
-            onUpdateAvailable = { cdnInfo ->
-                hasUpdate = true
-                availableVersion = cdnInfo.versionName
-                cachedCdnUpdate = cdnInfo
-                Log.i(TAG, "Edge CDN Update available: v${cdnInfo.versionName}")
-            },
-            onUpToDate = {
-                Log.i(TAG, "App is up to date via Edge CDN")
-            },
-            onError = {
-                Log.w(TAG, "Edge CDN update check fallback to Play Store: $it")
-            }
-        )
+    const val OFFICIAL_WEBSITE_URL = "https://gamenukeofficial.com"
 
-        // 2. Fallback to Google Play Store check
-        val mgr = updateManager ?: return
+    fun openOfficialWebsite(context: Context) {
         runCatching {
-            mgr.appUpdateInfo
-                .addOnSuccessListener { info ->
-                    val updateAvailable = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
-                    val flexAllowed = info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
-                    if (updateAvailable && flexAllowed) {
-                        hasUpdate = true
-                        availableVersion = info.availableVersionCode().toString()
-                    }
-                    if (info.installStatus() == InstallStatus.DOWNLOADED) {
-                        runCatching { mgr.completeUpdate() }
-                    }
-                }
-                .addOnFailureListener { e ->
-                    Log.w(TAG, "appUpdateInfo failed: ${e.message}")
-                }
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://play.google.com/store/apps/details?id=${context.packageName}")).apply {
+                if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(intent)
+            NukeToast.success(context, ("Opening Google Play..."))
+        }.onFailure { e ->
+            Log.e(TAG, "Failed opening official website", e)
+            if (context is Activity) openPlayStorePage(context)
         }
     }
 
-    fun startFlexibleUpdate(activity: Activity) {
-        // If Edge CDN update is available, download directly without Play Store
-        val cdnUpdate = cachedCdnUpdate
-        if (cdnUpdate != null) {
-            NukeToast.success(activity, "Mendownload update v${cdnUpdate.versionName} dari server resmi…", long = true)
-            NukeAppUpdater.startDownloadAndInstall(activity, cdnUpdate)
-            return
-        }
+    fun check(activity: Activity) {
+        val mgr = updateManager ?: return
+        mgr.appUpdateInfo.addOnSuccessListener { info ->
+            hasUpdate = info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE
+            availableVersion = if (hasUpdate) info.availableVersionCode().toString() else null
+            if (info.installStatus() == InstallStatus.DOWNLOADED) mgr.completeUpdate()
+        }.addOnFailureListener { Log.w(TAG, "Play update check unavailable", it) }
+    }
 
-        val mgr = updateManager ?: run {
-            openPlayStorePage(activity)
-            NukeToast.success(activity, Tx.t("Membuka Google Play Store...", "Opening Google Play Store..."))
-            return
-        }
-        val l = launcher ?: run {
-            openPlayStorePage(activity)
-            NukeToast.success(activity, Tx.t("Membuka Google Play Store...", "Opening Google Play Store..."))
-            return
-        }
-        runCatching {
-            mgr.appUpdateInfo.addOnSuccessListener { info ->
-                if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
-                    info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE)
-                ) {
-                    runCatching {
-                        mgr.startUpdateFlowForResult(
-                            info,
-                            l,
-                            AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build(),
-                        )
-                    }.onSuccess { NukeToast.success(activity, Tx.t("Alur pembaruan dibuka.", "Update flow opened.")) }
-                        .onFailure {
-                            openPlayStorePage(activity)
-                        }
-                } else {
-                    NukeToast.success(activity, Tx.t("Sudah versi terbaru (v${BuildConfig.VERSION_NAME})", "Game Nuke is already up to date (v${BuildConfig.VERSION_NAME})"))
-                }
-            }.addOnFailureListener { _ ->
-                openPlayStorePage(activity)
-            }
-        }.onFailure {
-            openPlayStorePage(activity)
-        }
+    fun startFlexibleUpdate(activity: Activity) {
+        val mgr = updateManager ?: run { openPlayStorePage(activity); return }
+        mgr.appUpdateInfo.addOnSuccessListener { info ->
+            val updateLauncher = launcher
+            if (info.installStatus() == InstallStatus.DOWNLOADED) {
+                mgr.completeUpdate()
+            } else if (info.updateAvailability() == UpdateAvailability.UPDATE_AVAILABLE &&
+                info.isUpdateTypeAllowed(AppUpdateType.FLEXIBLE) && updateLauncher != null) {
+                runCatching { mgr.startUpdateFlowForResult(info, updateLauncher,
+                    AppUpdateOptions.newBuilder(AppUpdateType.FLEXIBLE).build()) }
+                    .onFailure { openPlayStorePage(activity) }
+            } else openPlayStorePage(activity)
+        }.addOnFailureListener { openPlayStorePage(activity) }
     }
 
     fun launchInAppReview(activity: Activity, onComplete: (() -> Unit)? = null) {

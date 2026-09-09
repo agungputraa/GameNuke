@@ -18,7 +18,7 @@ import java.util.concurrent.atomic.AtomicLong
 /**
  * Process-level reconnect coordinator.
  *
- * It never bypasses Android's ADB trust model: an explicit authentication rejection stops retries
+ * It never uses an alternate path around Android's ADB trust model: an explicit authentication rejection stops retries
  * and tears down the local core. Normal endpoint/network loss uses bounded backoff and mDNS
  * self-healing so a still-trusted device reconnects with minimal friction.
  */
@@ -103,8 +103,7 @@ object NukeAdbOrchestrator {
             addAction(WifiManager.WIFI_STATE_CHANGED_ACTION)
         }
         runCatching {
-            if (Build.VERSION.SDK_INT >= 33) context.registerReceiver(receiver, filter, Context.RECEIVER_NOT_EXPORTED)
-            else @Suppress("DEPRECATION") context.registerReceiver(receiver, filter)
+            androidx.core.content.ContextCompat.registerReceiver(context, receiver, filter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         }.onSuccess { wakeReceiver = receiver }
             .onFailure { Log.w(TAG, "Reconnect signal receiver unavailable", it) }
     }

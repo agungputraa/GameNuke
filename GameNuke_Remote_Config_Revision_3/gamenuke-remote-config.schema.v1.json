@@ -209,7 +209,7 @@
       "required": [
         "requireHttps", "allowedHosts", "connectTimeoutMs", "readTimeoutMs", "maxBytes",
         "acceptContentTypes", "useEtag", "useIfModifiedSince", "cacheTtlHours",
-        "minimumFetchIntervalMinutes", "manualRefreshAllowed", "manualRefreshBypassesTtl", "maxRedirects",
+        "minimumFetchIntervalMinutes", "manualRefreshAllowed", "manualRefreshIgnoresTtl", "maxRedirects",
         "staleWhileRevalidateHours", "lastKnownGoodDays", "fallbackAsset", "fetchPolicy", "retry"
       ],
       "properties": {
@@ -224,7 +224,7 @@
         "cacheTtlHours": {"type": "integer", "minimum": 1, "maximum": 720},
         "minimumFetchIntervalMinutes": {"type": "integer", "minimum": 5, "maximum": 1440},
         "manualRefreshAllowed": {"type": "boolean"},
-        "manualRefreshBypassesTtl": {"type": "boolean"},
+        "manualRefreshIgnoresTtl": {"type": "boolean"},
         "maxRedirects": {"type": "integer", "minimum": 0, "maximum": 3},
         "staleWhileRevalidateHours": {"type": "integer", "minimum": 1, "maximum": 2160},
         "lastKnownGoodDays": {"type": "integer", "minimum": 1, "maximum": 365},

@@ -60,8 +60,10 @@ object NukeAudioBooster {
                         centerFreqHz < 300 -> eq.setBandLevel(i.toShort(), lowCut.toShort())
                         // Footstep impact and weapon reload frequencies (1kHz - 4kHz) - boost
                         centerFreqHz in 1000..5000 -> eq.setBandLevel(i.toShort(), maxBoost.toShort())
+                        // High-frequency crystal clarity & audio cues (up to 16kHz)
+                        centerFreqHz >= 8000 -> eq.setBandLevel(i.toShort(), maxBoost.toShort())
                         // Mid voice clarity (500Hz - 1000Hz)
-                        else -> eq.setBandLevel(i.toShort(), (maxBoost / 3).toShort())
+                        else -> eq.setBandLevel(i.toShort(), (maxBoost / 2).toShort())
                     }
                 }
                 eq.enabled = true

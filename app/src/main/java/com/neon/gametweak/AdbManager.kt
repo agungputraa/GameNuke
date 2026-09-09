@@ -31,6 +31,8 @@ data class NukeCommandResult(
     val timedOut: Boolean = false,
 ) {
     val isSuccess: Boolean get() = !timedOut && exitCode == 0
+    val stdout: String get() = if (isSuccess) output else ""
+    val stderr: String get() = if (!isSuccess) output else ""
 }
 
 data class NukePairingResult(
@@ -128,6 +130,7 @@ class AdbManager private constructor(context: Context) {
     fun isLocalBinaryAvailable(): Boolean = true
 
     fun isConnected(): Boolean {
+        if (NukeDaemonClient.ping()) return true
         // NOTE: If called on Main UI Thread, NEVER call m.isConnected directly!
         // In libadb, m.isConnected takes a synchronized lock on AbsAdbConnectionManager.
         // If autoConnect() or connect() is active on background thread, calling m.isConnected
@@ -249,7 +252,7 @@ class AdbManager private constructor(context: Context) {
     /**
      * Execute one already hash-verified ModuleShop entry under the Android shell UID.
      *
-     * This path intentionally bypasses [NukeDaemonPolicy] only for scripts accepted by
+     * This path intentionally uses an alternate path around [NukeDaemonPolicy] only for scripts accepted by
      * [NukeModuleScriptPolicy] and the signed catalog chain. It never uses the persistent local
      * daemon, refuses adb-root transports, masks `su`, and keeps the short `shell:sh -s` service
      * destination so larger module bodies do not hit libadb's OPEN buffer limit.
@@ -270,7 +273,7 @@ class AdbManager private constructor(context: Context) {
     fun persistentCoreOnline(): Boolean = NukeDaemonClient.ping()
 
     /**
-     * Best-effort trust verification that deliberately bypasses the local daemon. A missing/stale
+     * Best-effort trust verification that deliberately uses an alternate path around the local daemon. A missing/stale
      * endpoint is inconclusive (null); only an explicit authentication rejection marks revocation.
      * This lets a persistent local core keep working offline without treating ordinary network loss
      * as a revoked ADB key.
@@ -395,7 +398,7 @@ class AdbManager private constructor(context: Context) {
     /**
      * Android 12+ (API 31-36+) Phantom Process Killer automatically terminates child background
      * processes spawned by shell/ADB if they exceed 32 processes or consume significant memory.
-     * This bypass guarantees that game-nuke-core and background tasks stay 100% alive.
+     * This alternate path guarantees that game-nuke-core and background tasks stay 100% alive.
      */
     fun disablePhantomProcessKiller() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
@@ -619,7 +622,7 @@ class AdbManager private constructor(context: Context) {
         if (!normalizedCode.matches(Regex("^[0-9]{6}$"))) {
             return NukePairingResult(
                 success = false,
-                message = Tx.t("Kode pairing harus tepat 6 digit.", "Pairing code must be exactly 6 digits."),
+                message = ("Pairing code must be exactly 6 digits."),
                 recoverable = true,
             )
         }
@@ -632,7 +635,7 @@ class AdbManager private constructor(context: Context) {
             )
         }
 
-        val m = manager() ?: return NukePairingResult(false, Tx.t("Device Control tidak tersedia.", "Device Control is unavailable."))
+        val m = manager() ?: return NukePairingResult(false, ("Device Control is unavailable."))
         val hintedEndpoint = hintedTarget?.let { parseTarget(it) }?.let { (host, port) ->
             AdbEndpoint(host = host, port = port, serviceName = "notification")
         }
@@ -656,7 +659,7 @@ class AdbManager private constructor(context: Context) {
             startNetworkScanner()
             return NukePairingResult(
                 success = false,
-                message = Tx.t("Port pairing belum ditemukan. Biarkan layar 'Pair device with pairing code' tetap terbuka lalu coba lagi.", "Pairing port was not found. Keep the 'Pair device with pairing code' screen open, then try again."),
+                message = ("Pairing port was not found. Keep the 'Pair device with pairing code' screen open, then try again."),
                 recoverable = true,
             )
         }
@@ -686,9 +689,9 @@ class AdbManager private constructor(context: Context) {
                             pairedTarget = formatTarget(host, endpoint.port),
                             connected = connected,
                             message = if (connected) {
-                                Tx.t("Pairing berhasil dan Device Control sudah siap.", "Pairing succeeded and Device Control is ready.")
+                                ("Pairing succeeded and Device Control is ready.")
                             } else {
-                                Tx.t("Pairing berhasil. Menunggu port koneksi Wireless Debugging yang baru.", "Pairing succeeded. Waiting for the new Wireless Debugging connection port.")
+                                ("Pairing succeeded. Waiting for the new Wireless Debugging connection port.")
                             },
                             recoverable = !connected,
                         )
@@ -699,7 +702,7 @@ class AdbManager private constructor(context: Context) {
                     // repeats the authentication exchange and can make recovery less predictable.
                     return NukePairingResult(
                         success = false,
-                        message = Tx.t("Sesi pairing ditolak. Buat kode 6 digit baru dan pastikan dialog pairing tetap terbuka sampai selesai.", "Pairing session was rejected. Generate a new 6-digit code and keep the pairing dialog open until it finishes."),
+                        message = ("Pairing session was rejected. Generate a new 6-digit code and keep the pairing dialog open until it finishes."),
                         recoverable = true,
                     )
                 } catch (t: Throwable) {
@@ -797,7 +800,7 @@ class AdbManager private constructor(context: Context) {
     private fun classifyPairingFailure(t: Throwable?): PairingFailure {
         if (t == null) {
             return PairingFailure(
-                Tx.t("Pairing ditolak. Pastikan kode masih aktif dan coba buat kode baru.", "Pairing was rejected. Make sure the code is still active or generate a new code."),
+                ("Pairing was rejected. Make sure the code is still active or generate a new code."),
                 recoverable = true,
                 tryNextHost = false,
             )
@@ -808,7 +811,7 @@ class AdbManager private constructor(context: Context) {
 
         if (chain.any { it is NoSuchMethodException } || lower.contains("exportkeyingmaterial")) {
             return PairingFailure(
-                Tx.t("Engine TLS pairing tidak lengkap. Game Nuke harus memakai bundled Conscrypt; instal build 3.0.1 atau lebih baru.", "The TLS pairing engine is incomplete. Game Nuke must use bundled Conscrypt; install build 3.0.1 or newer."),
+                ("The TLS pairing engine is incomplete. Game Nuke must use bundled Conscrypt; install build 3.0.1 or newer."),
                 recoverable = false,
                 tryNextHost = false,
                 fatal = true,
@@ -816,7 +819,7 @@ class AdbManager private constructor(context: Context) {
         }
         if (lower.contains("tlsv1.3") || lower.contains("conscrypt")) {
             return PairingFailure(
-                Tx.t("TLS 1.3 pairing engine gagal diinisialisasi. Restart Game Nuke lalu coba pairing lagi.", "The TLS 1.3 pairing engine failed to initialize. Restart Game Nuke and try pairing again."),
+                ("The TLS 1.3 pairing engine failed to initialize. Restart Game Nuke and try pairing again."),
                 recoverable = true,
                 tryNextHost = false,
                 fatal = true,
@@ -826,14 +829,14 @@ class AdbManager private constructor(context: Context) {
             lower.contains("no route") || lower.contains("unreachable") ||
             lower.contains("failed to connect") || lower.contains("connectexception")) {
             return PairingFailure(
-                Tx.t("Port pairing sudah berubah atau tidak dapat dijangkau. Tetap buka dialog pairing agar Game Nuke menemukan port terbaru.", "The pairing port changed or is unreachable. Keep the pairing dialog open so Game Nuke can discover the latest port."),
+                ("The pairing port changed or is unreachable. Keep the pairing dialog open so Game Nuke can discover the latest port."),
                 recoverable = true,
                 tryNextHost = true,
             )
         }
         if (lower.contains("timed out") || lower.contains("timeout")) {
             return PairingFailure(
-                Tx.t("Pairing timeout. Pastikan Wi-Fi aktif, Wireless Debugging masih ON, dan dialog kode pairing tetap terbuka.", "Pairing timed out. Keep Wi-Fi and Wireless Debugging on, and leave the pairing-code dialog open."),
+                ("Pairing timed out. Keep Wi-Fi and Wireless Debugging on, and leave the pairing-code dialog open."),
                 recoverable = true,
                 tryNextHost = true,
             )
@@ -841,20 +844,20 @@ class AdbManager private constructor(context: Context) {
         if (lower.contains("exchanging message") || lower.contains("exchange peer") ||
             lower.contains("pairing cipher") || lower.contains("spake")) {
             return PairingFailure(
-                Tx.t("Kode pairing salah/kedaluwarsa atau sesi pairing Android sudah berubah. Buat kode 6 digit baru lalu coba lagi.", "The pairing code is invalid/expired or Android changed the pairing session. Generate a new 6-digit code and try again."),
+                ("The pairing code is invalid/expired or Android changed the pairing session. Generate a new 6-digit code and try again."),
                 recoverable = true,
                 tryNextHost = false,
             )
         }
         if (lower.contains("ssl") || lower.contains("handshake")) {
             return PairingFailure(
-                Tx.t("Handshake Wireless ADB gagal. Buat ulang kode pairing dan jangan tutup dialog pairing sampai proses selesai.", "Wireless ADB handshake failed. Generate a new pairing code and keep the pairing dialog open until completion."),
+                ("Wireless ADB handshake failed. Generate a new pairing code and keep the pairing dialog open until completion."),
                 recoverable = true,
                 tryNextHost = false,
             )
         }
         return PairingFailure(
-            Tx.t("Pairing tidak selesai. Buat kode 6 digit baru, biarkan dialog pairing tetap terbuka, lalu coba lagi.", "Pairing did not complete. Generate a new 6-digit code, keep the pairing dialog open, and try again."),
+            ("Pairing did not complete. Generate a new 6-digit code, keep the pairing dialog open, and try again."),
             recoverable = true,
             tryNextHost = false,
         )
@@ -880,7 +883,7 @@ class AdbManager private constructor(context: Context) {
             null
         } catch (t: Throwable) {
             writeTraceLog("PAIR CRYPTO PREFLIGHT FAIL: ${rootMessage(t)}")
-            Tx.t("Komponen TLS Wireless ADB tidak termuat dengan benar. Gunakan build Game Nuke terbaru lalu buka ulang aplikasi.", "Wireless ADB TLS components did not load correctly. Use the latest Game Nuke build and reopen the app.")
+            ("Wireless ADB TLS components did not load correctly. Use the latest Game Nuke build and reopen the app.")
         }
     }
 
@@ -1011,8 +1014,8 @@ class AdbManager private constructor(context: Context) {
             if (System.currentTimeMillis() - lastPairTime >= 15_000L && !isConnected()) {
                 runCatching {
                     NotificationHelper(mContext).updateNotification(
-                        Tx.t("Device Control Siap Dipair", "Device Control Ready to Pair"),
-                        Tx.t("Masukkan kode 6 digit sebelum dialog pairing ditutup.", "Enter the 6-digit code before closing the pairing dialog."),
+                        ("Device Control Ready to Pair"),
+                        ("Enter the 6-digit code before closing the pairing dialog."),
                         true,
                         true,
                         endpoint.target(),

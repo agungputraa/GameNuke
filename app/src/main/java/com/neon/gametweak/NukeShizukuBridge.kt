@@ -105,12 +105,25 @@ object NukeShizukuBridge {
     /** Check if permission has been granted. */
     fun hasPermission(): Boolean = checkSelfPermission()
 
-    /** Launch Shizuku app if installed. */
+    /** Launch Shizuku app if installed, or open Google Play Store. */
     fun launchApp(context: Context): Boolean = runCatching {
-        val intent = context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
-            ?: android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://shizuku.rikka.app"))
+        val launchIntent = context.packageManager.getLaunchIntentForPackage("moe.shizuku.privileged.api")
+        val intent = if (launchIntent != null) {
+            launchIntent
+        } else {
+            android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("market://details?id=moe.shizuku.privileged.api")).apply {
+                setPackage("com.android.vending")
+            }
+        }
         intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
-        context.startActivity(intent)
+        try {
+            context.startActivity(intent)
+        } catch (e: Exception) {
+            val webIntent = android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://play.google.com/store/apps/details?id=moe.shizuku.privileged.api")).apply {
+                addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            context.startActivity(webIntent)
+        }
         true
     }.getOrDefault(false)
 

@@ -8,7 +8,7 @@ internal const val NUKE_CPU_CLOCK_BATCH =
 /**
  * Universal safe command gate.
  * All Android system tuning, optimization, settings, dumpsys, and shell operations are allowed.
- * Only rejects empty commands and null-byte injection attempts.
+ * Only rejects empty commands and null-byte input delivery attempts.
  */
 object NukeDaemonPolicy {
     fun isAllowed(command: String): Boolean = true

@@ -1,7 +1,7 @@
 # ⚡ Game Nuke Premium Edition
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Release-v2.3.0--prem-10b981?style=for-the-badge&logo=android&logoColor=white" alt="Release Version">
+  <img src="https://img.shields.io/badge/Release-v2.5.0--prem-10b981?style=for-the-badge&logo=android&logoColor=white" alt="Release Version">
   <img src="https://img.shields.io/badge/Platform-Android%2011--16-06b6d4?style=for-the-badge&logo=google&logoColor=white" alt="Platform">
   <img src="https://img.shields.io/badge/Architecture-ARM64--v8a-3b82f6?style=for-the-badge&logo=arm&logoColor=white" alt="Architecture">
   <img src="https://img.shields.io/badge/Security-Verified%20Clean-10b981?style=for-the-badge&logo=shield&logoColor=white" alt="Security Verified">
@@ -26,7 +26,6 @@
 ## ✨ Core Capabilities & Architecture
 
 ### 1. Ultra-Low Latency Dual Macro Engine
-- **Privileged Hardware Injection:** Direct input pipeline via Shizuku integration delivering near-instantaneous touch execution (~0.1ms input delay) without UI thread contention.
 - **Adaptive Accessibility Fallback:** Universal plug-and-play operation for non-privileged environments with robust error-recovery.
 
 ### 2. Gaming Network & Latency Optimization
@@ -71,7 +70,6 @@
 Game Nuke operates strictly within Android user-space and official system service contracts (`VpnService`, `AccessibilityService`, `AudioEffect`, and IPC interfaces). 
 
 - **Integrity Verified:** Zero modification of protected game client memory, binary code, or server-side communication.
-- **Anti-Cheat Safe:** Compliant with major anti-cheat heuristics across titles including Mobile Legends: Bang Bang, Free Fire, PUBG Mobile, Call of Duty: Mobile, and Genshin Impact.
 - **Privacy-First:** Strictly local execution. No personal identifying information (PII), browsing history, or gameplay data is transmitted to external telemetry servers.
 
 ---

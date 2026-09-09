@@ -16,6 +16,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.compose.setContent
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -151,6 +154,12 @@ val YouTubeIcon: ImageVector
 
 class MainActivity : ComponentActivity() {
     private var integrityCheckScheduled = false
+    private val notificationPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        NukeLiveChatNotifier.ensureChannel(applicationContext)
+    }
+
     private val adbSetupPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestMultiplePermissions(),
     ) {
@@ -190,6 +199,8 @@ class MainActivity : ComponentActivity() {
         }, 700L)
     }
 
+    private var hasPromptedNotificationOnStartup = false
+
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
@@ -206,6 +217,15 @@ class MainActivity : ComponentActivity() {
                     NukeLiveChatOverlay.getInstance(applicationContext).show()
                 }
             }, 350L)
+        }
+    }
+
+    private fun checkNotificationPermissionOnStartup() {
+        NukeLiveChatNotifier.ensureChannel(applicationContext)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                runCatching { notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS) }
+            }
         }
     }
 
@@ -267,6 +287,14 @@ class MainActivity : ComponentActivity() {
     override fun onResume() {
         super.onResume()
         NukeAdManager.mainAppReady = true
+        if (!hasPromptedNotificationOnStartup) {
+            hasPromptedNotificationOnStartup = true
+            window.decorView.postDelayed({
+                if (!isFinishing && !isDestroyed) {
+                    checkNotificationPermissionOnStartup()
+                }
+            }, 450L)
+        }
         if (!integrityCheckScheduled) {
             integrityCheckScheduled = true
             lifecycleScope.launch(Dispatchers.Default) {
@@ -345,7 +373,6 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     var currentRoute by remember { mutableStateOf("dashboard") }
-    var showLangMenu by remember { mutableStateOf(false) }
     var showAdvanced by remember { mutableStateOf(false) }
     var webServer by remember { mutableStateOf<LocalWebServer?>(null) }
     var showManualAdBlockDialog by remember { mutableStateOf(false) }
@@ -404,59 +431,67 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
     ModalNavigationDrawer(
         drawerState = drawerState,
         drawerContent = {
-            Surface(modifier = Modifier.width(320.dp).fillMaxHeight(), color = Color(0xFF020705)) {
-                Column(modifier = Modifier.fillMaxSize().systemBarsPadding()) {
+            Surface(
+                modifier = Modifier
+                    .widthIn(min = 280.dp, max = 340.dp)
+                    .fillMaxWidth(0.85f)
+                    .fillMaxHeight(),
+                color = Color(0xFF090D12)
+            ) {
+                Column(modifier = Modifier.fillMaxSize()) {
+                    // ── DRAWER HEADER WITH BRANDING & TELEMETRY ──────────
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(220.dp)
                             .background(
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     listOf(
-                                        Color(0xFF06251B).copy(alpha = 0.45f),
-                                        Color(0xFF0A0A12),
+                                        Color(0xFF141D26),
+                                        Color(0xFF0C1217),
                                     )
                                 )
-                            ),
+                            )
+                            .statusBarsPadding()
+                            .padding(top = 18.dp, bottom = 22.dp),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
                                 modifier = Modifier
-                                    .size(78.dp)
-                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
-                                    .background(Color(0xFF08140F))
-                                    .border(1.dp, Color(0xFF35C99B).copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp)),
+                                    .size(68.dp)
+                                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                                    .background(Color(0xFF161E27))
+                                    .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Image(
                                     painter = androidx.compose.ui.res.painterResource(id = R.drawable.logo_nuke),
                                     contentDescription = "Game Nuke",
                                     modifier = Modifier
-                                        .size(56.dp)
-                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)),
+                                        .size(50.dp)
+                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),
                                 )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 "GAME NUKE",
-                                color = Color.White,
-                                fontSize = 18.sp,
+                                color = Color(0xFFF8FAFC),
+                                fontSize = 16.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 1.2.sp,
                             )
-                            Spacer(modifier = Modifier.height(5.dp))
+                            Spacer(modifier = Modifier.height(4.dp))
                             Box(
                                 modifier = Modifier
                                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF35C99B).copy(alpha = 0.12f))
-                                    .border(0.8.dp, Color(0xFF35C99B).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF38BDF8).copy(alpha = 0.12f))
+                                    .border(0.8.dp, Color(0xFF38BDF8).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             ) {
                                 Text(
-                                    "ENTERPRISE EDITION · v${BuildConfig.VERSION_NAME}",
-                                    color = Color(0xFF35C99B),
-                                    fontSize = 9.5.sp,
+                                    "ENTERPRISE UTILITY · v${BuildConfig.VERSION_NAME}",
+                                    color = Color(0xFF38BDF8),
+                                    fontSize = 8.5.sp,
                                     fontWeight = FontWeight.SemiBold,
                                     letterSpacing = 0.8.sp,
                                 )
@@ -468,109 +503,144 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    listOf(
-                                        Color.Transparent,
-                                        Color(0xFF35C99B).copy(alpha = 0.5f),
-                                        Color.Transparent,
-                                    )
-                                )
-                            ),
+                            .background(Color(0xFF1E2836)),
                     )
-                    Spacer(modifier = Modifier.height(8.dp))
-                    Text(
-                        "  NAVIGATION",
-                        color = Color(0xFF9BB0A6),
-                        fontSize = 10.sp,
-                        fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
-                        letterSpacing = 2.sp,
-                        modifier = Modifier.padding(start = 24.dp, top = 6.dp, bottom = 4.dp),
-                    )
-                    DrawerItem(Icons.Rounded.Dns, Tx.t("Web Server & REST API", "Web Server & REST API")) {
-                        navigateWithAd("webui")
-                        coroutineScope.launch { drawerState.close() }
-                    }
-                    DrawerItem(Icons.Rounded.LibraryBooks, Tx.t("Dokumentasi", "Documentation")) {
-                        navigateWithAd("tutorial")
-                        coroutineScope.launch { drawerState.close() }
-                    }
-                    DrawerItem(Icons.Rounded.PersonSearch, Tx.t("Tentang Pengembang", "About Developer")) {
-                        navigateWithAd("dev")
-                        coroutineScope.launch { drawerState.close() }
-                    }
-                    DrawerItem(Icons.Rounded.Security, Tx.t("Status Integritas Jaringan", "Network Integrity Status")) {
-                        coroutineScope.launch {
-                            drawerState.close()
-                            val status = withContext(Dispatchers.IO) {
-                                NukeAdBlockDetector.checkStatus(context, adbManager)
-                            }
-                            manualAdBlockStatus = status
-                            if (status.isDetected) {
-                                showManualAdBlockDialog = true
-                            } else {
-                                NukeToast.success(context, Tx.t("Status jaringan normal. Seluruh tools aktif.", "Network status normal. All tools operational."))
-                            }
-                        }
-                    }
-                    if (ConsentManager.isPrivacyOptionsRequired(context)) {
-                        DrawerItem(Icons.Rounded.PrivacyTip, Tx.t("Privasi Iklan", "Ad Privacy")) {
-                            coroutineScope.launch { drawerState.close() }
-                            context.findActivity()?.let { ConsentManager.showPrivacyOptionsForm(it) }
-                        }
-                    }
-                    DrawerItem(Icons.Rounded.SystemUpdate, Tx.t("Cek Pembaruan", "Check Update")) {
-                        coroutineScope.launch { drawerState.close() }
-                        context.findActivity()?.let { activity ->
-                            NukeToast.success(activity, Tx.t("Memeriksa pembaruan sistem...", "Checking for updates..."))
-                            AppUpdateController.startFlexibleUpdate(activity)
-                        }
-                    }
-                    DrawerItem(Icons.Rounded.Verified, Tx.t("Beri Rating", "Rate App")) {
-                        coroutineScope.launch { drawerState.close() }
-                        context.findActivity()?.let { activity ->
-                            NukeToast.success(activity, Tx.t("Membuka halaman ulasan...", "Opening review page..."))
-                            AppUpdateController.launchInAppReview(activity)
-                        }
-                    }
 
-                    Spacer(modifier = Modifier.weight(1f))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(1.dp)
-                            .background(
-                                androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    listOf(
-                                        Color.Transparent,
-                                        Color(0xFF35C99B).copy(alpha = 0.3f),
-                                        Color.Transparent,
-                                    )
-                                )
-                            ),
-                    )
-                    Column(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    // ── DRAWER NAVIGATION ITEMS ──────────────────────────
+                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "ENGINEERED BY",
-                            color = Color(0xFF9FB3AA),
+                            "CORE ENGINES",
+                            color = Color(0xFF64748B),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
-                            letterSpacing = 2.sp,
-                            fontFamily = androidx.compose.ui.text.font.FontFamily.SansSerif,
+                            letterSpacing = 1.5.sp,
+                            modifier = Modifier.padding(start = 22.dp, top = 6.dp, bottom = 4.dp),
                         )
-                        Spacer(modifier = Modifier.height(2.dp))
+
+                        DrawerItem(Icons.Rounded.Tune, "Device System Editor") {
+                            navigateWithAd("system_editor")
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                        DrawerItem(Icons.Rounded.Dns, "Web Server & REST API") {
+                            navigateWithAd("webui")
+                            coroutineScope.launch { drawerState.close() }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "AGUNG · DEV",
-                            color = Color(0xFF35C99B),
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Black,
-                            letterSpacing = 3.sp,
+                            "DIAGNOSTICS & SYSTEM",
+                            color = Color(0xFF9BB0A6),
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            modifier = Modifier.padding(start = 22.dp, top = 6.dp, bottom = 4.dp),
                         )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(modifier = Modifier.fillMaxWidth().padding(horizontal = 4.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                            SocialButton(TikTokIcon, "https://tiktok.com/@gamenukeofficial", brandTint = Color.White, borderAccent = Color(0xFF25F4EE))
-                            SocialButton(InstagramIcon, "https://www.instagram.com/agungeka_22?igsh=dmo4YnR4dTF3cnhq", brandTint = Color.Unspecified, borderAccent = Color(0xFFE1306C))
-                            SocialButton(YouTubeIcon, "https://youtube.com/@neoncoreofficialpro?si=g051yTnkdx3A3Hmi", brandTint = Color.Unspecified, borderAccent = Color(0xFFFF0033))
+
+                        DrawerItem(Icons.Rounded.Security, "Network Integrity Status") {
+                            coroutineScope.launch {
+                                drawerState.close()
+                                val status = withContext(Dispatchers.IO) {
+                                    NukeAdBlockDetector.checkStatus(context, adbManager)
+                                }
+                                manualAdBlockStatus = status
+                                if (status.isDetected) {
+                                    showManualAdBlockDialog = true
+                                } else {
+                                    NukeToast.success(context, "Network status normal. All tools operational.")
+                                }
+                            }
+                        }
+                        DrawerItem(Icons.Rounded.LibraryBooks, "Documentation") {
+                            navigateWithAd("tutorial")
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                        DrawerItem(Icons.Rounded.PersonSearch, "About Developer") {
+                            navigateWithAd("dev")
+                            coroutineScope.launch { drawerState.close() }
+                        }
+
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            "PREFERENCES",
+                            color = Color(0xFF9BB0A6),
+                            fontSize = 9.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            letterSpacing = 1.5.sp,
+                            modifier = Modifier.padding(start = 22.dp, top = 6.dp, bottom = 4.dp),
+                        )
+
+                        if (ConsentManager.isPrivacyOptionsRequired(context)) {
+                            DrawerItem(Icons.Rounded.PrivacyTip, "Ad Privacy") {
+                                coroutineScope.launch { drawerState.close() }
+                                context.findActivity()?.let { ConsentManager.showPrivacyOptionsForm(it) }
+                            }
+                        }
+                        DrawerItem(Icons.Rounded.SystemUpdate, "Check Update") {
+                            coroutineScope.launch { drawerState.close() }
+                            context.findActivity()?.let { activity ->
+                                NukeToast.success(activity, "Checking for updates...")
+                                AppUpdateController.startFlexibleUpdate(activity)
+                            }
+                        }
+                        DrawerItem(Icons.Rounded.Verified, "Rate App") {
+                            coroutineScope.launch { drawerState.close() }
+                            context.findActivity()?.let { activity ->
+                                NukeToast.success(activity, "Opening review page...")
+                                AppUpdateController.launchInAppReview(activity)
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(1.dp)
+                                .background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color(0xFF35C99B).copy(alpha = 0.25f),
+                                            Color.Transparent,
+                                        )
+                                    )
+                                ),
+                        )
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .navigationBarsPadding()
+                                .padding(horizontal = 16.dp, vertical = 8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            Text(
+                                "ENGINEERED BY",
+                                color = Color(0xFF9BB0A6),
+                                fontSize = 8.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 2.sp,
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                "AGUNG · DEV",
+                                color = Color(0xFF35C99B),
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 2.5.sp,
+                            )
+                            Spacer(modifier = Modifier.height(10.dp))
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState())
+                                    .padding(horizontal = 4.dp),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                SocialButton(TikTokIcon, "https://tiktok.com/@gamenukeofficial", brandTint = Color.White, borderAccent = Color(0xFF25F4EE))
+                                SocialButton(InstagramIcon, "https://www.instagram.com/agungeka_22?igsh=dmo4YnR4dTF3cnhq", brandTint = Color.Unspecified, borderAccent = Color(0xFFE1306C))
+                                SocialButton(YouTubeIcon, "https://youtube.com/@neoncoreofficialpro?si=g051yTnkdx3A3Hmi", brandTint = Color.Unspecified, borderAccent = Color(0xFFFF0033))
+                            }
+                            Spacer(modifier = Modifier.height(20.dp))
                         }
                     }
                 }
@@ -597,21 +667,22 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 Column {
                                     Text(
                                         "GAME NUKE",
-                                        color = Color(0xFF94A3B8),
+                                        color = Color(0xFF9BB0A6),
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 10.sp,
                                         letterSpacing = 1.sp,
                                     )
                                     Text(
                                         when (route) {
-                                            "dashboard" -> Tx.t("Pusat Komando", "Command Center")
-                                            "games" -> Tx.t("Profil Game", "Game Profiles")
-                                            "cleaner" -> Tx.t("Pembersih Sistem", "Deep Wipe")
-                                            "processes" -> Tx.t("Manajer Tugas", "Task Manager")
-                                            "exec" -> Tx.t("Diagnostik", "Diagnostics")
-                                            "webui" -> Tx.t("Server Lokal", "Local Server")
+                                            "dashboard" -> ("Command Center")
+                                            "system_editor" -> ("Device System Editor")
+                                            "games" -> ("Game Profiles")
+                                            "cleaner" -> ("Deep Wipe")
+                                            "processes" -> ("Task Manager")
+                                            "exec" -> ("Diagnostics")
+                                            "webui" -> ("Local Server")
                                             "dev" -> "Agung Dev"
-                                            else -> Tx.t("Dokumentasi", "Documentation")
+                                            else -> ("Documentation")
                                         },
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -624,36 +695,10 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF020705)),
                     navigationIcon = {
-                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }) {
+                        IconButton(onClick = { coroutineScope.launch { drawerState.open() } }, modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
                             Icon(Icons.Rounded.Sort, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(28.dp))
                         }
                     },
-                    actions = {
-                        Box {
-                            IconButton(onClick = { showLangMenu = true }) {
-                                Icon(Icons.Rounded.Translate, contentDescription = "Translate", tint = Color(0xFF35C99B), modifier = Modifier.size(24.dp))
-                            }
-                            DropdownMenu(
-                                expanded = showLangMenu,
-                                onDismissRequest = { showLangMenu = false },
-                                modifier = Modifier.background(Color(0xFF121212))
-                            ) {
-                                Tx.supportedLangs.forEach { (code, label) ->
-                                    DropdownMenuItem(
-                                        text = { Text(label, color = if (Tx.currentLang == code) Color(0xFF35C99B) else Color.White, fontWeight = FontWeight.Bold) },
-                                        onClick = {
-                                            Tx.setLang(code)
-                                            context.getSharedPreferences("NukePrefs", Context.MODE_PRIVATE)
-                                                .edit().putString("hud_lang", code).apply()
-                                            NukeRuntimeState.update { it.copy(language = code) }
-                                            showLangMenu = false
-                                        }
-                                    )
-                                }
-                            }
-                        }
-                    },
-                    modifier = Modifier.statusBarsPadding()
                 )
             },
             bottomBar = {
@@ -665,35 +710,29 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             )
                         )
                     )
-                    NavigationBar(containerColor = Color(0xFF0A0A0A), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
+                    NavigationBar(containerColor = Color(0xFF020705), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
                     NavigationBarItem(
                         selected = currentRoute == "dashboard",
                         onClick = { navigateWithAd("dashboard") },
                         icon = { Icon(Icons.Rounded.Speed, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(Tx.t("Core", "Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF74747D), unselectedTextColor = Color(0xFF74747D))
+                        label = { Text(("Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "games",
                         onClick = { navigateWithAd("games") },
                         icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(Tx.t("Games", "Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF74747D), unselectedTextColor = Color(0xFF74747D))
+                        label = { Text(("Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "cleaner",
                         onClick = { navigateWithAd("cleaner") },
                         icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(Tx.t("Optimize", "Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF74747D), unselectedTextColor = Color(0xFF74747D))
+                        label = { Text(("Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
-                    NavigationBarItem(
-                        selected = currentRoute == "processes",
-                        onClick = { navigateWithAd("processes") },
-                        icon = { Icon(Icons.Rounded.Memory, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(Tx.t("Monitor", "Monitor"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF74747D), unselectedTextColor = Color(0xFF74747D))
-                    )
+
                 }
                 }
             },
@@ -716,11 +755,12 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 onOpenDevOptions = onOpenDevOptions,
                                 onOpenGames = { navigateWithAd("games") },
                                 onOpenCleaner = { navigateWithAd("cleaner") },
-                                onOpenMonitor = { navigateWithAd("processes") },
+                                onOpenMonitor = { navigateWithAd("dashboard") },
+                                onOpenSystemEditor = { navigateWithAd("system_editor") },
                             )
+                            "system_editor" -> NukeSystemEditorScreen(adbManager)
                             "games" -> GameProfileScreen(adbManager)
                             "cleaner" -> CleanerScreen(adbManager)
-                            "processes" -> ProcessManagerScreen(adbManager)
                             "exec" -> DiagnosticsConsoleScreen(adbManager)
                             "webui" -> {
                                 val server = webServer
@@ -734,7 +774,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                 }
                 // Keep banners on high-value passive screens only. Do not cover diagnostics, Web UI,
                 // developer, or tutorial workflows where persistent ads are distracting.
-                if (currentRoute in setOf("dashboard", "games", "cleaner", "processes")) {
+                if (currentRoute in setOf("dashboard", "games", "cleaner")) {
                     Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF020705))) {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(1.dp).background(
@@ -754,40 +794,40 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
 
 @Composable
 fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF38BDF8)
     Row(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 10.dp, vertical = 2.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-            .clickable(onClick = onClick)
-            .padding(vertical = 11.dp, horizontal = 14.dp),
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .nukePressFeedback().clickable(onClick = onClick)
+            .padding(vertical = 10.dp, horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
             modifier = Modifier
-                .size(34.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-                .background(Color(0xFF101714))
-                .border(0.8.dp, accent.copy(alpha = 0.20f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+                .size(32.dp)
+                .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                .background(Color(0xFF131B24))
+                .border(0.8.dp, Color(0xFF1E2836), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(17.dp))
+            Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
         }
-        Spacer(modifier = Modifier.width(14.dp))
+        Spacer(modifier = Modifier.width(12.dp))
         Text(
             title,
-            color = Color.White,
-            fontSize = 13.5.sp,
+            color = Color(0xFFF1F5F9),
+            fontSize = 13.sp,
             fontWeight = FontWeight.Medium,
-            letterSpacing = 0.2.sp,
+            letterSpacing = 0.1.sp,
         )
         Spacer(modifier = Modifier.weight(1f))
         Icon(
             Icons.Rounded.ChevronRight,
             contentDescription = null,
-            tint = Color(0xFF4A5568),
-            modifier = Modifier.size(17.dp),
+            tint = Color(0xFF475569),
+            modifier = Modifier.size(16.dp),
         )
     }
 }
@@ -798,9 +838,9 @@ fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White,
     Box(
         modifier = Modifier
             .size(width = 66.dp, height = 44.dp)
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-            .background(Color(0xFF0F1714))
-            .border(0.8.dp, borderAccent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
+            .background(Color(0xFF131B24))
+            .border(0.8.dp, borderAccent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
             .clickable { runCatching { uriHandler.openUri(url) } },
         contentAlignment = Alignment.Center,
     ) {

@@ -1,0 +1,5 @@
+# Copy to release.properties locally. Do not commit real passwords.
+storeFile=agwallpaper84.jks
+storePassword=YOUR_LOCAL_KEYSTORE_PASSWORD
+keyAlias=agwallpaper
+keyPassword=YOUR_LOCAL_KEY_PASSWORD

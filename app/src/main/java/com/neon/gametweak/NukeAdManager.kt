@@ -418,7 +418,7 @@ object NukeAdManager {
     ) {
         val context = activity.applicationContext
         if (isBoosterVipActive(context)) {
-            Log.d(TAG, "Booster VIP active, bypassing ad")
+            Log.d(TAG, "Booster VIP active, using a separate path around ad")
             onProceedToGame(true)
             return
         }

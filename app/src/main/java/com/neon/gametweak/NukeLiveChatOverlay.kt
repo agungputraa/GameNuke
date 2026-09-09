@@ -3,14 +3,18 @@ package com.neon.gametweak
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.BitmapFactory
 import android.graphics.Color
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.text.Editable
+import android.text.InputType
+import android.text.TextUtils
 import android.text.TextWatcher
 import android.util.Log
 import android.view.Gravity
@@ -35,6 +39,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 /**
  * NukeLiveChatOverlay — Enterprise Floating Live Chat Support
@@ -158,6 +163,43 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                 modalOverlay = null
                 modalContentBox = null
                 Log.d(TAG, "Live Chat overlay hidden")
+            }
+        }
+    }
+
+    fun onImagePickerOpening() {
+        mainHandler.post {
+            rootView?.visibility = View.GONE
+            // Coordinate with other overlays: collapse Game Dock drawer to small pill
+            runCatching { NukeGameDockOverlay.getInstance(context).closeDrawer() }
+            // Collapse Floating Booster hub to edge pill
+            runCatching { FloatingBoosterService.collapseHub() }
+        }
+    }
+
+    fun onImagePickerDismissed() {
+        mainHandler.post {
+            rootView?.visibility = View.VISIBLE
+        }
+    }
+
+    fun onImagePicked(uri: Uri) {
+        mainHandler.post {
+            rootView?.visibility = View.VISIBLE
+            val caption = inputEt?.text?.toString()?.trim().orEmpty()
+            inputEt?.setText("")
+            sendProgressBar?.visibility = View.VISIBLE
+            sendBtn?.visibility = View.GONE
+            NukeLiveChatRepository.sendPhotoMessage(context, uri, caption) { success, error ->
+                mainHandler.post {
+                    sendProgressBar?.visibility = View.GONE
+                    sendBtn?.visibility = View.VISIBLE
+                    if (success) {
+                        NukeToast.success(context, "📸 Photo sent successfully!")
+                    } else {
+                        NukeToast.error(context, error ?: "Failed to send photo")
+                    }
+                }
             }
         }
     }
@@ -287,7 +329,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
 
         // Action buttons
         actions.forEach { action ->
-            val btn = Button(context).apply {
+            val btn = Button(context).apply { installNukePressFeedback() }.apply {
                 text = action.title
                 textSize = 11f
                 typeface = Typeface.DEFAULT_BOLD
@@ -425,6 +467,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             }
             contentRow.addView(clearBtn)
 
+
             // Close button
             val closeBtn = TextView(context).apply {
                 text = "✕"
@@ -475,7 +518,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
 
             editBannerTv = TextView(context).apply {
-                text = "Mengedit pesan..."
+                text = "Editing message..."
                 textSize = 9.5f
                 setTextColor(Color.parseColor("#00D4FF"))
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
@@ -483,7 +526,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             addView(editBannerTv)
 
             val cancelBtn = TextView(context).apply {
-                text = "✕ Batal"
+                text = "✕ Cancel"
                 textSize = 10f
                 setTextColor(Color.parseColor("#EF4444"))
                 typeface = Typeface.DEFAULT_BOLD
@@ -600,11 +643,15 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
 
             inputEt = EditText(context).apply {
-                hint = "Tulis pesan ke Agung Developer..."
+                hint = "Message to Agung Developer..."
                 setHintTextColor(Color.parseColor("#64748B"))
                 setTextColor(Color.WHITE)
                 textSize = 12f
-                maxLines = 4
+                inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_MULTI_LINE or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+                isSingleLine = false
+                maxLines = 5
+                setHorizontallyScrolling(false)
+                gravity = Gravity.CENTER_VERTICAL or Gravity.START
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#0F1A24"))
                     cornerRadius = 10 * d
@@ -618,11 +665,26 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             }
             addView(inputEt)
 
+            val attachBtn = TextView(context).apply {
+                text = "🖼️"
+                textSize = 18f
+                setPadding((6 * d).toInt(), (4 * d).toInt(), (6 * d).toInt(), (4 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
+                    rightMargin = (6 * d).toInt()
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
+                setOnClickListener {
+                    onImagePickerOpening()
+                    NukeImagePickerActivity.launch(context)
+                }
+            }
+            addView(attachBtn)
+
             val btnContainer = FrameLayout(context).apply {
                 layoutParams = LinearLayout.LayoutParams((38 * d).toInt(), (38 * d).toInt())
             }
 
-            sendBtn = Button(context).apply {
+            sendBtn = Button(context).apply { installNukePressFeedback() }.apply {
                 text = "➤"
                 textSize = 15f
                 setTextColor(Color.BLACK)
@@ -681,7 +743,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
             ).apply {
-                bottomMargin = (8 * d).toInt()
+                bottomMargin = (6 * d).toInt()
                 if (isUser) {
                     leftMargin = (36 * d).toInt()
                     rightMargin = 0
@@ -693,18 +755,28 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
         }
 
+        val dm = context.resources.displayMetrics
+        val sw = dm.widthPixels
+        val sh = dm.heightPixels
+        val isLandscape = sw > sh
+        val panelW = if (isLandscape) (sw * 0.45f).toInt().coerceIn((360 * d).toInt(), (480 * d).toInt())
+                     else (sw * 0.90f).toInt().coerceIn((320 * d).toInt(), (420 * d).toInt())
+        val maxCardWidth = (panelW - (80 * d)).toInt()
+        val maxTextWidth = maxCardWidth - (24 * d).toInt()
+        val maxBubbleW = maxTextWidth
+
         val card = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding((12 * d).toInt(), (9 * d).toInt(), (12 * d).toInt(), (7 * d).toInt())
+            setPadding((11 * d).toInt(), (8 * d).toInt(), (11 * d).toInt(), (6 * d).toInt())
             background = GradientDrawable().apply {
                 if (isUser) {
-                    setColor(Color.parseColor("#151D24")) // Minimalist enterprise dark slate
+                    setColor(Color.parseColor("#0F3826")) // Rich Emerald Green (Telegram/WhatsApp User Style)
                     cornerRadii = floatArrayOf(12 * d, 12 * d, 12 * d, 12 * d, 2 * d, 2 * d, 12 * d, 12 * d)
-                    setStroke((1f * d).toInt(), Color.parseColor("#253444"))
+                    setStroke((1f * d).toInt(), Color.parseColor("#1B5438"))
                 } else {
-                    setColor(Color.parseColor("#0F1620")) // Deep obsidian graphite
+                    setColor(Color.parseColor("#151F2B")) // Dark Navy Slate (Dev Bubble Style)
                     cornerRadii = floatArrayOf(12 * d, 12 * d, 12 * d, 12 * d, 12 * d, 12 * d, 2 * d, 2 * d)
-                    setStroke((1f * d).toInt(), Color.parseColor("#1C2936"))
+                    setStroke((1f * d).toInt(), Color.parseColor("#26384C"))
                 }
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -718,6 +790,60 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                 showMessageActions(msg)
                 true
             }
+        }
+
+        // Reply Quote Container (Shows what user message developer is answering)
+        if (!msg.replyToText.isNullOrBlank()) {
+            val quoteBox = LinearLayout(context).apply {
+                orientation = LinearLayout.HORIZONTAL
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#0C151D"))
+                    cornerRadius = 6 * d
+                    setStroke((0.8f * d).toInt(), Color.parseColor("#1E2D3D"))
+                }
+                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.MATCH_PARENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                ).apply {
+                    bottomMargin = (6 * d).toInt()
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
+            }
+
+            // Vertical neon accent bar
+            val accentBar = View(context).apply {
+                setBackgroundColor(Color.parseColor("#00FF88"))
+                layoutParams = LinearLayout.LayoutParams((3 * d).toInt(), LinearLayout.LayoutParams.MATCH_PARENT).apply {
+                    rightMargin = (8 * d).toInt()
+                }
+            }
+            quoteBox.addView(accentBar)
+
+            val quoteContent = LinearLayout(context).apply {
+                orientation = LinearLayout.VERTICAL
+                layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            }
+
+            val quoteAuthor = TextView(context).apply {
+                text = "↩️ Replying to ${msg.replyToSender ?: "You"}:"
+                textSize = 9f
+                setTextColor(Color.parseColor("#00D4FF"))
+                typeface = Typeface.DEFAULT_BOLD
+            }
+            val quoteSnippet = TextView(context).apply {
+                text = msg.replyToText
+                textSize = 10.5f
+                setTextColor(Color.parseColor("#94A3B8"))
+                maxLines = 2
+                ellipsize = TextUtils.TruncateAt.END
+                maxWidth = maxTextWidth - (12 * d).toInt()
+            }
+            quoteContent.addView(quoteAuthor)
+            quoteContent.addView(quoteSnippet)
+            quoteBox.addView(quoteContent)
+
+            card.addView(quoteBox)
         }
 
         // Developer sender badge
@@ -738,6 +864,36 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             card.addView(devHeader)
         }
 
+        // Message Photo Attachment
+        if (!msg.imagePath.isNullOrBlank()) {
+            val imgFile = File(msg.imagePath)
+            if (imgFile.exists()) {
+                val imgView = ImageView(context).apply {
+                    val bm = BitmapFactory.decodeFile(msg.imagePath)
+                    setImageBitmap(bm)
+                    adjustViewBounds = true
+                    scaleType = ImageView.ScaleType.FIT_CENTER
+                    maxHeight = (320 * d).toInt()
+                    layoutParams = LinearLayout.LayoutParams(
+                        (230 * d).toInt().coerceAtMost(maxBubbleW),
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                    ).apply {
+                        bottomMargin = (6 * d).toInt()
+                    }
+                    background = GradientDrawable().apply {
+                        setColor(Color.parseColor("#0C1714"))
+                        cornerRadius = 8 * d
+                        setStroke((1 * d).toInt(), if (isDev) Color.parseColor("#00FF88") else Color.parseColor("#38BDF8"))
+                    }
+                    clipToOutline = true
+                    setOnClickListener {
+                        showFullscreenImage(msg.imagePath)
+                    }
+                }
+                card.addView(imgView)
+            }
+        }
+
         // Message Body: If Developer sent /cmd, show syntax-formatted command box
         if (isDev && !cmd.isNullOrBlank()) {
             val cmdHeader = TextView(context).apply {
@@ -755,6 +911,8 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                 textSize = 11f
                 typeface = Typeface.MONOSPACE
                 setTextColor(Color.parseColor("#34D399"))
+                maxWidth = maxBubbleW
+                setHorizontallyScrolling(false)
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#071512"))
                     cornerRadius = 6 * d
@@ -790,13 +948,18 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             }
             card.addView(runBtn)
         } else {
-            // Standard clean chat message — High Contrast Crisp Text
+            // Standard clean chat message — High Contrast Crisp Text with Professional Auto-Wrap
             val textTv = TextView(context).apply {
                 text = msg.text
-                textSize = 12.5f
-                setTextColor(Color.parseColor("#F1F5F9"))
-                setLineSpacing(2 * d, 1.15f)
+                textSize = 12.8f
+                setTextColor(if (isUser) Color.parseColor("#ECFDF5") else Color.parseColor("#F8FAFC"))
+                setLineSpacing(2.5f * d, 1.15f)
                 typeface = Typeface.DEFAULT
+                layoutParams = LinearLayout.LayoutParams(
+                    LinearLayout.LayoutParams.WRAP_CONTENT,
+                    LinearLayout.LayoutParams.WRAP_CONTENT
+                )
+                maxWidth = maxBubbleW
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
             }
             card.addView(textTv)
@@ -885,7 +1048,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                     cancelEditing()
                     inputEt?.setText("")
                 } else {
-                    NukeToast.error(context, err ?: "Gagal memperbarui pesan", false)
+                    NukeToast.error(context, err ?: "Failed to update message", false)
                 }
             }
         } else {
@@ -897,7 +1060,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                 sendProgressBar?.visibility = View.GONE
                 sendBtn?.visibility = View.VISIBLE
                 if (!success) {
-                    NukeToast.error(context, err ?: "Gagal mengirim pesan", false)
+                    NukeToast.error(context, err ?: "Failed to send message", false)
                 }
             }
         }
@@ -908,28 +1071,28 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
         val actions = mutableListOf<ModalAction>()
 
         if (isUser) {
-            actions.add(ModalAction("✏️ Edit Pesan", "#38BDF8") {
+            actions.add(ModalAction("✏️ Edit Message", "#38BDF8") {
                 startEditing(msg)
             })
-            actions.add(ModalAction("📋 Salin Teks", "#00FF88") {
+            actions.add(ModalAction("📋 Copy Text", "#00FF88") {
                 copyToClipboard(msg.text)
             })
-            actions.add(ModalAction("🗑️ Hapus Pesan", "#EF4444") {
+            actions.add(ModalAction("🗑️ Delete Message", "#EF4444") {
                 NukeLiveChatRepository.deleteMessage(context, msg.id) { ok, err ->
                     if (ok) {
-                        NukeToast.success(context, "Pesan berhasil dihapus")
+                        NukeToast.success(context, "Message deleted successfully")
                     } else {
-                        NukeToast.error(context, err ?: "Gagal menghapus pesan", false)
+                        NukeToast.error(context, err ?: "Failed to delete message", false)
                     }
                 }
             })
         } else {
-            actions.add(ModalAction("📋 Salin Teks", "#00FF88") {
+            actions.add(ModalAction("📋 Copy Text", "#00FF88") {
                 copyToClipboard(msg.commandText ?: msg.text)
             })
             val cmd = msg.commandText
             if (!cmd.isNullOrBlank()) {
-                actions.add(ModalAction("▶ Jalankan di Terminal", "#00FF88") {
+                actions.add(ModalAction("▶ Run in Terminal", "#00FF88") {
                     copyToClipboard(cmd)
                     NukeTerminalOverlay.getInstance(context).showWithCommand(cmd)
                 })
@@ -937,12 +1100,12 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
         }
 
         val snippet = if (msg.text.length > 45) msg.text.take(42) + "..." else msg.text
-        showModal(if (isUser) "Pesan Anda" else "Agung Developer", snippet, actions)
+        showModal(if (isUser) "Your Message" else "Agung Developer", snippet, actions)
     }
 
     private fun startEditing(msg: NukeChatMessage) {
         editingMessageId = msg.id
-        editBannerTv?.text = "Mengedit: \"${msg.text.take(30)}...\""
+        editBannerTv?.text = "Editing: \"${msg.text.take(30)}...\""
         editBannerView?.visibility = View.VISIBLE
         inputEt?.setText(msg.text)
         inputEt?.setSelection(msg.text.length)
@@ -958,15 +1121,15 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
 
     private fun confirmDeleteMessage(msg: NukeChatMessage) {
         showModal(
-            "Hapus Pesan?",
-            "Pesan ini akan dihapus secara permanen dari percakapan.",
+            "Delete Message?",
+            "This message will be permanently deleted from the conversation.",
             listOf(
-                ModalAction("🗑 Hapus Sekarang", "#EF4444") {
+                ModalAction("🗑 Delete Now", "#EF4444") {
                     NukeLiveChatRepository.deleteMessage(context, msg.id) { ok, err ->
                         if (ok) {
-                            NukeToast.success(context, "Pesan berhasil dihapus")
+                            NukeToast.success(context, "Message deleted successfully")
                         } else {
-                            NukeToast.error(context, err ?: "Gagal menghapus pesan", false)
+                            NukeToast.error(context, err ?: "Failed to delete message", false)
                         }
                     }
                 }
@@ -976,12 +1139,12 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
 
     private fun promptClearHistory() {
         showModal(
-            "Bersihkan Riwayat?",
-            "Semua riwayat chat di aplikasi ini akan dihapus.",
+            "Clear History?",
+            "All chat messages will be permanently cleared from this device.",
             listOf(
-                ModalAction("🗑 Bersihkan Semua", "#EF4444") {
+                ModalAction("🗑 Clear All", "#EF4444") {
                     NukeLiveChatRepository.clearHistory(context)
-                    NukeToast.success(context, "Riwayat chat dibersihkan")
+                    NukeToast.success(context, "Chat history cleared")
                 }
             )
         )
@@ -990,7 +1153,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
     private fun copyToClipboard(text: String) {
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
         clipboard?.setPrimaryClip(ClipData.newPlainText("NukeChat", text))
-        NukeToast.success(context, "Teks disalin ke clipboard")
+        NukeToast.success(context, "Text copied to clipboard")
     }
 
     private fun showKeyboard() {
@@ -1003,5 +1166,45 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
     private fun hideKeyboard() {
         val imm = context.getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
         inputEt?.let { imm?.hideSoftInputFromWindow(it.windowToken, 0) }
+    }
+
+    private fun showFullscreenImage(imagePath: String) {
+        val overlay = modalOverlay ?: return
+        overlay.removeAllViews()
+        overlay.visibility = View.VISIBLE
+
+        val imgContainer = FrameLayout(context).apply {
+            setBackgroundColor(Color.parseColor("#E6000000"))
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT)
+            setOnClickListener { overlay.visibility = View.GONE }
+        }
+
+        val fullImg = ImageView(context).apply {
+            val bm = BitmapFactory.decodeFile(imagePath)
+            setImageBitmap(bm)
+            scaleType = ImageView.ScaleType.FIT_CENTER
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT, Gravity.CENTER)
+        }
+        imgContainer.addView(fullImg)
+
+        val closeTv = TextView(context).apply {
+            text = "✕ Close"
+            textSize = 12f
+            setTextColor(Color.WHITE)
+            typeface = Typeface.DEFAULT_BOLD
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#99000000"))
+                cornerRadius = 14 * d
+            }
+            setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
+            layoutParams = FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.TOP or Gravity.END).apply {
+                topMargin = (12 * d).toInt()
+                rightMargin = (12 * d).toInt()
+            }
+            setOnClickListener { overlay.visibility = View.GONE }
+        }
+        imgContainer.addView(closeTv)
+
+        overlay.addView(imgContainer)
     }
 }

@@ -197,7 +197,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
     private fun collectHealthData(): HealthSnapshot {
         // 1. Battery Telemetry
         val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-        val bIntent = context.registerReceiver(null, ifilter)
+        val bIntent = androidx.core.content.ContextCompat.registerReceiver(context, null, ifilter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
         val bLevel = bIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) ?: 0
         val bScale = bIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val bPct = if (bScale > 0) (bLevel * 100 / bScale) else bLevel
@@ -269,10 +269,10 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         score = score.coerceIn(50, 100)
 
         val healthStatus = when {
-            score >= 90 -> "EXCELLENT • TURBO READY"
-            score >= 80 -> "GOOD • STABLE GAMING"
-            score >= 70 -> "MODERATE • FLUSH RECOMMENDED"
-            else -> "HIGH STRAIN • COOLDOWN NEEDED"
+            score >= 90 -> "EXCELLENT • OPTIMAL READY"
+            score >= 80 -> "GOOD • STABLE STATUS"
+            score >= 70 -> "MODERATE • TRIMMING RECOMMENDED"
+            else -> "HIGH LOAD • OPTIMIZATION RECOMMENDED"
         }
 
         return HealthSnapshot(
@@ -458,7 +458,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             typeface = Typeface.DEFAULT_BOLD
         }
         overallDescTv = TextView(context).apply {
-            text = "OPTIMAL • TURBO READY"
+            text = "OPTIMAL • SYSTEM READY"
             setTextColor(Color.WHITE)
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
@@ -559,7 +559,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
 
-        val killHogsBtn = Button(context).apply {
+        val killHogsBtn = Button(context).apply { installNukePressFeedback() }.apply {
             text = "⚡ KILL CPU HOGS"
             setTextColor(Color.BLACK)
             textSize = 10.5f
@@ -582,7 +582,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             }
         }
 
-        val cooldownBtn = Button(context).apply {
+        val cooldownBtn = Button(context).apply { installNukePressFeedback() }.apply {
             text = "❄ COOLDOWN"
             setTextColor(Color.WHITE)
             textSize = 10.5f

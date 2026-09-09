@@ -479,9 +479,9 @@ class LocalWebServer private constructor(private val context: Context) {
                             sendJsonResponse(out, """{"success":true,"action":"kill_hogs","status":"sweep_triggered"}""")
                         }
                         "net_turbo", "vpn_boost" -> {
-                            val active = NukeVpnService.isRunning
-                            if (active) NukeVpnService.stopBoost(context)
-                            else NukeVpnService.startBoost(context, NukeVpnService.BoostMode.PING_BOOST)
+                            val active = NukeNetPacer.isRunning
+                            if (active) NukeNetPacer.stopBoost(context)
+                            else NukeNetPacer.startBoost(context, NukeNetPacer.BoostMode.PING_BOOST)
                             sendJsonResponse(out, """{"success":true,"action":"net_turbo","active":${!active}}""")
                         }
                         "brightness_lock" -> {
@@ -549,7 +549,7 @@ class LocalWebServer private constructor(private val context: Context) {
 
                 "/api/health/diagnostics" -> {
                     val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-                    val bIntent = context.registerReceiver(null, ifilter)
+                    val bIntent = androidx.core.content.ContextCompat.registerReceiver(context, null, ifilter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
                     val bLevel = bIntent?.getIntExtra(BatteryManager.EXTRA_LEVEL, 0) ?: 0
                     val bScale = bIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
                     val bPct = if (bScale > 0) (bLevel * 100 / bScale) else bLevel
@@ -588,7 +588,7 @@ class LocalWebServer private constructor(private val context: Context) {
                                 "used_percent": $stUsedPct
                             },
                             "sentinel_active": ${NukeAiSentinel.enabled.value},
-                            "vpn_turbo_active": ${NukeVpnService.isRunning}
+                            "vpn_turbo_active": ${NukeNetPacer.isRunning}
                         }
                     """.trimIndent()
                     sendJsonResponse(out, json)
@@ -599,14 +599,14 @@ class LocalWebServer private constructor(private val context: Context) {
                     if (enableParam != null) {
                         val enable = enableParam.toBooleanStrictOrNull() ?: true
                         if (enable) {
-                            NukeVpnService.startBoost(context, NukeVpnService.BoostMode.PING_BOOST)
+                            NukeNetPacer.startBoost(context, NukeNetPacer.BoostMode.PING_BOOST)
                         } else {
-                            NukeVpnService.stopBoost(context)
+                            NukeNetPacer.stopBoost(context)
                         }
                         sendJsonResponse(out, """{"success":true,"active":$enable}""")
                         return
                     }
-                    sendJsonResponse(out, """{"running":${NukeVpnService.isRunning},"mode":"${NukeVpnService.status.value.mode.name}","ping_ms":${NukeVpnService.status.value.measuredPingMs}}""")
+                    sendJsonResponse(out, """{"running":${NukeNetPacer.isRunning},"mode":"${NukeNetPacer.status.value.mode.name}","ping_ms":${NukeNetPacer.status.value.measuredPingMs}}""")
                 }
 
                 "/api/thermal" -> {
@@ -625,7 +625,7 @@ class LocalWebServer private constructor(private val context: Context) {
                     } else "NOT_SUPPORTED"
                     val thermalCode = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) pm?.currentThermalStatus ?: -1 else -1
                     val isThrottling = thermalCode >= 2
-                    val battery = runCatching { context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
+                    val battery = runCatching { androidx.core.content.ContextCompat.registerReceiver(context, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED) }.getOrNull()
                     val tempC = (battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
                     sendJsonResponse(out, """
                         {
@@ -925,7 +925,7 @@ class LocalWebServer private constructor(private val context: Context) {
         val storageFreeMb = (stat?.availableBytes ?: 0L) / 1_048_576L
         val storageTotalMb = (stat?.totalBytes ?: 0L) / 1_048_576L
 
-        val battery = runCatching { context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED)) }.getOrNull()
+        val battery = runCatching { androidx.core.content.ContextCompat.registerReceiver(context, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED) }.getOrNull()
         val batteryLevel = battery?.getIntExtra(BatteryManager.EXTRA_LEVEL, -1) ?: -1
         val temperatureC = (battery?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0) / 10f
         val isCharging = battery?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) == BatteryManager.BATTERY_STATUS_CHARGING
@@ -1001,10 +1001,10 @@ class LocalWebServer private constructor(private val context: Context) {
                 { "path": "/api/panel/open?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to open a specific floating overlay." },
                 { "path": "/api/panel/close?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to close a specific floating overlay." },
                 { "path": "/api/panel/toggle?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to toggle a specific floating overlay." },
-                { "path": "/api/action/trigger?action={kill_hogs|net_turbo|brightness_lock|footstep_boost|dnd}", "methods": ["POST", "GET"], "description": "Trigger tactical in-game actions: kill RAM/CPU zombies, enable VPN ping boost, lock brightness, or toggle footstep audio booster." },
+                { "path": "/api/action/trigger?action={kill_hogs|net_turbo|brightness_lock|footstep_boost|dnd}", "methods": ["POST", "GET"], "description": "Trigger in-game actions: optimize background processes, socket tuning, display brightness lock, or footstep audio enhancement." },
                 { "path": "/api/sentinel?action={sweep}&enabled={true|false}", "methods": ["POST", "GET"], "description": "AI Sentinel Autonomous Optimizer status, toggle, and on-demand sweep trigger." },
                 { "path": "/api/health/diagnostics", "methods": ["GET"], "description": "Deep hardware diagnostics: battery thermals, voltage, RAM and zRAM usage, internal storage, and CPU state." },
-                { "path": "/api/network/turbo?enable={true|false}", "methods": ["POST", "GET"], "description": "Control VPN Ping Optimizer and low-latency gaming DNS." },
+                { "path": "/api/network/turbo?enable={true|false}", "methods": ["POST", "GET"], "description": "Control socket pacing and local DNS caching for Game Nuke connections only." },
                 { "path": "/api/exec?cmd={command}", "methods": ["POST", "GET"], "description": "Execute a shell command with elevated privileges (Shizuku / Wireless ADB) and return exit code, output, and execution time." },
                 { "path": "/api/device", "methods": ["GET"], "description": "Hardware and OS specifications (Model, Brand, Android Version, SDK, ABIs)." },
                 { "path": "/api/thermal", "methods": ["GET"], "description": "Hardware thermal throttling status, thermal headroom, and battery temperature." },

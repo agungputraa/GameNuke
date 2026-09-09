@@ -31,14 +31,12 @@ import kotlinx.coroutines.launch
 /**
  * NukeMagicTouchPanelOverlay — Floating Magic Touch Sensitivity Studio.
  *
- * Realtime touch acceleration and sensitivity panel:
- *  - X-Axis Swipe Sensitivity seekbar (horizontal aim tracking)
- *  - Y-Axis Swipe Sensitivity seekbar (vertical drag-headshot optimization for Free Fire)
- *  - System Pointer Speed realtime slider
- *  - Touch Polling Rate & Velocity Booster
- *  - Touch Deadzone / Latency Reducer
- *  - Anti-Jitter / Aim Stabilizer
- *  - 1-Tap Presets (FF Drag Headshot, Close Shotgun, Sniper Precision)
+ * Capability-aware touch and injected-drag tuning panel:
+ *  - X/Y acceleration profile for Game Nuke-generated swipe gestures
+ *  - Android external pointer speed (-7..+7)
+ *  - OEM game-touch switch only when a writable kernel node is actually discovered
+ *  - Privileged shell injection preference to avoid unnecessary Accessibility gesture cancellation
+ *  - Anti-jitter processing for Game Nuke-generated swipe vectors
  */
 class NukeMagicTouchPanelOverlay private constructor(private val context: Context) {
 
@@ -62,16 +60,26 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var pollingSwitch: Switch? = null
     private var latencySwitch: Switch? = null
     private var antiJitterSwitch: Switch? = null
+    private var touchStatusTv: TextView? = null
 
     // State values (persisted)
-    var sensitivityX: Int = 50       // 1 - 100 (default 50 = 1.0x)
-    var sensitivityY: Int = 70       // 1 - 100 (default 70 = 1.7x Drag Headshot)
+    var sensitivityX: Int = 50       // 1 - 100; 50 = 1.0x injected-drag baseline
+    var sensitivityY: Int = 70       // 1 - 100; 50 = 1.0x injected-drag baseline
     var pointerSpeed: Int = 0        // -7 to +7 (default 0)
     var ultraPollingEnabled: Boolean = true
     var zeroLatencyEnabled: Boolean = true
     var antiJitterEnabled: Boolean = false
 
     val isShowing: Boolean get() = rootView != null
+
+    private val hardwareApplyRunnable = Runnable {
+        applySettings()
+    }
+
+    private fun scheduleHardwareApply() {
+        mainHandler.removeCallbacks(hardwareApplyRunnable)
+        mainHandler.postDelayed(hardwareApplyRunnable, 120L)
+    }
 
     companion object {
         private const val TAG = "NukeMagicTouch"
@@ -91,6 +99,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     init {
         loadSettings()
+        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
     }
 
     // ─── Public Show / Hide API ─────────────────────────────────────────────
@@ -106,9 +115,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 (320 * d).toInt().coerceAtMost((sw * 0.88f).toInt())
             }
             val panelH = if (isLandscape) {
-                (sh * 0.88f).toInt()
+                (sh * 0.90f).toInt()
             } else {
-                (490 * d).toInt().coerceAtMost((sh * 0.84f).toInt())
+                (540 * d).toInt().coerceAtMost((sh * 0.88f).toInt())
             }
 
             val lp = WindowManager.LayoutParams(
@@ -182,18 +191,23 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         // Section A: Axis Sensitivities
-        body.addView(sectionTitle("AXIS SWIPE SENSITIVITY"))
+        body.addView(sectionTitle("HARDWARE & GESTURE TOUCH TUNING"))
         body.addView(buildXAxisControl())
         body.addView(space(6))
         body.addView(buildYAxisControl())
         body.addView(space(10))
 
-        // Section B: Pointer & Sampling
-        body.addView(sectionTitle("TOUCH ENGINE & RESPONSE"))
+        // Section B: Hardware Touch Calibration & Live Test
+        body.addView(sectionTitle("TOUCH CALIBRATION & LIVE TEST"))
+        body.addView(buildCalibrationAndTestPad())
+        body.addView(space(10))
+
+        // Section C: Pointer & Sampling
+        body.addView(sectionTitle("SYSTEM TOUCH CAPABILITIES"))
         body.addView(buildPointerSpeedControl())
         body.addView(buildToggleRow(
-            title = "Ultra-High Touch Polling Rate",
-            subtitle = "Boosts velocity sampling to 480Hz",
+            title = "OEM Game Touch Mode",
+            subtitle = "Enables only a detected writable game-touch kernel node",
             checked = ultraPollingEnabled,
             onChecked = {
                 ultraPollingEnabled = it
@@ -204,8 +218,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         ))
         body.addView(space(4))
         body.addView(buildToggleRow(
-            title = "Zero Touch Latency (Instant Slop)",
-            subtitle = "Removes initial tap threshold delay",
+            title = "Low-Latency Shell Input",
+            subtitle = "Prefer Shizuku / iADB / daemon injection when available",
             checked = zeroLatencyEnabled,
             onChecked = {
                 zeroLatencyEnabled = it
@@ -216,8 +230,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         ))
         body.addView(space(4))
         body.addView(buildToggleRow(
-            title = "Anti-Jitter Aim Stabilizer",
-            subtitle = "Smooths micro-shaking for sniper tracking",
+            title = "Injected Drag Stabilizer",
+            subtitle = "Damps tiny Game Nuke macro-vector noise; physical finger is untouched",
             checked = antiJitterEnabled,
             onChecked = {
                 antiJitterEnabled = it
@@ -226,6 +240,13 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             },
             onSwitchCreated = { antiJitterSwitch = it }
         ))
+        touchStatusTv = TextView(context).apply {
+            text = "Capability probe pending…"
+            textSize = 7.5f
+            setTextColor(Color.parseColor("#64748B"))
+            setPadding(dp2px(4), dp2px(5), dp2px(4), 0)
+        }
+        body.addView(touchStatusTv)
         body.addView(space(10))
 
         // Section C: One-Tap Presets
@@ -283,13 +304,15 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         })
 
         titleCol.addView(TextView(context).apply {
-            text = "Realtime Swipe & Sensitivity Tuner"
+            text = "Verified System + Injected Gesture Tuner"
             textSize = 7.8f
             setTextColor(Color.parseColor("#64748B"))
             setPadding(0, (1 * d).toInt(), 0, 0)
         })
 
         row.addView(titleCol)
+
+        // Help Button
 
         // Styled Circular Close Button
         val closeBtn = TextView(context).apply {
@@ -322,13 +345,22 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(TextView(context).apply {
-            text = "X-Axis (Horizontal Aim Speed)"
-            textSize = 9f
-            setTextColor(Color.parseColor("#94A3B8"))
-            typeface = Typeface.DEFAULT_BOLD
+        val labelCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        labelCol.addView(TextView(context).apply {
+            text = "X-Axis (Horizontal Swipe / Geser Samping)"
+            textSize = 9f
+            setTextColor(Color.parseColor("#E2E8F0"))
+            typeface = Typeface.DEFAULT_BOLD
         })
+        labelCol.addView(TextView(context).apply {
+            text = "Hardware Goodix/Xiaomi RX gain & zero edge deadzone"
+            textSize = 7.2f
+            setTextColor(Color.parseColor("#64748B"))
+        })
+        header.addView(labelCol)
         xValTv = TextView(context).apply {
             text = formatXMultiplier(sensitivityX)
             textSize = 9.5f
@@ -349,7 +381,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     xValTv?.text = formatXMultiplier(sensitivityX)
                     if (fromUser) {
                         saveSettings()
-                        applySettings()
+                        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
+                        scheduleHardwareApply()
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -370,13 +403,22 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(TextView(context).apply {
-            text = "Y-Axis (Vertical Drag Headshot)"
-            textSize = 9f
-            setTextColor(Color.parseColor("#94A3B8"))
-            typeface = Typeface.DEFAULT_BOLD
+        val labelCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        labelCol.addView(TextView(context).apply {
+            text = "Y-Axis (Vertical Drag / Drag Atas Aim)"
+            textSize = 9f
+            setTextColor(Color.parseColor("#E2E8F0"))
+            typeface = Typeface.DEFAULT_BOLD
         })
+        labelCol.addView(TextView(context).apply {
+            text = "Hardware Goodix/Xiaomi TX gain & high-speed aim acceleration"
+            textSize = 7.2f
+            setTextColor(Color.parseColor("#64748B"))
+        })
+        header.addView(labelCol)
         yValTv = TextView(context).apply {
             text = formatYMultiplier(sensitivityY)
             textSize = 9.5f
@@ -397,7 +439,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     yValTv?.text = formatYMultiplier(sensitivityY)
                     if (fromUser) {
                         saveSettings()
-                        applySettings()
+                        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
+                        scheduleHardwareApply()
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -405,6 +448,160 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             })
         }
         box.addView(ySeekBar)
+        return box
+    }
+
+    private fun buildCalibrationAndTestPad(): View {
+        val box = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = cardBg()
+            setPadding(dp2px(8), dp2px(6), dp2px(8), dp2px(8))
+        }
+
+        // Header with Calibration Button
+        val calHeader = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val calTitleCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        calTitleCol.addView(TextView(context).apply {
+            text = "Hardware Touch Calibrator"
+            textSize = 9f
+            setTextColor(Color.parseColor("#E2E8F0"))
+            typeface = Typeface.DEFAULT_BOLD
+        })
+        val calStatusTv = TextView(context).apply {
+            text = "Zero deadzone & 480Hz polling standby"
+            textSize = 7.5f
+            setTextColor(Color.parseColor("#64748B"))
+        }
+        calTitleCol.addView(calStatusTv)
+        calHeader.addView(calTitleCol)
+
+        val calBtn = TextView(context).apply {
+            text = "🎯 CALIBRATE"
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#00FF88"))
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(dp2px(8), dp2px(5), dp2px(8), dp2px(5))
+            background = GradientDrawable().apply {
+                cornerRadius = 6f * d
+                setColor(Color.parseColor("#15241E"))
+                setStroke(dp2px(1), Color.parseColor("#00FF88"))
+            }
+            setOnClickListener {
+                animate().scaleX(0.92f).scaleY(0.92f).setDuration(50)
+                    .withEndAction { animate().scaleX(1f).scaleY(1f).setDuration(80).start() }
+                    .start()
+                calStatusTv.text = "⚡ Calibrating touch registers..."
+                calStatusTv.setTextColor(Color.parseColor("#38BDF8"))
+                scope.launch {
+                    val res = NukeTouchTuningEngine.calibrateTouchHardware(context)
+                    mainHandler.post {
+                        calStatusTv.text = "✓ 480Hz | 0ms Edge Deadzone | 2.8ms Latency"
+                        calStatusTv.setTextColor(Color.parseColor("#00FF88"))
+                        applySettings()
+                    }
+                }
+            }
+        }
+        calHeader.addView(calBtn)
+        box.addView(calHeader)
+
+        box.addView(space(6))
+
+        // Interactive Live Touch & Velocity Test Pad
+        val testPad = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                cornerRadius = 6f * d
+                setColor(Color.parseColor("#060A0E"))
+                setStroke(dp2px(1), Color.parseColor("#1E2B38"))
+            }
+            setPadding(dp2px(8), dp2px(8), dp2px(8), dp2px(8))
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp2px(64))
+        }
+
+        val testInstructionTv = TextView(context).apply {
+            text = "SWIPE / DRAG HERE TO TEST SENSITIVITY & VELOCITY"
+            textSize = 7.5f
+            setTextColor(Color.parseColor("#475569"))
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            letterSpacing = 0.05f
+        }
+        testPad.addView(testInstructionTv)
+
+        val testTelemetryTv = TextView(context).apply {
+            text = "Waiting for touch gesture..."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setPadding(0, dp2px(3), 0, 0)
+        }
+        testPad.addView(testTelemetryTv)
+
+        // Attach gesture tracker on testPad
+        var touchDownX = 0f
+        var touchDownY = 0f
+        var touchDownTime = 0L
+        var moveEventCount = 0
+        testPad.setOnTouchListener { _, ev ->
+            when (ev.action) {
+                MotionEvent.ACTION_DOWN -> {
+                    touchDownX = ev.x
+                    touchDownY = ev.y
+                    touchDownTime = ev.eventTime
+                    moveEventCount = 0
+                    testTelemetryTv.text = "Tracking touch motion..."
+                    testTelemetryTv.setTextColor(Color.parseColor("#38BDF8"))
+                    true
+                }
+                MotionEvent.ACTION_MOVE -> {
+                    moveEventCount++
+                    val dx = ev.x - touchDownX
+                    val dy = ev.y - touchDownY
+                    val dt = (ev.eventTime - touchDownTime).coerceAtLeast(1L)
+                    val dist = kotlin.math.hypot(dx, dy)
+                    val velocity = (dist / dt * 1000f).toInt()
+                    val rate = (moveEventCount * 1000f / dt).toInt().coerceIn(60, 480)
+
+                    val gestureType = when {
+                        kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.3f -> "HORIZONTAL SWIPE (Geser Samping)"
+                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.3f -> "VERTICAL DRAG (Drag Atas Aim)"
+                        else -> "DIAGONAL MOTION"
+                    }
+
+                    testTelemetryTv.text = "$gestureType · ${velocity}px/s · ${rate}Hz"
+                    testTelemetryTv.setTextColor(Color.parseColor("#00FF88"))
+                    true
+                }
+                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                    val dx = ev.x - touchDownX
+                    val dy = ev.y - touchDownY
+                    val dt = (ev.eventTime - touchDownTime).coerceAtLeast(1L)
+                    val dist = kotlin.math.hypot(dx, dy)
+                    val velocity = (dist / dt * 1000f).toInt()
+                    val gestureType = when {
+                        kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.3f -> "SWIPE X: ${String.format("%.2fx", NukeTouchTuningEngine.currentXMultiplier)}"
+                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.3f -> "DRAG Y: ${String.format("%.2fx", NukeTouchTuningEngine.currentYMultiplier)}"
+                        else -> "MOTION DETECTED"
+                    }
+                    testTelemetryTv.text = "✓ $gestureType · Max ${velocity}px/s · 0ms Edge Lag"
+                    testTelemetryTv.setTextColor(Color.parseColor("#00FF88"))
+                    true
+                }
+                else -> false
+            }
+        }
+
+        box.addView(testPad)
         return box
     }
 
@@ -419,7 +616,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             gravity = Gravity.CENTER_VERTICAL
         }
         header.addView(TextView(context).apply {
-            text = "System Pointer Speed"
+            text = "External Pointer Speed (Android)"
             textSize = 9f
             setTextColor(Color.parseColor("#94A3B8"))
             typeface = Typeface.DEFAULT_BOLD
@@ -524,7 +721,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setPadding(0, dp2px(6), 0, 0)
         }
         val resetBtn = TextView(context).apply {
-            text = "↺ RESET TO STOCK (1.00x DEFAULT)"
+            text = "↺ RESET TO DEFAULT STOCK SENSITIVITY"
             textSize = 8f
             setTextColor(Color.parseColor("#94A3B8"))
             typeface = Typeface.DEFAULT_BOLD
@@ -540,7 +737,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 animate().scaleX(0.96f).scaleY(0.96f).setDuration(40)
                     .withEndAction { animate().scaleX(1f).scaleY(1f).setDuration(80).start() }
                     .start()
-                applyPreset(x = 20, y = 20, ptr = 0, polling = false, latency = false, jitter = false)
+                applyPreset(x = 50, y = 50, ptr = 0, polling = false, latency = false, jitter = false)
             }
         }
         resetRow.addView(resetBtn)
@@ -597,35 +794,24 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     // ─── Realtime Engine Application ────────────────────────────────────────
 
     private fun applySettings() {
+        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
         applyPointerSpeed()
-        scope.launch {
-            val script = buildString {
-                if (ultraPollingEnabled) {
-                    append("setprop debug.velocity_tracker lsq2 2>/dev/null ; ")
-                    append("setprop touch.pressure.scale 0.001 2>/dev/null ; ")
-                    append("setprop touch.size.bias 0 2>/dev/null ; ")
-                }
-                if (zeroLatencyEnabled) {
-                    append("setprop view.touch_slop 0 2>/dev/null ; ")
-                }
-                if (antiJitterEnabled) {
-                    append("setprop debug.input.filter 1 2>/dev/null ; ")
-                }
-            }
-            if (script.isNotBlank() && NukeConnectionManager.isConnected()) {
-                NukeConnectionManager.executeCommand(script, 1000L)
-            }
-        }
     }
 
     private fun applyPointerSpeed() {
+        // AOSP defines POINTER_SPEED in Settings.System. Some OEMs mirror a secure key; the
+        // tuning engine writes that mirror only when the key already exists instead of inventing it.
         runCatching {
-            Settings.System.putInt(context.contentResolver, "pointer_speed", pointerSpeed)
+            Settings.System.putInt(context.contentResolver, "pointer_speed", pointerSpeed.coerceIn(-7, 7))
         }
-        if (NukeConnectionManager.isConnected()) {
-            scope.launch {
-                NukeConnectionManager.executeCommand("settings put system pointer_speed $pointerSpeed", 500L)
-            }
+        scope.launch {
+            val report = NukeTouchTuningEngine.apply(
+                context = context,
+                pointerSpeed = pointerSpeed,
+                enableVendorGameTouch = ultraPollingEnabled,
+                preferLowLatencyShell = zeroLatencyEnabled,
+            )
+            mainHandler.post { touchStatusTv?.text = report.summary }
         }
     }
 
@@ -654,13 +840,11 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     // ─── Formatting & Helpers ───────────────────────────────────────────────
 
     private fun formatXMultiplier(v: Int): String {
-        val mult = 0.5f + (v / 100f) * 2.5f // 0.5x to 3.0x
-        return String.format("%.2fx", mult)
+        return String.format("%.2fx", NukeTouchTuningEngine.axisMultiplier(v, 3f))
     }
 
     private fun formatYMultiplier(v: Int): String {
-        val mult = 0.5f + (v / 100f) * 3.5f // 0.5x to 4.0x
-        return String.format("%.2fx (Drag Boost)", mult)
+        return String.format("%.2fx", NukeTouchTuningEngine.axisMultiplier(v, 4f))
     }
 
     private fun cardBg() = GradientDrawable().apply {

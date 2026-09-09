@@ -54,7 +54,8 @@ class NukeFpsOverlayView(private val context: Context) {
             if (delta >= 1000L) {
                 val currentFps = (frameCount * 1000.0 / delta).toInt()
                 fpsTextView?.text = "$currentFps FPS"
-                statsTextView?.text = "${String.format("%.1f", batteryTemp)}°C • 120Hz"
+                val refreshHz = currentRefreshRateHz()
+                statsTextView?.text = "${String.format("%.1f", batteryTemp)}°C • ${refreshHz}Hz"
 
                 // Color code based on stability
                 when {
@@ -69,6 +70,16 @@ class NukeFpsOverlayView(private val context: Context) {
             Choreographer.getInstance().postFrameCallback(this)
         }
     }
+
+    private fun currentRefreshRateHz(): Int = runCatching {
+        val rate = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            context.display?.refreshRate ?: windowManager.defaultDisplay.refreshRate
+        } else {
+            @Suppress("DEPRECATION")
+            windowManager.defaultDisplay.refreshRate
+        }
+        rate.toInt().coerceAtLeast(1)
+    }.getOrDefault(60)
 
     private val batteryReceiver = object : BroadcastReceiver() {
         override fun onReceive(context: Context?, intent: Intent?) {
@@ -136,7 +147,7 @@ class NukeFpsOverlayView(private val context: Context) {
         }
 
         val fpsView = TextView(context).apply {
-            text = "120 FPS"
+            text = "-- FPS"
             setTextColor(Color.parseColor("#00FF88"))
             textSize = 12f
             paint.isFakeBoldText = true
@@ -145,7 +156,7 @@ class NukeFpsOverlayView(private val context: Context) {
         fpsTextView = fpsView
 
         val statsView = TextView(context).apply {
-            text = "36.5°C • 120Hz"
+            text = "--.-°C • ${currentRefreshRateHz()}Hz"
             setTextColor(Color.parseColor("#94A3B8"))
             textSize = 9.5f
         }

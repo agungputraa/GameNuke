@@ -1,5 +1,6 @@
 package com.neon.gametweak.ui.theme
 
+import com.neon.gametweak.nukePressFeedback
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -39,7 +40,7 @@ object Neon {
     val Bg          = NukeBackground
     val BgRaised    = NukeSurface
     val BgCard      = NukeSurfaceHigh
-    val BgCardL     = Color(0xFF111B17)
+    val BgCardL     = Color(0xFF0F2018)
     val BgInset     = NukeInset
     val Outline     = NukeOutline
     val TextDim     = NukeTextSecondary
@@ -190,7 +191,7 @@ fun HudButton(
     Button(
         onClick = onClick,
         enabled = enabled,
-        modifier = modifier.height(44.dp),
+        modifier = (modifier.height(44.dp)).nukePressFeedback(),
         shape = HudShapeSmall,
         colors = ButtonDefaults.buttonColors(
             containerColor = effectiveAccent.copy(alpha = 0.12f),

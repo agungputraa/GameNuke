@@ -99,6 +99,11 @@ class NukeWebServerService : Service() {
         }
     }
 
+    override fun onTimeout(startId: Int, fgsType: Int) {
+        stopForeground(STOP_FOREGROUND_REMOVE)
+        stopSelf()
+    }
+
     private fun startForegroundSafely() {
         runCatching {
             val notification = buildNotification()

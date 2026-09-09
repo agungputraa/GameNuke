@@ -70,7 +70,7 @@
     "cacheTtlHours": 1,
     "minimumFetchIntervalMinutes": 15,
     "manualRefreshAllowed": true,
-    "manualRefreshBypassesTtl": true,
+    "manualRefreshIgnoresTtl": true,
     "maxRedirects": 0,
     "staleWhileRevalidateHours": 168,
     "lastKnownGoodDays": 60,

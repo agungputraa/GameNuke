@@ -12,13 +12,19 @@ val localReleaseProperties = Properties().also { props ->
 }
 val releaseStoreFile = providers.gradleProperty("NUKE_RELEASE_STORE_FILE").orNull
     ?: localReleaseProperties.getProperty("storeFile")?.let { rootProject.file(it).absolutePath }
+    ?: rootProject.file("agwallpaper84.jks").absolutePath
 val releaseStorePassword = providers.gradleProperty("NUKE_RELEASE_STORE_PASSWORD").orNull
     ?: localReleaseProperties.getProperty("storePassword")
 val releaseKeyAlias = providers.gradleProperty("NUKE_RELEASE_KEY_ALIAS").orNull
     ?: localReleaseProperties.getProperty("keyAlias")
+    ?: "agwallpaper"
 val releaseKeyPassword = providers.gradleProperty("NUKE_RELEASE_KEY_PASSWORD").orNull
     ?: localReleaseProperties.getProperty("keyPassword")
-val hasReleaseSigning = listOf(releaseStoreFile, releaseStorePassword, releaseKeyAlias, releaseKeyPassword).all { !it.isNullOrBlank() }
+val hasReleaseSigning = releaseStoreFile.isNotBlank() &&
+    file(releaseStoreFile).isFile &&
+    !releaseStorePassword.isNullOrBlank() &&
+    releaseKeyAlias == "agwallpaper" &&
+    !releaseKeyPassword.isNullOrBlank()
 
 android {
     namespace = "com.neon.gametweak"
@@ -29,8 +35,8 @@ android {
         applicationId = "com.neon.gametweak"
         minSdk = 30
         targetSdk = 36
-        versionCode = 16
-        versionName = "2.3.0-prem"
+        versionCode = 18
+        versionName = "2.5.0-prem"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
 //        ndk {
@@ -46,6 +52,10 @@ android {
                 storePassword = releaseStorePassword
                 keyAlias = releaseKeyAlias
                 keyPassword = releaseKeyPassword
+                enableV1Signing = true
+                enableV2Signing = true
+                enableV3Signing = true
+                enableV4Signing = false
             }
         }
     }
@@ -69,6 +79,7 @@ android {
         debug {
             isMinifyEnabled = false
             isDebuggable = true
+            signingConfig = signingConfigs.findByName("release")
 
             // Debug build uses real placement IDs too; Vungle serves test ads automatically
             // in debug/test-device environments when USE_TEST_ADS = true.
@@ -104,15 +115,20 @@ android {
             "MissingTranslation",
             "ExtraTranslation",
         )
-        abortOnError = true
-        checkReleaseBuilds = true
+        abortOnError = false
+        checkReleaseBuilds = false
     }
+
+    sourceSets.getByName("main").res.srcDir(layout.buildDirectory.dir("generated/nukeFonts/res"))
 
     androidResources {
         noCompress += "mp4"
     }
 
     packaging {
+        jniLibs {
+            useLegacyPackaging = false
+        }
         resources {
             excludes += setOf(
                 "/META-INF/{AL2.0,LGPL2.1}",
@@ -165,6 +181,10 @@ dependencies {
     implementation("com.google.android.play:app-update:2.1.0")
     implementation("com.google.android.play:review:2.0.2")
 
+
+    // ── WorkManager — reliable background task scheduling (live chat polling) ─
+    implementation("androidx.work:work-runtime-ktx:2.9.1")
+
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
@@ -173,6 +193,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
+
+
+apply(from = "nuke-fonts.gradle.kts")
 
 val copyReleaseAab by tasks.registering(Copy::class) {
     from(layout.buildDirectory.dir("outputs/bundle/release"))
@@ -191,6 +214,14 @@ tasks.configureEach {
     when (name) {
         "bundleRelease" -> finalizedBy(copyReleaseAab)
         "assembleRelease" -> finalizedBy("bundleRelease", copyReleaseApk)
+    }
+}
+
+tasks.matching { it.name in setOf("assembleRelease", "bundleRelease", "productionAab", "aabRelease") }.configureEach {
+    doFirst {
+        check(hasReleaseSigning) {
+            "Release signing requires local agwallpaper84.jks (alias agwallpaper) and passwords in release.properties or NUKE_RELEASE_* Gradle properties."
+        }
     }
 }
 

@@ -69,6 +69,15 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
                 }
             }
         }
+
+        // Initialize Developer Live Chat bridge & background polling
+        kotlin.concurrent.thread(name = "Nuke-LiveChatInit", isDaemon = true) {
+            runCatching {
+                NukeLiveChatRepository.init(this)
+                NukeLiveChatScheduler.arm(this, 15_000L)
+                NukeLiveChatWorker.schedule(this)
+            }
+        }
     }
 
     override fun onStart(owner: LifecycleOwner) {

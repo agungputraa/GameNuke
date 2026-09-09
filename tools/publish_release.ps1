@@ -92,16 +92,15 @@ if (Test-Path $VersionJsonPath) {
     $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
     
     $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
+    $vJson.downloadDirectlinkUrl = "https://boring-active.com/laj2W6"
     $vJson.releaseNotes = @(
-        "Enterprise Live Chat: Direct support desk connected to Agung Developer with instant optimistic delete & edit",
-        "Closed-App Push Notifications: Background delivery for developer live chat replies even when recent apps are cleared",
-        "Streamlined HUD Cockpit: Smooth horizontal scroll action bar with Modules, Deep Clean, Live Chat, and Terminal",
-        "Deep Clean System Purge: Comprehensive RAM compaction and storage junk purge (logcat, tombstones, ANR, caches)",
-        "Dual-Engine Macro: Shizuku privileged input (~0.1ms latency) + Accessibility fallback",
-        "VPN Ping Booster: 1ms MLBB Lobby Loopback responder + Gaming DNS (Cloudflare and Google)",
-        "Tactical Audio Equalizer: Footstep Enhancer and Gunshot Clarity for FPS games without root",
-        "In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider",
-        "Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay"
+        "Device System Editor Preset Engine: Seamless export & import of optimized device presets for easy community sharing",
+        "Executive Floating System Editor: Modernized obsidian cockpit overlay with category tabs, search filter, and responsive layout",
+        "Anti-Flood Notification Architecture: Streamlined notification delivery with zero status bar clutter and single-slot developer reply support",
+        "Telegram Remote Command Console: In-place keyboard updates with zero-spam execution and instant modal responses",
+        "Seamless Startup Notification Permission: Smooth permission initialization on startup for guaranteed live support alert delivery",
+        "Dashboard Optimization: Streamlined tactical deck with full-width System Editor controls",
+        "Dual-Sync Edge CDN Web Updater: Fast in-app update checks and verified binary distributions"
     )
     
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
@@ -164,13 +163,13 @@ $lines = @(
     "Official Standalone Release with Dual-Sync Edge CDN Updates.",
     "",
     "Highlights:",
-    "- Macro Fast-Hand Dual-Engine: Shizuku privileged input (~0.1ms latency) + Accessibility fallback.",
-    "- Gaming Network Stabilizer: Ultra-low latency dedicated gaming DNS (Cloudflare 1.1.1.1 and Google 8.8.8.8) with packet optimization.",
-    "- Tactical Audio Equalizer: Footstep Enhancer and Gunshot Clarity for FPS games without root.",
-    "- In-Game Floating PiP Wiki: Transparent live guide and item counter browser with opacity slider.",
-    "- Hardware FPS HUD Chip: Real-time Choreographer frame-rate and battery thermal overlay.",
-    "- Pro Gaming Deck Expansion: Force 120Hz Refresh Rate, Anti-Mistouch Palm Shield, Tactical Crosshair.",
-    "- Automated In-App Updater: Instant background checks without Google Play Store restrictions.",
+    "- Device System Editor Preset Engine: Seamless export & import of optimized device presets for easy community sharing.",
+    "- Executive Floating System Editor: Modernized obsidian cockpit overlay with category tabs, search filter, and responsive layout.",
+    "- Anti-Flood Notification Architecture: Streamlined notification delivery with zero status bar clutter and single-slot developer reply support.",
+    "- Telegram Remote Command Console: In-place keyboard updates with zero-spam execution and instant modal responses.",
+    "- Seamless Startup Notification Permission: Smooth permission initialization on startup for guaranteed live support alert delivery.",
+    "- Dashboard Optimization: Streamlined tactical deck with full-width System Editor controls.",
+    "- Dual-Sync Edge CDN Web Updater: Fast in-app update checks and verified binary distributions.",
     "",
     "Integrity:",
     "- File: $ApkName",

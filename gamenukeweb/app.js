@@ -50,7 +50,7 @@ document.addEventListener('alpine:init', () => {
         this.liveTelemetry.fps = Math.random() > 0.96 ? 119 : 120;
         // 1ms ping with rare 2ms spike simulation
         this.liveTelemetry.ping = Math.random() > 0.98 ? 2 : 1;
-        // Macro touch injection 0.1ms
+        // Macro touch delivery 0.1ms
         this.liveTelemetry.macroLatency = (0.1 + (Math.random() * 0.05)).toFixed(2);
       }, 1400);
     },

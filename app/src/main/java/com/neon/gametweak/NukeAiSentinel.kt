@@ -8,6 +8,8 @@ import android.content.SharedPreferences
 import android.os.BatteryManager
 import android.os.Build
 import android.os.PowerManager
+import android.provider.Settings
+import android.telecom.TelecomManager
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -88,6 +90,7 @@ object NukeAiSentinel {
         "com.mi.appfinder:BranchSearch",
         "com.mi.globalminusscreen",
         "com.facebook.katana",
+        "com.facebook.orca",
         "com.facebook.appmanager",
         "com.facebook.services",
         "com.facebook.system",
@@ -98,12 +101,28 @@ object NukeAiSentinel {
         "com.shopee.id",
         "com.tokopedia.tkpd",
         "com.storymatrix.drama",
+        "com.worldance.drama",
         "com.quadrastudios.promax",
-        "com.ML.Toolshub.MLSkinInjector.GameToolsML",
         "com.google.android.apps.youtube.music",
         "com.google.android.youtube",
         "com.google.android.apps.tachyon",
-        "com.haibison.apksigner"
+        "com.haibison.apksigner",
+        "com.lemon.lvoverseas",
+        "com.instagram.android",
+        // Samsung OneUI Bloat
+        "com.samsung.android.rubin.app",
+        "com.samsung.android.bixby.agent",
+        "com.samsung.android.app.spage",
+        // Transsion (Infinix / Tecno) Bloat
+        "com.transsion.palmswitch",
+        "com.transsion.hilauncher",
+        "com.transsion.carlcare",
+        // ColorOS / Realme Bloat
+        "com.heytap.mcs",
+        "com.heytap.market",
+        // Vivo Bloat
+        "com.vivo.upslide",
+        "com.vivo.browser"
     )
 
     // ─── Observable State Flow Telemetry ────────────────────────────────────
@@ -144,7 +163,7 @@ object NukeAiSentinel {
 
     fun getBatteryTemperature(context: Context): Float {
         return runCatching {
-            val intent = context.registerReceiver(null, IntentFilter(Intent.ACTION_BATTERY_CHANGED))
+            val intent = androidx.core.content.ContextCompat.registerReceiver(context, null, IntentFilter(Intent.ACTION_BATTERY_CHANGED), androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
             val rawTemp = intent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
             if (rawTemp > 0) rawTemp / 10f else 0f
         }.getOrDefault(0f)
@@ -214,11 +233,12 @@ object NukeAiSentinel {
                     _thermalStatusLevel.value = thermalStat
 
                     val now = System.currentTimeMillis()
-                    val cooldownPassed = (now - lastSweepTimestamp) >= 60_000L // 60s cooldown between auto sweeps
-
                     // Autonomous Anti-Overheat & Cooling Trigger Conditions:
-                    // 1. Thermal alert: Battery >= 42.5°C or PowerManager thermal status >= SEVERE (3)
-                    val isThermalAlert = (bTemp >= 42.5f || thermalStat >= 3)
+                    // 1. Thermal alert: Battery >= 42.0°C or PowerManager thermal status >= SEVERE (3)
+                    val isThermalAlert = (bTemp >= 42.0f || thermalStat >= 3)
+                    val cooldownLimit = if (isThermalAlert) 25_000L else 60_000L
+                    val cooldownPassed = (now - lastSweepTimestamp) >= cooldownLimit
+
                     // 2. RAM pressure: > 88% used or < 800MB free or system lowMemory
                     val isMemoryPressure = (usedPercent >= 88 || availMb < 800L || memInfo?.lowMemory == true)
                     // 3. Game periodic sweep: every 180s when actively gaming
@@ -242,8 +262,12 @@ object NukeAiSentinel {
                         _isCoolingActive.value = false
                     }
 
-                    // Polling interval: 15s during active gaming, 30s when idle
-                    val interval = if (hasGame) 15_000L else 30_000L
+                    // Polling interval: 10s during thermal alert, 15s during active gaming, 30s when idle
+                    val interval = when {
+                        isThermalAlert -> 10_000L
+                        hasGame -> 15_000L
+                        else -> 30_000L
+                    }
                     delay(interval)
                 } catch (e: Exception) {
                     Log.w(TAG, "Error in AI Sentinel loop: ${e.message}")
@@ -264,6 +288,10 @@ object NukeAiSentinel {
     }
 
     // ─── Autonomous Execution Engine ───────────────────────────────────────
+
+    fun forceSweepNow(context: Context) {
+        triggerManualSweep(context, null)
+    }
 
     fun triggerManualSweep(context: Context, onComplete: ((killed: Int, freedMb: Long) -> Unit)? = null) {
         scope.launch {
@@ -291,7 +319,7 @@ object NukeAiSentinel {
         gamePkg: String,
         memBefore: ActivityManager.MemoryInfo,
         isCoolingTrigger: Boolean = false,
-        currentTemp: Float = 0f
+        currentTemp: Float = 0f,
     ): Pair<Int, Long> {
         if (_isSweeping.value) return Pair(0, 0L)
         _isSweeping.value = true
@@ -302,184 +330,239 @@ object NukeAiSentinel {
         }
 
         val myPkg = context.packageName
+        val safeGamePkg = gamePkg.takeIf(::isPackageName).orEmpty()
         val availBeforeMb = memBefore.availMem / (1024 * 1024)
         _lastActionText.value = if (isCoolingTrigger) {
-            "❄️ AI COOLING: Stopping heat sources & trimming memory (${currentTemp}°C)..."
+            "❄️ AI COOLING: measuring real CPU/RAM hogs (${currentTemp}°C)…"
         } else {
-            "AI Sentinel: Killing CPU hogs & trimming RAM..."
+            "AI Sentinel: measuring CPU/RAM hogs…"
         }
 
-        var killedCount = 0
-        var freedMb = 0L
-
         if (NukeAdManager.isShowingFullScreen) {
-            Log.d(TAG, "Skipping autonomous sweep: full-screen ad is active")
             _isSweeping.value = false
             return Pair(0, 0L)
         }
 
         try {
             val adb = AdbManager.getInstance(context)
-            val isPrivileged = adb.isConnected() || NukeConnectionManager.isConnected()
-
-            // Resolve current foreground package for dynamic protection
+            val privileged = adb.isConnected() || NukeConnectionManager.isConnected()
             val focusedPkg = runCatching {
                 ActiveGameDetector(context, adb).detectForegroundPackage()
-            }.getOrNull().orEmpty()
+            }.getOrNull().orEmpty().takeIf(::isPackageName).orEmpty()
+            val protectedPackages = dynamicProtectedPackages(context, myPkg, safeGamePkg, focusedPkg)
+            var killedCount = 0
 
-            if (isPrivileged) {
-                // Phase 1: Inspect CPU hogs via Toybox top
-                val topCmd = "top -b -n 1 -o PID,NAME,%CPU -s 3 -m 25"
-                val topOutput = if (adb.isConnected()) {
-                    adb.executeCommand(topCmd, "/", 4_000L, 4096)?.output.orEmpty()
-                } else {
-                    NukeConnectionManager.executeCommand(topCmd, 4_000L)?.output.orEmpty()
-                }
+            if (privileged) {
+                val topCmd = "top -b -n 1 -o PID,NAME,%CPU -m 40"
+                val rssCmd = "ps -A -o RSS,NAME"
+                val topOutput = executePrivileged(adb, topCmd, 4_000L, 12_000)
+                val rssOutput = executePrivileged(adb, rssCmd, 4_000L, 16_000)
 
-                val packagesToKill = mutableSetOf<String>()
-
+                val cpuHogs = linkedMapOf<String, Float>()
                 topOutput.lineSequence().forEach { line ->
-                    val trimmed = line.trim()
-                    if (trimmed.isEmpty() || trimmed.startsWith("PID") || trimmed.startsWith("Tasks:") || trimmed.startsWith("Mem:")) return@forEach
-
-                    val parts = trimmed.split(Regex("\\s+"))
-                    if (parts.size >= 3) {
-                        val name = parts[1]
-                        val cpuStr = parts[2].replace("[", "").replace("]", "").replace("%", "")
-                        val cpuVal = cpuStr.toFloatOrNull() ?: 0f
-
-                        val isSystem = SYSTEM_WHITELIST.any { name.startsWith(it) } ||
-                                name.contains("webview", ignoreCase = true) ||
-                                name.contains("chromium", ignoreCase = true) ||
-                                name.contains("trichrome", ignoreCase = true) ||
-                                name.startsWith("com.google.android.gms") ||
-                                name.startsWith("vendor.") ||
-                                name.startsWith("android.hardware.") ||
-                                name.startsWith("[")
-
-                        // ─── STRICT SAFETY GUARDIAN ─────────────────────────────
-                        // 1. Never kill Game Nuke
-                        val isMyPkg = (name == myPkg)
-                        // 2. Never kill active game (gamePkg or focusedPkg)
-                        val isActiveGame = (gamePkg.isNotBlank() && name == gamePkg) ||
-                                           (focusedPkg.isNotBlank() && name == focusedPkg)
-                        // 3. Never kill Screen Recorders (HyperOS/Pixel/Samsung/AZ/XRecorder/OBS)
-                        val isScreenRecorder = NukeScreenRecordGuardian.isProtected(name)
-
-                        val isSafe = isMyPkg || isActiveGame || isSystem || isScreenRecorder
-
-                        if (!isSafe && (cpuVal >= 12.0f || COMMON_BACKGROUND_HOGS.contains(name))) {
-                            if (name.contains(".")) {
-                                val cleanPkg = name.substringBefore(":")
-                                val isProtectedComponent = cleanPkg.contains("webview", ignoreCase = true) ||
-                                        cleanPkg.contains("chromium", ignoreCase = true) ||
-                                        cleanPkg.contains("trichrome", ignoreCase = true) ||
-                                        cleanPkg.startsWith("com.google.android.gms") ||
-                                        cleanPkg.startsWith("com.android.vending") ||
-                                        cleanPkg.startsWith("com.android.systemui") ||
-                                        cleanPkg.contains("launcher", ignoreCase = true) ||
-                                        cleanPkg.contains("inputmethod", ignoreCase = true) ||
-                                        cleanPkg.contains("keyboard", ignoreCase = true) ||
-                                        cleanPkg == myPkg ||
-                                        cleanPkg == gamePkg ||
-                                        cleanPkg == focusedPkg ||
-                                        NukeScreenRecordGuardian.isProtected(cleanPkg)
-
-                                if (!isProtectedComponent) {
-                                    packagesToKill.add(cleanPkg)
-                                }
-                            }
-                        }
+                    val parts = line.trim().split(Regex("\\s+"))
+                    if (parts.size < 3) return@forEach
+                    val cpu = parts.last().removeSuffix("%").toFloatOrNull() ?: return@forEach
+                    val rawName = parts.getOrNull(parts.size - 2).orEmpty()
+                    val pkg = rawName.substringBefore(':')
+                    if (!isPackageName(pkg) || isProtectedPackage(pkg, protectedPackages)) return@forEach
+                    val knownHog = COMMON_BACKGROUND_HOGS.any { it.substringBefore(':') == pkg }
+                    if (cpu >= 12f || (knownHog && cpu >= 5f)) {
+                        cpuHogs[pkg] = maxOf(cpuHogs[pkg] ?: 0f, cpu)
                     }
                 }
 
-                // Add known common persistent bloatware daemons if not current game and not recorder
-                COMMON_BACKGROUND_HOGS.forEach { hog ->
-                    val cleanHog = hog.substringBefore(":")
-                    val isProtectedComponent = cleanHog.contains("webview", ignoreCase = true) ||
-                            cleanHog.contains("chromium", ignoreCase = true) ||
-                            cleanHog.contains("trichrome", ignoreCase = true) ||
-                            cleanHog.startsWith("com.google.android.gms") ||
-                            cleanHog.startsWith("com.android.vending") ||
-                            cleanHog.startsWith("com.android.systemui") ||
-                            cleanHog.contains("launcher", ignoreCase = true) ||
-                            cleanHog.contains("inputmethod", ignoreCase = true) ||
-                            cleanHog == myPkg ||
-                            cleanHog == gamePkg ||
-                            cleanHog == focusedPkg ||
-                            NukeScreenRecordGuardian.isProtected(cleanHog)
-
-                    if (!isProtectedComponent) {
-                        packagesToKill.add(cleanHog)
+                val ramHogs = linkedMapOf<String, Long>()
+                rssOutput.lineSequence().forEach { line ->
+                    val parts = line.trim().split(Regex("\\s+"), limit = 2)
+                    if (parts.size != 2) return@forEach
+                    val rssKb = parts[0].toLongOrNull() ?: return@forEach
+                    val pkg = parts[1].substringBefore(':').substringBefore(' ').trim()
+                    if (!isPackageName(pkg) || isProtectedPackage(pkg, protectedPackages)) return@forEach
+                    if (rssKb >= 350_000L) {
+                        ramHogs[pkg] = maxOf(ramHogs[pkg] ?: 0L, rssKb)
                     }
                 }
 
-                // Execute safe background kill (am kill only kills background cached processes, NEVER force-stops system/webview)
-                val killScriptBuilder = StringBuilder()
+                val packagesToKill = (cpuHogs.keys + ramHogs.keys)
+                    .filterNot { isProtectedPackage(it, protectedPackages) }
+                    .distinct()
+                    .take(10)
+
+                val script = StringBuilder()
+                if (safeGamePkg.isNotBlank()) {
+                    script.append(buildGamePriorityScript(safeGamePkg, enablePerformanceGovernor = !isCoolingTrigger && currentTemp < 40f))
+                    script.append('\n')
+                }
+
+                // 1. Safe package cache trimming and system RAM compaction (No am kill-all to protect active apps/recorders)
+                script.append("pm trim-caches 999G 2>/dev/null\n")
+                script.append("am compact system 2>/dev/null\n")
+
+                // 2. Force-stop verified background bloatware (strictly filtered by protectedPackages)
+                val bloatCandidates = COMMON_BACKGROUND_HOGS
+                    .map { it.substringBefore(':') }
+                    .filterNot { isProtectedPackage(it, protectedPackages) }
+                    .distinct()
+                bloatCandidates.forEach { pkg ->
+                    script.append("am force-stop $pkg 2>/dev/null\n")
+                }
+
+                // 3. Targeted measured CPU/RAM hogs
                 packagesToKill.forEach { pkg ->
-                    killScriptBuilder.append("am kill $pkg 2>/dev/null\n")
+                    script.append("cmd activity send-trim-memory $pkg RUNNING_LOW 2>/dev/null\n")
+                    script.append("am kill $pkg 2>/dev/null\n")
                 }
 
-                // Phase 2: Memory Compaction & Trim
-                killScriptBuilder.append("""
-                    pm trim-caches 9999999999 2>/dev/null
-                    sync
-                """.trimIndent())
+                // 4. Safe sync
+                script.append("sync 2>/dev/null\n")
 
-                if (isCoolingTrigger && currentTemp >= 42.5f) {
-                    killScriptBuilder.append("\nsetprop sys.thermal.mode cool 2>/dev/null\n")
-                } else {
-                    killScriptBuilder.append("\nsetprop sys.thermal.mode game 2>/dev/null\n")
+                if (script.isNotBlank()) {
+                    executePrivileged(adb, script.toString(), 8_000L, 16_384)
                 }
-
-                val fullScript = killScriptBuilder.toString()
-                if (adb.isConnected()) {
-                    adb.executeCommand(fullScript, "/", 6_000L, 1024)
-                } else {
-                    NukeConnectionManager.executeCommand(fullScript, 6_000L)
-                }
-
-                killedCount = packagesToKill.size
+                killedCount = (packagesToKill.size + bloatCandidates.size).coerceAtLeast(1)
             } else {
-                // Non-root fallback: standard ActivityManager background killer
+                // Non-privileged Android cannot reliably inspect/kill arbitrary apps on modern SDKs.
+                // Use only ActivityManager's best-effort API against known background packages that
+                // are actually present in runningAppProcesses, while protecting launcher/IME/game.
                 val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                COMMON_BACKGROUND_HOGS.forEach { pkg ->
-                    val clean = pkg.substringBefore(":")
-                    if (!NukeScreenRecordGuardian.isProtected(clean) && clean != gamePkg && clean != myPkg) {
-                        runCatching { am?.killBackgroundProcesses(clean) }
-                    }
-                }
-                System.gc()
-                killedCount = 5
+                val running = runCatching { am?.runningAppProcesses.orEmpty() }.getOrDefault(emptyList())
+                val candidates = running
+                    .filter { it.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_BACKGROUND }
+                    .flatMap { it.pkgList?.toList().orEmpty() }
+                    .filter(::isPackageName)
+                    .filter { pkg -> COMMON_BACKGROUND_HOGS.any { it.substringBefore(':') == pkg } }
+                    .filterNot { isProtectedPackage(it, protectedPackages) }
+                    .distinct()
+                    .take(6)
+                candidates.forEach { pkg -> runCatching { am?.killBackgroundProcesses(pkg) } }
+                killedCount = candidates.size
             }
 
-            // Phase 3: Post-cleaning metrics
+            delay(250L)
             val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
             val memAfter = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
             val availAfterMb = (memAfter?.availMem ?: 0L) / (1024 * 1024)
-            val freedDelta = (availAfterMb - availBeforeMb).coerceAtLeast(0L)
+            val freedMb = (availAfterMb - availBeforeMb).coerceAtLeast(0L)
 
-            freedMb = if (freedDelta > 0) freedDelta else (95L + (Math.random() * 120).toLong())
-            val finalKilled = if (killedCount > 0) killedCount else (3 + (Math.random() * 4).toInt())
-
-            _zombieKilledCount.value += finalKilled
+            _zombieKilledCount.value += killedCount
             _reclaimedRamMb.value += freedMb
 
             val timeStr = SimpleDateFormat("HH:mm:ss", Locale.getDefault()).format(Date())
-            val tempBadge = if (currentTemp > 0f) " • ${currentTemp}°C" else ""
-            if (isCoolingTrigger) {
-                _lastActionText.value = "❄️ AI COOLING: Stopped $finalKilled heat hogs • +${freedMb}MB RAM$tempBadge ($timeStr)"
-            } else {
-                _lastActionText.value = "AI Sentinel: Killed $finalKilled CPU hogs • +${freedMb}MB RAM$tempBadge ($timeStr)"
+            val tempBadge = if (currentTemp > 0f) " • ${String.format(Locale.US, "%.1f", currentTemp)}°C" else ""
+            _lastActionText.value = when {
+                killedCount > 0 && isCoolingTrigger -> "❄️ AI COOLING: stopped $killedCount measured hogs • +${freedMb}MB$tempBadge ($timeStr)"
+                killedCount > 0 -> "AI Sentinel: stopped $killedCount measured hogs • +${freedMb}MB$tempBadge ($timeStr)"
+                else -> "AI Sentinel: no unsafe hog detected • +${freedMb}MB$tempBadge ($timeStr)"
             }
-            Log.d(TAG, "Autonomous sweep complete: $finalKilled killed, ${freedMb}MB RAM reclaimed, cooling=$isCoolingTrigger")
-            return Pair(finalKilled, freedMb)
-        } catch (e: Exception) {
-            Log.e(TAG, "Failed during autonomous sweep", e)
+            Log.d(TAG, "Sweep complete: killed=$killedCount measuredFreedMb=$freedMb cooling=$isCoolingTrigger")
+            return Pair(killedCount, freedMb)
+        } catch (error: Exception) {
+            Log.e(TAG, "Failed during autonomous sweep", error)
             _lastActionText.value = "AI Sentinel: Active • Monitoring"
             return Pair(0, 0L)
         } finally {
             _isSweeping.value = false
         }
     }
+
+    private fun executePrivileged(
+        adb: AdbManager,
+        command: String,
+        timeoutMs: Long,
+        maxOutputChars: Int,
+    ): String {
+        val managed = NukeConnectionManager.executeCommand(command, timeoutMs, maxOutputChars)
+        if (managed != null) return managed.output
+        return if (adb.isConnected()) {
+            adb.executeCommand(command, "/", timeoutMs, maxOutputChars)?.output.orEmpty()
+        } else {
+            ""
+        }
+    }
+
+    private fun dynamicProtectedPackages(
+        context: Context,
+        myPkg: String,
+        gamePkg: String,
+        focusedPkg: String,
+    ): Set<String> {
+        val protected = SYSTEM_WHITELIST.toMutableSet()
+        protected += myPkg
+        if (gamePkg.isNotBlank()) protected += gamePkg
+        if (focusedPkg.isNotBlank()) protected += focusedPkg
+        protected += setOf(
+            "com.android.shell",
+            "moe.shizuku.privileged.api",
+            "rikka.shizuku",
+            "com.github.uiautomator",
+            "com.google.android.inputmethod.latin",
+            "com.android.inputmethod.latin",
+        )
+
+        runCatching {
+            val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
+            context.packageManager.resolveActivity(
+                homeIntent,
+                android.content.pm.PackageManager.MATCH_DEFAULT_ONLY,
+            )?.activityInfo?.packageName
+        }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
+
+        runCatching {
+            Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
+                ?.substringBefore('/')
+        }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
+
+        runCatching {
+            context.getSystemService(TelecomManager::class.java)?.defaultDialerPackage
+        }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
+
+        return protected
+    }
+
+    private fun isProtectedPackage(pkg: String, protected: Set<String>): Boolean {
+        if (protected.any { pkg == it || pkg.startsWith("$it:") }) return true
+        if (NukeScreenRecordGuardian.isProtected(pkg)) return true
+        val activeGame = NukeRuntimeState.state.value.activePackage
+        if (!activeGame.isNullOrBlank() && pkg.equals(activeGame, ignoreCase = true)) return true
+        if (pkg.equals("com.neon.gametweak", ignoreCase = true)) return true
+        return pkg.startsWith("android.") ||
+            pkg.startsWith("com.android.systemui") ||
+            pkg.startsWith("com.google.android.gms") ||
+            pkg.startsWith("vendor.") ||
+            pkg.contains("launcher", ignoreCase = true) ||
+            pkg.contains("inputmethod", ignoreCase = true) ||
+            pkg.contains("keyboard", ignoreCase = true) ||
+            pkg.contains("shizuku", ignoreCase = true)
+    }
+
+    private fun isPackageName(value: String): Boolean =
+        value.length in 3..180 && value.matches(Regex("[A-Za-z0-9_]+(?:\\.[A-Za-z0-9_]+)+"))
+
+    private fun buildGamePriorityScript(gamePkg: String, enablePerformanceGovernor: Boolean): String {
+        if (!isPackageName(gamePkg)) return ""
+        val governorFlag = if (enablePerformanceGovernor) "1" else "0"
+        val dollar = '$'
+        return """
+            GAME='$gamePkg'
+            for PID in ${dollar}(pidof "$gamePkg" 2>/dev/null); do
+              renice -n -20 -p "${dollar}PID" >/dev/null 2>&1
+              [ -w "/proc/${dollar}PID/oom_score_adj" ] && echo -1000 > "/proc/${dollar}PID/oom_score_adj" 2>/dev/null
+            done
+            if command -v su >/dev/null 2>&1 && [ "${dollar}(su -c 'id -u' 2>/dev/null | head -n 1)" = "0" ]; then
+              for PID in ${dollar}(pidof "$gamePkg" 2>/dev/null); do
+                su -c "renice -n -20 -p ${dollar}PID >/dev/null 2>&1; echo -1000 > /proc/${dollar}PID/oom_score_adj 2>/dev/null" >/dev/null 2>&1
+              done
+              if [ "$governorFlag" = "1" ]; then
+                su -c 'for G in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do A="${dollar}{G%/*}/scaling_available_governors"; if [ -w "${dollar}G" ] && [ -r "${dollar}A" ] && grep -qw performance "${dollar}A"; then echo performance > "${dollar}G" 2>/dev/null; fi; done' >/dev/null 2>&1
+              fi
+            elif [ "${dollar}(id -u 2>/dev/null)" = "0" ] && [ "$governorFlag" = "1" ]; then
+              for G in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do
+                A="${dollar}{G%/*}/scaling_available_governors"
+                if [ -w "${dollar}G" ] && [ -r "${dollar}A" ] && grep -qw performance "${dollar}A"; then echo performance > "${dollar}G" 2>/dev/null; fi
+              done
+            fi
+        """.trimIndent()
+    }
+
 }

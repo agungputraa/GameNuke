@@ -3,6 +3,7 @@ package com.neon.gametweak
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -46,6 +47,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.AirplanemodeActive
 import androidx.compose.material.icons.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
@@ -71,7 +73,6 @@ import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Nightlight
 import androidx.compose.material.icons.outlined.PhoneLocked
-import androidx.compose.material.icons.outlined.PhotoCamera
 import androidx.compose.material.icons.outlined.PowerSettingsNew
 import androidx.compose.material.icons.outlined.Radar
 import androidx.compose.material.icons.outlined.Refresh
@@ -81,6 +82,7 @@ import androidx.compose.material.icons.outlined.ScreenRotation
 import androidx.compose.material.icons.outlined.Security
 import androidx.compose.material.icons.outlined.Speed
 import androidx.compose.material.icons.outlined.SportsEsports
+import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VolumeOff
@@ -99,6 +101,7 @@ import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
@@ -132,6 +135,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.platform.ViewCompositionStrategy
@@ -195,6 +199,8 @@ internal data class FloatingHudSnapshot(
     val ramDetail: String = "-- / --",
     val fps: String = "--",
     val ping: String = "--",
+    val probeMs: Long? = null,
+    val probeEnabled: Boolean = false,
     val temperature: String = "--",
     val battery: String = "--",
     val storage: String = "--",
@@ -263,19 +269,19 @@ internal fun createFloatingHudComposeView(
     }
 }
 
-private val NukeGreen = Color(0xFFA8FF00)
+private val NukeGreen = Color(0xFF35C99B)
 private val NukeGreenDim = Color(0xFF68C900)
 private val NukeCyan = Color(0xFF00E5C8)
 private val NukeAmber = Color(0xFFFFB830)
-private val NukeRed = Color(0xFFFF3D55)
+private val NukeRed = Color(0xFFFF4D6A)
 private val NukePurple = Color(0xFFA855F7)
-private val NukeVoid = Color(0xFF020608)
-private val NukePanel = Color(0xFF0D1614)
-private val NukePanelHigh = Color(0xFF141F1C)
+private val NukeVoid = Color(0xFF020705)
+private val NukePanel = Color(0xFF0D1A13)
+private val NukePanelHigh = Color(0xFF0F2018)
 private val NukePanelBright = Color(0xFF1C2E2A)
-private val NukeText = Color(0xFFF0FFF4)
-private val NukeMuted = Color(0xFF7A9E94)
-private val NukeHairline = Color(0xFF1E3530)
+private val NukeText = Color(0xFFFFFFFF)
+private val NukeMuted = Color(0xFF9BB0A6)
+private val NukeHairline = Color(0xFF1D3528)
 
 private val NukeColorScheme = darkColorScheme(
     primary = NukeGreen,
@@ -429,7 +435,7 @@ private fun NukeFloatingWing(
     wing: FloatingHudWing,
     callbacks: FloatingHudCallbacks,
 ) {
-    MaterialTheme(colorScheme = NukeColorScheme) {
+    MaterialTheme(colorScheme = NukeColorScheme, typography = com.neon.gametweak.ui.theme.Typography) {
         var entered by remember { mutableStateOf(false) }
         var confirmEnd by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) { entered = true }
@@ -734,7 +740,7 @@ private fun NukePortraitCockpit(
     moduleState: NukeModuleShopState,
     callbacks: FloatingHudCallbacks,
 ) {
-    MaterialTheme(colorScheme = NukeColorScheme) {
+    MaterialTheme(colorScheme = NukeColorScheme, typography = com.neon.gametweak.ui.theme.Typography) {
         var entered by remember { mutableStateOf(false) }
         var confirmEnd by rememberSaveable { mutableStateOf(false) }
         var selectedTab by rememberSaveable { mutableStateOf(0) } // 0: TOOLS, 1: CONTROLS, 2: MODULES
@@ -900,7 +906,7 @@ private fun NukePortraitCockpit(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     TelemetryChip("FPS", snapshot.fps, NukeGreen)
-                    TelemetryChip("PING", snapshot.ping, NukeCyan)
+                    TelemetryChip("TCP", probeText(snapshot), probeColor(snapshot))
                     TelemetryChip("°C", snapshot.temperature, NukeAmber)
                     TelemetryChip("BAT", snapshot.battery, NukeCyan)
                     Row(
@@ -1066,10 +1072,10 @@ private fun TacticalEnginesDeckView(
     val isAiSentinelOn = states["ai_sentinel"] ?: true
     val isAiCoolingOn = states["ai_cooling"] ?: false
     val isTaskManagerOn = states["task_manager"] ?: false
+    val isSystemEditorOn = states["system_editor"] ?: false
     val isLiveChatOn = states["live_chat"] ?: false
     val isTerminalOn = states["terminal"] ?: false
     val isVpnOn = states["vpn_boost"] ?: false
-    val isAntiMistouchOn = states["anti_mistouch"] ?: false
     val isFootstepOn = states["footstep_boost"] ?: false
     val isWikiOn = states["wiki_pip"] ?: false
 
@@ -1127,7 +1133,7 @@ private fun TacticalEnginesDeckView(
         ) {
             listOf(
                 Triple("FPS", snapshot.fps, NukeGreen),
-                Triple("PING", snapshot.ping, NukeCyan),
+                Triple("TCP", probeText(snapshot), probeColor(snapshot)),
                 Triple("°C", snapshot.temperature, NukeAmber),
                 Triple("BAT", snapshot.battery, NukeCyan),
             ).forEach { (label, value, tint) ->
@@ -1152,7 +1158,7 @@ private fun TacticalEnginesDeckView(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // ── PRO TUNING PANELS (Expandable Sub-Windows) ────────────────────
+            // ── PRO TUNING ENGINES (EXPANDABLE) ────────────────────
             SectionDivider("PRO TUNING ENGINES (EXPANDABLE)")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
@@ -1214,17 +1220,37 @@ private fun TacticalEnginesDeckView(
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            // ── TACTICAL HARDWARE BOOST — 3 column square grid ───────────────
-            SectionDivider("TACTICAL HARDWARE BOOST")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TacticalHardwareCard(Icons.Outlined.Speed, "CPU TURBO", "MAX", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "NET LOCK", "TURBO", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.Bolt, "NET TURBO", "ACCEL", "STD", checked = isVpnOn, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
+                PanelLauncherCard(
+                    icon = Icons.Outlined.Tune,
+                    title = "DEVICE SYS",
+                    badgeText = "TUNING",
+                    statusText = if (isSystemEditorOn) "ACTIVE • OPEN" else "DEVICE SYSTEM EDITOR",
+                    isOpen = isSystemEditorOn,
+                    onClick = { callbacks.onQuickAction("system_editor") },
+                    modifier = Modifier.weight(1f)
+                )
+                PanelLauncherCard(
+                    icon = Icons.Outlined.CleaningServices,
+                    title = "TASK MGR",
+                    badgeText = "SYSTEM",
+                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "PROCESS KILLER",
+                    isOpen = isTaskManagerOn,
+                    onClick = { callbacks.onQuickAction("task_manager") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // ── TACTICAL HARDWARE TUNING — 3 column square grid ───────────────
+            SectionDivider("TACTICAL HARDWARE TUNING")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TacticalHardwareCard(Icons.Outlined.Speed, "CPU PROFILE", "PERF", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "NET PRIORITY", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Bolt, "LOCAL NET", "ON", "OFF", checked = isVpnOn, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TacticalHardwareCard(Icons.Outlined.Security, "MISTOUCH", "SHIELD", "OFF", checked = isAntiMistouchOn, onToggle = { callbacks.onQuickAction("anti_mistouch") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.Tune, "FOOTSTEP", "BOOST", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.TouchApp, "TOUCH TUNE", "ACTIVE", "STD", checked = isTouchOn, onToggle = { callbacks.onQuickAction("touch_response") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO TUNE", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(Icons.Outlined.SportsEsports, "GAME MODE", "PERF", "STD", checked = isGameOn, onToggle = { callbacks.onQuickAction("game_mode") }, modifier = Modifier.weight(1f))
             }
         }
@@ -1237,7 +1263,7 @@ private fun TacticalEnginesDeckView(
 private fun WingTelemetryRail(snapshot: FloatingHudSnapshot) {
     val metrics = listOf(
         Triple("FPS", snapshot.fps, NukeGreen),
-        Triple("PING", snapshot.ping, NukeCyan),
+        Triple("TCP", probeText(snapshot), probeColor(snapshot)),
         Triple("°C", snapshot.temperature, NukeAmber),
     )
     Row(
@@ -1317,6 +1343,9 @@ private fun QuickActionsDeckView(
     val states = snapshot.quickToolStates
     val unsupported = snapshot.unsupportedQuickTools
 
+    val isFpsLockOn = states["fps_lock"] ?: false
+    val fpsLockHz by NukeUniversalFpsLock.targetFpsState.collectAsState()
+    val fpsLockBadge = if (fpsLockHz > 0) "${fpsLockHz}Hz" else "AUTO"
     val isGameOn = states["game_mode"] ?: false
     val isDndOn = states["dnd"] ?: false
     val isTouchOn = states["touch_response"] ?: false
@@ -1338,14 +1367,16 @@ private fun QuickActionsDeckView(
     val isGpuTunerOn = states["gpu_tuner"] ?: false
     val isAiSentinelOn = states["ai_sentinel"] ?: true
     val isVpnOn = states["vpn_boost"] ?: false
-    val isAntiMistouchOn = states["anti_mistouch"] ?: false
     val isFootstepOn = states["footstep_boost"] ?: false
     val isWikiOn = states["wiki_pip"] ?: false
     val isLiveChatOn = states["live_chat"] ?: false
     val isTerminalOn = states["terminal"] ?: false
     val isFpsChipOn = states["fps_overlay"] ?: false
-    val isCrosshairOn = states["crosshair"] ?: false
+    val isCrosshairOn = snapshot.toggleValues[FloatingHudToggle.CROSSHAIR] == true
     val isBrightnessLockOn = states["brightness_lock"] ?: false
+    val isGameDockOn = states["game_dock"] ?: false
+    val isDeepCoolingOn = states["deep_cooling"] ?: false
+    val isAntivirusOn = states["antivirus"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Compact Header ───────────────────────────────────────────────────
@@ -1383,6 +1414,7 @@ private fun QuickActionsDeckView(
                     overflow = TextOverflow.Ellipsis
                 )
             }
+
             if (snapshot.remoteDefinition.showEndSession) {
                 Spacer(Modifier.width(4.dp))
                 HeaderAction(Icons.Outlined.PowerSettingsNew, "End session", NukeRed, true, true) {
@@ -1402,7 +1434,12 @@ private fun QuickActionsDeckView(
                 modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // ── Top Action Bar (Scrollable: Modules, Deep Clean, Live Chat, Terminal) ──
+                // ── Top Action Bar: Crosshair Studio, TCP Ping, Live FPS ──
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "STUDIO", "STUDIO", checked = isCrosshairOn, onToggle = { callbacks.onQuickAction("crosshair_studio") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.NetworkCheck, "TCP PING", "ON", "OFF", checked = snapshot.probeEnabled, onToggle = { callbacks.onQuickAction("ping_monitor") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Speed, "LIVE FPS", "ON", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f))
+                }
                 Row(
                     Modifier
                         .fillMaxWidth()
@@ -1430,7 +1467,7 @@ private fun QuickActionsDeckView(
                     TopActionPill(
                         icon = Icons.Outlined.Forum,
                         label = "LIVE CHAT",
-                        badge = null,
+                        badge = if (isLiveChatOn) "❐ OPEN" else "❐ WIN",
                         tint = NukeCyan,
                         active = isLiveChatOn,
                         modifier = Modifier.wrapContentWidth(),
@@ -1439,7 +1476,7 @@ private fun QuickActionsDeckView(
                     TopActionPill(
                         icon = Icons.Outlined.Terminal,
                         label = "TERMINAL",
-                        badge = null,
+                        badge = if (isTerminalOn) "❐ OPEN" else "❐ WIN",
                         tint = NukeGreen,
                         active = isTerminalOn,
                         modifier = Modifier.wrapContentWidth(),
@@ -1454,8 +1491,9 @@ private fun QuickActionsDeckView(
                 // ── DISPLAY & ENVIRONMENT — 3 column square grid ─────────────────
                 SectionDivider("DISPLAY & ENVIRONMENT")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.MonitorHeart, "FPS HUD", "CHIP", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f))
-                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "AIM", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onTool(FloatingHudTool.CROSSHAIR) }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Speed, "FPS LOCK", fpsLockBadge, "AUTO", checked = fpsLockHz > 0 || isFpsLockOn, onToggle = { callbacks.onQuickAction("fps_lock") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.MonitorHeart, "FPS HUD", "CHIP", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "AIM", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onToggle(FloatingHudToggle.CROSSHAIR, !isCrosshairOn) }, modifier = Modifier.weight(1f), isFloatingWindow = true)
                     SquareMiniCard(Icons.Outlined.Brightness6, "BRIGHT LOCK", "MAX", "AUTO", checked = isBrightnessLockOn, onToggle = { callbacks.onQuickAction("brightness_lock") }, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1477,9 +1515,9 @@ private fun QuickActionsDeckView(
                     SquareMiniCard(Icons.Outlined.Bluetooth, "BLUETOOTH", "ON", "OFF", checked = isBluetoothOn, onToggle = { callbacks.onQuickAction("bluetooth") }, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.DataSaverOn, "DATA SAVE", "RESTRICT", "OFF", checked = isDataSaverOn, onToggle = { callbacks.onQuickAction("data_saver") }, modifier = Modifier.weight(1f))
-                    Spacer(Modifier.weight(1f))
-                    Spacer(Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Widgets, "CYBER DECK", "PORTAL", "OFF", checked = isGameDockOn, onToggle = { callbacks.onQuickAction("game_dock") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.Security, "APP SAFETY", "SHIELD", "OFF", checked = isAntivirusOn, onToggle = { callbacks.onQuickAction("antivirus") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.CleaningServices, "CACHE TRIM", "OPTIMIZE", "READY", checked = false, onToggle = { callbacks.onQuickAction("zombie_clean") }, modifier = Modifier.weight(1f), isWarning = false)
                 }
             }
         }
@@ -1487,7 +1525,7 @@ private fun QuickActionsDeckView(
     }
 }
 
-// ── Expandable Panel Launcher Card (Enterprise Military Cyberpunk Styling) ──
+// ── Expandable Panel Launcher Card ──
 @Composable
 private fun PanelLauncherCard(
     icon: ImageVector,
@@ -1500,76 +1538,93 @@ private fun PanelLauncherCard(
     customAccent: Color? = null,
 ) {
     val accent = customAccent ?: NukeGreen
-    val cardShape = RoundedCornerShape(9.dp)
+    val cardShape = RoundedCornerShape(8.dp)
     val bg by animateColorAsState(
-        if (isOpen) Color(0xFF142B22) else Color(0xFF0C1217),
+        if (isOpen) Color(0xFF142B22) else Color(0xFF0C131A),
         tween(120), "panelBg"
     )
     val border by animateColorAsState(
-        if (isOpen) accent else Color(0xFF1C2732),
+        if (isOpen) accent else Color(0xFF1B2836),
         tween(120), "panelBorder"
     )
 
     Box(
-        modifier = modifier
+        modifier = modifier.nukeCardEntrance().nukePressFeedback()
+            .height(50.dp)
             .clip(cardShape)
             .background(bg)
-            .border(1.dp, border, cardShape)
+            .border(if (isOpen) 1.dp else 0.7.dp, border, cardShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 7.dp, vertical = 6.dp),
+            .padding(horizontal = 7.dp, vertical = 5.dp),
     ) {
         Row(
-            Modifier.fillMaxWidth(),
+            Modifier.fillMaxSize(),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
         ) {
+            Row(
+                modifier = Modifier.weight(1f),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(26.dp)
+                        .clip(RoundedCornerShape(5.dp))
+                        .background(if (isOpen) accent.copy(alpha = 0.22f) else Color(0xFF141E28))
+                        .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.6f) else Color(0xFF1F2E3D), RoundedCornerShape(5.dp)),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(icon, null, tint = if (isOpen) accent else Color(0xFF88A0B2), modifier = Modifier.size(14.dp))
+                }
+                Spacer(Modifier.width(6.dp))
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.Center,
+                ) {
+                    Text(
+                        text = title,
+                        color = if (isOpen) accent else Color.White,
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.3.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Text(
+                        text = statusText,
+                        color = if (isOpen) accent.copy(alpha = 0.85f) else Color(0xFF64748B),
+                        fontSize = 6.2.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+
+            Spacer(Modifier.width(4.dp))
+
             Box(
-                Modifier.size(26.dp).clip(CircleShape)
-                    .background(if (isOpen) accent.copy(alpha = 0.22f) else Color(0xFF141E28))
-                    .border(0.8.dp, if (isOpen) accent.copy(alpha = 0.7f) else Color(0xFF263545), CircleShape),
+                modifier = Modifier
+                    .clip(RoundedCornerShape(4.dp))
+                    .background(if (isOpen) accent.copy(alpha = 0.20f) else Color(0xFF121B24))
+                    .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.60f) else Color(0xFF1C2A38), RoundedCornerShape(4.dp))
+                    .padding(horizontal = 4.dp, vertical = 2.5.dp),
                 contentAlignment = Alignment.Center,
             ) {
-                Icon(icon, null, tint = if (isOpen) accent else Color(0xFF94A3B8), modifier = Modifier.size(14.dp))
-            }
-            Column(Modifier.weight(1f)) {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
-                    Text(
-                        title,
-                        color = if (isOpen) Color.White else Color(0xFFE2E8F0),
-                        fontSize = 8.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 0.4.sp,
-                        maxLines = 1
-                    )
-                    Text("↗", color = if (isOpen) accent else Color(0xFF64748B), fontSize = 7.5.sp, fontWeight = FontWeight.Bold)
-                }
                 Text(
-                    statusText,
-                    color = if (isOpen) accent else Color(0xFF64748B),
-                    fontSize = 6.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = if (isOpen) "❐ OPEN" else "❐ $badgeText",
+                    color = if (isOpen) accent else Color(0xFF8499AB),
+                    fontSize = 5.2.sp,
+                    fontWeight = FontWeight.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-            }
-            Box(
-                Modifier.clip(RoundedCornerShape(3.dp))
-                    .background(if (isOpen) accent.copy(alpha = 0.20f) else Color(0xFF16222E))
-                    .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.6f) else Color(0xFF26374A), RoundedCornerShape(3.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.5.dp),
-            ) {
-                Text(
-                    if (isOpen) "OPEN" else badgeText,
-                    color = if (isOpen) accent else Color(0xFF94A3B8),
-                    fontSize = 5.5.sp,
-                    fontWeight = FontWeight.Black
+                    softWrap = false,
                 )
             }
         }
     }
 }
 
-// ── Tactical Hardware Military Card (Left Wing Exclusive: Cut Corner, Cyber Emerald Glow, Tactical Power Notch) ──
+// ── Tactical Hardware Military Card ──
 @Composable
 private fun TacticalHardwareCard(
     icon: ImageVector,
@@ -1595,20 +1650,19 @@ private fun TacticalHardwareCard(
     )
 
     Box(
-        modifier = modifier
-            .aspectRatio(1.08f)
+        modifier = modifier.nukeCardEntrance().nukePressFeedback()
+            .height(54.dp)
             .clip(tacticalShape)
             .background(bg)
             .border(if (checked) 1.dp else 0.7.dp, border, tacticalShape)
             .clickable(onClick = onToggle)
             .padding(horizontal = 5.dp, vertical = 4.dp),
     ) {
-        // Military Status LED notch at top-right
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .width(14.dp)
-                .height(3.dp)
+                .width(12.dp)
+                .height(2.5.dp)
                 .clip(RoundedCornerShape(1.dp))
                 .background(if (checked) NukeGreen else Color(0xFF22362C))
         )
@@ -1624,26 +1678,27 @@ private fun TacticalHardwareCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(20.dp)
-                        .clip(CutCornerShape(topEnd = 4.dp))
+                        .size(19.dp)
+                        .clip(CutCornerShape(topEnd = 3.dp))
                         .background(if (checked) NukeGreen.copy(alpha = 0.20f) else Color(0xFF121B16))
-                        .border(0.6.dp, if (checked) NukeGreen.copy(alpha = 0.6f) else Color(0xFF1F2F27), CutCornerShape(topEnd = 4.dp)),
+                        .border(0.6.dp, if (checked) NukeGreen.copy(alpha = 0.6f) else Color(0xFF1F2F27), CutCornerShape(topEnd = 3.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = iconTint,
-                        modifier = Modifier.size(12.dp),
+                        modifier = Modifier.size(11.dp),
                     )
                 }
 
                 Text(
                     text = if (checked) activeText else inactiveText,
                     color = if (checked) NukeGreen else Color(0xFF6B8074),
-                    fontSize = 6.sp,
+                    fontSize = 5.8.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     fontWeight = FontWeight.Black,
+                    maxLines = 1,
                 )
             }
 
@@ -1651,16 +1706,16 @@ private fun TacticalHardwareCard(
                 Text(
                     text = label,
                     color = if (checked) Color.White else Color(0xFF9EABA4),
-                    fontSize = 7.5.sp,
+                    fontSize = 7.2.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    letterSpacing = 0.3.sp,
+                    letterSpacing = 0.2.sp,
                 )
                 Text(
                     text = if (checked) "TACTICAL • ON" else "READY",
                     color = if (checked) NukeGreen.copy(alpha = 0.85f) else Color(0xFF526159),
-                    fontSize = 5.2.sp,
+                    fontSize = 5.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -1670,7 +1725,7 @@ private fun TacticalHardwareCard(
     }
 }
 
-// ── Square Proportional Mini Card (Solid Non-Transparent, Symmetrical 8dp Corners) ──
+// ── Square Proportional Mini Card ──
 @Composable
 private fun SquareMiniCard(
     icon: ImageVector,
@@ -1683,20 +1738,21 @@ private fun SquareMiniCard(
     modifier: Modifier = Modifier,
     supported: Boolean = true,
     isWarning: Boolean = false,
+    isFloatingWindow: Boolean = false,
 ) {
     val isActive = checked && supported
     val effectiveAccent = if (isWarning && isActive) NukeAmber else accent
     val cardShape = RoundedCornerShape(8.dp)
     val bg by animateColorAsState(
-        if (isActive) (if (isWarning) Color(0xFF241A0E) else Color(0xFF0F261E)) else Color(0xFF0B1217),
+        if (isActive) (if (isWarning) Color(0xFF241A0E) else Color(0xFF0F261E)) else Color(0xFF0F2018),
         tween(100), "sqBg",
     )
     val border by animateColorAsState(
-        if (isActive) effectiveAccent else Color(0xFF182430),
+        if (isActive) effectiveAccent else Color(0xFF1D3528),
         tween(100), "sqBorder",
     )
     Box(
-        modifier = modifier
+        modifier = modifier.nukeCardEntrance().nukePressFeedback()
             .aspectRatio(1.08f)
             .clip(cardShape)
             .background(bg)
@@ -1705,7 +1761,6 @@ private fun SquareMiniCard(
             .padding(horizontal = 4.dp, vertical = 4.dp),
         contentAlignment = Alignment.Center,
     ) {
-        // Active LED dot indicator in top-right corner
         if (isActive) {
             Box(
                 Modifier
@@ -1722,7 +1777,6 @@ private fun SquareMiniCard(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
-            // Icon circle with solid background
             Box(
                 Modifier.size(22.dp).clip(CircleShape)
                     .background(if (isActive) (if (isWarning) Color(0xFF382614) else Color(0xFF163C2E)) else Color(0xFF131D27)),
@@ -1734,10 +1788,9 @@ private fun SquareMiniCard(
                     modifier = Modifier.size(13.dp),
                 )
             }
-            // Title
             Text(
                 title,
-                color = if (!supported) Color(0xFF33463E) else if (isActive) Color.White else Color(0xFF94A3B8),
+                color = if (!supported) Color(0xFF33463E) else if (isActive) Color.White else Color(0xFF9BB0A6),
                 fontSize = 6.8.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.3.sp,
@@ -1745,21 +1798,26 @@ private fun SquareMiniCard(
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
             )
-            // Status badge with solid background
             Box(
                 Modifier
                     .clip(RoundedCornerShape(3.dp))
                     .background(if (isActive) (if (isWarning) Color(0xFF452D12) else Color(0xFF194A37)) else Color(0xFF121B24))
                     .border(0.5.dp, if (isActive) effectiveAccent.copy(alpha = 0.6f) else Color(0xFF1E2B38), RoundedCornerShape(3.dp))
-                    .padding(horizontal = 5.dp, vertical = 1.dp),
+                    .padding(horizontal = 4.dp, vertical = 1.dp),
                 contentAlignment = Alignment.Center,
             ) {
+                val labelText = when {
+                    !supported -> "N/A"
+                    isFloatingWindow -> if (isActive) "❐ $activeLabel" else "❐ $inactiveLabel"
+                    isActive -> activeLabel
+                    else -> inactiveLabel
+                }
                 Text(
-                    if (!supported) "N/A" else if (isActive) activeLabel else inactiveLabel,
+                    labelText,
                     color = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF64748B),
-                    fontSize = 5.5.sp,
+                    fontSize = if (isFloatingWindow) 5.1.sp else 5.5.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 0.3.sp,
+                    letterSpacing = 0.2.sp,
                 )
             }
         }
@@ -1861,7 +1919,7 @@ private fun DensityStepperCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, null, tint = NukeGreen, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("DISPLAY DENSITY (DPI)", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
+                    Text("LEBAR TERKECIL / DPI (SKALA LAYAR)", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
                 }
                 Box(
                     Modifier
@@ -1869,7 +1927,7 @@ private fun DensityStepperCard(
                         .background(NukeGreen.copy(alpha = 0.18f))
                         .padding(horizontal = 5.dp, vertical = 1.dp)
                 ) {
-                    Text("$currentDpi DPI", color = NukeGreen, fontSize = 7.sp, fontWeight = FontWeight.Bold)
+                    Text("$currentDpi DP", color = NukeGreen, fontSize = 7.sp, fontWeight = FontWeight.Bold)
                 }
             }
             Spacer(Modifier.height(3.dp))
@@ -1877,8 +1935,14 @@ private fun DensityStepperCard(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
             ) {
-                listOf(380, 410, 440, 480, 520).forEach { dpi ->
-                    val isSelected = (currentDpi - dpi).let { if (it < 0) -it else it } < 15
+                listOf(
+                    360 to "360\nBesar",
+                    411 to "411\nNormal",
+                    480 to "480\nKecil",
+                    540 to "540\nLicin",
+                    600 to "600\nUltra"
+                ).forEach { (dpi, label) ->
+                    val isSelected = (currentDpi - dpi).let { if (it < 0) -it else it } < 25
                     Box(
                         modifier = Modifier
                             .weight(1f)
@@ -1886,10 +1950,17 @@ private fun DensityStepperCard(
                             .background(if (isSelected) NukeGreen.copy(alpha = 0.22f) else Color(0xFF0C1411))
                             .border(0.6.dp, if (isSelected) NukeGreen else NukeHairline, ControlShape)
                             .clickable { onChanged(dpi) }
-                            .padding(vertical = 2.dp),
+                            .padding(vertical = 3.dp),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("$dpi", color = if (isSelected) NukeGreen else NukeMuted, fontSize = 7.sp, fontWeight = FontWeight.Black)
+                        Text(
+                            text = label,
+                            color = if (isSelected) NukeGreen else NukeMuted,
+                            fontSize = 6.5.sp,
+                            fontWeight = FontWeight.Black,
+                            lineHeight = 8.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                        )
                     }
                 }
             }
@@ -1897,7 +1968,7 @@ private fun DensityStepperCard(
     }
 }
 
-// ── Professional Pill Toggle Card — no Switch, just tap ──────────────────────
+// ── Professional Pill Toggle Card ──────────────────────
 @Composable
 private fun PillToggleCard(
     icon: ImageVector,
@@ -1920,7 +1991,7 @@ private fun PillToggleCard(
         animationSpec = tween(100), label = "pillBorder",
     )
     Box(
-        modifier = modifier
+        modifier = modifier.nukeCardEntrance().nukePressFeedback()
             .alpha(if (supported) 1f else 0.35f)
             .clip(ControlShape)
             .background(bgColor)
@@ -1954,7 +2025,6 @@ private fun PillToggleCard(
                 overflow = TextOverflow.Ellipsis,
                 textAlign = androidx.compose.ui.text.style.TextAlign.Center,
             )
-            // Status pill
             Box(
                 modifier = Modifier
                     .clip(RoundedCornerShape(8.dp))
@@ -1975,7 +2045,7 @@ private fun PillToggleCard(
     }
 }
 
-// ── Top pill action button (shop / clean / capture) ────────────────────────────
+// ── Top pill action button ──────────────────────────────────────────────────
 @Composable
 private fun TopActionPill(
     icon: ImageVector,
@@ -1994,7 +2064,7 @@ private fun TopActionPill(
             .clip(ControlShape)
             .background(bg)
             .border(0.8.dp, border, ControlShape)
-            .clickable(onClick = onClick)
+            .nukePressFeedback().clickable(onClick = onClick)
             .padding(horizontal = 6.dp),
         contentAlignment = Alignment.Center,
     ) {
@@ -2011,11 +2081,11 @@ private fun TopActionPill(
     }
 }
 
-// ── Section divider with unified enterprise styling ─────────────────────────────
+// ── Section divider ───────────────────────────────────────────────────────────
 @Composable
-private fun SectionDivider(label: String, accent: Color = NukeGreen) {
+private fun SectionDivider(title: String, accent: Color = NukeGreen) {
     Row(
-        Modifier.fillMaxWidth().padding(horizontal = 1.dp, vertical = 2.dp),
+        Modifier.fillMaxWidth().padding(top = 5.dp, bottom = 3.dp, start = 2.dp, end = 2.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
@@ -2026,14 +2096,14 @@ private fun SectionDivider(label: String, accent: Color = NukeGreen) {
         )
         Spacer(Modifier.width(5.dp))
         Text(
-            label,
-            color = Color(0xFF94A3B8),
-            fontSize = 6.2.sp,
+            title,
+            color = Color(0xFF9BB0A6),
+            fontSize = 6.4.sp,
             fontWeight = FontWeight.Black,
-            letterSpacing = 1.1.sp
+            letterSpacing = 1.sp
         )
         Spacer(Modifier.width(5.dp))
-        Box(Modifier.weight(1f).height(0.6.dp).background(Color(0xFF1A2634)))
+        Box(Modifier.weight(1f).height(0.6.dp).background(Color(0xFF1E2B38)))
     }
 }
 
@@ -2407,10 +2477,10 @@ private fun CompactEndSessionGate(onCancel: () -> Unit, onConfirm: () -> Unit) {
         Text("Installed modules are restored in reverse activation order before the overlay ends.", color = NukeMuted, fontSize = 7.5.sp, lineHeight = 9.sp)
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-            Surface(Modifier.weight(1f).height(48.dp).clickable(onClick = onCancel), color = NukePanelHigh, border = BorderStroke(.7.dp, NukeHairline), shape = ControlShape) {
+            Surface(Modifier.weight(1f).height(48.dp).nukePressFeedback().clickable(onClick = onCancel), color = NukePanelHigh, border = BorderStroke(.7.dp, NukeHairline), shape = ControlShape) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("CANCEL", color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
             }
-            Surface(Modifier.weight(1f).height(48.dp).clickable(onClick = onConfirm), color = NukeRed.copy(alpha = .17f), border = BorderStroke(.8.dp, NukeRed.copy(alpha = .70f)), shape = ControlShape) {
+            Surface(Modifier.weight(1f).height(48.dp).nukePressFeedback().clickable(onClick = onConfirm), color = NukeRed.copy(alpha = .17f), border = BorderStroke(.8.dp, NukeRed.copy(alpha = .70f)), shape = ControlShape) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("END NOW", color = NukeRed, fontSize = 8.sp, fontWeight = FontWeight.Black) }
             }
         }
@@ -2419,7 +2489,7 @@ private fun CompactEndSessionGate(onCancel: () -> Unit, onConfirm: () -> Unit) {
 
 @Composable
 private fun NukeFloatingHud(snapshot: FloatingHudSnapshot, callbacks: FloatingHudCallbacks) {
-    MaterialTheme(colorScheme = NukeColorScheme) {
+    MaterialTheme(colorScheme = NukeColorScheme, typography = com.neon.gametweak.ui.theme.Typography) {
         var entered by remember { mutableStateOf(false) }
         var confirmEnd by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) { entered = true }
@@ -2575,14 +2645,14 @@ private fun EndSessionGate(dense: Boolean, onCancel: () -> Unit, onConfirm: () -
         Text("END SESSION?", color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
         Spacer(Modifier.weight(1f))
         Surface(
-            modifier = Modifier.height(48.dp).widthIn(min = 70.dp).clickable(onClick = onCancel),
+            modifier = Modifier.height(48.dp).widthIn(min = 70.dp).nukePressFeedback().clickable(onClick = onCancel),
             shape = ControlShape,
             color = NukePanelHigh,
             border = BorderStroke(.7.dp, NukeHairline),
         ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("CANCEL", color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) } }
         Spacer(Modifier.width(6.dp))
         Surface(
-            modifier = Modifier.height(48.dp).widthIn(min = 86.dp).clickable(onClick = onConfirm),
+            modifier = Modifier.height(48.dp).widthIn(min = 86.dp).nukePressFeedback().clickable(onClick = onConfirm),
             shape = ControlShape,
             color = NukeRed.copy(alpha = .18f),
             border = BorderStroke(.8.dp, NukeRed.copy(alpha = .72f)),
@@ -2616,7 +2686,7 @@ private fun HeaderAction(
     onClick: () -> Unit,
 ) {
     Surface(
-        modifier = Modifier.size(48.dp).clip(ControlShape).clickable(onClick = onClick),
+        modifier = Modifier.size(48.dp).clip(ControlShape).nukePressFeedback().clickable(onClick = onClick),
         color = if (danger) NukeRed.copy(alpha = .10f) else NukePanelHigh,
         border = BorderStroke(.8.dp, tint.copy(alpha = if (danger) .58f else .32f)),
         shape = ControlShape,
@@ -2655,20 +2725,35 @@ private fun TelemetryRail(snapshot: FloatingHudSnapshot, dense: Boolean) {
         horizontalArrangement = Arrangement.spacedBy(5.dp),
     ) {
         metrics.forEachIndexed { index, item ->
+            val metricAccent = when (item.first) {
+                "FPS" -> NukeGreen
+                "PING" -> {
+                    val pingMs = item.second.filter(Char::isDigit).toIntOrNull()
+                    when {
+                        pingMs == null -> NukeMuted
+                        pingMs < 50 -> NukeGreen
+                        pingMs < 100 -> NukeAmber
+                        pingMs > 150 -> NukeRed
+                        else -> NukeAmber
+                    }
+                }
+                else -> NukeMuted
+            }
+            val highlighted = item.first == "FPS" || item.first == "PING"
             Box(
                 modifier = Modifier
                     .widthIn(min = if (dense) 69.dp else 76.dp)
                     .fillMaxHeight()
                     .clip(ControlShape)
-                    .background(if (index == 0) NukeGreen.copy(alpha = .10f) else NukePanel.copy(alpha = .82f))
-                    .border(.7.dp, if (index == 0) NukeGreen.copy(alpha = .40f) else NukeHairline, ControlShape)
+                    .background(if (highlighted) metricAccent.copy(alpha = .10f) else NukePanel.copy(alpha = .82f))
+                    .border(.7.dp, if (highlighted) metricAccent.copy(alpha = .40f) else NukeHairline, ControlShape)
                     .padding(horizontal = 8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(item.first, color = if (index == 0) NukeGreen else NukeMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(item.first, color = if (highlighted) metricAccent else NukeMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                     Spacer(Modifier.width(6.dp))
-                    Text(item.second, color = NukeText, fontSize = if (dense) 9.sp else 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
+                    Text(item.second, color = if (item.first == "PING") metricAccent else NukeText, fontSize = if (dense) 9.sp else 10.sp, fontWeight = FontWeight.Black, maxLines = 1)
                 }
             }
         }
@@ -2824,7 +2909,7 @@ private fun ReactorBay(
     shape: Shape = BayShape,
 ) {
     Surface(
-        modifier = modifier.clip(shape).clickable(onClick = callbacks.onCoreClick),
+        modifier = modifier.clip(shape).nukePressFeedback().clickable(onClick = callbacks.onCoreClick),
         color = Color.Transparent,
         shape = shape,
         border = BorderStroke(.8.dp, NukeGreen.copy(alpha = .28f)),
@@ -3039,7 +3124,7 @@ private fun MissionCard(
     val interaction = remember { MutableInteractionSource() }
     Surface(
         modifier = modifier.clip(ControlShape).alpha(if (supported) 1f else .40f)
-            .clickable(enabled = supported, interactionSource = interaction, indication = null, onClick = onClick),
+            .nukePressFeedback().clickable(enabled = supported, interactionSource = interaction, indication = null, onClick = onClick),
         color = NukePanelHigh.copy(alpha = .80f),
         border = BorderStroke(.75.dp, NukeHairline),
         shape = ControlShape,
@@ -3219,4 +3304,12 @@ private fun StatusRail(message: String, dense: Boolean) {
         Text(text = message, modifier = Modifier.weight(1f), color = NukeMuted, fontSize = if (dense) 8.sp else 8.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Start)
         Text("LIVE", color = NukeGreenDim, fontSize = 7.5.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
     }
+}
+
+private fun probeText(snapshot: FloatingHudSnapshot): String = if (snapshot.probeEnabled) snapshot.probeMs?.let { "${it}ms" } ?: "TIMEOUT" else snapshot.ping
+private fun probeColor(snapshot: FloatingHudSnapshot): Color = when {
+    !snapshot.probeEnabled || snapshot.probeMs == null -> Color(0xFF9BB0A6)
+    snapshot.probeMs < 50 -> Color(0xFF35C99B)
+    snapshot.probeMs <= 120 -> Color(0xFFFFB830)
+    else -> Color(0xFFFF4D6A)
 }

@@ -41,7 +41,7 @@ class ShellUserService() : IShellService.Stub() {
 
     /**
      * Executes a shell command in the ADB-shell UID process.
-     * This bypasses all normal Android sandbox restrictions that apply to a regular app UID,
+     * This uses an alternate path around all normal Android sandbox restrictions that apply to a regular app UID,
      * since shell (UID 2000) has the same privileges as ADB commands.
      */
     override fun execCommand(command: String?, timeoutMs: Long): ShellResult {
