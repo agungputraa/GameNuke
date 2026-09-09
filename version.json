@@ -1,0 +1,21 @@
+{
+    "versionCode":  19,
+    "versionName":  "2.6.0-prem",
+    "appName":  "Game Nuke Premium",
+    "publishedAt":  "2026-09-09",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "30.1",
+    "releaseNotes":  [
+                         "Thermal Control \u0026 Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
+                         "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
+                         "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
+                         "Performance \u0026 Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
+                         "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
+                         "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.6.0-prem/GameNuke-Premium-v2.6.0.apk",
+    "sha256":  "B61442516D0BB74CC3C0BDD6751E0AE8D69F77452D6821529858630670CFD713",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl":  "https://boring-active.com/laj2W6"
+}
