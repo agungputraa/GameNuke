@@ -5,7 +5,7 @@
   "publishedAt": "2026-09-10",
   "minAndroidVersion": 11,
   "targetSdk": 36,
-  "apkSizeMb": "24.3",
+  "apkSizeMb": "30.0",
   "releaseNotes": [
     "Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
     "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
@@ -14,7 +14,7 @@
     "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
     "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.6.0-prem/GameNuke-Premium-v2.6.0-prem.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.6.0-prem/GameNuke-Premium-v2.6.0.apk",
   "localApkUrl": "GameNuke-Premium-v2.6.0.apk",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.6.0-prem/GameNuke-Premium-v2.6.0.apk",
   "sha256": "B61442516D0BB74CC3C0BDD6751E0AE8D69F77452D6821529858630670CFD713",
