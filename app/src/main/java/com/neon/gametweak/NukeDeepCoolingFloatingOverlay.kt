@@ -29,20 +29,12 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlin.math.abs
-import kotlin.math.roundToInt
 
 /**
- * NukeDeepCoolingFloatingOverlay — Active Hardware Cryo Cooling & Thermal Governor Studio.
+ * NukeDeepCoolingFloatingOverlay — Active In-Game Thermal Control & Telemetry Studio.
  *
- * Developer: Agung Developer
- *
- * Responsibilities:
- *  - Floating in-game controller for active SoC cooling, kernel drop_caches, RAM compaction,
- *    and multi-mode governor switching.
- *  - Replaces obsolete voice changer with genuine high-value gaming performance hardware controls.
- *  - Real-time hardware telemetry: Battery Temp, Board Temp, Freed RAM, Thermal State.
- *  - 1-Tap Cryo Flush: Immediately chills device temperature and eliminates frame stutter.
+ * Provides a responsive, professional floating cockpit overlay for in-game thermal
+ * profile tuning, kernel cache maintenance, and real-time hardware temperature telemetry.
  */
 class NukeDeepCoolingFloatingOverlay private constructor(private val context: Context) {
 
@@ -57,23 +49,23 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
 
     // UI elements
     private var tempTv: TextView? = null
-    private var ramTv: TextView? = null
     private var statusTv: TextView? = null
+    private var statusBadgeTv: TextView? = null
     private var progressBar: ProgressBar? = null
     private var purgeBtn: Button? = null
     private var modeButtons = mutableMapOf<CoolingMode, TextView>()
 
     enum class CoolingMode(val label: String, val desc: String) {
-        CRYO("❄️ Cryo Cool", "Suhu Rendah & Anti-Overheat"),
-        HYPER("⚡ Hyper Overdrive", "Clock Maksimal & Anti-Throttling"),
-        AUTO("🎯 AI Auto-Pilot", "Seimbang Dinamis <41°C")
+        CRYO("RELIEF", "Reduce background load & trim caches"),
+        HYPER("PERFORMANCE", "Performance governor & GPU prioritization"),
+        AUTO("ADAPTIVE", "Continuous thermal & memory balance")
     }
 
     private var currentMode = CoolingMode.AUTO
     val isShowing: Boolean get() = rootView != null
 
     companion object {
-        private const val TAG = "NukeDeepCoolingHUD"
+        private const val TAG = "NukeThermalControlHUD"
 
         @Volatile
         private var instance: NukeDeepCoolingFloatingOverlay? = null
@@ -94,8 +86,8 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         mainHandler.post {
             if (rootView != null) return@post
 
-            val dm = context.resources.displayMetrics
-            val panelW = (310 * d).toInt().coerceAtMost((dm.widthPixels * 0.92f).toInt())
+            val (sw, sh) = getScreenSize()
+            val panelW = (320 * d).toInt().coerceAtMost((sw * 0.92f).toInt())
             val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -111,8 +103,8 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = ((dm.widthPixels - panelW) / 2).coerceAtLeast(0)
-                y = (dm.heightPixels * 0.16f).toInt()
+                x = ((sw - panelW) / 2).coerceAtLeast(0)
+                y = (sh * 0.16f).toInt()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                 }
@@ -146,54 +138,127 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
     private fun buildView(panelW: Int): View {
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#F5080E14")) // Obsidian Deep Glass
-                cornerRadius = 16 * d
-                setStroke((1.5f * d).toInt(), Color.parseColor("#00E5FF")) // Neon Cyan Border
-            }
-            setPadding((14 * d).toInt(), (12 * d).toInt(), (14 * d).toInt(), (14 * d).toInt())
-            elevation = 20 * d
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 14 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
+            setPadding((14 * d).toInt(), (10 * d).toInt(), (14 * d).toInt(), (12 * d).toInt())
+            elevation = 16 * d
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
         }
 
-        setupDraggable(root)
-
-        // ── 1. Header Row (Title, ?, Close) ──────────────────────────────────
+        // ── 1. Top Draggable Header (Dedicated Drag Handle) ───────────────────
         val header = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(0, 0, 0, (6 * d).toInt())
+        }
+
+        // Draggable Pill Indicator
+        val gripBar = LinearLayout(context).apply {
+            gravity = Gravity.CENTER
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+            val pill = View(context).apply {
+                background = GradientDrawable().apply {
+                    setColor(Color.parseColor("#4D94A3B8"))
+                    cornerRadius = 2 * d
+                }
+                layoutParams = LinearLayout.LayoutParams((36 * d).toInt(), (3.5f * d).toInt())
+            }
+            addView(pill)
+        }
+        header.addView(gripBar)
+
+        val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            setPadding(0, 0, 0, (8 * d).toInt())
+        }
+
+        val titleCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
 
         val titleTv = TextView(context).apply {
-            text = "❄️ CRYO COOLING STUDIO"
-            textSize = 13.5f
-            setTextColor(Color.WHITE)
+            text = "THERMAL CONTROL"
+            textSize = 12f
+            setTextColor(Color.parseColor("#F8FAFC"))
             typeface = Typeface.DEFAULT_BOLD
-            layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
+            letterSpacing = 0.05f
         }
-        header.addView(titleTv)
+        val subTv = TextView(context).apply {
+            text = "PROFILE & CACHE MANAGEMENT"
+            textSize = 7.5f
+            setTextColor(Color.parseColor("#64748B"))
+            typeface = Typeface.MONOSPACE
+            setPadding(0, (1 * d).toInt(), 0, 0)
+        }
+        titleCol.addView(titleTv)
+        titleCol.addView(subTv)
+        headerRow.addView(titleCol)
 
+        // Status Badge
+        statusBadgeTv = TextView(context).apply {
+            text = "[ACTIVE]"
+            textSize = 8.5f
+            typeface = Typeface.MONOSPACE
+            setTextColor(Color.parseColor("#10B981"))
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1410B981"))
+                cornerRadius = 4 * d
+                setStroke((0.8f * d).toInt(), Color.parseColor("#2810B981"))
+            }
+            setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                LinearLayout.LayoutParams.WRAP_CONTENT
+            ).apply { rightMargin = (8 * d).toInt() }
+        }
+        headerRow.addView(statusBadgeTv)
 
+        // Close Button
         val closeBtn = TextView(context).apply {
             text = "✕"
-            textSize = 15f
-            setTextColor(Color.parseColor("#8899A6"))
-            setPadding((6 * d).toInt(), (2 * d).toInt(), (2 * d).toInt(), (2 * d).toInt())
+            textSize = 12f
+            setTextColor(Color.parseColor("#94A3B8"))
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 12 * d
+            }
+            layoutParams = LinearLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt())
             setOnClickListener { hide() }
         }
-        header.addView(closeBtn)
+        headerRow.addView(closeBtn)
+        header.addView(headerRow)
+
+        // Attach dragging strictly to the header
+        setupDrag(header)
         root.addView(header)
+
+        // Divider
+        val div = View(context).apply {
+            setBackgroundColor(Color.parseColor("#1E293B"))
+            layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
+                bottomMargin = (8 * d).toInt()
+            }
+        }
+        root.addView(div)
 
         // ── 2. Hardware Telemetry Card ───────────────────────────────────────
         val telemetryCard = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#121D28"))
-                cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1F3244"))
-            }
+            background = NukeCyberHudStyler.buildCardBackground(
+                density = d,
+                cornerRadiusDp = 8f,
+                strokeColor = NukeCyberHudStyler.COLOR_BORDER_SUBTLE,
+                fillColor = NukeCyberHudStyler.COLOR_BG_CARD
+            )
             setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
@@ -208,51 +273,51 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val tempLabel = TextView(context).apply {
-            text = "HARDWARE TEMP"
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#8899A6"))
+            text = "DEVICE TEMP"
+            textSize = 8f
+            setTextColor(Color.parseColor("#64748B"))
             typeface = Typeface.DEFAULT_BOLD
         }
         tempTv = TextView(context).apply {
             text = "--.-°C"
             textSize = 14f
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             typeface = Typeface.DEFAULT_BOLD
         }
         tempBlock.addView(tempLabel)
         tempBlock.addView(tempTv)
         telemetryCard.addView(tempBlock)
 
-        // Divider
-        val div = View(context).apply {
-            layoutParams = LinearLayout.LayoutParams((1 * d).toInt(), (24 * d).toInt()).apply {
+        // Subtle Divider
+        val cardDivider = View(context).apply {
+            layoutParams = LinearLayout.LayoutParams((1 * d).toInt(), (22 * d).toInt()).apply {
                 leftMargin = (6 * d).toInt(); rightMargin = (6 * d).toInt()
             }
-            setBackgroundColor(Color.parseColor("#26394C"))
+            setBackgroundColor(Color.parseColor("#1E293B"))
         }
-        telemetryCard.addView(div)
+        telemetryCard.addView(cardDivider)
 
-        // RAM & State Block
-        val ramBlock = LinearLayout(context).apply {
+        // Profile State Block
+        val stateBlock = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
-        val ramLabel = TextView(context).apply {
-            text = "GOVERNOR STATUS"
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#8899A6"))
+        val stateLabel = TextView(context).apply {
+            text = "GOVERNOR PROFILE"
+            textSize = 8f
+            setTextColor(Color.parseColor("#64748B"))
             typeface = Typeface.DEFAULT_BOLD
         }
         statusTv = TextView(context).apply {
-            text = "AI OPTIMAL"
+            text = "ADAPTIVE"
             textSize = 12.5f
-            setTextColor(Color.parseColor("#00E5FF"))
+            setTextColor(Color.parseColor("#38BDF8"))
             typeface = Typeface.DEFAULT_BOLD
         }
-        ramBlock.addView(ramLabel)
-        ramBlock.addView(statusTv)
-        telemetryCard.addView(ramBlock)
+        stateBlock.addView(stateLabel)
+        stateBlock.addView(statusTv)
+        telemetryCard.addView(stateBlock)
 
         root.addView(telemetryCard)
 
@@ -268,7 +333,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         CoolingMode.values().forEach { mode ->
             val modeBtn = TextView(context).apply {
                 text = mode.label
-                textSize = 10.5f
+                textSize = 10f
                 gravity = Gravity.CENTER
                 typeface = Typeface.DEFAULT_BOLD
                 setPadding((4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt())
@@ -284,22 +349,22 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         root.addView(modeRow)
         refreshModeButtons()
 
-        // ── 4. Main 1-Tap Active Cryo Flush Button ───────────────────────────
+        // ── 4. Main 1-Tap Active Flush Button ────────────────────────────────
         val purgeContainer = FrameLayout(context).apply {
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
-                (42 * d).toInt()
+                (40 * d).toInt()
             )
         }
 
         purgeBtn = Button(context).apply { installNukePressFeedback() }.apply {
-            text = "❄️ 1-TAP INSTANT CRYO PURGE"
-            textSize = 12.5f
-            setTextColor(Color.BLACK)
+            text = "TRIM MEMORY & OPTIMIZE PROFILE"
+            textSize = 11.5f
+            setTextColor(Color.parseColor("#06100C"))
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#00E5FF"))
-                cornerRadius = 10 * d
+                setColor(Color.parseColor("#10B981")) // Cyber Emerald
+                cornerRadius = 8 * d
             }
             layoutParams = FrameLayout.LayoutParams(
                 FrameLayout.LayoutParams.MATCH_PARENT,
@@ -311,16 +376,16 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
 
         progressBar = ProgressBar(context).apply {
             visibility = View.GONE
-            layoutParams = FrameLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt(), Gravity.CENTER)
+            layoutParams = FrameLayout.LayoutParams((22 * d).toInt(), (22 * d).toInt(), Gravity.CENTER)
         }
         purgeContainer.addView(progressBar)
 
         root.addView(purgeContainer)
 
-        // Footer hint
+        // Footer note
         val footerTv = TextView(context).apply {
-            text = "💡 Flushes kernel caches, drop_caches & swap thrashing."
-            textSize = 9.5f
+            text = "Applies cache trimming and dynamic memory compaction. Hardware temperature is tracked live."
+            textSize = 8.5f
             setTextColor(Color.parseColor("#64748B"))
             gravity = Gravity.CENTER
             setPadding(0, (6 * d).toInt(), 0, 0)
@@ -345,7 +410,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                     """.trimIndent(), 2_000L)
                 }
                 CoolingMode.HYPER -> {
-                    // Max clock overdrive
+                    // Max clock profile
                     NukeConnectionManager.executeCommand("""
                         setprop debug.thermal.throttle 0 2>/dev/null
                         setprop debug.sf.hw 1 2>/dev/null
@@ -353,12 +418,12 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                     """.trimIndent(), 2_000L)
                 }
                 CoolingMode.AUTO -> {
-                    // AI auto-pilot
+                    // Adaptive auto-pilot
                     NukeAiSentinel.forceSweepNow(context)
                 }
             }
             withContext(Dispatchers.Main) {
-                NukeToast.success(context, "${mode.label}: Activated")
+                NukeToast.success(context, "${mode.label}: profile applied")
             }
         }
     }
@@ -367,11 +432,11 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         modeButtons.forEach { (mode, btn) ->
             val isSelected = mode == currentMode
             btn.background = GradientDrawable().apply {
-                setColor(if (isSelected) Color.parseColor("#00E5FF") else Color.parseColor("#15222E"))
-                cornerRadius = 8 * d
-                if (!isSelected) setStroke((1 * d).toInt(), Color.parseColor("#263B4D"))
+                setColor(if (isSelected) Color.parseColor("#10B981") else Color.parseColor("#111A24"))
+                cornerRadius = 6 * d
+                if (!isSelected) setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
             }
-            btn.setTextColor(if (isSelected) Color.BLACK else Color.WHITE)
+            btn.setTextColor(if (isSelected) Color.parseColor("#06100C") else Color.parseColor("#CBD5E1"))
         }
     }
 
@@ -380,8 +445,6 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         progressBar?.visibility = View.VISIBLE
 
         scope.launch(Dispatchers.IO) {
-            val startMs = SystemClock.elapsedRealtime()
-
             // 1. Kernel memory cache purge
             val dropCacheCmd = "echo 3 > /proc/sys/vm/drop_caches"
             val compactCmd = "echo 1 > /proc/sys/vm/compact_memory"
@@ -398,9 +461,9 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             withContext(Dispatchers.Main) {
                 progressBar?.visibility = View.GONE
                 purgeBtn?.visibility = View.VISIBLE
-                statusTv?.text = "CRYO ACTIVE"
-                statusTv?.setTextColor(Color.parseColor("#00FF88"))
-                NukeToast.success(context, "❄️ Cryo Purge Complete: Caches flushed & thermal balance restored!")
+                statusTv?.text = "OPTIMIZED"
+                statusTv?.setTextColor(Color.parseColor("#10B981"))
+                NukeToast.success(context, "Memory and cache optimization completed.")
             }
         }
     }
@@ -411,16 +474,16 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             while (isActive) {
                 val temp = readHardwareTemp()
                 withContext(Dispatchers.Main) {
-                    tempTv?.text = String.format("%.1f°C", temp)
+                    tempTv?.text = if (temp > 0f) String.format("%.1f°C", temp) else "N/A"
                     tempTv?.setTextColor(
                         when {
-                            temp >= 44f -> Color.parseColor("#FF3B30") // Red overheat
-                            temp >= 40f -> Color.parseColor("#FF9500") // Orange warm
-                            else -> Color.parseColor("#00FF88") // Green cool
+                            temp >= 44f -> Color.parseColor("#EF4444") // Red warm
+                            temp >= 40f -> Color.parseColor("#F59E0B") // Amber mild
+                            else -> Color.parseColor("#10B981") // Green cool
                         }
                     )
                 }
-                delay(2_000L)
+                delay(3_000L)
             }
         }
     }
@@ -428,40 +491,49 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
     private fun readHardwareTemp(): Float {
         return try {
             val ifilter = IntentFilter(Intent.ACTION_BATTERY_CHANGED)
-            val batteryStatus = androidx.core.content.ContextCompat.registerReceiver(context, null, ifilter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED)
+            val batteryStatus = androidx.core.content.ContextCompat.registerReceiver(
+                context, null, ifilter, androidx.core.content.ContextCompat.RECEIVER_NOT_EXPORTED
+            )
             val raw = batteryStatus?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-            if (raw > 0) raw / 10.0f else 35.0f
+            if (raw > 0) raw / 10.0f else 0f
         } catch (e: Throwable) {
-            35.0f
+            0f
         }
     }
 
-    private fun setupDraggable(view: View) {
+    private fun setupDrag(dragHandle: View) {
         var startX = 0
         var startY = 0
         var touchX = 0f
         var touchY = 0f
 
-        view.setOnTouchListener { _, event ->
+        dragHandle.setOnTouchListener { _, event ->
             val lp = rootParams ?: return@setOnTouchListener false
-            when (event.actionMasked) {
+            val rv = rootView ?: return@setOnTouchListener false
+            val (sw, sh) = getScreenSize()
+            when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    startX = lp.x; startY = lp.y
-                    touchX = event.rawX; touchY = event.rawY
+                    startX = lp.x
+                    startY = lp.y
+                    touchX = event.rawX
+                    touchY = event.rawY
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    val dx = (event.rawX - touchX).toInt()
-                    val dy = (event.rawY - touchY).toInt()
-                    if (abs(dx) > 6 || abs(dy) > 6) {
-                        lp.x = (startX + dx).coerceAtLeast(0)
-                        lp.y = (startY + dy).coerceAtLeast(0)
-                        runCatching { wm.updateViewLayout(view, lp) }
-                    }
+                    val newX = startX + (event.rawX - touchX).toInt()
+                    val newY = startY + (event.rawY - touchY).toInt()
+                    lp.x = newX.coerceIn(0, (sw - lp.width).coerceAtLeast(0))
+                    lp.y = newY.coerceIn(0, (sh - (80 * d).toInt()).coerceAtLeast(0))
+                    runCatching { wm.updateViewLayout(rv, lp) }
                     true
                 }
                 else -> false
             }
         }
+    }
+
+    private fun getScreenSize(): Pair<Int, Int> {
+        val dm = context.resources.displayMetrics
+        return Pair(dm.widthPixels, dm.heightPixels)
     }
 }

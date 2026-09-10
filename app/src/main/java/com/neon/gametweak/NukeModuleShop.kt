@@ -42,7 +42,7 @@ internal data class NukeModuleShopState(
     val busyIds: Set<String> = emptySet(),
     val blockedReasons: Map<String, String> = emptyMap(),
     val loading: Boolean = false,
-    val message: String = "MODULESHOP STANDBY",
+    val message: String = "PLUGIN CATALOG STANDBY",
     val catalogTrusted: Boolean = false,
 )
 
@@ -81,14 +81,14 @@ internal class NukeModuleShopRepository(
         try {
             definition = remote
             if (!remote.enabled) {
-                _state.update { it.copy(modules = emptyList(), loading = false, catalogTrusted = false, message = "MODULESHOP DISABLED") }
+                _state.update { it.copy(modules = emptyList(), loading = false, catalogTrusted = false, message = "PLUGIN CATALOG DISABLED") }
                 return
             }
             root.mkdirs()
             moduleRoot.mkdirs()
             val current = _state.value
             if (!force && current.modules.isNotEmpty() && current.catalogTrusted && loadedCatalogSha256 == remote.catalogSha256) return
-            _state.update { it.copy(loading = true, message = "VERIFYING MODULE CATALOG…") }
+            _state.update { it.copy(loading = true, message = "VERIFYING PLUGIN CATALOG…") }
 
             val cached = runCatching {
                 catalogFile.takeIf { it.isFile && sha256(it.readBytes()) == remote.catalogSha256 }
@@ -102,7 +102,7 @@ internal class NukeModuleShopRepository(
                 require(sha256(bytes) == remote.catalogSha256) { "Catalog digest does not match signed RemoteNuke config" }
                 val parsed = parseCatalog(String(bytes, Charsets.UTF_8), remote)
                 persistCatalogAtomically(bytes)
-                publishCatalog(parsed, "${parsed.size} VERIFIED MODULES")
+                publishCatalog(parsed, "${parsed.size} VERIFIED PLUGINS")
             }.onFailure { error ->
                 if (error is CancellationException) throw error
                 _state.update {
@@ -123,10 +123,10 @@ internal class NukeModuleShopRepository(
     }
 
     suspend fun install(moduleId: String): String {
-        if (!operationMutex.tryLock()) return "Another module action is already running"
+        if (!operationMutex.tryLock()) return "Another plugin action is already running"
         try {
-            val module = findModule(moduleId) ?: return "Module is not present in the catalog"
-            setBusy(module.id, true, "DOWNLOADING ${module.name.uppercase(Locale.US)}…")
+            val module = findModule(moduleId) ?: return "Plugin is not present in the catalog"
+            setBusy(module.id, true, "DOWNLOADING PLUGIN • ${module.name.uppercase(Locale.US)}…")
             return try {
                 val bytes = fetchBytes(module.url, definition.maxArchiveBytes, "application/zip,application/octet-stream")
                 val scripts = readVerifiedArchive(bytes, module)
@@ -136,10 +136,10 @@ internal class NukeModuleShopRepository(
                     it.copy(
                         installedIds = installed,
                         blockedReasons = it.blockedReasons - module.id,
-                        message = "INSTALLED • ${module.name}",
+                        message = "PLUGIN INSTALLED • ${module.name}",
                     )
                 }
-                "Installed ${module.name}; switch it on when ready"
+                "Plugin ${module.name} installed; switch it on when ready"
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 val reason = safeMessage(error)
@@ -159,13 +159,13 @@ internal class NukeModuleShopRepository(
     }
 
     suspend fun setEnabled(moduleId: String, enabled: Boolean): String {
-        if (!operationMutex.tryLock()) return "Another module action is already running"
+        if (!operationMutex.tryLock()) return "Another plugin action is already running"
         try {
-            val module = findModule(moduleId) ?: return "Module is not present in the catalog"
+            val module = findModule(moduleId) ?: return "Plugin is not present in the catalog"
             val currentlyActive = module.id in _state.value.activeIds
-            if (currentlyActive == enabled) return if (enabled) "Module already active" else "Module already inactive"
-            if (module.id !in _state.value.installedIds) return "Install the module before enabling it"
-            setBusy(module.id, true, if (enabled) "APPLYING ${module.name.uppercase(Locale.US)}…" else "RESTORING ${module.name.uppercase(Locale.US)}…")
+            if (currentlyActive == enabled) return if (enabled) "Plugin already active" else "Plugin already inactive"
+            if (module.id !in _state.value.installedIds) return "Install the plugin before enabling it"
+            setBusy(module.id, true, if (enabled) "APPLYING PLUGIN • ${module.name.uppercase(Locale.US)}…" else "RESTORING PLUGIN • ${module.name.uppercase(Locale.US)}…")
             return try {
                 val scriptName = if (enabled) module.entryExec else module.entryDelete
                 val scriptFile = installedVersionDir(module).resolve(scriptName)
@@ -183,7 +183,7 @@ internal class NukeModuleShopRepository(
                             adb.executeVerifiedModuleScript(module.id, module.entryDelete, rollback)
                         }
                     }
-                    error(result.output.takeLast(180).ifBlank { if (result.timedOut) "Module timed out" else "Device rejected the module" })
+                    error(result.output.takeLast(180).ifBlank { if (result.timedOut) "Plugin timed out" else "Device rejected the plugin request" })
                 }
                 setActive(module.id, enabled)
                 _state.update {
@@ -196,8 +196,8 @@ internal class NukeModuleShopRepository(
             } catch (error: Throwable) {
                 if (error is CancellationException) throw error
                 val reason = safeMessage(error)
-                _state.update { it.copy(message = "MODULE ERROR • $reason") }
-                "Module error: $reason"
+                _state.update { it.copy(message = "PLUGIN ERROR • $reason") }
+                "Plugin error: $reason"
             } finally {
                 setBusy(module.id, false)
             }
@@ -274,7 +274,7 @@ internal class NukeModuleShopRepository(
 
     private fun validateModuleUrl(value: String, file: String, remote: NukeRemoteModuleShop) {
         val url = URL(value)
-        require(url.protocol == "https" && url.query == null && url.ref == null) { "Module URL must be HTTPS without query or fragment" }
+        require(url.protocol == "https" && url.query == null && url.ref == null) { "Plugin URL must be HTTPS without query or fragment" }
     }
 
     private fun readVerifiedArchive(bytes: ByteArray, module: NukeShopModule): Map<String, String> {

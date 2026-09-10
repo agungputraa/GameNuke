@@ -1,22 +1,23 @@
 {
-    "versionCode":  18,
-    "versionName":  "2.5.0-prem",
+    "versionCode":  20,
+    "versionName":  "2.7.0-prem",
     "appName":  "Game Nuke Premium",
-    "publishedAt":  "2026-09-09",
+    "publishedAt":  "2026-09-11",
     "minAndroidVersion":  11,
     "targetSdk":  36,
-    "apkSizeMb":  "30.1",
+    "apkSizeMb":  "24.2",
     "releaseNotes":  [
-                         "Device System Editor Preset Engine: Seamless export \u0026 import of optimized device presets for easy community sharing",
-                         "Executive Floating System Editor: Modernized obsidian cockpit overlay with category tabs, search filter, and responsive layout",
-                         "Anti-Flood Notification Architecture: Streamlined notification delivery with zero status bar clutter and single-slot developer reply support",
-                         "Telegram Remote Command Console: In-place keyboard updates with zero-spam execution and instant modal responses",
-                         "Seamless Startup Notification Permission: Smooth permission initialization on startup for guaranteed live support alert delivery",
-                         "Dashboard Optimization: Streamlined tactical deck with full-width System Editor controls",
-                         "Dual-Sync Edge CDN Web Updater: Fast in-app update checks and verified binary distributions"
+                         "Thermal Control \u0026 Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
+                         "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
+                         "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
+                         "Performance \u0026 Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
+                         "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
+                         "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
                      ],
-    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.5.0-prem/GameNuke-Premium-v2.5.0.apk",
-    "sha256":  "69AE5D4CD773C4FD1194F57E363C1616DA87F0474AE8CBBA6D9116DC249AD670",
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
+    "localApkUrl":  "GameNuke-Premium-v2.7.0.apk",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
+    "sha256":  "6E50B65673C5B3FC3421C408608C69D462ABA5D5AE5320B1A301F7CFA68BCA91",
     "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
-    "downloadDirectlinkUrl":  "https://boring-active.com/laj2W6"
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
 }

@@ -505,7 +505,7 @@ private fun JSONArray?.stringSet(): Set<String> {
 private fun bundledPanels(): List<NukeRemotePanel> = listOf(
     NukeRemotePanel("frame_control", 10, "Frame Control", "Native frame path and measured FPS", "speed", emptySet(), setOf("local.display", "shell.frame_scan")),
     NukeRemotePanel("deep_clean", 20, "Deep Clean", "Measured cache and memory reclaim", "clean", setOf("local.telemetry"), emptySet()),
-    NukeRemotePanel("crosshair", 30, "Crosshair Studio", "Canvas aim overlay", "crosshair", setOf("overlay"), emptySet()),
+    NukeRemotePanel("crosshair", 30, "Crosshair Studio", "Canvas crosshair overlay", "crosshair", setOf("overlay"), emptySet()),
     NukeRemotePanel("live_monitor", 40, "Live Monitor", "CPU and RAM telemetry", "monitor", setOf("local.telemetry"), emptySet()),
     NukeRemotePanel("network", 50, "Network Core", "Link quality and Wi-Fi session lock", "network", emptySet(), setOf("local.wifi", "local.telemetry")),
     NukeRemotePanel("pressure_radar", 60, "Pressure Radar", "Protected background process release", "radar", setOf("shell.background_release"), emptySet()),

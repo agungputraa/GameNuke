@@ -167,7 +167,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 withContext(Dispatchers.Main) {
                     renderTelemetry(data)
                 }
-                delay(2000L) // Telemetry refreshed every 2 seconds
+                delay(3000L) // Lightweight telemetry cadence while this overlay is visible
             }
         }
     }
@@ -202,9 +202,9 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         val bScale = bIntent?.getIntExtra(BatteryManager.EXTRA_SCALE, 100) ?: 100
         val bPct = if (bScale > 0) (bLevel * 100 / bScale) else bLevel
         val tempRaw = bIntent?.getIntExtra(BatteryManager.EXTRA_TEMPERATURE, 0) ?: 0
-        val bTemp = if (tempRaw > 0) tempRaw / 10.0f else 32.5f
+        val bTemp = if (tempRaw > 0) tempRaw / 10.0f else 0f
         val voltRaw = bIntent?.getIntExtra(BatteryManager.EXTRA_VOLTAGE, 0) ?: 0
-        val bVolt = if (voltRaw > 0) voltRaw / 1000.0f else 4.10f
+        val bVolt = if (voltRaw > 0) voltRaw / 1000.0f else 0f
         val healthInt = bIntent?.getIntExtra(BatteryManager.EXTRA_HEALTH, BatteryManager.BATTERY_HEALTH_UNKNOWN)
         val bHealth = when (healthInt) {
             BatteryManager.BATTERY_HEALTH_GOOD -> "Optimal (Good)"
@@ -216,7 +216,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         val statusInt = bIntent?.getIntExtra(BatteryManager.EXTRA_STATUS, -1) ?: -1
         val isChg = statusInt == BatteryManager.BATTERY_STATUS_CHARGING || statusInt == BatteryManager.BATTERY_STATUS_FULL
-        val bTech = bIntent?.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY) ?: "Li-Poly"
+        val bTech = bIntent?.getStringExtra(BatteryManager.EXTRA_TECHNOLOGY) ?: "Unknown"
 
         // 2. CPU Telemetry
         fun readFreq(cpuNum: Int): String {
@@ -269,10 +269,10 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         score = score.coerceIn(50, 100)
 
         val healthStatus = when {
-            score >= 90 -> "EXCELLENT • OPTIMAL READY"
-            score >= 80 -> "GOOD • STABLE STATUS"
-            score >= 70 -> "MODERATE • TRIMMING RECOMMENDED"
-            else -> "HIGH LOAD • OPTIMIZATION RECOMMENDED"
+            score >= 90 -> "READY • NORMAL LOAD"
+            score >= 80 -> "READY • MODERATE LOAD"
+            score >= 70 -> "CHECK • MEMORY LOAD"
+            else -> "CHECK • HIGH DEVICE LOAD"
         }
 
         return HealthSnapshot(
@@ -308,15 +308,15 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             s.batteryTempC > 38.0f -> "#F59E0B"
             else -> "#00E5A3"
         }
-        batteryTempTv?.text = String.format(Locale.US, "%.1f°C", s.batteryTempC)
+        batteryTempTv?.text = if (s.batteryTempC > 0f) String.format(Locale.US, "%.1f°C", s.batteryTempC) else "N/A"
         batteryTempTv?.setTextColor(Color.parseColor(tempColor))
-        batteryVoltTv?.text = String.format(Locale.US, "%.2f V", s.batteryVoltageV)
+        batteryVoltTv?.text = if (s.batteryVoltageV > 0f) String.format(Locale.US, "%.2f V", s.batteryVoltageV) else "N/A"
 
         val chargeTag = if (s.isCharging) "⚡ Charging" else "Discharging"
         batteryStatusTv?.text = "${s.batteryLevel}% • $chargeTag • ${s.batteryHealthStr}"
 
         cpuFreqTv?.text = "Little: ${s.littleCoreGhz} • Big: ${s.bigCoreGhz} • Prime: ${s.primeCoreGhz}"
-        cpuLoadTv?.text = if (s.batteryTempC > 43.0f) "⚠ Thermal Limit Approaching" else "✓ Governor Active • No Throttling"
+        cpuLoadTv?.text = if (s.batteryTempC > 43.0f) "⚠ High temperature detected" else if (s.batteryTempC > 0f) "Temperature reading within normal range" else "Temperature sensor unavailable"
         cpuLoadTv?.setTextColor(if (s.batteryTempC > 43.0f) Color.parseColor("#EF4444") else Color.parseColor("#00E5A3"))
 
         val totalGb = String.format(Locale.US, "%.1f GB", s.totalRamMb / 1024.0f)
@@ -331,18 +331,21 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             "zRAM Compression: Kernel Optimized"
         }
 
-        storageTv?.text = "${s.totalStorageGb} GB Total • ${s.freeStorageGb} GB Free (UFS High-Speed)"
+        storageTv?.text = "${s.totalStorageGb} GB Total • ${s.freeStorageGb} GB Free"
     }
 
     // ─── UI Layout Construction ─────────────────────────────────────────────
 
     private fun buildView(): View {
         val root = FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#F5080C10")) // Obsidian Dark Glass
-                cornerRadius = 16 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#3300FF88"))
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 16 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_EMERALD_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             clipToOutline = true
         }
 
@@ -380,14 +383,14 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val titleTv = TextView(context).apply {
-            text = "🩺 PHONE HEALTH & TELEMETRY"
+            text = "DEVICE HEALTH & TELEMETRY"
             setTextColor(Color.parseColor("#00FF88"))
             textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         }
         val subTv = TextView(context).apply {
-            text = "Hardware Sensor Suite • Realtime Diagnostics"
+            text = "Hardware telemetry • Device readiness"
             setTextColor(Color.parseColor("#64748B"))
             textSize = 7.8f
             setPadding(0, (1 * d).toInt(), 0, 0)
@@ -428,18 +431,19 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         val scoreCard = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0B1218"))
-                cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1C2732"))
-            }
+            background = NukeCyberHudStyler.buildCardBackground(
+                density = d,
+                cornerRadiusDp = 10f,
+                strokeColor = NukeCyberHudStyler.COLOR_BORDER_SUBTLE,
+                fillColor = NukeCyberHudStyler.COLOR_BG_CARD
+            )
             setPadding((12 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = (8 * d).toInt()
             }
         }
         overallScoreTv = TextView(context).apply {
-            text = "98%"
+            text = "—"
             setTextColor(Color.parseColor("#00FF88"))
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
@@ -452,13 +456,13 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         val scoreTitle = TextView(context).apply {
-            text = "SYSTEM HEALTH GRADE"
+            text = "DEVICE READINESS SCORE"
             setTextColor(Color.parseColor("#94A3B8"))
             textSize = 8.5f
             typeface = Typeface.DEFAULT_BOLD
         }
         overallDescTv = TextView(context).apply {
-            text = "OPTIMAL • SYSTEM READY"
+            text = "READY • NORMAL LOAD"
             setTextColor(Color.WHITE)
             textSize = 11f
             typeface = Typeface.DEFAULT_BOLD
@@ -484,7 +488,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         tempCol.addView(createSmallLabel("TEMP"))
-        batteryTempTv = createCardText("33.0°C")
+        batteryTempTv = createCardText("N/A")
         tempCol.addView(batteryTempTv)
 
         val voltCol = LinearLayout(context).apply {
@@ -492,7 +496,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f)
         }
         voltCol.addView(createSmallLabel("VOLTAGE"))
-        batteryVoltTv = createCardText("4.15 V")
+        batteryVoltTv = createCardText("N/A")
         voltCol.addView(batteryVoltTv)
 
         bSubRow.addView(tempCol)
@@ -504,8 +508,8 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         // 3. CPU Core Frequencies Section
         scrollContent.addView(createSectionHeader("CPU CLOCK & THERMAL THROTTLE"))
         val cpuCard = createMetricCard()
-        cpuFreqTv = createCardText("Little: 1.30 GHz • Big: 2.20 GHz • Prime: 3.35 GHz", isBold = true)
-        cpuLoadTv = createCardText("✓ Governor Active • No Throttling")
+        cpuFreqTv = createCardText("Reading CPU frequencies…", isBold = true)
+        cpuLoadTv = createCardText("Waiting for thermal reading…")
         cpuCard.addView(cpuFreqTv)
         cpuCard.addView(cpuLoadTv)
         scrollContent.addView(cpuCard)
@@ -513,7 +517,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         // 4. RAM & zRAM Compression Section
         scrollContent.addView(createSectionHeader("RAM & zRAM SWAP COMPRESSION"))
         val ramCard = createMetricCard()
-        ramStatusTv = createCardText("12 GB Total • 4.2 GB Free", isBold = true)
+        ramStatusTv = createCardText("Reading memory status…", isBold = true)
         ramProgressBar = ProgressBar(context, null, android.R.attr.progressBarStyleHorizontal).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (6 * d).toInt()).apply {
                 topMargin = (6 * d).toInt()
@@ -526,17 +530,17 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 cornerRadius = 3 * d
             }
         }
-        zramTv = createCardText("8 GB zRAM Swap • 648 MB Active (3.2x Compression)")
+        zramTv = createCardText("Reading zRAM status…")
         ramCard.addView(ramStatusTv)
         ramCard.addView(ramProgressBar)
         ramCard.addView(zramTv)
         scrollContent.addView(ramCard)
 
-        // 5. Storage (UFS) Health Section
-        scrollContent.addView(createSectionHeader("STORAGE (UFS 4.0 FLASH)"))
+        // 5. Storage status
+        scrollContent.addView(createSectionHeader("STORAGE STATUS"))
         val stCard = createMetricCard()
-        storageTv = createCardText("512 GB Total • Checking Free Space...", isBold = true)
-        val stSub = createCardText("I/O Health: Excellent • Flash Wear Normal")
+        storageTv = createCardText("Reading storage capacity…", isBold = true)
+        val stSub = createCardText("Storage availability telemetry")
         stCard.addView(storageTv)
         stCard.addView(stSub)
         scrollContent.addView(stCard)
@@ -546,7 +550,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
 
         // Action Buttons Deck
         actionStatusTv = TextView(context).apply {
-            text = "Status: Realtime Hardware Monitor Active"
+            text = "Live hardware telemetry active"
             setTextColor(Color.parseColor("#64748B"))
             textSize = 9f
             gravity = Gravity.CENTER
@@ -560,7 +564,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
 
         val killHogsBtn = Button(context).apply { installNukePressFeedback() }.apply {
-            text = "⚡ KILL CPU HOGS"
+            text = "MANAGE LOAD"
             setTextColor(Color.BLACK)
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
@@ -572,18 +576,21 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 rightMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Killing rogue CPU hogs & trimming memory..."
+                actionStatusTv?.text = "Hunting rogue zombies & optimizing background memory..."
                 actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
-                NukeAiSentinel.triggerManualSweep(context) { killed, freedMb ->
-                    actionStatusTv?.text = "✓ Suppressed $killed rogue tasks • Freed +${freedMb}MB RAM"
-                    val freshData = collectHealthData()
-                    renderTelemetry(freshData)
+                scope.launch {
+                    val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
+                    withContext(Dispatchers.Main) {
+                        actionStatusTv?.text = "✓ Terminated eligible background hogs & zombies • +${freedMb}MB RAM"
+                        val freshData = collectHealthData()
+                        renderTelemetry(freshData)
+                    }
                 }
             }
         }
 
         val cooldownBtn = Button(context).apply { installNukePressFeedback() }.apply {
-            text = "❄ COOLDOWN"
+            text = "THERMAL CLEANUP"
             setTextColor(Color.WHITE)
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
@@ -596,9 +603,17 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 leftMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Thermal cooldown applied • ART cache trimmed"
+                actionStatusTv?.text = "Cooling down CPU & purging rogue background loops..."
                 actionStatusTv?.setTextColor(Color.parseColor("#38BDF8"))
-                NukeAiSentinel.triggerManualSweep(context)
+                scope.launch {
+                    val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
+                    NukeProcessPurgeGuardian.cleanCachesSafe(context)
+                    withContext(Dispatchers.Main) {
+                        actionStatusTv?.text = "✓ Thermal cleanup: $killedZombies rogue loop(s) killed • caches pruned"
+                        val freshData = collectHealthData()
+                        renderTelemetry(freshData)
+                    }
+                }
             }
         }
 
@@ -626,11 +641,12 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
     private fun createMetricCard(): LinearLayout {
         return LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0B1218"))
-                cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1C2732"))
-            }
+            background = NukeCyberHudStyler.buildCardBackground(
+                density = d,
+                cornerRadiusDp = 10f,
+                strokeColor = NukeCyberHudStyler.COLOR_BORDER_SUBTLE,
+                fillColor = NukeCyberHudStyler.COLOR_BG_CARD
+            )
             setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = (6 * d).toInt()

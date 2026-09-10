@@ -35,14 +35,19 @@ android {
         applicationId = "com.neon.gametweak"
         minSdk = 30
         targetSdk = 36
-        versionCode = 18
-        versionName = "2.5.0-prem"
+        versionCode = 20
+        versionName = "2.7.0-prem"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
-//        ndk {
-//            abiFilters.add("arm64-v8a")
-//            abiFilters.add("armeabi-v7a")
-//        }
+        ndk {
+            abiFilters.add("arm64-v8a")
+        }
+    }
+
+    packaging {
+        jniLibs {
+            useLegacyPackaging = true
+        }
     }
 
     signingConfigs {

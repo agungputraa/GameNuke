@@ -1063,7 +1063,7 @@ private fun buildEndpointSpecs(): List<ApiEndpointSpec> = listOf(
     ),
     ApiEndpointSpec(
         method = "GET", path = "/api/sentinel",
-        description = "AI Sentinel Autonomous Optimizer status, toggle, and on-demand sweep trigger.",
+        description = "AI Sentinel adaptive session monitor status, toggle, and on-demand background maintenance.",
         params = listOf(
             "action" to "sweep (optional)",
             "enabled" to "true | false (optional)",

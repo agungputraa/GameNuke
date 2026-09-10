@@ -175,3 +175,9 @@
 -keepclassmembers class com.vungle.** { *; }
 -keep interface com.vungle.** { *; }
 -dontwarn com.vungle.**
+
+# --- Native Touch Subsystem (Must match libtouch.so JNI signatures exactly) ---
+-keep class frb.axeron.server.touch.** { *; }
+-keepclassmembers class frb.axeron.server.touch.** { *; }
+-dontwarn frb.axeron.server.touch.**
+

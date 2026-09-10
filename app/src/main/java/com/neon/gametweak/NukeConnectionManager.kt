@@ -47,6 +47,14 @@ object NukeConnectionManager {
     /** Returns true if ANY backend is connected and ready. */
     fun isConnected(): Boolean = activeBackend() != Backend.NONE
 
+    /** Returns active privileged IShellService Binder via iAdb or Shizuku if available. */
+    fun getShellService(): IShellService? {
+        return NukeIadbBridge.getShellService() ?: NukeShizukuBridge.getShellService()
+    }
+
+    /** Returns true if Touch Listener is supported through current connections. */
+    fun isTouchSupported(): Boolean = getShellService() != null || NukeDaemonClient.ping() || isConnected()
+
     /**
      * Execute a shell command through the best available backend.
      * Returns null if no backend is available.
@@ -94,4 +102,66 @@ object NukeConnectionManager {
         Backend.IADB, Backend.SHIZUKU, Backend.DAEMON -> true
         Backend.ADB_NATIVE, Backend.NONE -> false
     }
+
+    /**
+     * Bootstraps the local daemon (NukeShellDaemon) using whichever backend is currently connected
+     * (Shizuku, iAdb, or Wireless ADB). Returns true when the daemon is responding to PING.
+     */
+    fun bootstrapPersistentCore(context: android.content.Context): Boolean {
+        if (NukeDaemonClient.ping(force = true)) return true
+
+        // Try getting APK path via sourceDir first (fastest) or pm path fallback
+        var targetApk = context.applicationInfo.sourceDir
+        if (!java.io.File(targetApk).exists()) {
+            val pmResult = executeCommand("pm path ${context.packageName}", timeoutMs = 2500L)
+            val apkPath = pmResult?.output?.lineSequence()
+                ?.map { it.trim() }
+                ?.firstOrNull { it.startsWith("package:") }
+                ?.removePrefix("package:")
+                ?.trim()
+                .orEmpty()
+            if (apkPath.isNotBlank()) targetApk = apkPath
+        }
+
+        val myUid = android.os.Process.myUid()
+        val className = NukeShellDaemon::class.java.name
+
+        // Kill any stale zombie daemon first
+        runCatching {
+            executeCommand("pkill -f game-nuke-core 2>/dev/null || true", timeoutMs = 1500L)
+            Thread.sleep(200)
+        }
+
+        // Launch Shizuku-style daemon with detached stdio and proper DEX cache
+        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH='$targetApk'; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
+        Log.i(TAG, "Bootstrapping daemon via ${connectionLabel()}: $launch")
+        
+        var execResult = executeCommand(launch, timeoutMs = 4500L)
+        if (execResult == null) {
+            // Direct execution attempts across all available privileged bridges
+            if (NukeShizukuBridge.isRunning() && NukeShizukuBridge.hasPermission()) {
+                Log.i(TAG, "Trying direct Shizuku execution for core bootstrap")
+                NukeShizukuBridge.execute(launch, timeoutMs = 4500L)
+            } else if (NukeIadbBridge.isRunning() && NukeIadbBridge.hasPermission()) {
+                Log.i(TAG, "Trying direct iAdb execution for core bootstrap")
+                NukeIadbBridge.execute(launch, timeoutMs = 4500L)
+            }
+            runCatching { AdbManager.getInstance(context).ensurePersistentCore() }
+        }
+
+        // Wait up to 3s for daemon to become reachable
+        for (i in 0 until 20) {
+            if (NukeDaemonClient.ping(force = true)) {
+                Log.i(TAG, "Daemon core successfully started and reachable")
+                return true
+            }
+            try { Thread.sleep(150L) } catch (_: InterruptedException) { return false }
+        }
+
+        // Final fallback: try native ADB manager
+        runCatching { AdbManager.getInstance(context).ensurePersistentCore() }
+
+        return NukeDaemonClient.ping(force = true)
+    }
 }
+

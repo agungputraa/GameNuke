@@ -1,80 +1,50 @@
-# ⚡ Game Nuke Premium Edition
+# Game Nuke Official Website — V5
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Release-v2.5.0--prem-10b981?style=for-the-badge&logo=android&logoColor=white" alt="Release Version">
-  <img src="https://img.shields.io/badge/Platform-Android%2011--16-06b6d4?style=for-the-badge&logo=google&logoColor=white" alt="Platform">
-  <img src="https://img.shields.io/badge/Architecture-ARM64--v8a-3b82f6?style=for-the-badge&logo=arm&logoColor=white" alt="Architecture">
-  <img src="https://img.shields.io/badge/Security-Verified%20Clean-10b981?style=for-the-badge&logo=shield&logoColor=white" alt="Security Verified">
-</p>
+Premium static product website for Game Nuke Premium.
 
----
+## Deploy
+Upload the whole folder to the web root for `gamenukeofficial.com`. The site is static HTML/CSS/JS and works on GitHub Pages or standard cPanel hosting.
 
-## 🌐 Official Portals & Verification
+## Download flow (sponsor mode — default)
+Configuration lives in `site-config.js`.
 
-- 🚀 **Official Web Portal:** [https://agungputraa.github.io/GameNuke/](https://agungputraa.github.io/GameNuke/)
-- 📦 **Latest Release Channel:** [GitHub Releases](https://github.com/agungputraa/GameNuke/releases/latest)
-- 🛰️ **Edge CDN Version Feed:** [version.json](https://agungputraa.github.io/GameNuke/version.json)
+1. User clicks any Download button on `index.html`.
+2. `download.html` opens immediately in a new tab.
+3. The original `index.html` tab waits 2000 ms, then navigates to:
+   `https://dulyhagglermounting.com/2082665`
+4. On `download.html`, one click on Download starts the APK through the official `downloadUrl` from `version.json` using a hidden download frame.
+5. `download.html` waits 2000 ms, then navigates to:
+   `https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990`
 
----
+If the browser blocks the new tab from the first step, the current tab falls back to the real download page so the user is not left with a broken button.
 
-## 🎮 Overview
+## AdSense review mode
+The requested sponsor redirect flow can conflict with Google AdSense site-behavior / pop-under / unwanted-redirect policies. Before submitting the domain for AdSense review, edit `site-config.js`:
 
-**Game Nuke Premium Edition** is an enterprise-grade performance optimization suite and tactical gaming cockpit engineered specifically for high-intensity competitive mobile gaming. Designed to overcome standard operating system throttling and latency overheads, Game Nuke delivers granular hardware-level control, real-time diagnostic telemetry, and specialized gaming utilities without requiring device root access.
+```js
+adsenseReviewMode: true
+```
 
----
+This disables both sponsor redirects while preserving the real download flow and hides the sponsor-flow disclosure text. Set it back to `false` only when you intentionally want the sponsor flow active and are not relying on AdSense compliance.
 
-## ✨ Core Capabilities & Architecture
+## Search / GEO / content structure
+- `index.html`: primary product landing page + SoftwareApplication/WebSite/WebPage/FAQ structured data
+- `guides.html`: original educational content on telemetry, thermal behavior, Shizuku, and network tools
+- `about.html`: product purpose and scope
+- `privacy.html`: website/app privacy information
+- `terms.html`: terms and compatibility/performance disclaimers
+- `contact.html`: official support channels
+- `sitemap.xml`, `robots.txt`, `llms.txt`, `manifest.webmanifest`
+- `download.html` intentionally uses `noindex,nofollow`
 
-### 1. Ultra-Low Latency Dual Macro Engine
-- **Adaptive Accessibility Fallback:** Universal plug-and-play operation for non-privileged environments with robust error-recovery.
+## Performance decisions
+- No render-blocking Google Fonts
+- No Font Awesome, Tailwind runtime, Alpine runtime, or particle CDN
+- Local SVG symbol icons
+- WebP product logo
+- Deferred JavaScript
+- Particle canvas starts during idle time, caps DPR/particle count, pauses off-screen, respects Save-Data and Reduced Motion
+- Responsive breakpoints include a safer enterprise navigation switch at 1180px
 
-### 2. Gaming Network & Latency Optimization
-- **Dedicated Gaming DNS Routing:** Direct high-throughput routing through gaming-optimized DNS resolvers (Cloudflare 1.1.1.1 and Google Public DNS) to minimize jitter and packet loss.
-- **Connection Stability Engine:** Real-time socket monitoring and packet stream prioritization for seamless online lobby and competitive matchmaking performance.
-
-### 3. Acoustic Frequency Precision Enhancer
-- **Tactical Audio Equalizer:** Real-time digital signal processing pipeline calibrating 1kHz–4kHz acoustic bands to highlight footstep audio cues and reload mechanics while balancing ambient low-frequency explosions.
-- **Hardware-Accelerated DSP:** Powered by native Android audio effect interfaces with zero audio lag and no root requirement.
-
-### 4. Real-Time Hardware Diagnostics & FPS Telemetry
-- **Frame Rate Telemetry:** Direct Android Choreographer callbacks measuring actual hardware rendered FPS, frame-time variance, and frame-drop indicators.
-- **Thermal & Hardware Health HUD:** Floating draggable HUD displaying real-time battery temperatures, SoC clock indicators, and hardware memory usage.
-
-### 5. Display Refresh Rate & Touch Stabilization
-- **Display Refresh Rate Lock:** Stabilizes display output up to 120Hz, preventing aggressive vendor power-saving algorithms from downthrottling refresh rates mid-combat.
-- **Palm Shield & Touch Boundary Filter:** Advanced edge-rejection algorithms designed specifically for 3-finger and 4-finger claw grip players.
-- **Tactical Reticle Calibration:** Hardware-accelerated centered crosshair reticle overlay for enhanced hip-fire accuracy.
-
-### 6. In-Game Picture-in-Picture Tactical Overlay
-- **Multitasking Guide Browser:** Lightweight, draggable in-game overlay with adjustable transparency (20%–100%) enabling players to consult tactical charts and build counters without minimizing the active session.
-
-### 7. Global Edge CDN Auto-Updater
-- **Direct Update Pipeline:** Integrated updater delivering updates directly through global Cloudflare Edge CDN caches, ensuring instantaneous access to stability improvements.
-
----
-
-## 📱 System Requirements & Compatibility
-
-| Component | Specification |
-| :--- | :--- |
-| **Operating System** | Android 11, 12, 13, 14, 15, and 16 |
-| **Compatible ROMs** | HyperOS, MIUI, One UI, ColorOS, OxygenOS, OriginOS, ROG UI, AOSP |
-| **Architecture** | 64-bit ARM (`arm64-v8a`) |
-| **Privilege Mode** | Non-Root (Standard) / Shizuku & Wireless ADB (Enhanced Mode) |
-| **Package Identifier**| `com.neon.gametweak` |
-
----
-
-## 🔒 Security & Fair Play Guarantee
-
-Game Nuke operates strictly within Android user-space and official system service contracts (`VpnService`, `AccessibilityService`, `AudioEffect`, and IPC interfaces). 
-
-- **Integrity Verified:** Zero modification of protected game client memory, binary code, or server-side communication.
-- **Privacy-First:** Strictly local execution. No personal identifying information (PII), browsing history, or gameplay data is transmitted to external telemetry servers.
-
----
-
-<p align="center">
-  <b>Game Nuke Premium Edition</b> — Enterprise Mobile Gaming Performance Suite.<br>
-  © 2026 Game Nuke Team. All rights reserved.
-</p>
+## Release metadata
+Update `version.json` for APK URL, version number, file size, and release information. `site-config.js` is the source of truth for sponsor behavior.

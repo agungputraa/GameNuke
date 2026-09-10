@@ -12,8 +12,8 @@ if (Test-Path $ZipFile) {
 Write-Host "Scanning source files in $RootDir..." -ForegroundColor Cyan
 
 # Exclude patterns (regex against relative path)
-$ExcludeDirPattern = '^(app[\\/]build|build|\.gradle|\.git|\.idea|release-apk|release-aab|\.cxx|\.externalNativeBuild)([\\/]|$)'
-$ExcludeFilePattern = '\.(jks|keystore|apk|aab|hprof|log)$|^release\.properties$|^tools[\\/].*\.(env|token)$|^GameNukeChatgpt\.zip$'
+$ExcludeDirPattern = '([\\/]|^)(app[\\/]build|build|\.gradle|\.git|\.idea|\.kotlin|release-apk|release-aab|\.cxx|\.externalNativeBuild)([\\/]|$)'
+$ExcludeFilePattern = '\.(zip|jks|keystore|apk|aab|hprof|log)$|^release\.properties$|^local\.properties$|^tools[\\/].*\.(env|token)$'
 
 Add-Type -AssemblyName System.IO.Compression.FileSystem
 Add-Type -AssemblyName System.IO.Compression

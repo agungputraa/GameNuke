@@ -75,7 +75,7 @@ object NukeSystemParamRepository {
         // ── UNIVERSAL DISPLAY & REFRESH RATE ─────────────────────────────────
         CuratedDef(
             ParamSource.SYSTEM, "peak_refresh_rate", ParamCategory.DISPLAY,
-            "Locks maximum display refresh rate for peak smoothness in games.",
+            "Requests the selected display refresh target where the device supports it.",
             "120.0", listOf("60.0", "90.0", "120.0", "144.0")
         ),
         CuratedDef(
@@ -164,7 +164,7 @@ object NukeSystemParamRepository {
         ),
         CuratedDef(
             ParamSource.SECURE, "game_performance_mode", ParamCategory.PERFORMANCE,
-            "Samsung Game Booster performance governor lock.",
+            "Samsung game performance preference on supported firmware.",
             "1", listOf("1", "0"), OemBrand.SAMSUNG
         ),
         CuratedDef(
@@ -191,7 +191,7 @@ object NukeSystemParamRepository {
         ),
         CuratedDef(
             ParamSource.PROP, "oplus.perf.gt_mode", ParamCategory.PERFORMANCE,
-            "Realme GT Mode / Oppo HyperBoost performance toggle.",
+            "Realme GT Mode / Oppo performance preference on supported firmware.",
             "1", listOf("1", "0"), OemBrand.OPPO_REALME
         ),
 
@@ -203,7 +203,7 @@ object NukeSystemParamRepository {
         ),
         CuratedDef(
             ParamSource.SYSTEM, "vivo_game_cube_mode", ParamCategory.PERFORMANCE,
-            "Vivo Ultra Game Mode / Multi-Turbo acceleration.",
+            "Vivo game performance preference on supported firmware.",
             "1", listOf("1", "0"), OemBrand.VIVO
         ),
         CuratedDef(
@@ -220,14 +220,14 @@ object NukeSystemParamRepository {
         ),
         CuratedDef(
             ParamSource.SYSTEM, "touch_sampling_rate", ParamCategory.TOUCH,
-            "Gaming phone maximum touch sampling frequency.",
+            "Touch sampling preference exposed by supported gaming devices.",
             "240", listOf("120", "240", "360", "480"), OemBrand.ROG_GAMING
         ),
 
         // ── TOUCH & AIM RESPONSIVENESS ───────────────────────────────────────
         CuratedDef(
             ParamSource.SYSTEM, "pointer_speed", ParamCategory.TOUCH,
-            "Hardware pointer tracking responsiveness (-7 to 7). Faster gives snappier flick aim.",
+            "Android pointer tracking responsiveness (-7 to 7) where supported.",
             "5", listOf("0", "3", "5", "7")
         ),
         CuratedDef(
@@ -284,7 +284,7 @@ object NukeSystemParamRepository {
         ),
         CuratedDef(
             ParamSource.PROP, "vendor.perf.gestureFlingBoost", ParamCategory.TOUCH,
-            "Hardware fling booster for high-speed scrolling and swift camera panning.",
+            "Vendor fling-response preference on supported devices.",
             "1", listOf("1", "0")
         ),
 
@@ -303,7 +303,7 @@ object NukeSystemParamRepository {
         // ── THERMAL & BATTERY ────────────────────────────────────────────────
         CuratedDef(
             ParamSource.PROP, "debug.thermal.throttle", ParamCategory.THERMAL,
-            "Overrides aggressive thermal frequency throttling during extended game sessions.",
+            "Advanced vendor thermal-frequency override parameter on supported devices.",
             "0", listOf("0", "1")
         ),
         CuratedDef(

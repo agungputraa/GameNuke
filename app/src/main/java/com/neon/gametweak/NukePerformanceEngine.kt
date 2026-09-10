@@ -512,7 +512,7 @@ class NukePerformanceEngine(
         withContext(Dispatchers.IO) {
             if (enabled) {
                 if (wifiLock.isHeld() || _state.value.networkBoostActive) {
-                    _state.value = _state.value.copy(wifiLockHeld = wifiLock.isHeld(), networkBoostActive = true, message = "NETWORK BOOST ACTIVE")
+                    _state.value = _state.value.copy(wifiLockHeld = wifiLock.isHeld(), networkBoostActive = true, message = "NETWORK PRIORITY ACTIVE")
                     return@withContext
                 }
                 val lock = wifiLock.acquire()
@@ -533,9 +533,9 @@ class NukePerformanceEngine(
                     wifiLockHeld = lock.held,
                     networkBoostActive = active,
                     message = when {
-                        lock.held && shellLayer -> "NETWORK BOOST ACTIVE • LOW-LATENCY WIFI + DEVICE LAYER"
-                        lock.held -> "NETWORK BOOST ACTIVE • ${lock.detail.uppercase()}"
-                        shellLayer -> "NETWORK BOOST ACTIVE • DEVICE LOW-LATENCY LAYER"
+                        lock.held && shellLayer -> "NETWORK PRIORITY ACTIVE • WIFI + DEVICE LAYER"
+                        lock.held -> "NETWORK PRIORITY ACTIVE • ${lock.detail.uppercase()}"
+                        shellLayer -> "NETWORK PRIORITY ACTIVE • DEVICE LAYER"
                         else -> "NETWORK BOOST UNAVAILABLE • ${lock.detail.uppercase()}"
                     },
                 )
@@ -949,7 +949,7 @@ class NukePerformanceEngine(
                 ramAvailableMb = afterStatus.available / MIB,
                 ramTotalMb = afterStatus.total / MIB,
                 lastMemoryGainMb = gain,
-                message = if (killed) "RECLAIM + SAFE BACKGROUND KILL: +${gain}MB" else "SYSTEM COMPACTION: +${gain}MB",
+                message = if (killed) "BACKGROUND MAINTENANCE • RAM CHANGE +${gain}MB" else "SYSTEM COMPACTION • RAM CHANGE +${gain}MB",
             )
         }
     }
@@ -957,10 +957,10 @@ class NukePerformanceEngine(
     suspend fun trimCachesForStoragePressure() = operationMutex.withLock {
         withContext(Dispatchers.IO) {
             if (!shell.connected()) {
-                setMessage("EXTENDED CONTROL REQUIRED FOR CACHE PURGE", Phase.DEGRADED)
+                setMessage("EXTENDED CONTROL REQUIRED FOR CACHE CLEANUP", Phase.DEGRADED)
                 return@withContext
             }
-            updateBusy("CACHE PURGE")
+            updateBusy("CACHE CLEANUP")
             val before = readStorageBytes()
             val target = cacheTargetFreeBytes(before.free, before.total)
             if (target <= before.free || target <= 0L) {

@@ -58,6 +58,36 @@ object NukeDaemonClient {
         return ok
     }
 
+    fun touchStart(libPath: String? = null): Boolean {
+        val payload = if (!libPath.isNullOrBlank()) "TOUCH_START|$libPath" else "TOUCH_START"
+        val resp = runCatching { request(payload, 2500) }.getOrNull()
+        return resp?.startsWith("TOUCH_STARTED|") == true
+    }
+
+    fun touchConfig(
+        sx: Float,
+        sy: Float,
+        area: Int = 1,
+        curve: Int = 1,
+        smooth: Boolean = true,
+        minCutoff: Float = 1.0f,
+        beta: Float = 0.007f
+    ): Boolean {
+        val cmd = "TOUCH_CONFIG|$sx|$sy|$area|$curve|$smooth|$minCutoff|$beta"
+        val resp = runCatching { request(cmd, 1500) }.getOrNull()
+        return resp == "TOUCH_CONFIGURED"
+    }
+
+    fun touchStop(): Boolean {
+        val resp = runCatching { request("TOUCH_STOP", 1500) }.getOrNull()
+        return resp == "TOUCH_STOPPED"
+    }
+
+    fun touchStatus(): Boolean {
+        val resp = runCatching { request("TOUCH_STATUS", 1000) }.getOrNull()
+        return resp == "TOUCH_STATUS|true"
+    }
+
     /**
      * Sends a request to the abstract UNIX domain socket server.
      * Note: LocalSocket.connect(endpoint, timeout) throws UnsupportedOperationException on Android!

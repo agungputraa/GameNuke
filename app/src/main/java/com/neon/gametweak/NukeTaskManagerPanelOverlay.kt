@@ -161,11 +161,14 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
     private fun buildView(): View {
         val root = FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#080C10"))
-                cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#1C2E2A"))
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 14 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_EMERALD_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             clipToOutline = true
         }
 
@@ -188,7 +191,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
         // 3. Status text feedback
         actionStatusTv = TextView(context).apply {
-            text = "⚡ TAP [END TASK] TO SAFELY FREEZE APPS"
+            text = "⚡ TACTICAL HUD: Select an app to terminate or purge zombie loops"
             textSize = 9.5f
             setTextColor(Color.parseColor("#00E5C8"))
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
@@ -311,7 +314,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             ellipsize = TextUtils.TruncateAt.END
         }
         val subTv = TextView(context).apply {
-            text = "BACKGROUND PROCESS KILLER • DRAG TO MOVE"
+            text = "BACKGROUND APP & MEMORY MANAGER • DRAG TO MOVE"
             textSize = 6.2f
             setTextColor(Color.parseColor("#7A9E94"))
             typeface = Typeface.MONOSPACE
@@ -372,13 +375,14 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.MATCH_PARENT,
                 LinearLayout.LayoutParams.WRAP_CONTENT
-            ).apply { bottomMargin = (4 * d).toInt() }
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0B1418"))
-                cornerRadius = 8 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#1C3A35"))
-            }
-            setPadding((10 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
+            ).apply { bottomMargin = (6 * d).toInt() }
+            background = NukeCyberHudStyler.buildCardBackground(
+                density = d,
+                cornerRadiusDp = 8f,
+                strokeColor = NukeCyberHudStyler.COLOR_BORDER_SUBTLE,
+                fillColor = NukeCyberHudStyler.COLOR_BG_CARD
+            )
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (8 * d).toInt(), (8 * d).toInt())
         }
 
         val infoCol = LinearLayout(context).apply {
@@ -389,14 +393,14 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         }
         taskCountTv = TextView(context).apply {
             text = "SCANNING APPS..."
-            textSize = 9f
+            textSize = 9.5f
             setTextColor(Color.parseColor("#F0FFF4"))
             typeface = Typeface.DEFAULT_BOLD
             maxLines = 1
         }
         totalRamTv = TextView(context).apply {
-            text = "RAM HOGS: CALCULATING"
-            textSize = 7f
+            text = "MEMORY FOOTPRINT: CALCULATING"
+            textSize = 7.5f
             setTextColor(Color.parseColor("#7A9E94"))
             typeface = Typeface.MONOSPACE
             maxLines = 1
@@ -405,11 +409,42 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         infoCol.addView(totalRamTv)
         card.addView(infoCol)
 
-        // Action Buttons Row: [⚖ BALANCE ALL] and [⚡ KILL ALL]
+        // Action Buttons Row: [💀 PURGE ZOMBIES], [⚖ BALANCE ALL], [⚡ END SAFE]
         val actionRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
+
+        val killZombiesBtn = TextView(context).apply {
+            text = "💀 ZOMBIES"
+            textSize = 7.5f
+            setTextColor(Color.parseColor("#FF0055"))
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#260813"))
+                cornerRadius = 6 * d
+                setStroke((0.8f * d).toInt(), Color.parseColor("#FF0055"))
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                LinearLayout.LayoutParams.WRAP_CONTENT,
+                (28 * d).toInt()
+            ).apply { rightMargin = (4 * d).toInt() }
+            setPadding((7 * d).toInt(), 0, (7 * d).toInt(), 0)
+            isClickable = true
+            isFocusable = true
+            setOnClickListener {
+                scope.launch {
+                    val killed = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
+                    withContext(Dispatchers.Main) {
+                        actionStatusTv?.text = if (killed > 0) "✓ Terminated $killed rogue zombie cluster(s)! CPU 100% clean." else "✓ 0 rogue zombies detected. System clean!"
+                        actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                        refreshTasksList()
+                    }
+                }
+            }
+        }
+        actionRow.addView(killZombiesBtn)
 
         val balanceAllBtn = TextView(context).apply {
             text = "⚖ BALANCE"
@@ -434,7 +469,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         actionRow.addView(balanceAllBtn)
 
         val killAllBtn = TextView(context).apply {
-            text = "⚡ KILL ALL"
+            text = "END SAFE"
             textSize = 7.5f
             setTextColor(Color.parseColor("#050D0A"))
             typeface = Typeface.DEFAULT_BOLD
@@ -465,7 +500,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         refreshJob = scope.launch {
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "SCANNING ACTIVE USER PROCESSES..."
+                actionStatusTv?.text = "SCANNING ELIGIBLE BACKGROUND APPS..."
                 actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
             }
 
@@ -666,12 +701,12 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
         val totalRam = tasks.sumOf { it.estimatedRamMb }
         val killableCount = tasks.count { !it.isProtectedOrActive }
-        taskCountTv?.text = "$killableCount BACKGROUND APPS • ${tasks.size - killableCount} PROTECTED"
-        totalRamTv?.text = "TOTAL APPS RAM: ~${totalRam} MB"
+        taskCountTv?.text = "$killableCount ELIGIBLE APPS • ${tasks.size - killableCount} PROTECTED"
+        totalRamTv?.text = "APP MEMORY FOOTPRINT: ~${totalRam} MB"
 
         if (tasks.isEmpty()) {
             val emptyTv = TextView(context).apply {
-                text = "✓ ALL BACKGROUND PROCESSES OPTIMAL\nNo rogue CPU or RAM hogs found."
+                text = "✓ NO ELIGIBLE BACKGROUND APPS\nProtected and active processes are left untouched."
                 textSize = 10f
                 setTextColor(Color.parseColor("#7A9E94"))
                 gravity = Gravity.CENTER
@@ -819,7 +854,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         if (isProt) {
             // Protected items CANNOT be terminated: Display muted [🔒 IMMUNE] badge
             val immuneBadge = TextView(context).apply {
-                text = "🔒 IMMUNE"
+                text = "🔒 PROTECTED"
                 textSize = 7.5f
                 setTextColor(Color.parseColor("#94A3B8"))
                 typeface = Typeface.DEFAULT_BOLD
@@ -909,7 +944,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 balanceBtn.text = "✓ OK"
                 balanceBtn.setTextColor(Color.parseColor("#00FF88"))
                 balanceBtn.isClickable = false
-                actionStatusTv?.text = "⚖ BALANCED: ${item.appLabel.uppercase()} (MEMORY COMPACTED)"
+                actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED: ${item.appLabel.uppercase()}"
                 actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
             }
         }
@@ -917,7 +952,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
     private fun terminateTask(item: BackgroundAppItem, cardView: View) {
         if (item.isProtectedOrActive || item.packageName == context.packageName || item.packageName == NukeRuntimeState.state.value.activePackage) {
-            actionStatusTv?.text = "🛡 PROTECTED PROCESS CANNOT BE TERMINATED"
+            actionStatusTv?.text = "PROTECTED PROCESS • NO ACTION TAKEN"
             actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
             return
         }
@@ -945,7 +980,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                     }
                     .start()
 
-                actionStatusTv?.text = "✓ ENDED TASK: ${item.appLabel.uppercase()} (+${item.estimatedRamMb} MB RECLAIMED)"
+                actionStatusTv?.text = "✓ END REQUEST SENT: ${item.appLabel.uppercase()} • ~${item.estimatedRamMb} MB footprint"
                 actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
             }
         }
@@ -955,7 +990,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         scope.launch {
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "⚖ BALANCING & COMPACTING ALL RUNNING APPS..."
+                actionStatusTv?.text = "REQUESTING MEMORY COMPACTION FOR ELIGIBLE APPS..."
                 actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
             }
 
@@ -982,7 +1017,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.GONE
-                actionStatusTv?.text = "✓ BALANCED ${tasks.size} APPS! MEMORY COMPACTED"
+                actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED FOR ${tasks.size} APPS"
                 actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
                 refreshTasksList()
             }
@@ -993,7 +1028,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         scope.launch {
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "⚡ TERMINATING ALL SAFE BACKGROUND HOGS..."
+                actionStatusTv?.text = "ENDING ELIGIBLE BACKGROUND TASKS..."
                 actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
             }
 
@@ -1018,6 +1053,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
             val adb = AdbManager.getInstance(context)
             val isPrivileged = adb.isConnected() || NukeConnectionManager.isConnected()
+            val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
 
             if (isPrivileged) {
                 val scriptBuilder = StringBuilder()
@@ -1027,6 +1063,8 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 scriptBuilder.append("""
                     pm trim-caches 9999999999 2>/dev/null
                     am compact all 2>/dev/null
+                    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
+                    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
                     sync
                 """.trimIndent())
 
@@ -1047,7 +1085,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.GONE
-                actionStatusTv?.text = "⚡ ALL SAFE BACKGROUND TASKS KILLED! (+${freedTotalMb} MB RAM FREED)"
+                actionStatusTv?.text = "✓ END SAFE: $killedZombies zombie cluster(s) terminated • ${tasks.size} tasks ended • ~${freedTotalMb} MB RAM freed"
                 actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
                 refreshTasksList()
             }

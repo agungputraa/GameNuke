@@ -182,14 +182,14 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         }
 
         val titleTv = TextView(context).apply {
-            text = "APP SECURITY SENTINEL"
+            text = "APP SECURITY AUDIT"
             textSize = 11.5f
             setTextColor(Color.parseColor("#F8FAFC"))
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         }
         val subTv = TextView(context).apply {
-            text = "SYSTEM INTEGRITY • HEURISTIC AUDIT"
+            text = "PERMISSION & PACKAGE RISK REVIEW"
             textSize = 7.5f
             setTextColor(Color.parseColor("#64748B"))
             typeface = Typeface.MONOSPACE
@@ -200,7 +200,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
 
         // Status Badge Monospace
         val badge = TextView(context).apply {
-            text = "[PROTECTED]"
+            text = "[MONITORING]"
             textSize = 8.5f
             typeface = Typeface.MONOSPACE
             setTextColor(Color.parseColor("#10B981"))
@@ -293,7 +293,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val shellMetricCol = buildMetricCell("SECURITY PRIVILEGE", shellStatus, Color.parseColor("#10B981"))
         metricRow2.addView(shellMetricCol.first)
 
-        val threatMetricCol = buildMetricCell("THREAT INDEX", "0 DETECTED", Color.parseColor("#10B981"))
+        val threatMetricCol = buildMetricCell("RISK FINDINGS", "0 DETECTED", Color.parseColor("#10B981"))
         threatIndexMetricTv = threatMetricCol.second
         metricRow2.addView(threatMetricCol.first)
         metricsGrid.addView(metricRow2)
@@ -314,7 +314,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         root.addView(pBar)
 
         val pStepTv = TextView(context).apply {
-            text = "Standby • Real-Time Protection Active"
+            text = "Ready • Background risk monitoring active"
             textSize = 7.5f
             typeface = Typeface.MONOSPACE
             setTextColor(Color.parseColor("#64748B"))
@@ -343,7 +343,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             setPadding((12 * d).toInt(), (24 * d).toInt(), (12 * d).toInt(), (24 * d).toInt())
         }
         val emptyTitle = TextView(context).apply {
-            text = "SYSTEM INTEGRITY VERIFIED"
+            text = "NO HIGH-RISK FINDINGS"
             textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -375,7 +375,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         }
 
         val scanBtn = TextView(context).apply {
-            text = "SCAN SYSTEM"
+            text = "RUN SECURITY AUDIT"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
@@ -396,7 +396,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         footer.addView(scanBtn)
 
         val cleanBtn = TextView(context).apply {
-            text = "MANAGE ALL"
+            text = "REVIEW FINDINGS"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
@@ -485,7 +485,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
                 setColor(Color.parseColor("#EF4444")) // Alert Red
             }
             statusBadgeTv?.apply {
-                text = "[$threatCount THREATS]"
+                text = "[$threatCount FINDINGS]"
                 setTextColor(Color.parseColor("#EF4444"))
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#1AEF4444"))
@@ -504,7 +504,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
                 setColor(Color.parseColor("#10B981")) // Secure Emerald
             }
             statusBadgeTv?.apply {
-                text = if (state.isScanning) "[SCANNING]" else "[PROTECTED]"
+                text = if (state.isScanning) "[SCANNING]" else "[MONITORING]"
                 val color = if (state.isScanning) Color.parseColor("#38BDF8") else Color.parseColor("#10B981")
                 setTextColor(color)
                 background = GradientDrawable().apply {
@@ -521,7 +521,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         }
 
         // Button text
-        actionScanBtn?.text = if (state.isScanning) "SCANNING..." else "SCAN SYSTEM"
+        actionScanBtn?.text = if (state.isScanning) "SCANNING..." else "RUN SECURITY AUDIT"
 
         // Render Threat Cards
         val container = threatsContainer ?: return

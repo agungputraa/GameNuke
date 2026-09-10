@@ -182,7 +182,7 @@ fun DashboardScreen(
                     showAdBlockDialog = true
                 }
             }
-            delay(1_350L)
+            delay(2_500L)
         }
     }
 
@@ -326,7 +326,7 @@ fun DashboardScreen(
                     Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
                 )
                 CommandTile(
-                    ("DEEP CLEAN"), ("Storage + memory preparation"), Icons.Rounded.CleaningServices,
+                    ("DEEP CLEAN"), ("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
                     Color(0xFFFFB830), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
                 )
             }
@@ -674,7 +674,7 @@ private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Tune, null, tint = accent, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
-            Text(("NUKE INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
+            Text(("SESSION INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
             Spacer(Modifier.weight(1f))
             Text(if (telemetry.adbConnected) ("EXTENDED") else ("STANDARD"), color = accent, fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         }
@@ -931,7 +931,7 @@ private fun NukeConnectionSelectorDialog(
                     tag = ("RECOMMENDED"),
                     badge = iadbBadge,
                     badgeColor = iadbBadgeColor,
-                    description = ("High-stability lightweight engine (Android 11+) with zero PC / Wi-Fi dependency after initial setup."),
+                    description = ("High-stability lightweight engine (Android 11+) with no PC or Wi-Fi dependency after initial setup."),
                     icon = Icons.Rounded.Bolt,
                     iconTint = Neon.Accent,
                     onClick = {

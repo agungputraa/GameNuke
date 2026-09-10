@@ -53,6 +53,13 @@ object NukeShellDaemon {
         runCatching {
             java.io.File("/proc/${Process.myPid()}/oom_adj").writeText("-16")
         }
+        Runtime.getRuntime().addShutdownHook(Thread {
+            runCatching { frb.axeron.server.touch.TouchListener.INSTANCE.nativeSetGrab(false) }
+            runCatching { frb.axeron.server.touch.TouchListener.INSTANCE.nativeStop() }
+            runCatching {
+                Runtime.getRuntime().exec("settings put system pointer_speed 0; setprop persist.vendor.touch.game_mode 0").waitFor()
+            }
+        })
         Log.i(TAG, "Core started pid=${Process.myPid()} uid=${Process.myUid()} expectedPkgUid=${lastKnownPackageUid.get()}")
 
         thread(name = "Nuke-Core-Watchdog", isDaemon = true) {
@@ -131,8 +138,25 @@ object NukeShellDaemon {
             val line = BufferedReader(InputStreamReader(socket.inputStream)).readLine().orEmpty()
             val response = when {
                 line == "PING" -> "PONG|${Process.myPid()}"
-                line == "STOP" -> { running.set(false); "BYE" }
+                line == "STOP" -> {
+                    runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+                    running.set(false)
+                    "BYE"
+                }
                 line.startsWith("EXEC|") -> executeRequest(line)
+                line.startsWith("TOUCH_START") -> {
+                    val libPath = line.substringAfter("TOUCH_START|", "").trim().takeIf { it.isNotEmpty() }
+                    val count = frb.axeron.server.touch.NukeTouchService.start(libPath)
+                    "TOUCH_STARTED|$count"
+                }
+                line.startsWith("TOUCH_CONFIG|") -> handleTouchConfig(line)
+                line == "TOUCH_STOP" -> {
+                    frb.axeron.server.touch.NukeTouchService.stop()
+                    "TOUCH_STOPPED"
+                }
+                line == "TOUCH_STATUS" -> {
+                    "TOUCH_STATUS|${frb.axeron.server.touch.NukeTouchService.isRunning()}"
+                }
                 else -> "ERROR|PROTOCOL"
             }
             socket.outputStream.bufferedWriter().use {
@@ -142,12 +166,28 @@ object NukeShellDaemon {
             }
             if (line == "STOP") thread(isDaemon = true) {
                 try { Thread.sleep(80) } catch (_: Throwable) {}
+                runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
                 runCatching { Looper.getMainLooper()?.quit() }
                 Process.killProcess(Process.myPid())
             }
         } catch (_: Throwable) {} finally {
             runCatching { socket.close() }
         }
+    }
+
+    private fun handleTouchConfig(line: String): String {
+        // TOUCH_CONFIG|<sensX>|<sensY>|<area>|<curve>|<smoothing>|<minCutoff>|<beta>
+        val parts = line.split('|')
+        val sx = parts.getOrNull(1)?.toFloatOrNull() ?: 1.0f
+        val sy = parts.getOrNull(2)?.toFloatOrNull() ?: 1.0f
+        val area = parts.getOrNull(3)?.toIntOrNull() ?: frb.axeron.server.touch.NukeTouchInjector.AREA_RIGHT
+        val curve = parts.getOrNull(4)?.toIntOrNull() ?: frb.axeron.server.touch.NukeTouchInjector.CURVE_ACCELERATE
+        val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: true
+        val minCutoff = parts.getOrNull(6)?.toFloatOrNull() ?: 1.0f
+        val beta = parts.getOrNull(7)?.toFloatOrNull() ?: 0.007f
+
+        frb.axeron.server.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta)
+        return "TOUCH_CONFIGURED"
     }
 
     private fun executeRequest(line: String): String {

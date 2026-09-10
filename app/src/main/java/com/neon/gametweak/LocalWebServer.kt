@@ -1002,7 +1002,7 @@ class LocalWebServer private constructor(private val context: Context) {
                 { "path": "/api/panel/close?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to close a specific floating overlay." },
                 { "path": "/api/panel/toggle?name={panel}", "methods": ["POST", "GET"], "description": "Direct shortcut to toggle a specific floating overlay." },
                 { "path": "/api/action/trigger?action={kill_hogs|net_turbo|brightness_lock|footstep_boost|dnd}", "methods": ["POST", "GET"], "description": "Trigger in-game actions: optimize background processes, socket tuning, display brightness lock, or footstep audio enhancement." },
-                { "path": "/api/sentinel?action={sweep}&enabled={true|false}", "methods": ["POST", "GET"], "description": "AI Sentinel Autonomous Optimizer status, toggle, and on-demand sweep trigger." },
+                { "path": "/api/sentinel?action={sweep}&enabled={true|false}", "methods": ["POST", "GET"], "description": "AI Sentinel adaptive session monitor status, toggle, and on-demand background maintenance." },
                 { "path": "/api/health/diagnostics", "methods": ["GET"], "description": "Deep hardware diagnostics: battery thermals, voltage, RAM and zRAM usage, internal storage, and CPU state." },
                 { "path": "/api/network/turbo?enable={true|false}", "methods": ["POST", "GET"], "description": "Control socket pacing and local DNS caching for Game Nuke connections only." },
                 { "path": "/api/exec?cmd={command}", "methods": ["POST", "GET"], "description": "Execute a shell command with elevated privileges (Shizuku / Wireless ADB) and return exit code, output, and execution time." },

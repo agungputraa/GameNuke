@@ -19,4 +19,19 @@ interface IShellService {
 
     /** Returns true if the service process is alive and ready. */
     boolean ping() = 3;
+
+    /** Start kernel touch listener via libtouch.so. Returns device count or negative on error. */
+    int touchStart(String libPath) = 4;
+
+    /** Stop kernel touch listener and release hardware grab safely. */
+    void touchStop() = 5;
+
+    /** Returns true if the touch listener is active and running. */
+    boolean isTouchRunning() = 6;
+
+    /** Update touch sensitivity and curve configuration. */
+    void touchConfigure(float sx, float sy, int area, int curve, boolean smooth, float minCutoff, float beta) = 7;
+
+    /** Directly control hardware touch grab. */
+    void touchSetGrab(boolean grab) = 8;
 }

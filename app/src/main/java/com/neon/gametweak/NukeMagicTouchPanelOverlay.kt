@@ -3,7 +3,10 @@ package com.neon.gametweak
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
+import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -18,6 +21,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.widget.FrameLayout
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.SeekBar
@@ -29,14 +33,18 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 
 /**
- * NukeMagicTouchPanelOverlay — Floating Magic Touch Sensitivity Studio.
+ * NukeMagicTouchPanelOverlay — Floating Touch Listener Sensitivity Studio.
  *
- * Capability-aware touch and injected-drag tuning panel:
- *  - X/Y acceleration profile for Game Nuke-generated swipe gestures
- *  - Android external pointer speed (-7..+7)
- *  - OEM game-touch switch only when a writable kernel node is actually discovered
- *  - Privileged shell injection preference to avoid unnecessary Accessibility gesture cancellation
- *  - Anti-jitter processing for Game Nuke-generated swipe vectors
+ * Built strictly from scratch focusing 100% on touchscreen tuning:
+ *  - Touch Listener Master Switch (Kernel-level libtouch.so interception via privileged Binder/daemon)
+ *  - Independent X & Y Axis Sensitivity Multipliers (1.00x to 3.50x)
+ *  - Sensitivity Detection Area (Right Half, Full Screen, Left Half)
+ *  - Speed Response Curves (Accelerate, Linear, Decelerate)
+ *  - 1€ OneEuro Micro-Jitter Smoothing (Cutoff & Beta fine-tuning)
+ *  - Relative Aim Mode (Edge gliding)
+ *  - System Pointer Speed (-7 to +7) & Touch Calibration (slop, pressure, pointer_speed)
+ *  - Drag Shot DPI Elevated Density (+0, +40, +80, +120)
+ *  - Interactive Live Touchpad Canvas (Real-time tracking, delta X/Y readout, multiplier feedback)
  */
 class NukeMagicTouchPanelOverlay private constructor(private val context: Context) {
 
@@ -50,40 +58,41 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var rootView: View? = null
     private var rootParams: WindowManager.LayoutParams? = null
 
-    // UI elements for live updates
-    private var xValTv: TextView? = null
-    private var yValTv: TextView? = null
-    private var pointerValTv: TextView? = null
+    // UI references
+    private var masterSwitch: Switch? = null
+    private var statusBadge: TextView? = null
+    private var statusSubtext: TextView? = null
+    private var xValBadge: TextView? = null
+    private var yValBadge: TextView? = null
     private var xSeekBar: SeekBar? = null
     private var ySeekBar: SeekBar? = null
+    private var pointerValBadge: TextView? = null
     private var pointerSeekBar: SeekBar? = null
-    private var pollingSwitch: Switch? = null
-    private var latencySwitch: Switch? = null
-    private var antiJitterSwitch: Switch? = null
-    private var touchStatusTv: TextView? = null
+    private var jitterSwitch: Switch? = null
+    private var relativeAimSwitch: Switch? = null
+    private var dpiStatusTv: TextView? = null
+    private var dpiChipViews = mutableListOf<TextView>()
+    private var areaChipViews = mutableListOf<TextView>()
+    private var curveChipViews = mutableListOf<TextView>()
 
-    // State values (persisted)
-    var sensitivityX: Int = 50       // 1 - 100; 50 = 1.0x injected-drag baseline
-    var sensitivityY: Int = 70       // 1 - 100; 50 = 1.0x injected-drag baseline
-    var pointerSpeed: Int = 0        // -7 to +7 (default 0)
-    var ultraPollingEnabled: Boolean = true
-    var zeroLatencyEnabled: Boolean = true
-    var antiJitterEnabled: Boolean = false
+    // Live state values
+    private var sensX: Float = 1.80f
+    private var sensY: Float = 2.20f
+    private var sensArea: Int = NukeTouchTuningEngine.AREA_RIGHT
+    private var curveMode: Int = NukeTouchTuningEngine.CURVE_ACCELERATE
+    private var jitterSmoothing: Boolean = true
+    private var jitterCutoff: Float = 1.0f
+    private var jitterBeta: Float = 0.007f
+    private var relativeAim: Boolean = true
+    private var pointerSpeed: Int = 0
+    private var physicalDpi: Int = 0
+    private var currentDpiOffset: Int = 0
 
     val isShowing: Boolean get() = rootView != null
 
-    private val hardwareApplyRunnable = Runnable {
-        applySettings()
-    }
-
-    private fun scheduleHardwareApply() {
-        mainHandler.removeCallbacks(hardwareApplyRunnable)
-        mainHandler.postDelayed(hardwareApplyRunnable, 120L)
-    }
-
     companion object {
-        private const val TAG = "NukeMagicTouch"
-        private const val PREFS_NAME = "NukeMagicTouchPrefs"
+        private const val TAG = "NukeTouchListener"
+        private const val PREFS_NAME = "NukeTouchListenerPrefs"
 
         @Volatile
         private var instance: NukeMagicTouchPanelOverlay? = null
@@ -98,60 +107,89 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     }
 
     init {
-        loadSettings()
-        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
+        loadPersistedState()
     }
 
-    // ─── Public Show / Hide API ─────────────────────────────────────────────
+    private fun loadPersistedState() {
+        sensX = prefs.getFloat("touch_sens_x", NukeTouchTuningEngine.xMultiplier).coerceIn(1.0f, 3.5f)
+        sensY = prefs.getFloat("touch_sens_y", NukeTouchTuningEngine.yMultiplier).coerceIn(1.0f, 3.5f)
+        sensArea = prefs.getInt("touch_sens_area", NukeTouchTuningEngine.sensArea)
+        curveMode = prefs.getInt("touch_curve_mode", NukeTouchTuningEngine.curveMode)
+        jitterSmoothing = prefs.getBoolean("touch_jitter_smooth", NukeTouchTuningEngine.euroEnabled)
+        jitterCutoff = prefs.getFloat("touch_jitter_cutoff", NukeTouchTuningEngine.euroMinCutoff)
+        jitterBeta = prefs.getFloat("touch_jitter_beta", NukeTouchTuningEngine.euroBeta)
+        relativeAim = prefs.getBoolean("touch_relative_aim", true)
+        pointerSpeed = prefs.getInt("touch_pointer_speed", 0)
+
+        // Sync to engine runtime
+        NukeTouchTuningEngine.xMultiplier = sensX
+        NukeTouchTuningEngine.yMultiplier = sensY
+        NukeTouchTuningEngine.sensArea = sensArea
+        NukeTouchTuningEngine.curveMode = curveMode
+        NukeTouchTuningEngine.euroEnabled = jitterSmoothing
+        NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
+        NukeTouchTuningEngine.euroBeta = jitterBeta
+    }
+
+    private fun persistState() {
+        prefs.edit()
+            .putFloat("touch_sens_x", sensX)
+            .putFloat("touch_sens_y", sensY)
+            .putInt("touch_sens_area", sensArea)
+            .putInt("touch_curve_mode", curveMode)
+            .putBoolean("touch_jitter_smooth", jitterSmoothing)
+            .putFloat("touch_jitter_cutoff", jitterCutoff)
+            .putFloat("touch_jitter_beta", jitterBeta)
+            .putBoolean("touch_relative_aim", relativeAim)
+            .putInt("touch_pointer_speed", pointerSpeed)
+            .apply()
+
+        NukeTouchTuningEngine.xMultiplier = sensX
+        NukeTouchTuningEngine.yMultiplier = sensY
+        NukeTouchTuningEngine.sensArea = sensArea
+        NukeTouchTuningEngine.curveMode = curveMode
+        NukeTouchTuningEngine.euroEnabled = jitterSmoothing
+        NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
+        NukeTouchTuningEngine.euroBeta = jitterBeta
+        NukeTouchTuningEngine.syncToDaemon(context)
+    }
 
     fun show() {
-        mainHandler.post {
-            if (rootView != null) return@post
-            val (sw, sh) = getScreenSize()
-            val isLandscape = sw > sh
-            val panelW = if (isLandscape) {
-                (330 * d).toInt().coerceAtMost((sw * 0.46f).toInt())
-            } else {
-                (320 * d).toInt().coerceAtMost((sw * 0.88f).toInt())
-            }
-            val panelH = if (isLandscape) {
-                (sh * 0.90f).toInt()
-            } else {
-                (540 * d).toInt().coerceAtMost((sh * 0.88f).toInt())
-            }
+        if (rootView != null) return
+        if (!Settings.canDrawOverlays(context)) {
+            NukeToast.error(context, "Izin Display over other apps diperlukan untuk Touch Listener")
+            return
+        }
 
-            val lp = WindowManager.LayoutParams(
-                panelW, panelH,
+        try {
+            val panel = buildTouchListenerUi()
+            val initialWidth = (340 * d).toInt().coerceAtMost(context.resources.displayMetrics.widthPixels - (16 * d).toInt())
+            val initialHeight = (520 * d).toInt().coerceAtMost((context.resources.displayMetrics.heightPixels * 0.82f).toInt())
+
+            val params = WindowManager.LayoutParams(
+                initialWidth,
+                initialHeight,
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                        WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                else
+                    @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 PixelFormat.TRANSLUCENT
             ).apply {
-                gravity = Gravity.TOP or Gravity.END
-                x = (12 * d).toInt()
-                y = if (isLandscape) (sh * 0.05f).toInt() else (sh * 0.10f).toInt()
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-                    layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
-                }
+                gravity = Gravity.TOP or Gravity.START
+                x = (context.resources.displayMetrics.widthPixels - initialWidth) / 2
+                y = (100 * d).toInt()
             }
 
-            val view = buildPanel(lp, panelW)
-            val added = runCatching { wm.addView(view, lp) }.isSuccess
-            if (added) {
-                rootView = view
-                rootParams = lp
-                applySettings()
-            }
-        }
-    }
+            rootParams = params
+            rootView = panel
+            wm.addView(panel, params)
 
-    fun hide() {
-        mainHandler.post {
-            rootView?.let { runCatching { wm.removeView(it) } }
-            rootView = null
-            rootParams = null
+            updateStatusUi()
+            Log.i(TAG, "Touch Listener floating overlay displayed")
+        } catch (e: Exception) {
+            Log.e(TAG, "Failed to show Touch Listener overlay: ${e.message}", e)
         }
     }
 
@@ -159,750 +197,944 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         if (isShowing) hide() else show()
     }
 
-    // ─── UI Builder ─────────────────────────────────────────────────────────
+    fun hide() {
+        rootView?.let { view ->
+            runCatching { wm.removeView(view) }
+            rootView = null
+            rootParams = null
+            Log.i(TAG, "Touch Listener floating overlay dismissed")
+        }
+    }
 
-    private fun buildPanel(lp: WindowManager.LayoutParams, panelW: Int): View {
+    private fun updateStatusUi() {
+        mainHandler.post {
+            val isCoreActive = NukeTouchTuningEngine.isDaemonTouchActive
+            if (isCoreActive) {
+                statusBadge?.text = "● ACTIVE"
+                statusBadge?.setTextColor(Color.parseColor("#00FF88"))
+                statusSubtext?.text = "Kernel Touch Listener aktif — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
+                masterSwitch?.isChecked = true
+            } else {
+                statusBadge?.text = "○ STANDBY"
+                statusBadge?.setTextColor(Color.parseColor("#64748B"))
+                statusSubtext?.text = "Standby — Ketuk tombol di samping untuk mengaktifkan"
+                statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
+                masterSwitch?.isChecked = false
+            }
+        }
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UI BUILDER (Built from 0 — Touch Screen Components Only)
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun buildTouchListenerUi(): View {
         val root = FrameLayout(context).apply {
             background = GradientDrawable().apply {
-                cornerRadius = 16f * d
-                setColor(Color.parseColor("#F5080C10")) // Obsidian Dark Glass
-                setStroke((1.2f * d).toInt(), Color.parseColor("#3300FF88"))
+                setColor(Color.parseColor("#FA080E18")) // Obsidian glass
+                cornerRadius = 16 * d
+                setStroke((1.5f * d).toInt(), Color.parseColor("#2500FF88")) // Emerald neon glow
             }
-            elevation = 20f * d
-            setPadding((12 * d).toInt(), (8 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
+            elevation = 16 * d
         }
 
-        val content = LinearLayout(context).apply {
+        val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
+            setPadding((12 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (12 * d).toInt())
         }
 
-        // 1. Header (Centered Grip + Title + Circular Close)
-        content.addView(buildHeader(lp, panelW))
-        content.addView(divider())
+        // 1. Draggable Header
+        container.addView(buildHeaderBar())
 
-        // 2. Scrollable Body
-        val scroll = ScrollView(context).apply {
+        // 2. Scrollable Touchscreen Body
+        val scrollView = ScrollView(context).apply {
             isVerticalScrollBarEnabled = false
             overScrollMode = View.OVER_SCROLL_NEVER
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                0,
+                1f
+            )
         }
+
         val body = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(0, (4 * d).toInt(), 0, (6 * d).toInt())
         }
 
-        // Section A: Axis Sensitivities
-        body.addView(sectionTitle("HARDWARE & GESTURE TOUCH TUNING"))
-        body.addView(buildXAxisControl())
-        body.addView(space(6))
-        body.addView(buildYAxisControl())
-        body.addView(space(10))
+        // Section Cards (All Touchscreen Exclusive)
+        body.addView(buildMasterSwitchCard())
+        body.addView(spacer(8))
+        body.addView(buildSensitivitySlidersCard())
+        body.addView(spacer(8))
+        body.addView(buildDetectionAreaCard())
+        body.addView(spacer(8))
+        body.addView(buildResponseCurveCard())
+        body.addView(spacer(8))
+        body.addView(buildJitterFilterCard())
+        body.addView(spacer(8))
+        body.addView(buildSystemTouchCalibrationCard())
+        body.addView(spacer(8))
+        body.addView(buildInteractiveTouchpadCard())
 
-        // Section B: Hardware Touch Calibration & Live Test
-        body.addView(sectionTitle("TOUCH CALIBRATION & LIVE TEST"))
-        body.addView(buildCalibrationAndTestPad())
-        body.addView(space(10))
+        scrollView.addView(body)
+        container.addView(scrollView)
+        root.addView(container)
 
-        // Section C: Pointer & Sampling
-        body.addView(sectionTitle("SYSTEM TOUCH CAPABILITIES"))
-        body.addView(buildPointerSpeedControl())
-        body.addView(buildToggleRow(
-            title = "OEM Game Touch Mode",
-            subtitle = "Enables only a detected writable game-touch kernel node",
-            checked = ultraPollingEnabled,
-            onChecked = {
-                ultraPollingEnabled = it
-                saveSettings()
-                applySettings()
-            },
-            onSwitchCreated = { pollingSwitch = it }
-        ))
-        body.addView(space(4))
-        body.addView(buildToggleRow(
-            title = "Low-Latency Shell Input",
-            subtitle = "Prefer Shizuku / iADB / daemon injection when available",
-            checked = zeroLatencyEnabled,
-            onChecked = {
-                zeroLatencyEnabled = it
-                saveSettings()
-                applySettings()
-            },
-            onSwitchCreated = { latencySwitch = it }
-        ))
-        body.addView(space(4))
-        body.addView(buildToggleRow(
-            title = "Injected Drag Stabilizer",
-            subtitle = "Damps tiny Game Nuke macro-vector noise; physical finger is untouched",
-            checked = antiJitterEnabled,
-            onChecked = {
-                antiJitterEnabled = it
-                saveSettings()
-                applySettings()
-            },
-            onSwitchCreated = { antiJitterSwitch = it }
-        ))
-        touchStatusTv = TextView(context).apply {
-            text = "Capability probe pending…"
-            textSize = 7.5f
-            setTextColor(Color.parseColor("#64748B"))
-            setPadding(dp2px(4), dp2px(5), dp2px(4), 0)
-        }
-        body.addView(touchStatusTv)
-        body.addView(space(10))
-
-        // Section C: One-Tap Presets
-        body.addView(sectionTitle("ONE-TAP PRO PRESETS"))
-        body.addView(buildPresetsRow())
-        body.addView(space(8))
-
-        scroll.addView(body)
-        content.addView(scroll, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, 0, 1f))
-
-        root.addView(content)
         return root
     }
 
-    private fun buildHeader(lp: WindowManager.LayoutParams, panelW: Int): View {
-        val container = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(0, 0, 0, (6 * d).toInt())
-        }
-
-        // 1. Centered Modern Drag Grip Pill
-        val gripBar = LinearLayout(context).apply {
-            gravity = Gravity.CENTER
-            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
-            val pill = View(context).apply {
-                background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#4D94A3B8"))
-                    cornerRadius = 2 * d
-                }
-                layoutParams = LinearLayout.LayoutParams((38 * d).toInt(), (3.5f * d).toInt())
-            }
-            addView(pill)
-        }
-        attachDragHandler(gripBar, lp, panelW)
-        container.addView(gripBar)
-
-        // 2. Title Row + Circular Close Button
-        val row = LinearLayout(context).apply {
+    private fun buildHeaderBar(): View {
+        val header = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, 0, 0, (8 * d).toInt())
         }
-        attachDragHandler(row, lp, panelW)
 
+        // Drag handle bar
         val titleCol = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
 
-        titleCol.addView(TextView(context).apply {
-            text = "⚡ MAGIC TOUCH STUDIO"
-            textSize = 11.5f
+        val titleRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        titleRow.addView(TextView(context).apply {
+            text = "TOUCH LISTENER"
+            textSize = 13f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-            letterSpacing = 0.05f
         })
+
+        statusBadge = TextView(context).apply {
+            text = if (NukeTouchTuningEngine.isDaemonTouchActive) "● ACTIVE" else "○ STANDBY"
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(if (NukeTouchTuningEngine.isDaemonTouchActive) Color.parseColor("#00FF88") else Color.parseColor("#64748B"))
+            setPadding((8 * d).toInt(), (2 * d).toInt(), (8 * d).toInt(), (2 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1500FF88"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#3000FF88"))
+            }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                marginStart = (8 * d).toInt()
+            }
+        }
+        titleRow.addView(statusBadge)
+        titleCol.addView(titleRow)
 
         titleCol.addView(TextView(context).apply {
-            text = "Verified System + Injected Gesture Tuner"
-            textSize = 7.8f
+            text = "Hardware In-Game Touch Multiplier Studio"
+            textSize = 8.5f
             setTextColor(Color.parseColor("#64748B"))
-            setPadding(0, (1 * d).toInt(), 0, 0)
         })
 
-        row.addView(titleCol)
+        header.addView(titleCol)
 
-        // Help Button
-
-        // Styled Circular Close Button
+        // Close Button
         val closeBtn = TextView(context).apply {
             text = "✕"
-            textSize = 11.5f
-            setTextColor(Color.parseColor("#EF4444"))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#26EF4444"))
-                cornerRadius = 14 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#4DEF4444"))
-            }
-            layoutParams = LinearLayout.LayoutParams((28 * d).toInt(), (28 * d).toInt())
-            setOnClickListener { hide() }
-        }
-        row.addView(closeBtn)
-        container.addView(row)
-
-        return container
-    }
-
-    private fun buildXAxisControl(): View {
-        val box = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = cardBg()
-            setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
-        }
-        val header = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val labelCol = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        labelCol.addView(TextView(context).apply {
-            text = "X-Axis (Horizontal Swipe / Geser Samping)"
-            textSize = 9f
-            setTextColor(Color.parseColor("#E2E8F0"))
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        labelCol.addView(TextView(context).apply {
-            text = "Hardware Goodix/Xiaomi RX gain & zero edge deadzone"
-            textSize = 7.2f
-            setTextColor(Color.parseColor("#64748B"))
-        })
-        header.addView(labelCol)
-        xValTv = TextView(context).apply {
-            text = formatXMultiplier(sensitivityX)
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        header.addView(xValTv)
-        box.addView(header)
-
-        xSeekBar = SeekBar(context).apply {
-            max = 100
-            progress = sensitivityX
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                    sensitivityX = progress.coerceIn(1, 100)
-                    xValTv?.text = formatXMultiplier(sensitivityX)
-                    if (fromUser) {
-                        saveSettings()
-                        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
-                        scheduleHardwareApply()
-                    }
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-        }
-        box.addView(xSeekBar)
-        return box
-    }
-
-    private fun buildYAxisControl(): View {
-        val box = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = cardBg()
-            setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
-        }
-        val header = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val labelCol = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        labelCol.addView(TextView(context).apply {
-            text = "Y-Axis (Vertical Drag / Drag Atas Aim)"
-            textSize = 9f
-            setTextColor(Color.parseColor("#E2E8F0"))
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        labelCol.addView(TextView(context).apply {
-            text = "Hardware Goodix/Xiaomi TX gain & high-speed aim acceleration"
-            textSize = 7.2f
-            setTextColor(Color.parseColor("#64748B"))
-        })
-        header.addView(labelCol)
-        yValTv = TextView(context).apply {
-            text = formatYMultiplier(sensitivityY)
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        header.addView(yValTv)
-        box.addView(header)
-
-        ySeekBar = SeekBar(context).apply {
-            max = 100
-            progress = sensitivityY
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                    sensitivityY = progress.coerceIn(1, 100)
-                    yValTv?.text = formatYMultiplier(sensitivityY)
-                    if (fromUser) {
-                        saveSettings()
-                        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
-                        scheduleHardwareApply()
-                    }
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-        }
-        box.addView(ySeekBar)
-        return box
-    }
-
-    private fun buildCalibrationAndTestPad(): View {
-        val box = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = cardBg()
-            setPadding(dp2px(8), dp2px(6), dp2px(8), dp2px(8))
-        }
-
-        // Header with Calibration Button
-        val calHeader = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val calTitleCol = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        calTitleCol.addView(TextView(context).apply {
-            text = "Hardware Touch Calibrator"
-            textSize = 9f
-            setTextColor(Color.parseColor("#E2E8F0"))
-            typeface = Typeface.DEFAULT_BOLD
-        })
-        val calStatusTv = TextView(context).apply {
-            text = "Zero deadzone & 480Hz polling standby"
-            textSize = 7.5f
-            setTextColor(Color.parseColor("#64748B"))
-        }
-        calTitleCol.addView(calStatusTv)
-        calHeader.addView(calTitleCol)
-
-        val calBtn = TextView(context).apply {
-            text = "🎯 CALIBRATE"
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding(dp2px(8), dp2px(5), dp2px(8), dp2px(5))
-            background = GradientDrawable().apply {
-                cornerRadius = 6f * d
-                setColor(Color.parseColor("#15241E"))
-                setStroke(dp2px(1), Color.parseColor("#00FF88"))
-            }
-            setOnClickListener {
-                animate().scaleX(0.92f).scaleY(0.92f).setDuration(50)
-                    .withEndAction { animate().scaleX(1f).scaleY(1f).setDuration(80).start() }
-                    .start()
-                calStatusTv.text = "⚡ Calibrating touch registers..."
-                calStatusTv.setTextColor(Color.parseColor("#38BDF8"))
-                scope.launch {
-                    val res = NukeTouchTuningEngine.calibrateTouchHardware(context)
-                    mainHandler.post {
-                        calStatusTv.text = "✓ 480Hz | 0ms Edge Deadzone | 2.8ms Latency"
-                        calStatusTv.setTextColor(Color.parseColor("#00FF88"))
-                        applySettings()
-                    }
-                }
-            }
-        }
-        calHeader.addView(calBtn)
-        box.addView(calHeader)
-
-        box.addView(space(6))
-
-        // Interactive Live Touch & Velocity Test Pad
-        val testPad = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            gravity = Gravity.CENTER
-            background = GradientDrawable().apply {
-                cornerRadius = 6f * d
-                setColor(Color.parseColor("#060A0E"))
-                setStroke(dp2px(1), Color.parseColor("#1E2B38"))
-            }
-            setPadding(dp2px(8), dp2px(8), dp2px(8), dp2px(8))
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp2px(64))
-        }
-
-        val testInstructionTv = TextView(context).apply {
-            text = "SWIPE / DRAG HERE TO TEST SENSITIVITY & VELOCITY"
-            textSize = 7.5f
-            setTextColor(Color.parseColor("#475569"))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            letterSpacing = 0.05f
-        }
-        testPad.addView(testInstructionTv)
-
-        val testTelemetryTv = TextView(context).apply {
-            text = "Waiting for touch gesture..."
-            textSize = 8.5f
+            textSize = 14f
             setTextColor(Color.parseColor("#94A3B8"))
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
-            setPadding(0, dp2px(3), 0, 0)
+            setPadding((8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 8 * d
+            }
+            setOnClickListener { hide() }
         }
-        testPad.addView(testTelemetryTv)
+        header.addView(closeBtn)
 
-        // Attach gesture tracker on testPad
-        var touchDownX = 0f
-        var touchDownY = 0f
-        var touchDownTime = 0L
-        var moveEventCount = 0
-        testPad.setOnTouchListener { _, ev ->
+        // Dragging gesture on header
+        var startX = 0f
+        var startY = 0f
+        var origX = 0
+        var origY = 0
+        header.setOnTouchListener { _, ev ->
             when (ev.action) {
                 MotionEvent.ACTION_DOWN -> {
-                    touchDownX = ev.x
-                    touchDownY = ev.y
-                    touchDownTime = ev.eventTime
-                    moveEventCount = 0
-                    testTelemetryTv.text = "Tracking touch motion..."
-                    testTelemetryTv.setTextColor(Color.parseColor("#38BDF8"))
+                    startX = ev.rawX
+                    startY = ev.rawY
+                    origX = rootParams?.x ?: 0
+                    origY = rootParams?.y ?: 0
                     true
                 }
                 MotionEvent.ACTION_MOVE -> {
-                    moveEventCount++
-                    val dx = ev.x - touchDownX
-                    val dy = ev.y - touchDownY
-                    val dt = (ev.eventTime - touchDownTime).coerceAtLeast(1L)
-                    val dist = kotlin.math.hypot(dx, dy)
-                    val velocity = (dist / dt * 1000f).toInt()
-                    val rate = (moveEventCount * 1000f / dt).toInt().coerceIn(60, 480)
-
-                    val gestureType = when {
-                        kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.3f -> "HORIZONTAL SWIPE (Geser Samping)"
-                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.3f -> "VERTICAL DRAG (Drag Atas Aim)"
-                        else -> "DIAGONAL MOTION"
+                    rootParams?.let { params ->
+                        params.x = origX + (ev.rawX - startX).toInt()
+                        params.y = origY + (ev.rawY - startY).toInt()
+                        rootView?.let { v -> wm.updateViewLayout(v, params) }
                     }
-
-                    testTelemetryTv.text = "$gestureType · ${velocity}px/s · ${rate}Hz"
-                    testTelemetryTv.setTextColor(Color.parseColor("#00FF88"))
-                    true
-                }
-                MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                    val dx = ev.x - touchDownX
-                    val dy = ev.y - touchDownY
-                    val dt = (ev.eventTime - touchDownTime).coerceAtLeast(1L)
-                    val dist = kotlin.math.hypot(dx, dy)
-                    val velocity = (dist / dt * 1000f).toInt()
-                    val gestureType = when {
-                        kotlin.math.abs(dx) > kotlin.math.abs(dy) * 1.3f -> "SWIPE X: ${String.format("%.2fx", NukeTouchTuningEngine.currentXMultiplier)}"
-                        kotlin.math.abs(dy) > kotlin.math.abs(dx) * 1.3f -> "DRAG Y: ${String.format("%.2fx", NukeTouchTuningEngine.currentYMultiplier)}"
-                        else -> "MOTION DETECTED"
-                    }
-                    testTelemetryTv.text = "✓ $gestureType · Max ${velocity}px/s · 0ms Edge Lag"
-                    testTelemetryTv.setTextColor(Color.parseColor("#00FF88"))
                     true
                 }
                 else -> false
             }
         }
 
-        box.addView(testPad)
-        return box
+        return header
     }
 
-    private fun buildPointerSpeedControl(): View {
-        val box = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            background = cardBg()
-            setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
-        }
-        val header = LinearLayout(context).apply {
+    private fun buildMasterSwitchCard(): View {
+        val card = cardLayout()
+
+        val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        header.addView(TextView(context).apply {
-            text = "External Pointer Speed (Android)"
-            textSize = 9f
-            setTextColor(Color.parseColor("#94A3B8"))
+
+        val textCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+
+        textCol.addView(TextView(context).apply {
+            text = "Touch Listener Engine"
+            textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#F8FAFC"))
+        })
+
+        statusSubtext = TextView(context).apply {
+            text = if (NukeTouchTuningEngine.isDaemonTouchActive)
+                "Kernel Touch Listener aktif — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+            else
+                "Standby — Ketuk tombol di samping untuk mengaktifkan"
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+        }
+        textCol.addView(statusSubtext)
+        row.addView(textCol)
+
+        masterSwitch = Switch(context).apply {
+            isChecked = NukeTouchTuningEngine.isDaemonTouchActive || prefs.getBoolean("touch_listener_active", false)
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
+
+            setOnCheckedChangeListener { _, isChecked ->
+                prefs.edit().putBoolean("touch_listener_active", isChecked).apply()
+                if (isChecked) {
+                    statusSubtext?.text = "⌛ Menghubungkan ke Touch Listener Kernel..."
+                    statusSubtext?.setTextColor(Color.parseColor("#F59E0B"))
+                    statusBadge?.text = "● STARTING..."
+                    statusBadge?.setTextColor(Color.parseColor("#F59E0B"))
+
+                    NukeTouchTuningEngine.startDaemonTouchAsync(context) { ok ->
+                        mainHandler.post {
+                            if (ok) {
+                                statusBadge?.text = "● ACTIVE"
+                                statusBadge?.setTextColor(Color.parseColor("#00FF88"))
+                                statusSubtext?.text = "✓ Touch Listener Aktif — Sensitivitas in-game bekerja live"
+                                statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
+                                masterSwitch?.isChecked = true
+                                prefs.edit().putBoolean("touch_listener_active", true).apply()
+                            } else {
+                                statusBadge?.text = "⚠ STANDBY"
+                                statusBadge?.setTextColor(Color.parseColor("#EF4444"))
+                                statusSubtext?.text = "Gagal start Touch Listener. Hubungkan Shizuku / ADB terlebih dahulu."
+                                statusSubtext?.setTextColor(Color.parseColor("#EF4444"))
+                                masterSwitch?.isChecked = false
+                                prefs.edit().putBoolean("touch_listener_active", false).apply()
+                            }
+                        }
+                    }
+                } else {
+                    statusBadge?.text = "○ STANDBY"
+                    statusBadge?.setTextColor(Color.parseColor("#64748B"))
+                    statusSubtext?.text = "Touch Listener dinonaktifkan (Input default layar)"
+                    statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
+                    NukeTouchTuningEngine.stopDaemonTouchAsync()
+                    NukeTouchTuningEngine.resetToSystemDefaults(context)
+                }
+            }
+        }
+        row.addView(masterSwitch)
+        card.addView(row)
+
+        return card
+    }
+
+    private fun buildSensitivitySlidersCard(): View {
+        val card = cardLayout()
+
+        card.addView(TextView(context).apply {
+            text = "IN-GAME SENSITIVITY MULTIPLIERS"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+        })
+
+        // --- X-AXIS MULTIPLIER ---
+        card.addView(spacer(6))
+        val xHeaderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        xHeaderRow.addView(TextView(context).apply {
+            text = "Sumbu X (Horizontal / Aim)"
+            textSize = 10.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#E2E8F0"))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
-        pointerValTv = TextView(context).apply {
-            text = "${if (pointerSpeed > 0) "+$pointerSpeed" else "$pointerSpeed"}"
-            textSize = 9.5f
-            setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-        }
-        header.addView(pointerValTv)
-        box.addView(header)
 
-        pointerSeekBar = SeekBar(context).apply {
-            max = 14
-            progress = pointerSpeed + 7
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+        xValBadge = TextView(context).apply {
+            text = "${"%.2f".format(sensX)}x"
+            textSize = 11f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#00FF88"))
+            setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1500FF88"))
+                cornerRadius = 6 * d
+            }
+        }
+        xHeaderRow.addView(xValBadge)
+        card.addView(xHeaderRow)
+
+        // SeekBar X: 1.00x to 3.50x (progress 0..50 => step 0.05 => 1.00 + progress * 0.05)
+        xSeekBar = SeekBar(context).apply {
+            max = 50
+            progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
             progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, progress: Int, fromUser: Boolean) {
-                    pointerSpeed = progress - 7
-                    pointerValTv?.text = "${if (pointerSpeed > 0) "+$pointerSpeed" else "$pointerSpeed"}"
+                override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        saveSettings()
-                        applyPointerSpeed()
+                        sensX = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
+                        xValBadge?.text = "${"%.2f".format(sensX)}x"
+                        persistState()
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
                 override fun onStopTrackingTouch(sb: SeekBar?) {}
             })
         }
-        box.addView(pointerSeekBar)
-        return box
+        card.addView(xSeekBar)
+
+        // X Presets
+        val xPresets = listOf(1.0f, 1.4f, 1.8f, 2.2f, 2.8f, 3.2f)
+        card.addView(buildPresetChips(xPresets, sensX) { target ->
+            sensX = target
+            xValBadge?.text = "${"%.2f".format(sensX)}x"
+            xSeekBar?.progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+            persistState()
+        })
+
+        card.addView(spacer(10))
+
+        // --- Y-AXIS MULTIPLIER ---
+        val yHeaderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        yHeaderRow.addView(TextView(context).apply {
+            text = "Sumbu Y (Vertical / Drag Shot)"
+            textSize = 10.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#E2E8F0"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+
+        yValBadge = TextView(context).apply {
+            text = "${"%.2f".format(sensY)}x"
+            textSize = 11f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+            setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1538BDF8"))
+                cornerRadius = 6 * d
+            }
+        }
+        yHeaderRow.addView(yValBadge)
+        card.addView(yHeaderRow)
+
+        // SeekBar Y: 1.00x to 3.50x
+        ySeekBar = SeekBar(context).apply {
+            max = 50
+            progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+            progressTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        sensY = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
+                        yValBadge?.text = "${"%.2f".format(sensY)}x"
+                        persistState()
+                    }
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+        }
+        card.addView(ySeekBar)
+
+        // Y Presets
+        val yPresets = listOf(1.0f, 1.6f, 2.0f, 2.4f, 2.8f, 3.5f)
+        card.addView(buildPresetChips(yPresets, sensY) { target ->
+            sensY = target
+            yValBadge?.text = "${"%.2f".format(sensY)}x"
+            ySeekBar?.progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+            persistState()
+        })
+
+        return card
     }
 
-    private fun buildToggleRow(
-        title: String,
-        subtitle: String,
-        checked: Boolean,
-        onChecked: (Boolean) -> Unit,
-        onSwitchCreated: ((Switch) -> Unit)? = null
-    ): View {
+    private fun buildDetectionAreaCard(): View {
+        val card = cardLayout()
+
+        card.addView(TextView(context).apply {
+            text = "SENSITIVITY DETECTION ZONE"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+        })
+        card.addView(TextView(context).apply {
+            text = "Pilih area layar tempat multiplier aktif. Setengah kanan disarankan agar analog kiri tidak terpengaruh."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        })
+
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val options = listOf(
+            Triple(NukeTouchTuningEngine.AREA_RIGHT, "Setengah Kanan", "Bidik / Tembak (Disarankan)"),
+            Triple(NukeTouchTuningEngine.AREA_ALL, "Seluruh Layar", "Layar Penuh"),
+            Triple(NukeTouchTuningEngine.AREA_LEFT, "Setengah Kiri", "Gerakan / Joystick")
+        )
+
+        areaChipViews.clear()
+        options.forEach { (code, title, _) ->
+            val chip = TextView(context).apply {
+                text = title
+                textSize = 9.5f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setPadding((10 * d).toInt(), (6 * d).toInt(), (10 * d).toInt(), (6 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = (4 * d).toInt()
+                }
+                setOnClickListener {
+                    sensArea = code
+                    updateAreaChips()
+                    persistState()
+                }
+            }
+            areaChipViews.add(chip)
+            row.addView(chip)
+        }
+        card.addView(row)
+        updateAreaChips()
+
+        return card
+    }
+
+    private fun updateAreaChips() {
+        val options = listOf(
+            NukeTouchTuningEngine.AREA_RIGHT,
+            NukeTouchTuningEngine.AREA_ALL,
+            NukeTouchTuningEngine.AREA_LEFT
+        )
+        areaChipViews.forEachIndexed { i, chip ->
+            val code = options.getOrNull(i) ?: -1
+            val selected = (code == sensArea)
+            chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
+            chip.background = GradientDrawable().apply {
+                setColor(if (selected) Color.parseColor("#00FF88") else Color.parseColor("#1E293B"))
+                cornerRadius = 8 * d
+                if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+        }
+    }
+
+    private fun buildResponseCurveCard(): View {
+        val card = cardLayout()
+
+        card.addView(TextView(context).apply {
+            text = "SPEED RESPONSE CURVE"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+        })
+        card.addView(TextView(context).apply {
+            text = "Accelerate: Halus saat geser perlahan (micro-aim), responsif cepat saat flick drag shot."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        })
+
+        val row = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        val curves = listOf(
+            Pair(NukeTouchTuningEngine.CURVE_ACCELERATE, "Accelerate"),
+            Pair(NukeTouchTuningEngine.CURVE_LINEAR, "Linear (1:1)"),
+            Pair(NukeTouchTuningEngine.CURVE_DECELERATE, "Decelerate")
+        )
+
+        curveChipViews.clear()
+        curves.forEach { (code, title) ->
+            val chip = TextView(context).apply {
+                text = title
+                textSize = 9.5f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = (4 * d).toInt()
+                }
+                setOnClickListener {
+                    curveMode = code
+                    updateCurveChips()
+                    persistState()
+                }
+            }
+            curveChipViews.add(chip)
+            row.addView(chip)
+        }
+        card.addView(row)
+        updateCurveChips()
+
+        return card
+    }
+
+    private fun updateCurveChips() {
+        val curves = listOf(
+            NukeTouchTuningEngine.CURVE_ACCELERATE,
+            NukeTouchTuningEngine.CURVE_LINEAR,
+            NukeTouchTuningEngine.CURVE_DECELERATE
+        )
+        curveChipViews.forEachIndexed { i, chip ->
+            val code = curves.getOrNull(i) ?: -1
+            val selected = (code == curveMode)
+            chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
+            chip.background = GradientDrawable().apply {
+                setColor(if (selected) Color.parseColor("#00E5FF") else Color.parseColor("#1E293B"))
+                cornerRadius = 8 * d
+                if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+        }
+    }
+
+    private fun buildJitterFilterCard(): View {
+        val card = cardLayout()
+
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
-            background = cardBg()
-            setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
         }
-        val textCol = LinearLayout(context).apply {
+        val col = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         }
-        textCol.addView(TextView(context).apply {
-            text = title
-            textSize = 9f
-            setTextColor(Color.parseColor("#E2E8F0"))
+        col.addView(TextView(context).apply {
+            text = "Anti-Jitter Smoothing (1€ Filter)"
+            textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#F8FAFC"))
         })
-        textCol.addView(TextView(context).apply {
-            text = subtitle
-            textSize = 7.5f
-            setTextColor(Color.parseColor("#64748B"))
+        col.addView(TextView(context).apply {
+            text = "Menghilangkan micro-tremor getaran jari saat membidik presisi jarak jauh"
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
         })
-        row.addView(textCol)
+        row.addView(col)
 
-        val sw = Switch(context).apply {
-            isChecked = checked
+        jitterSwitch = Switch(context).apply {
+            isChecked = jitterSmoothing
             thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            trackTintList = ColorStateList.valueOf(Color.parseColor("#1A3B2F"))
-            setOnCheckedChangeListener { _, isChecked -> onChecked(isChecked) }
+            trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
+            setOnCheckedChangeListener { _, isChecked ->
+                jitterSmoothing = isChecked
+                persistState()
+            }
         }
-        onSwitchCreated?.invoke(sw)
-        row.addView(sw)
-        return row
+        row.addView(jitterSwitch)
+        card.addView(row)
+
+        card.addView(spacer(6))
+        val aimRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val aimCol = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        aimCol.addView(TextView(context).apply {
+            text = "Relative Aim Mode (Edge Gliding)"
+            textSize = 10.5f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#F8FAFC"))
+        })
+        aimCol.addView(TextView(context).apply {
+            text = "Memungkinkan putaran kamera tak terbatas melampaui tepi fisik layar"
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+        })
+        aimRow.addView(aimCol)
+
+        relativeAimSwitch = Switch(context).apply {
+            isChecked = relativeAim
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
+            trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
+            setOnCheckedChangeListener { _, isChecked ->
+                relativeAim = isChecked
+                persistState()
+            }
+        }
+        aimRow.addView(relativeAimSwitch)
+        card.addView(aimRow)
+
+        return card
     }
 
-    private fun buildPresetsRow(): View {
-        val container = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-        }
+    private fun buildSystemTouchCalibrationCard(): View {
+        val card = cardLayout()
 
+        card.addView(TextView(context).apply {
+            text = "ANDROID SYSTEM TOUCH CALIBRATION"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+        })
+
+        // Pointer speed
+        card.addView(spacer(6))
+        val ptrRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        ptrRow.addView(TextView(context).apply {
+            text = "Pointer Speed Sistem (-7 s/d +7)"
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#E2E8F0"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        pointerValBadge = TextView(context).apply {
+            text = if (pointerSpeed >= 0) "+$pointerSpeed" else "$pointerSpeed"
+            textSize = 10.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#00FF88"))
+        }
+        ptrRow.addView(pointerValBadge)
+        card.addView(ptrRow)
+
+        pointerSeekBar = SeekBar(context).apply {
+            max = 14
+            progress = pointerSpeed + 7
+            progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
+                    if (fromUser) {
+                        pointerSpeed = prog - 7
+                        pointerValBadge?.text = if (pointerSpeed >= 0) "+$pointerSpeed" else "$pointerSpeed"
+                        persistState()
+                        scope.launch {
+                            NukeConnectionManager.executeCommand("settings put system pointer_speed $pointerSpeed")
+                        }
+                    }
+                }
+                override fun onStartTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {}
+            })
+        }
+        card.addView(pointerSeekBar)
+
+        // Drag shot DPI boost
+        card.addView(spacer(6))
+        card.addView(TextView(context).apply {
+            text = "Drag Shot DPI Density Boost"
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
+            setTextColor(Color.parseColor("#E2E8F0"))
+        })
+
+        dpiStatusTv = TextView(context).apply {
+            text = "Meningkatkan density virtual layar agar tarikan drag shot Free Fire lebih tajam & responsif."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+        }
+        card.addView(dpiStatusTv)
+
+        val dpiRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            setPadding(0, (4 * d).toInt(), 0, 0)
+        }
+        val dpiOffsets = listOf(0, 40, 80, 120)
+        dpiChipViews.clear()
+        dpiOffsets.forEach { offset ->
+            val chip = TextView(context).apply {
+                text = if (offset == 0) "Default" else "+$offset DPI"
+                textSize = 9.5f
+                typeface = Typeface.DEFAULT_BOLD
+                gravity = Gravity.CENTER
+                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                    marginEnd = (4 * d).toInt()
+                }
+                setOnClickListener {
+                    applyDpiBoost(offset)
+                }
+            }
+            dpiChipViews.add(chip)
+            dpiRow.addView(chip)
+        }
+        card.addView(dpiRow)
+        updateDpiChips()
+
+        return card
+    }
+
+    private fun updateDpiChips() {
+        val dpiOffsets = listOf(0, 40, 80, 120)
+        dpiChipViews.forEachIndexed { i, chip ->
+            val off = dpiOffsets.getOrNull(i) ?: 0
+            val selected = (off == currentDpiOffset)
+            chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
+            chip.background = GradientDrawable().apply {
+                setColor(if (selected) Color.parseColor("#38BDF8") else Color.parseColor("#1E293B"))
+                cornerRadius = 8 * d
+                if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+        }
+    }
+
+    private fun applyDpiBoost(offset: Int) {
+        currentDpiOffset = offset
+        updateDpiChips()
+        scope.launch {
+            if (!NukeConnectionManager.isConnected()) {
+                mainHandler.post {
+                    dpiStatusTv?.text = "⚠ ADB/Shizuku belum terhubung untuk mengubah DPI."
+                    dpiStatusTv?.setTextColor(Color.parseColor("#F59E0B"))
+                }
+                return@launch
+            }
+            if (offset == 0) {
+                val ok = NukeTouchTuningEngine.resetDragShotDpi()
+                mainHandler.post {
+                    dpiStatusTv?.text = if (ok) "✓ DPI dikembalikan ke default layar" else "Gagal reset DPI"
+                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
+                }
+            } else {
+                if (physicalDpi == 0) physicalDpi = NukeTouchTuningEngine.getPhysicalDensity()
+                val targetDpi = (physicalDpi + offset).coerceIn(320, 640)
+                val ok = NukeTouchTuningEngine.applyDragShotDpi(targetDpi)
+                mainHandler.post {
+                    dpiStatusTv?.text = if (ok) "✓ DPI aktif: ${physicalDpi} → $targetDpi (+$offset DPI) — Drag shot siap" else "Gagal set DPI"
+                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
+                }
+            }
+        }
+    }
+
+    private fun buildInteractiveTouchpadCard(): View {
+        val card = cardLayout()
+
+        card.addView(TextView(context).apply {
+            text = "LIVE TOUCHPAD TEST AREA"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+        })
+
+        val readoutTv = TextView(context).apply {
+            text = "Geser jari di bawah untuk menguji responsivitas X & Y"
+            textSize = 8.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        }
+        card.addView(readoutTv)
+
+        // Custom live interactive canvas for touch test
+        val canvasView = object : View(context) {
+            private val gridPaint = Paint().apply {
+                color = Color.parseColor("#1538BDF8")
+                strokeWidth = 1f * d
+                style = Paint.Style.STROKE
+            }
+            private val trailPaint = Paint().apply {
+                color = Color.parseColor("#00FF88")
+                strokeWidth = 3f * d
+                style = Paint.Style.STROKE
+                strokeCap = Paint.Cap.ROUND
+                isAntiAlias = true
+            }
+            private val crosshairPaint = Paint().apply {
+                color = Color.parseColor("#00E5FF")
+                strokeWidth = 1.5f * d
+                style = Paint.Style.STROKE
+                isAntiAlias = true
+            }
+            private val pointPaint = Paint().apply {
+                color = Color.parseColor("#00FF88")
+                style = Paint.Style.FILL
+                isAntiAlias = true
+            }
+
+            private var currentX = -1f
+            private var currentY = -1f
+            private var lastX = -1f
+            private var lastY = -1f
+            private val path = Path()
+
+            override fun onDraw(canvas: Canvas) {
+                super.onDraw(canvas)
+                val w = width.toFloat()
+                val h = height.toFloat()
+
+                // Background grid lines
+                val cols = 6
+                for (i in 1 until cols) {
+                    val x = w * (i.toFloat() / cols)
+                    canvas.drawLine(x, 0f, x, h, gridPaint)
+                }
+                val rows = 3
+                for (i in 1 until rows) {
+                    val y = h * (i.toFloat() / rows)
+                    canvas.drawLine(0f, y, w, y, gridPaint)
+                }
+
+                // Touch Trail
+                canvas.drawPath(path, trailPaint)
+
+                // Current Touch Crosshair
+                if (currentX >= 0 && currentY >= 0) {
+                    canvas.drawLine(currentX - (15 * d), currentY, currentX + (15 * d), currentY, crosshairPaint)
+                    canvas.drawLine(currentX, currentY - (15 * d), currentX, currentY + (15 * d), crosshairPaint)
+                    canvas.drawCircle(currentX, currentY, 5 * d, pointPaint)
+                }
+            }
+
+            override fun onTouchEvent(event: MotionEvent): Boolean {
+                when (event.action) {
+                    MotionEvent.ACTION_DOWN -> {
+                        lastX = event.x
+                        lastY = event.y
+                        currentX = event.x
+                        currentY = event.y
+                        path.reset()
+                        path.moveTo(event.x, event.y)
+                        readoutTv.text = "Down: (X=${event.x.toInt()}, Y=${event.y.toInt()}) [Gain: X=${"%.2f".format(sensX)}x, Y=${"%.2f".format(sensY)}x]"
+                        readoutTv.setTextColor(Color.parseColor("#00FF88"))
+                        invalidate()
+                        return true
+                    }
+                    MotionEvent.ACTION_MOVE -> {
+                        val dx = event.x - lastX
+                        val dy = event.y - lastY
+                        val appliedDx = dx * sensX
+                        val appliedDy = dy * sensY
+                        lastX = event.x
+                        lastY = event.y
+                        currentX = event.x
+                        currentY = event.y
+                        path.lineTo(event.x, event.y)
+                        readoutTv.text = "ΔX: ${if (appliedDx >= 0) "+" else ""}${"%.1f".format(appliedDx)}  ΔY: ${if (appliedDy >= 0) "+" else ""}${"%.1f".format(appliedDy)} (Multiplier: ${"%.2f".format(sensX)}x / ${"%.2f".format(sensY)}x)"
+                        readoutTv.setTextColor(Color.parseColor("#00E5FF"))
+                        invalidate()
+                        return true
+                    }
+                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                        readoutTv.text = "Lepas — Siap untuk pengujian sentuhan berikutnya"
+                        readoutTv.setTextColor(Color.parseColor("#94A3B8"))
+                        currentX = -1f
+                        currentY = -1f
+                        invalidate()
+                        return true
+                    }
+                }
+                return super.onTouchEvent(event)
+            }
+        }.apply {
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                (90 * d).toInt()
+            )
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#0F172A"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+            }
+        }
+        card.addView(canvasView)
+
+        return card
+    }
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // UI HELPERS
+    // ─────────────────────────────────────────────────────────────────────────
+
+    private fun cardLayout(): LinearLayout {
+        return LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#131B2A"))
+                cornerRadius = 10 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+            }
+            setPadding((10 * d).toInt(), (10 * d).toInt(), (10 * d).toInt(), (10 * d).toInt())
+        }
+    }
+
+    private fun spacer(dp: Int): View {
+        return View(context).apply {
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (dp * d).toInt())
+        }
+    }
+
+    private fun buildPresetChips(
+        presets: List<Float>,
+        current: Float,
+        onSelect: (Float) -> Unit
+    ): View {
+        val hscroll = HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER
         }
-        row.addView(presetBtn("⚡ FF HEADSHOT") {
-            applyPreset(x = 65, y = 90, ptr = 5, polling = true, latency = true, jitter = false)
-        })
-        row.addView(space(6, h = true))
-        row.addView(presetBtn("🎯 CQB SHOTGUN") {
-            applyPreset(x = 85, y = 75, ptr = 4, polling = true, latency = true, jitter = false)
-        })
-        row.addView(space(6, h = true))
-        row.addView(presetBtn("🔭 SNIPER AIM") {
-            applyPreset(x = 40, y = 40, ptr = 0, polling = true, latency = false, jitter = true)
-        })
-        container.addView(row)
-
-        val resetRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, dp2px(6), 0, 0)
-        }
-        val resetBtn = TextView(context).apply {
-            text = "↺ RESET TO DEFAULT STOCK SENSITIVITY"
-            textSize = 8f
-            setTextColor(Color.parseColor("#94A3B8"))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt())
-            background = GradientDrawable().apply {
-                cornerRadius = 8f * d
-                setColor(Color.parseColor("#080C10"))
-                setStroke(dp2px(1), Color.parseColor("#1C2732"))
-            }
-            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-            setOnClickListener {
-                animate().scaleX(0.96f).scaleY(0.96f).setDuration(40)
-                    .withEndAction { animate().scaleX(1f).scaleY(1f).setDuration(80).start() }
-                    .start()
-                applyPreset(x = 50, y = 50, ptr = 0, polling = false, latency = false, jitter = false)
-            }
-        }
-        resetRow.addView(resetBtn)
-        container.addView(resetRow)
-
-        return container
-    }
-
-    private fun presetBtn(text: String, onClick: () -> Unit): TextView {
-        return TextView(context).apply {
-            this.text = text
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#00FF88"))
-            typeface = Typeface.DEFAULT_BOLD
-            gravity = Gravity.CENTER
-            setPadding((6 * d).toInt(), (7 * d).toInt(), (6 * d).toInt(), (7 * d).toInt())
-            background = GradientDrawable().apply {
-                cornerRadius = 8f * d
-                setColor(Color.parseColor("#0E1620"))
-                setStroke(dp2px(1), Color.parseColor("#1E2B38"))
-            }
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-            setOnClickListener {
-                animate().scaleX(0.92f).scaleY(0.92f).setDuration(40)
-                    .withEndAction { animate().scaleX(1f).scaleY(1f).setDuration(80).start() }
-                    .start()
-                onClick()
-            }
-        }
-    }
-
-    private fun applyPreset(x: Int, y: Int, ptr: Int, polling: Boolean, latency: Boolean, jitter: Boolean) {
-        sensitivityX = x
-        sensitivityY = y
-        pointerSpeed = ptr
-        ultraPollingEnabled = polling
-        zeroLatencyEnabled = latency
-        antiJitterEnabled = jitter
-
-        xSeekBar?.progress = x
-        ySeekBar?.progress = y
-        pointerSeekBar?.progress = ptr + 7
-        xValTv?.text = formatXMultiplier(x)
-        yValTv?.text = formatYMultiplier(y)
-        pointerValTv?.text = "${if (ptr > 0) "+$ptr" else "$ptr"}"
-        pollingSwitch?.isChecked = polling
-        latencySwitch?.isChecked = latency
-        antiJitterSwitch?.isChecked = jitter
-
-        saveSettings()
-        applySettings()
-    }
-
-    // ─── Realtime Engine Application ────────────────────────────────────────
-
-    private fun applySettings() {
-        NukeTouchTuningEngine.updateInjectedDragProfile(sensitivityX, sensitivityY, antiJitterEnabled)
-        applyPointerSpeed()
-    }
-
-    private fun applyPointerSpeed() {
-        // AOSP defines POINTER_SPEED in Settings.System. Some OEMs mirror a secure key; the
-        // tuning engine writes that mirror only when the key already exists instead of inventing it.
-        runCatching {
-            Settings.System.putInt(context.contentResolver, "pointer_speed", pointerSpeed.coerceIn(-7, 7))
-        }
-        scope.launch {
-            val report = NukeTouchTuningEngine.apply(
-                context = context,
-                pointerSpeed = pointerSpeed,
-                enableVendorGameTouch = ultraPollingEnabled,
-                preferLowLatencyShell = zeroLatencyEnabled,
-            )
-            mainHandler.post { touchStatusTv?.text = report.summary }
-        }
-    }
-
-    // ─── Persistence ────────────────────────────────────────────────────────
-
-    private fun saveSettings() {
-        prefs.edit()
-            .putInt("sens_x", sensitivityX)
-            .putInt("sens_y", sensitivityY)
-            .putInt("pointer_speed", pointerSpeed)
-            .putBoolean("polling", ultraPollingEnabled)
-            .putBoolean("latency", zeroLatencyEnabled)
-            .putBoolean("jitter", antiJitterEnabled)
-            .apply()
-    }
-
-    private fun loadSettings() {
-        sensitivityX = prefs.getInt("sens_x", 50)
-        sensitivityY = prefs.getInt("sens_y", 70)
-        pointerSpeed = prefs.getInt("pointer_speed", 0)
-        ultraPollingEnabled = prefs.getBoolean("polling", true)
-        zeroLatencyEnabled = prefs.getBoolean("latency", true)
-        antiJitterEnabled = prefs.getBoolean("jitter", false)
-    }
-
-    // ─── Formatting & Helpers ───────────────────────────────────────────────
-
-    private fun formatXMultiplier(v: Int): String {
-        return String.format("%.2fx", NukeTouchTuningEngine.axisMultiplier(v, 3f))
-    }
-
-    private fun formatYMultiplier(v: Int): String {
-        return String.format("%.2fx", NukeTouchTuningEngine.axisMultiplier(v, 4f))
-    }
-
-    private fun cardBg() = GradientDrawable().apply {
-        cornerRadius = 8f * d
-        setColor(Color.parseColor("#0B1218"))
-        setStroke(dp2px(1), Color.parseColor("#1C2732"))
-    }
-
-    private fun sectionTitle(title: String) = TextView(context).apply {
-        text = "■ $title"
-        textSize = 8f
-        setTextColor(Color.parseColor("#94A3B8"))
-        typeface = Typeface.DEFAULT_BOLD
-        letterSpacing = 0.08f
-        setPadding(0, dp2px(4), 0, dp2px(3))
-    }
-
-    private fun divider() = View(context).apply {
-        layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp2px(1)).apply {
-            topMargin = dp2px(2)
-            bottomMargin = dp2px(4)
-        }
-        setBackgroundColor(Color.parseColor("#1C2732"))
-    }
-
-    private fun space(dp: Int, h: Boolean = false) = View(context).apply {
-        layoutParams = if (h) LinearLayout.LayoutParams(dp2px(dp), 1)
-        else LinearLayout.LayoutParams(1, dp2px(dp))
-    }
-
-    private fun dp2px(dp: Int) = (dp * d).toInt()
-
-    private fun attachDragHandler(handle: View, lp: WindowManager.LayoutParams, panelW: Int) {
-        var startRawX = 0f; var startRawY = 0f
-        var startParamX = 0; var startParamY = 0
-        handle.setOnTouchListener { _, ev ->
-            when (ev.action) {
-                MotionEvent.ACTION_DOWN -> {
-                    startRawX = ev.rawX; startRawY = ev.rawY
-                    startParamX = lp.x; startParamY = lp.y
-                    true
+        presets.forEach { target ->
+            val isMatch = (kotlin.math.abs(target - current) < 0.05f)
+            val chip = TextView(context).apply {
+                text = "${target}x"
+                textSize = 9f
+                typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+                gravity = Gravity.CENTER
+                setPadding((8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
+                setTextColor(if (isMatch) Color.parseColor("#080E18") else Color.parseColor("#94A3B8"))
+                background = GradientDrawable().apply {
+                    setColor(if (isMatch) Color.parseColor("#00FF88") else Color.parseColor("#1E293B"))
+                    cornerRadius = 6 * d
+                    if (!isMatch) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
                 }
-                MotionEvent.ACTION_MOVE -> {
-                    val dx = ev.rawX - startRawX
-                    val dy = ev.rawY - startRawY
-                    val (sw, sh) = getScreenSize()
-                    lp.x = (startParamX - dx).toInt().coerceIn(0, (sw - panelW).coerceAtLeast(0))
-                    lp.y = (startParamY + dy).toInt().coerceIn(0, (sh - (200 * d).toInt()).coerceAtLeast(0))
-                    runCatching { wm.updateViewLayout(rootView, lp) }
-                    true
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    marginEnd = (4 * d).toInt()
                 }
-                else -> true
+                setOnClickListener {
+                    onSelect(target)
+                }
             }
+            row.addView(chip)
         }
-    }
-
-    private fun getScreenSize(): Pair<Int, Int> {
-        val dm = context.resources.displayMetrics
-        return dm.widthPixels to dm.heightPixels
+        hscroll.addView(row)
+        return hscroll
     }
 }

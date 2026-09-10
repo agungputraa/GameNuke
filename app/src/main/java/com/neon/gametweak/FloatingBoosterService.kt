@@ -95,6 +95,8 @@ class FloatingBoosterService : Service() {
         @Volatile
         private var activeInstance: FloatingBoosterService? = null
 
+        fun isRunning(): Boolean = activeInstance != null
+
         fun collapseHub() {
             activeInstance?.let { service ->
                 android.os.Handler(android.os.Looper.getMainLooper()).post {
@@ -300,6 +302,7 @@ class FloatingBoosterService : Service() {
         // stopWithTask=false keeps the already-running user-visible FGS independent from the
         // MainActivity task. We intentionally do not ask Android to resurrect it after process death.
         publishRuntime(engine?.state?.value)
+        runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
         super.onTaskRemoved(rootIntent)
     }
 
@@ -443,7 +446,7 @@ class FloatingBoosterService : Service() {
             local.state.value.let { updateTelemetryUi(it); publishRuntime(it) }
             while (isActive) {
                 val isVisible = hubVisible()
-                val interval = if (isVisible) 1_200L else 15_000L
+                val interval = if (isVisible) 1_800L else 20_000L
                 delay(interval)
                 // When HUD is collapsed/minimized, avoid spawning shell processes entirely (zero-overhead)
                 runCatching { local.refreshHudMetrics(includeCpu = isVisible) }
@@ -459,7 +462,7 @@ class FloatingBoosterService : Service() {
             engine?.state?.value?.let(::updateTelemetryUi)
             while (isActive) {
                 val isVisible = hubVisible()
-                val interval = if (isVisible) 2_500L else 20_000L
+                val interval = if (isVisible) 4_000L else 30_000L
                 delay(interval)
                 if (isVisible) {
                     refreshAuxTelemetry(retryPing = true)
@@ -618,7 +621,7 @@ class FloatingBoosterService : Service() {
                 }
             },
             onModuleInstall = { moduleId ->
-                if (moduleActionJob?.isActive == true) toastStatus("Another module action is already running")
+                if (moduleActionJob?.isActive == true) toastStatus("Another plugin action is already running")
                 else moduleActionJob = scope.launch(Dispatchers.IO) {
                     try {
                         val result = runCatching { moduleShop.install(moduleId) }
@@ -630,11 +633,11 @@ class FloatingBoosterService : Service() {
                 }
             },
             onModuleToggle = { moduleId, enabled ->
-                if (moduleActionJob?.isActive == true) toastStatus("Another module action is already running")
+                if (moduleActionJob?.isActive == true) toastStatus("Another plugin action is already running")
                 else moduleActionJob = scope.launch(Dispatchers.IO) {
                     try {
                         val result = runCatching { moduleShop.setEnabled(moduleId, enabled) }
-                            .getOrElse { "Module failed: ${it.message ?: it.javaClass.simpleName}" }
+                            .getOrElse { "Plugin action failed: ${it.message ?: it.javaClass.simpleName}" }
                         withContext(Dispatchers.Main.immediate) { toastOutcome(result) }
                     } finally {
                         moduleActionJob = null
@@ -1011,7 +1014,7 @@ class FloatingBoosterService : Service() {
                         if (nextVal) 78 else 50,
                         antiJitter = false,
                     )
-                    toastOutcome(if (nextVal) "Touch Boost: ${report.summary}" else "Touch Boost: STANDARD")
+                    toastOutcome(if (nextVal) "Touch Response: ${report.summary}" else "Touch Response: STANDARD")
                 }
             }
             "net_boost" -> {
@@ -1119,9 +1122,9 @@ class FloatingBoosterService : Service() {
                     val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
 
                     withContext(Dispatchers.Main.immediate) {
-                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB RAM Freed" else "+512MB RAM Optimized"
-                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB Storage Purged" else "+1.2GB Cache Purged"
-                        toastOutcome("DEEP CLEAN COMPLETE! $ramStr ✓ $storStr")
+                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB available RAM" else "Memory maintenance completed"
+                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB available storage" else "Storage cleanup completed"
+                        toastOutcome("Deep Clean complete • $ramStr • $storStr")
                     }
                 }
             }
@@ -1291,17 +1294,17 @@ class FloatingBoosterService : Service() {
             "phone_health" -> {
                 val overlay = NukePhoneHealthOverlay.getInstance(applicationContext)
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Phone Health: OPEN 🩺" else "Phone Health: CLOSED")
+                toastOutcome(if (overlay.isShowing) "Device Health: OPEN" else "Device Health: CLOSED")
             }
             "task_manager" -> {
                 val overlay = NukeTaskManagerPanelOverlay.getInstance(applicationContext)
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Task Manager: OPEN ⚡" else "Task Manager: CLOSED")
+                toastOutcome(if (overlay.isShowing) "Task Manager: OPEN" else "Task Manager: CLOSED")
             }
             "magic_touch" -> {
                 val overlay = NukeMagicTouchPanelOverlay.getInstance(applicationContext)
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Magic Touch: OPEN ⚡" else "Magic Touch: CLOSED")
+                toastOutcome(if (overlay.isShowing) "Touch Listener: OPEN" else "Touch Listener: CLOSED")
             }
             "gpu_tuner" -> {
                 val overlay = NukeGpuGraphicsPanelOverlay.getInstance(applicationContext)
@@ -1328,13 +1331,13 @@ class FloatingBoosterService : Service() {
                 val overlay = NukeDeepCoolingFloatingOverlay.getInstance(applicationContext)
                 val showing = overlay.toggle()
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("deep_cooling" to showing)) }
-                toastOutcome(if (showing) "❄️ AI Deep Cooling Studio: ACTIVE" else "❄️ AI Deep Cooling Studio: CLOSED")
+                toastOutcome(if (showing) "Thermal Control: OPEN" else "Thermal Control: CLOSED")
             }
             "antivirus" -> {
                 val overlay = NukeAntivirusFloatingOverlay.getInstance(applicationContext)
                 val showing = overlay.toggle()
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("antivirus" to showing)) }
-                toastOutcome(if (showing) "🛡️ Cyber Shield Sentinel: ACTIVE" else "🛡️ Cyber Shield: CLOSED")
+                toastOutcome(if (showing) "App Security Audit: OPEN" else "App Security Audit: CLOSED")
             }
             "system_editor" -> {
                 val overlay = NukeSystemEditorFloatingOverlay.getInstance(applicationContext)
@@ -1347,9 +1350,9 @@ class FloatingBoosterService : Service() {
                 val active = NukeAiSentinel.enabled.value
                 val cooling = NukeAiSentinel.isCoolingActive.value
                 val msg = if (active) {
-                    if (cooling) "❄️ AI Sentinel: ACTIVE (Cooling Mode Engaged)" else "🤖 AI Sentinel: ACTIVE (Anti-Overheat & Cleaner)"
+                    if (cooling) "AI Sentinel: ACTIVE (Thermal response in progress)" else "AI Sentinel: ACTIVE (Adaptive session monitor)"
                 } else {
-                    "🤖 AI Sentinel: PAUSED"
+                    "AI Sentinel: PAUSED"
                 }
                 toastOutcome(msg)
             }
@@ -1393,7 +1396,7 @@ class FloatingBoosterService : Service() {
                     val active = nextHz > 0
                     composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("fps_lock" to active)) }
                     withContext(Dispatchers.Main.immediate) {
-                        toastOutcome(if (active) "FPS Lock: LOCKED $nextHz Hz (All Games)" else "FPS Lock: DYNAMIC AUTO")
+                        toastOutcome(if (active) "Refresh Target: $nextHz Hz requested" else "Refresh Target: DYNAMIC")
                     }
                 }
             }
@@ -1402,7 +1405,7 @@ class FloatingBoosterService : Service() {
                     val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
                     withContext(Dispatchers.Main.immediate) {
                         val freedText = if (freedMb > 0) "Freed ~${freedMb}MB RAM" else "Memory Compacted"
-                        toastOutcome("Memory Optimization: $freedText • $killed Tasks Trimmed")
+                        toastOutcome("Background maintenance: $freedText • $killed eligible targets processed")
                     }
                 }
             }
@@ -1410,7 +1413,7 @@ class FloatingBoosterService : Service() {
             "check_update" -> { AppUpdateController.openOfficialWebsite(applicationContext) }
             "footstep_boost" -> {
                 val nextActive = NukeAudioBooster.toggleFootstepBoost(applicationContext)
-                toastOutcome(if (nextActive) "Footstep Boost: ACTIVE (1kHz-4kHz)" else "Footstep Boost: OFF")
+                toastOutcome(if (nextActive) "Audio Focus Profile: ACTIVE (1kHz–4kHz emphasis)" else "Audio Focus Profile: OFF")
             }
             "wiki_pip" -> {
                 val wiki = wikiOverlay ?: NukeWikiOverlayView.getInstance(applicationContext).also { wikiOverlay = it }
@@ -2126,7 +2129,7 @@ class FloatingBoosterService : Service() {
     private fun openDeepClean() {
         val key = "deep_clean"
         if (windows.containsKey(key)) { removeWindow(key); return }
-        val view = moduleView("DEEP CLEAN", "MEASURED CACHE + MEMORY RECLAIM")
+        val view = moduleView("DEEP CLEAN", "CACHE + MEMORY MAINTENANCE")
         val metrics = view.findViewById<LinearLayout>(R.id.moduleMetrics)
         val fx = NukeCleanerFxView(this).apply {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(86)).apply { bottomMargin = dp(5) }
@@ -2149,7 +2152,7 @@ class FloatingBoosterService : Service() {
             if (capabilities.has("shell.background_release")) add("protected background sweep")
         }.joinToString(", ")
         content.addView(noteText("Available on this device: $activeLayers. Unsupported shell layers are omitted, not presented as inactive controls."))
-        content.addView(actionButton("START DEEP CLEAN") {
+        content.addView(actionButton("RUN DEEP CLEAN") {
             runPanelAction("$key.clean") {
                 runDeepClean(
                     ownCache.isChecked,
@@ -2201,16 +2204,20 @@ class FloatingBoosterService : Service() {
                     ((before - after) / (1024L * 1024L)).coerceAtLeast(0L)
                 }
             }
+            var zombieKilled = 0
             if (reclaimRam) runLayer("RAM") { engine?.deepReclaim() }
             if (trimStorage) runLayer("STORAGE") { engine?.trimCachesForStoragePressure() }
-            if (sweepBackground) runLayer("BACKGROUND") { engine?.sweepSafeBackground() }
+            if (sweepBackground) runLayer("BACKGROUND") {
+                zombieKilled = NukeProcessPurgeGuardian.killRogueZombieProcesses(applicationContext)
+                engine?.sweepSafeBackground()
+            }
             runLayer("METRICS") { engine?.refreshMetrics() }
             val state = engine?.state?.value
             val details = buildList {
                 if (clearOwnCache) add("CACHE +${ownGainMb}MB")
                 if (reclaimRam) add("RAM +${state?.lastMemoryGainMb ?: 0}MB")
                 if (trimStorage) add("STORAGE +${state?.lastCacheGainMb ?: 0}MB")
-                if (sweepBackground) add("BG SWEEP")
+                if (sweepBackground) add(if (zombieKilled > 0) "ZOMBIES -$zombieKilled" else "BG SWEEP")
                 if (failedLayers.isNotEmpty()) add("SKIPPED ${failedLayers.joinToString("+")}")
             }
             status.text = "CLEAN COMPLETE // ${details.joinToString(" // ")}"
@@ -2227,7 +2234,7 @@ class FloatingBoosterService : Service() {
             removeWindow(key)
             return
         }
-        val view = moduleView("CROSSHAIR STUDIO", "OBSIDIAN CALIBRATION // 1PX NUDGE")
+        val view = moduleView("CROSSHAIR STUDIO", "OVERLAY CALIBRATION • 1PX POSITION CONTROL")
         val content = view.findViewById<LinearLayout>(R.id.moduleActions)
         val styles = NukeCrosshairView.Style.entries
         val colors = intArrayOf(
@@ -3426,7 +3433,7 @@ class FloatingBoosterService : Service() {
             }
         } == true
         if (!moduleRestoreCompleted) {
-            NukeToast.error(applicationContext, "Some installed module restores timed out; reopen Game Nuke to retry their OFF switches", true)
+            NukeToast.error(applicationContext, "Some installed plugin restores timed out; reopen Game Nuke to retry their OFF switches", true)
         }
         withTimeoutOrNull(4_500L) { runCatching { local?.restoreSession() } }
         // Remove overlays before restoring size/density so no attached window can be stranded with
@@ -3452,6 +3459,7 @@ class FloatingBoosterService : Service() {
             prefs.edit().putBoolean("hud_keep_awake", false).apply()
         }
         clearSessionMarker(); engine = null; targetPackage = null
+        runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
         NukeAdManager.markGamingSessionEnded(applicationContext)
         publishRuntime(null)
         Log.i(TAG, "Session stopped: $reason")
@@ -3535,6 +3543,7 @@ class FloatingBoosterService : Service() {
         CoroutineScope(Dispatchers.IO).launch {
             runCatching { NukeSystemOptimizer.restoreSystemDefaults(appContext) }
             runCatching { NukeUniversalFpsLock.setTargetFps(appContext, 0) }
+            runCatching { NukeTouchTuningEngine.resetToSystemDefaults(appContext) }
         }
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }

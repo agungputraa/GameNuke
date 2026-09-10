@@ -22,3 +22,8 @@ tools/*.token
 *.aab
 
 .kotlin/
+tools/jadx/
+tools/redcorner_decompiled/
+tools/*.dex
+tools/*dump.txt
+tools/*dexdump.txt

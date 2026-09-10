@@ -27,7 +27,11 @@ class ShellUserService() : IShellService.Stub() {
 
     /** Called by Shizuku/iAdb to destroy this service. MUST call exitProcess. */
     override fun destroy() {
-        Log.i(tag, "destroy() called — exiting shell service process")
+        Log.i(tag, "destroy() called — stopping touch service, reverting pointer speed, and exiting shell process")
+        runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+        runCatching {
+            Runtime.getRuntime().exec("settings put system pointer_speed 0").waitFor()
+        }
         exitProcess(0)
     }
 
@@ -38,6 +42,39 @@ class ShellUserService() : IShellService.Stub() {
 
     /** Returns true — if this method is reachable, the service is alive. */
     override fun ping(): Boolean = true
+
+    override fun touchStart(libPath: String?): Int {
+        Log.i(tag, "touchStart called via privileged Binder with libPath: $libPath")
+        return frb.axeron.server.touch.NukeTouchService.start(libPath)
+    }
+
+    override fun touchStop() {
+        Log.i(tag, "touchStop called via privileged Binder")
+        frb.axeron.server.touch.NukeTouchService.stop()
+    }
+
+    override fun isTouchRunning(): Boolean {
+        return frb.axeron.server.touch.NukeTouchService.isRunning()
+    }
+
+    override fun touchConfigure(
+        sx: Float,
+        sy: Float,
+        area: Int,
+        curve: Int,
+        smooth: Boolean,
+        minCutoff: Float,
+        beta: Float
+    ) {
+        frb.axeron.server.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta)
+    }
+
+    override fun touchSetGrab(grab: Boolean) {
+        val touch = frb.axeron.server.touch.TouchListener.INSTANCE
+        if (touch.isLoaded) {
+            touch.nativeSetGrab(grab)
+        }
+    }
 
     /**
      * Executes a shell command in the ADB-shell UID process.

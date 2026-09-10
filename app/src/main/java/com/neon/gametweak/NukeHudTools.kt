@@ -121,7 +121,7 @@ class NukeHudTools(private val context: Context, private val scope: CoroutineSco
                             }
                         }.getOrNull()
                     }
-                    delay(2_000)
+                    delay(4_000)
                 }
             } finally {
                 measured.value = null

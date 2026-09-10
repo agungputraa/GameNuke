@@ -92,27 +92,32 @@ if (Test-Path $VersionJsonPath) {
     $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
     
     $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
-    $vJson.downloadDirectlinkUrl = "https://boring-active.com/laj2W6"
+    $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
     $vJson.releaseNotes = @(
-        "Device System Editor Preset Engine: Seamless export & import of optimized device presets for easy community sharing",
-        "Executive Floating System Editor: Modernized obsidian cockpit overlay with category tabs, search filter, and responsive layout",
-        "Anti-Flood Notification Architecture: Streamlined notification delivery with zero status bar clutter and single-slot developer reply support",
-        "Telegram Remote Command Console: In-place keyboard updates with zero-spam execution and instant modal responses",
-        "Seamless Startup Notification Permission: Smooth permission initialization on startup for guaranteed live support alert delivery",
-        "Dashboard Optimization: Streamlined tactical deck with full-width System Editor controls",
-        "Dual-Sync Edge CDN Web Updater: Fast in-app update checks and verified binary distributions"
+        "Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
+        "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
+        "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
+        "Performance & Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
+        "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
+        "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
     )
     
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
     Copy-Item -Path $VersionJsonPath -Destination "$RootDir\version.json" -Force
-    if (Test-Path "$RootDir\gamenukeweb\index.html") {
-        Copy-Item -Path "$RootDir\gamenukeweb\index.html" -Destination "$RootDir\index.html" -Force
+    $webFilesToSync = @(
+        "index.html", "download.html", "CNAME", "app.js", "download.js", "site-config.js",
+        "particles.js", "style.css", "style-v5.css", "style-v6.css", "favicon.png",
+        "about.html", "contact.html", "guides.html", "privacy.html", "terms.html", "404.html",
+        "manifest.webmanifest", "robots.txt", "sitemap.xml", "llms.txt"
+    )
+    foreach ($wf in $webFilesToSync) {
+        $wfPath = "$RootDir\gamenukeweb\$wf"
+        if (Test-Path $wfPath) {
+            Copy-Item -Path $wfPath -Destination "$RootDir\$wf" -Force
+        }
     }
-    if (Test-Path "$RootDir\gamenukeweb\download.html") {
-        Copy-Item -Path "$RootDir\gamenukeweb\download.html" -Destination "$RootDir\download.html" -Force
-    }
-    if (Test-Path "$RootDir\gamenukeweb\CNAME") {
-        Copy-Item -Path "$RootDir\gamenukeweb\CNAME" -Destination "$RootDir\CNAME" -Force
+    if (Test-Path "$RootDir\gamenukeweb\assets") {
+        Copy-Item -Path "$RootDir\gamenukeweb\assets\*" -Destination "$RootDir\assets" -Recurse -Force
     }
 }
 
@@ -136,18 +141,20 @@ try {
     $commitMsg = "Game Nuke Premium Web and Release Portal v$VersionName (Tailwind, Alpine.js, Edge CDN, GitHub Actions)"
     git commit -m $commitMsg -q
 
-    # Push to origin 'main' (strictly Web, README, and Workflows)
-    Write-Host "   Synchronizing remote main branch..." -ForegroundColor Cyan
-    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:main --force -q
-    
     # Push to origin 'gh-pages' (Edge CDN serving)
     Write-Host "   Deploying to remote gh-pages branch for Edge CDN..." -ForegroundColor Cyan
     git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q
 
-    Write-Host "   Web distribution synchronized successfully!" -ForegroundColor Green
+    Write-Host "   Web distribution synchronized successfully to gh-pages!" -ForegroundColor Green
 } finally {
     Pop-Location
 }
+
+# Synchronize Android codebase to GitHub 'main' branch
+Write-Host "   Synchronizing Android project repository to origin main..." -ForegroundColor Cyan
+git add -A
+git commit -m "feat(release): Game Nuke Premium v$VersionName with ironclad Touch Listener and process purifier" -q 2>$null
+git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" main -q
 
 # 6. Create or Update GitHub Release via API
 Write-Host "[4/6] Synchronizing GitHub Release via API..." -ForegroundColor Yellow
@@ -163,13 +170,12 @@ $lines = @(
     "Official Standalone Release with Dual-Sync Edge CDN Updates.",
     "",
     "Highlights:",
-    "- Device System Editor Preset Engine: Seamless export & import of optimized device presets for easy community sharing.",
-    "- Executive Floating System Editor: Modernized obsidian cockpit overlay with category tabs, search filter, and responsive layout.",
-    "- Anti-Flood Notification Architecture: Streamlined notification delivery with zero status bar clutter and single-slot developer reply support.",
-    "- Telegram Remote Command Console: In-place keyboard updates with zero-spam execution and instant modal responses.",
-    "- Seamless Startup Notification Permission: Smooth permission initialization on startup for guaranteed live support alert delivery.",
-    "- Dashboard Optimization: Streamlined tactical deck with full-width System Editor controls.",
-    "- Dual-Sync Edge CDN Web Updater: Fast in-app update checks and verified binary distributions.",
+    "- Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring.",
+    "- Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules.",
+    "- Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement.",
+    "- Performance & Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles.",
+    "- Device System Editor: Safe system parameter tuning with category filtering and profile backup.",
+    "- Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery.",
     "",
     "Integrity:",
     "- File: $ApkName",

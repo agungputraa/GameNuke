@@ -299,7 +299,7 @@ object NukeModuleJsonImporter {
     fun getCreatorGuideTemplate(): String {
         return """
 {
-  "module_name": "Pro Gaming Touch & Aim Stabilizer",
+  "module_name": "Pro Gaming Touch Response Stabilizer",
   "author": "Agung Developer / YourChannelName",
   "version": "1.0",
   "target_oem": "UNIVERSAL",

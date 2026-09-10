@@ -99,8 +99,8 @@ object NukeShizukuBridge {
     /** Returns true if Shizuku is installed and its server is running. */
     fun isRunning(): Boolean = runCatching { Shizuku.pingBinder() }.getOrDefault(false)
 
-    /** Returns true if we have Shizuku permission AND the UserService binder is alive. */
-    fun isConnected(): Boolean = userServiceBinder?.pingBinder() == true
+    /** Returns true if we have Shizuku permission AND (UserService binder is alive OR Shizuku server is running). */
+    fun isConnected(): Boolean = (userServiceBinder?.pingBinder() == true) || (isRunning() && hasPermission())
 
     /** Check if permission has been granted. */
     fun hasPermission(): Boolean = checkSelfPermission()
@@ -134,23 +134,76 @@ object NukeShizukuBridge {
         }
     }
 
+    /** Returns the active IShellService AIDL interface if bound and alive. */
+    fun getShellService(): IShellService? {
+        val binder = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
+        return IShellService.Stub.asInterface(binder)
+    }
+
     /**
-     * Execute a shell command via Shizuku's privileged UserService.
+     * Execute a shell command via Shizuku's privileged UserService or direct Shizuku.newProcess fallback.
      * Returns null if Shizuku is not connected or the command fails.
      */
     fun execute(command: String, timeoutMs: Long = 7_500L, maxOutputChars: Int = 131_072): NukeCommandResult? {
-        val binder = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
+        val binder = userServiceBinder?.takeIf { it.pingBinder() }
+        if (binder != null) {
+            val res = runCatching {
+                val service = IShellService.Stub.asInterface(binder)
+                val result = service.execCommand(command, timeoutMs) ?: return null
+                NukeCommandResult(
+                    exitCode = result.exitCode,
+                    output = result.output.take(maxOutputChars),
+                    timedOut = result.timedOut,
+                )
+            }.onFailure {
+                Log.w(TAG, "Shizuku UserService execute failed: ${it.message}")
+                userServiceBinder = null
+            }.getOrNull()
+            if (res != null) return res
+        }
+
+        // Direct fallback via Shizuku.newProcess (bypasses UserService binding delays)
+        if (isRunning() && hasPermission()) {
+            return executeViaShizukuProcess(command, timeoutMs, maxOutputChars)
+        }
+        return null
+    }
+
+    private fun executeViaShizukuProcess(command: String, timeoutMs: Long, maxOutputChars: Int): NukeCommandResult? {
         return runCatching {
-            val service = IShellService.Stub.asInterface(binder)
-            val result = service.execCommand(command, timeoutMs) ?: return null
-            NukeCommandResult(
-                exitCode = result.exitCode,
-                output = result.output.take(maxOutputChars),
-                timedOut = result.timedOut,
-            )
+            val method = Shizuku::class.java.getDeclaredMethod(
+                "newProcess",
+                Array<String>::class.java,
+                Array<String>::class.java,
+                String::class.java
+            ).apply { isAccessible = true }
+            val process = method.invoke(null, arrayOf("/system/bin/sh", "-c", command), null, null) as java.lang.Process
+            val output = StringBuilder()
+            val reader = Thread {
+                runCatching {
+                    process.inputStream.bufferedReader().useLines { lines ->
+                        for (line in lines) {
+                            if (output.length < maxOutputChars) {
+                                if (output.isNotEmpty()) output.append('\n')
+                                output.append(line.take(maxOutputChars - output.length))
+                            }
+                        }
+                    }
+                }
+            }
+            reader.isDaemon = true
+            reader.start()
+
+            val finished = process.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+            if (!finished) {
+                runCatching { process.destroy() }
+                reader.join(250)
+                return NukeCommandResult(exitCode = -1, output = output.toString().trimEnd(), timedOut = true)
+            }
+            reader.join(250)
+            NukeCommandResult(exitCode = process.exitValue(), output = output.toString().trimEnd(), timedOut = false)
         }.onFailure {
-            Log.w(TAG, "Shizuku execute failed: ${it.message}")
-            userServiceBinder = null
+            Log.w(TAG, "executeViaShizukuProcess failed: ${it.message}")
         }.getOrNull()
     }
 

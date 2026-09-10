@@ -1393,7 +1393,7 @@ private fun ExecutiveModuleImportDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("IMPORT DEVICE MODULE", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("IMPORT DEVICE PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
@@ -1463,14 +1463,14 @@ private fun ExecutiveModuleImportDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(24.dp))
                             Spacer(Modifier.height(6.dp))
-                            Text("PILIH FILE MODULE .JSON", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                            Text("PILIH FILE PLUGIN .JSON", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
                             Text("Buka dari penyimpanan internal atau unduhan", color = StudioTextDim, fontSize = 9.sp)
                         }
                     }
                 } else {
                     // Paste text field
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("KODE JSON MODUL:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("KODE JSON PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         TextButton(
                             onClick = {
                                 val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -1605,7 +1605,7 @@ private fun ExecutiveModuleImportDialog(
                             }
 
                             Spacer(Modifier.height(8.dp))
-                            Text("PARAMETER DALAM MODUL:", color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                            Text("PARAMETER DALAM PLUGIN:", color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
 
                             module.allItems.take(8).forEach { item ->
@@ -1656,7 +1656,7 @@ private fun ExecutiveModuleImportDialog(
                         .padding(horizontal = 12.dp, vertical = 7.dp)
                 ) {
                     Text(
-                        if (isApplying) "MENERAPKAN..." else "⚡ PASANG MODUL (${module.safeCount} PARAM)",
+                        if (isApplying) "APPLYING..." else "⚡ APPLY PLUGIN (${module.safeCount} PARAM)",
                         color = Color.Black,
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.5.sp
@@ -1742,7 +1742,7 @@ private fun ExecutiveModuleExportDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.FileUpload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("EXPORT PRESET MODULE", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("EXPORT PRESET PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
@@ -1790,7 +1790,7 @@ private fun ExecutiveModuleExportDialog(
                 Spacer(Modifier.height(10.dp))
 
                 // Module Metadata Inputs
-                Text("NAMA PRESET / MODUL:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("NAMA PRESET / PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = moduleName,
@@ -1828,7 +1828,7 @@ private fun ExecutiveModuleExportDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Text("DESKRIPSI MODUL:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("DESKRIPSI PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = description,
@@ -1874,7 +1874,7 @@ private fun ExecutiveModuleExportDialog(
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                            cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Module Preset", generatedJson))
+                            cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Preset", generatedJson))
                             NukeToast.success(context, "Kode JSON disalin ke clipboard!")
                         }
                     ) {
@@ -1968,7 +1968,7 @@ private fun ExecutiveCreatorGuideDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("PANDUAN CREATOR MODULE", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("PANDUAN CREATOR PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
@@ -2004,7 +2004,7 @@ private fun ExecutiveCreatorGuideDialog(
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                            cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Module Template", templateJson))
+                            cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Template", templateJson))
                             NukeToast.success(context, "Template JSON disalin ke clipboard!")
                         }
                     ) {

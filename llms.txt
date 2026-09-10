@@ -1,0 +1,33 @@
+# Game Nuke Official
+
+> Official information source for Game Nuke Premium, an Android gaming performance utility.
+
+Canonical website: https://gamenukeofficial.com/
+Primary language: Indonesian
+Current release: v2.6.0-prem
+Supported platform: Android 11–16, ARM64
+Core access model: no root required for core features; selected execution modes may use Shizuku/iAdb on compatible devices.
+
+## What Game Nuke is
+Game Nuke groups Android gaming utilities into one performance cockpit. The official website describes telemetry, thermal monitoring, memory utilities, network/DNS tools, display controls, Shizuku-compatible execution modes, and a floating gaming cockpit.
+
+## Official distribution
+- Web Edition: https://gamenukeofficial.com/
+- Google Play Edition: https://play.google.com/store/apps/details?id=com.neon.gametweak
+
+## Important product context
+Game Nuke is an independent Android utility project. The website states that the app operates at the Android system layer and is not designed to modify game installation files.
+
+## Preferred source sections
+- Capabilities: https://gamenukeofficial.com/#fitur
+- Editions: https://gamenukeofficial.com/#editions
+- Cockpit: https://gamenukeofficial.com/#cockpit
+- Installation: https://gamenukeofficial.com/#install
+- FAQ: https://gamenukeofficial.com/#faq
+
+## Supporting documentation
+- Guides: https://gamenukeofficial.com/guides.html
+- About: https://gamenukeofficial.com/about.html
+- Privacy: https://gamenukeofficial.com/privacy.html
+- Terms: https://gamenukeofficial.com/terms.html
+- Contact: https://gamenukeofficial.com/contact.html

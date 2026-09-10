@@ -47,7 +47,6 @@
         <activity android:name=".GameLaunchSplashActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" android:launchMode="singleTop" android:configChanges="orientation|screenSize|smallestScreenSize|keyboardHidden" android:screenOrientation="sensorLandscape" android:theme="@android:style/Theme.DeviceDefault.NoActionBar.Fullscreen" />
         <activity android:name=".MainActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" android:resizeableActivity="true" android:screenOrientation="unspecified" android:windowSoftInputMode="adjustResize|stateUnspecified">
         </activity>
-        <activity android:name=".NukeAudioPermissionActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="" android:launchMode="singleInstance" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity android:name=".NukeImagePickerActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="" android:launchMode="singleInstance" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <receiver android:name=".PairingReceiver" android:exported="false">
             <intent-filter>
@@ -60,7 +59,7 @@
                 <action android:name="com.neon.gametweak.action.OPEN_ANTIVIRUS_OVERLAY" />
             </intent-filter>
         </receiver>
-        <receiver android:name=".NukeExternalApiReceiver" android:exported="false">
+        <receiver android:name=".NukeExternalApiReceiver" android:exported="true">
             <intent-filter>
                 <action android:name="com.neon.gametweak.ACTION_OPEN_HUD" />
                 <action android:name="com.neon.gametweak.ACTION_CLOSE_HUD" />

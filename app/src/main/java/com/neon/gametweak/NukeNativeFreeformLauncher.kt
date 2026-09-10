@@ -7,6 +7,8 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Rect
 import android.os.Build
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -38,9 +40,16 @@ object NukeNativeFreeformLauncher {
     private const val TAG = "NukeFreeformLauncher"
     private const val WINDOWING_MODE_FREEFORM = 5
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val mainHandler = Handler(Looper.getMainLooper())
 
     // Flag: Intent.FLAG_ACTIVITY_NEW_TASK (0x10000000) | Intent.FLAG_ACTIVITY_MULTIPLE_TASK (0x08000000) | FLAG_ACTIVITY_LAUNCH_ADJACENT (0x00001000)
     private const val LAUNCH_FLAGS_HEX = "0x18001000"
+
+    // Floating Close Pill (appears on screen after native freeform launch)
+    private var closePillView: android.view.View? = null
+    private var closePillParams: android.view.WindowManager.LayoutParams? = null
+    private var lastLaunchedPkg: String = ""
+    private var lastLaunchedLabel: String = ""
 
     /**
      * Launches an installed package in a floating / freeform window on top of the current game.
@@ -91,14 +100,15 @@ object NukeNativeFreeformLauncher {
             if (inAppSuccess) return
         }
 
-        // 5. Fallback: Device does NOT support floating windows natively and no privileged shell is active.
-        // DO NOT launch fullscreen! Fullscreen kicks the user out of the game.
-        Log.w(TAG, "Device does not support floating window and privileged shell is inactive for $targetPkg")
-        NukeToast.unsupported(
-            context,
-            "Floating app windows are unavailable for $label on this firmware. Connect iAdb or Shizuku to use supported multitasking controls.",
-            long = true
-        )
+        // 5. Fallback: Device does not have privileged shell and in-app launch failed
+        Log.w(TAG, "Native freeform unsupported without ADB/Shizuku for $targetPkg")
+        mainHandler.post {
+            NukeToast.unsupported(
+                context,
+                "⚡ Aktifkan Shizuku / ADB untuk membuka $label dalam mode Jendela Mengambang",
+                long = true
+            )
+        }
     }
 
     /**
@@ -151,6 +161,7 @@ object NukeNativeFreeformLauncher {
 
             if (result?.isSuccess == true && !result.output.contains("Error", ignoreCase = true)) {
                 NukeToast.success(context, "💬 Opening $label (Floating Mode)")
+                mainHandler.postDelayed({ showClosePill(context, packageName, label) }, 800L)
                 return
             }
 
@@ -159,6 +170,7 @@ object NukeNativeFreeformLauncher {
             val fallbackRes = NukeConnectionManager.executeCommand(fallbackCmd, 4_000L)
             if (fallbackRes?.isSuccess == true && fallbackRes.output.contains("Starting:", ignoreCase = true)) {
                 NukeToast.success(context, "💬 Opening $label (Floating Mode)")
+                mainHandler.postDelayed({ showClosePill(context, packageName, label) }, 800L)
                 return
             }
 
@@ -171,7 +183,9 @@ object NukeNativeFreeformLauncher {
                     executeInAppFreeformLaunch(context, intent, bounds, label)
                 }
             } else {
-                NukeToast.unsupported(context, "⚠️ Jendela melayang tidak didukung di firmware ini untuk $label.", long = true)
+                mainHandler.post {
+                    NukeToast.unsupported(context, "⚡ Fitur Jendela Mengambang untuk $label membutuhkan Shizuku / ADB aktif.")
+                }
             }
         } catch (e: Throwable) {
             Log.e(TAG, "executeShellFreeformLaunch failed", e)
@@ -181,9 +195,15 @@ object NukeNativeFreeformLauncher {
                 if (intent != null) {
                     val bounds = Rect(l, t, r, b)
                     executeInAppFreeformLaunch(context, intent, bounds, label)
+                } else {
+                    mainHandler.post {
+                        NukeToast.error(context, "Gagal meluncurkan $label dalam mode mengambang")
+                    }
                 }
             } else {
-                NukeToast.unsupported(context, "⚠️ Jendela melayang tidak didukung di firmware ini untuk $label.", long = true)
+                mainHandler.post {
+                    NukeToast.unsupported(context, "⚡ Fitur Jendela Mengambang untuk $label membutuhkan Shizuku / ADB aktif.")
+                }
             }
         }
     }
@@ -294,5 +314,105 @@ object NukeNativeFreeformLauncher {
                 NukeConnectionManager.executeCommand(script, 3_000L)
             } catch (ignored: Throwable) {}
         }
+    }
+
+    // ── Floating Close Pill ──────────────────────────────────────────────
+
+    /**
+     * Shows a floating close pill (small draggable bar with ✕ button) so user can close
+     * the native floating app at any time without leaving the game.
+     */
+    @Suppress("DEPRECATION")
+    fun showClosePill(context: Context, packageName: String, label: String) {
+        hideClosePill(context)
+        lastLaunchedPkg = packageName
+        lastLaunchedLabel = label
+        val wm = context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+        val d = context.resources.displayMetrics.density
+        val dm = context.resources.displayMetrics
+
+        val pillW = (180 * d).toInt()
+        val pillH = (34 * d).toInt()
+
+        val windowType = if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O)
+            android.view.WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
+        else android.view.WindowManager.LayoutParams.TYPE_PHONE
+
+        val lp = android.view.WindowManager.LayoutParams(
+            pillW, pillH, windowType,
+            android.view.WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    android.view.WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+            android.graphics.PixelFormat.TRANSLUCENT
+        ).apply {
+            gravity = android.view.Gravity.TOP or android.view.Gravity.END
+            x = (12 * d).toInt()
+            y = (dm.heightPixels * 0.08f).toInt()
+        }
+        closePillParams = lp
+
+        val pill = android.widget.LinearLayout(context).apply {
+            orientation = android.widget.LinearLayout.HORIZONTAL
+            gravity = android.view.Gravity.CENTER
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(android.graphics.Color.parseColor("#E8100A0A"))
+                cornerRadius = 17 * d
+                setStroke((1.2f * d).toInt(), android.graphics.Color.parseColor("#EF4444"))
+            }
+            setPadding((8 * d).toInt(), 0, (8 * d).toInt(), 0)
+
+            // Drag handle dot
+            val dot = android.view.View(context).apply {
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(android.graphics.Color.parseColor("#EF4444"))
+                }
+                layoutParams = android.widget.LinearLayout.LayoutParams((6 * d).toInt(), (6 * d).toInt()).apply { rightMargin = (6 * d).toInt() }
+            }
+            addView(dot)
+
+            val closeTv = android.widget.TextView(context).apply {
+                text = "✕ Close $label"
+                textSize = 10f
+                typeface = android.graphics.Typeface.DEFAULT_BOLD
+                setTextColor(android.graphics.Color.parseColor("#EF4444"))
+                layoutParams = android.widget.LinearLayout.LayoutParams(0, android.view.ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+                setOnClickListener {
+                    // Force-stop the native floating app
+                    scope.launch {
+                        NukeConnectionManager.executeCommand("am force-stop $packageName", 3_000L)
+                    }
+                    hideClosePill(context)
+                    NukeToast.success(context, "✓ $label ditutup")
+                }
+            }
+            addView(closeTv)
+        }
+
+        // Drag support for the pill itself
+        var startX = 0; var startY = 0; var initX = 0; var initY = 0
+        pill.setOnTouchListener { v, event ->
+            when (event.action) {
+                android.view.MotionEvent.ACTION_DOWN -> { startX = event.rawX.toInt(); startY = event.rawY.toInt(); initX = lp.x; initY = lp.y; true }
+                android.view.MotionEvent.ACTION_MOVE -> {
+                    lp.x = (initX - (event.rawX.toInt() - startX)).coerceIn(0, dm.widthPixels - pillW)
+                    lp.y = (initY + (event.rawY.toInt() - startY)).coerceIn(0, dm.heightPixels - pillH)
+                    runCatching { wm.updateViewLayout(v, lp) }
+                    true
+                }
+                else -> false
+            }
+        }
+
+        closePillView = pill
+        runCatching { wm.addView(pill, lp) }
+    }
+
+    fun hideClosePill(context: Context) {
+        closePillView?.let { v ->
+            val wm = context.getSystemService(android.content.Context.WINDOW_SERVICE) as android.view.WindowManager
+            runCatching { wm.removeView(v) }
+        }
+        closePillView = null
+        closePillParams = null
     }
 }

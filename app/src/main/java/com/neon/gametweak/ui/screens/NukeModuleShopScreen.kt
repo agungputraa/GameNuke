@@ -96,8 +96,8 @@ fun NukeModuleShopScreen() {
                     Icon(Icons.Rounded.Extension, null, tint = Neon.Accent)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("MODULE SHOP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.6.sp)
-                        Text("$enabledCount/${NukeModuleCatalog.modules.size} ENABLED // COCKPIT SYNC", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                        Text("PLUGIN CENTER", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.6.sp)
+                        Text("$enabledCount/${NukeModuleCatalog.modules.size} ACTIVE • HUD SYNC", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -105,7 +105,7 @@ fun NukeModuleShopScreen() {
                     Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFB830))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        ("All modules are first-party Game Nuke features. No remote shell script is downloaded and executed."),
+                        ("Built-in Game Nuke plugins are packaged tools and profiles managed from this screen."),
                         color = Color(0xFFBACBC5), fontSize = 10.sp, lineHeight = 14.sp,
                     )
                 }
@@ -119,8 +119,8 @@ fun NukeModuleShopScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Rounded.Search, null, tint = Neon.Accent) },
-                placeholder = { Text("Search module / tool", color = Neon.TextDim, fontSize = 10.sp) },
-                label = { Text("MODULE SEARCH", fontSize = 8.sp) },
+                placeholder = { Text("Search plugin / tool", color = Neon.TextDim, fontSize = 10.sp) },
+                label = { Text("PLUGIN SEARCH", fontSize = 8.sp) },
             )
         }
 
@@ -206,8 +206,8 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("CROSSHAIR QUICK SETUP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.sp)
-                Text("SYNCED WITH THE FLOATING COCKPIT", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
+                Text("CROSSHAIR OVERLAY SETUP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.sp)
+                Text("SYNCED WITH THE FLOATING HUD", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
             }
             Switch(
                 checked = enabled,

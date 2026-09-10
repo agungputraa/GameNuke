@@ -306,6 +306,9 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         runCatching { AppUpdateController.unregister() }
+        if (!FloatingBoosterService.isRunning()) {
+            runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
+        }
         super.onDestroy()
     }
 }

@@ -69,6 +69,7 @@ import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
 import androidx.compose.material.icons.outlined.MenuBook
+import androidx.compose.material.icons.outlined.Mic
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Nightlight
@@ -373,13 +374,13 @@ private val ControlShape = GenericShape { size, _ ->
     val c = minOf(size.width, size.height) * .28f
     moveTo(c, 0f)
     lineTo(size.width - c * .35f, 0f)
-    quadraticBezierTo(size.width, 0f, size.width, c * .72f)
+    quadraticTo(size.width, 0f, size.width, c * .72f)
     lineTo(size.width, size.height - c)
-    quadraticBezierTo(size.width, size.height, size.width - c, size.height)
+    quadraticTo(size.width, size.height, size.width - c, size.height)
     lineTo(c * .35f, size.height)
-    quadraticBezierTo(0f, size.height, 0f, size.height - c * .72f)
+    quadraticTo(0f, size.height, 0f, size.height - c * .72f)
     lineTo(0f, c)
-    quadraticBezierTo(0f, 0f, c, 0f)
+    quadraticTo(0f, 0f, c, 0f)
     close()
 }
 
@@ -492,7 +493,7 @@ private fun NukeFloatingWing(
                 }
                 .clip(shape)
                 .semantics {
-                    contentDescription = if (controlWing) "Game Nuke control panel" else "Game Nuke module panel"
+                    contentDescription = if (controlWing) "Game Nuke control panel" else "Game Nuke plugin panel"
                 }
                 .drawWithCache {
                     val edgeStart = when (wing) {
@@ -743,7 +744,7 @@ private fun NukePortraitCockpit(
     MaterialTheme(colorScheme = NukeColorScheme, typography = com.neon.gametweak.ui.theme.Typography) {
         var entered by remember { mutableStateOf(false) }
         var confirmEnd by rememberSaveable { mutableStateOf(false) }
-        var selectedTab by rememberSaveable { mutableStateOf(0) } // 0: TOOLS, 1: CONTROLS, 2: MODULES
+        var selectedTab by rememberSaveable { mutableStateOf(0) } // 0: TOOLS, 1: CONTROLS, 2: PLUGINS
         var isCleaning by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
 
@@ -951,7 +952,7 @@ private fun NukePortraitCockpit(
                     val tabs = listOf(
                         Triple(0, "ENGINES", Icons.Outlined.Tune),
                         Triple(1, "CONTROLS", Icons.Outlined.Widgets),
-                        Triple(2, "MODULES (${moduleState.modules.size})", Icons.Outlined.Extension),
+                        Triple(2, "PLUGINS (${moduleState.modules.size})", Icons.Outlined.Extension),
                     )
                     tabs.forEach { (index, title, icon) ->
                         val isSelected = selectedTab == index
@@ -1078,6 +1079,7 @@ private fun TacticalEnginesDeckView(
     val isVpnOn = states["vpn_boost"] ?: false
     val isFootstepOn = states["footstep_boost"] ?: false
     val isWikiOn = states["wiki_pip"] ?: false
+    val isDeepCoolingOn = states["deep_cooling"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Header: Logo + game name + close ─────────────────────────────
@@ -1148,7 +1150,7 @@ private fun TacticalEnginesDeckView(
                 ) {
                     Text(value, color = tint, fontSize = 8.5.sp, fontWeight = FontWeight.Black, maxLines = 1)
                     Spacer(Modifier.width(2.dp))
-                    Text(label, color = NukeMuted, fontSize = 5.5.sp, fontWeight = FontWeight.Bold)
+                    Text(label, color = NukeMuted, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1159,13 +1161,13 @@ private fun TacticalEnginesDeckView(
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
             // ── PRO TUNING ENGINES (EXPANDABLE) ────────────────────
-            SectionDivider("PRO TUNING ENGINES (EXPANDABLE)")
+            SectionDivider("ADVANCED TOOLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.Security,
                     title = "TASK MANAGER",
                     badgeText = "PROCESS",
-                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "KILL ROGUE APPS",
+                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "MANAGE BACKGROUND APPS",
                     isOpen = isTaskManagerOn,
                     onClick = { callbacks.onQuickAction("task_manager") },
                     modifier = Modifier.weight(1f)
@@ -1173,8 +1175,8 @@ private fun TacticalEnginesDeckView(
                 PanelLauncherCard(
                     icon = Icons.Outlined.AutoAwesome,
                     title = "AI SENTINEL",
-                    badgeText = if (isAiCoolingOn) "❄ COOLING" else if (isAiSentinelOn) "AUTO" else "OFF",
-                    statusText = if (isAiCoolingOn) "❄️ COOLING ACTIVE" else if (isAiSentinelOn) "AUTONOMOUS ON" else "PAUSED",
+                    badgeText = if (isAiCoolingOn) "THERMAL" else if (isAiSentinelOn) "ADAPTIVE" else "OFF",
+                    statusText = if (isAiCoolingOn) "THERMAL RESPONSE" else if (isAiSentinelOn) "SESSION MONITOR ON" else "PAUSED",
                     isOpen = isAiSentinelOn || isAiCoolingOn,
                     onClick = { callbacks.onQuickAction("ai_sentinel") },
                     modifier = Modifier.weight(1f)
@@ -1183,9 +1185,9 @@ private fun TacticalEnginesDeckView(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.TouchApp,
-                    title = "MAGIC TOUCH",
+                    title = "TOUCH LISTENER",
                     badgeText = "STUDIO",
-                    statusText = if (isMagicTouchOn) "ACTIVE • OPEN" else "TOUCH SENSITIVITY",
+                    statusText = if (isMagicTouchOn) "ACTIVE • OPEN" else "TOUCH MULTIPLIER CONTROLS",
                     isOpen = isMagicTouchOn,
                     onClick = { callbacks.onQuickAction("magic_touch") },
                     modifier = Modifier.weight(1f)
@@ -1203,9 +1205,9 @@ private fun TacticalEnginesDeckView(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.HealthAndSafety,
-                    title = "PHONE HEALTH",
+                    title = "DEVICE HEALTH",
                     badgeText = "SENSORS",
-                    statusText = if (isPhoneHealthOn) "ACTIVE • OPEN" else "HARDWARE SENSORS",
+                    statusText = if (isPhoneHealthOn) "ACTIVE • OPEN" else "HARDWARE TELEMETRY",
                     isOpen = isPhoneHealthOn,
                     onClick = { callbacks.onQuickAction("phone_health") },
                     modifier = Modifier.weight(1f)
@@ -1231,18 +1233,18 @@ private fun TacticalEnginesDeckView(
                     modifier = Modifier.weight(1f)
                 )
                 PanelLauncherCard(
-                    icon = Icons.Outlined.CleaningServices,
-                    title = "TASK MGR",
-                    badgeText = "SYSTEM",
-                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "PROCESS KILLER",
-                    isOpen = isTaskManagerOn,
-                    onClick = { callbacks.onQuickAction("task_manager") },
+                    icon = Icons.Outlined.AcUnit,
+                    title = "THERMAL CONTROL",
+                    badgeText = "MONITOR",
+                    statusText = if (isDeepCoolingOn) "ACTIVE • OPEN" else "TEMP & LOAD TOOLS",
+                    isOpen = isDeepCoolingOn,
+                    onClick = { callbacks.onQuickAction("deep_cooling") },
                     modifier = Modifier.weight(1f)
                 )
             }
 
             // ── TACTICAL HARDWARE TUNING — 3 column square grid ───────────────
-            SectionDivider("TACTICAL HARDWARE TUNING")
+            SectionDivider("DEVICE PERFORMANCE CONTROLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TacticalHardwareCard(Icons.Outlined.Speed, "CPU PROFILE", "PERF", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(Icons.Outlined.NetworkCheck, "NET PRIORITY", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
@@ -1448,7 +1450,7 @@ private fun QuickActionsDeckView(
                 ) {
                     TopActionPill(
                         icon = Icons.Outlined.Extension,
-                        label = "MODULES",
+                        label = "PLUGINS",
                         badge = "${state.modules.size}",
                         tint = NukeCyan,
                         active = false,
@@ -1457,7 +1459,7 @@ private fun QuickActionsDeckView(
                     )
                     TopActionPill(
                         icon = Icons.Outlined.CleaningServices,
-                        label = if (isCleaning) "PURGING…" else "DEEP CLEAN",
+                        label = if (isCleaning) "CLEANING…" else "DEEP CLEAN",
                         badge = null,
                         tint = NukeGreen,
                         active = isCleaning,
@@ -1491,9 +1493,9 @@ private fun QuickActionsDeckView(
                 // ── DISPLAY & ENVIRONMENT — 3 column square grid ─────────────────
                 SectionDivider("DISPLAY & ENVIRONMENT")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.Speed, "FPS LOCK", fpsLockBadge, "AUTO", checked = fpsLockHz > 0 || isFpsLockOn, onToggle = { callbacks.onQuickAction("fps_lock") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Speed, "REFRESH TARGET", fpsLockBadge, "AUTO", checked = fpsLockHz > 0 || isFpsLockOn, onToggle = { callbacks.onQuickAction("fps_lock") }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.MonitorHeart, "FPS HUD", "CHIP", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
-                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "AIM", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onToggle(FloatingHudToggle.CROSSHAIR, !isCrosshairOn) }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "OVERLAY", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onToggle(FloatingHudToggle.CROSSHAIR, !isCrosshairOn) }, modifier = Modifier.weight(1f), isFloatingWindow = true)
                     SquareMiniCard(Icons.Outlined.Brightness6, "BRIGHT LOCK", "MAX", "AUTO", checked = isBrightnessLockOn, onToggle = { callbacks.onQuickAction("brightness_lock") }, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1516,7 +1518,7 @@ private fun QuickActionsDeckView(
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SquareMiniCard(Icons.Outlined.Widgets, "CYBER DECK", "PORTAL", "OFF", checked = isGameDockOn, onToggle = { callbacks.onQuickAction("game_dock") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
-                    SquareMiniCard(Icons.Outlined.Security, "APP SAFETY", "SHIELD", "OFF", checked = isAntivirusOn, onToggle = { callbacks.onQuickAction("antivirus") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.Security, "APP SECURITY", "MONITOR", "READY", checked = isAntivirusOn, onToggle = { callbacks.onQuickAction("antivirus") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
                     SquareMiniCard(Icons.Outlined.CleaningServices, "CACHE TRIM", "OPTIMIZE", "READY", checked = false, onToggle = { callbacks.onQuickAction("zombie_clean") }, modifier = Modifier.weight(1f), isWarning = false)
                 }
             }
@@ -1593,7 +1595,7 @@ private fun PanelLauncherCard(
                     Text(
                         text = statusText,
                         color = if (isOpen) accent.copy(alpha = 0.85f) else Color(0xFF64748B),
-                        fontSize = 6.2.sp,
+                        fontSize = 6.8.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1614,7 +1616,7 @@ private fun PanelLauncherCard(
                 Text(
                     text = if (isOpen) "❐ OPEN" else "❐ $badgeText",
                     color = if (isOpen) accent else Color(0xFF8499AB),
-                    fontSize = 5.2.sp,
+                    fontSize = 6.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     softWrap = false,
@@ -1695,7 +1697,7 @@ private fun TacticalHardwareCard(
                 Text(
                     text = if (checked) activeText else inactiveText,
                     color = if (checked) NukeGreen else Color(0xFF6B8074),
-                    fontSize = 5.8.sp,
+                    fontSize = 6.3.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
@@ -1715,7 +1717,7 @@ private fun TacticalHardwareCard(
                 Text(
                     text = if (checked) "TACTICAL • ON" else "READY",
                     color = if (checked) NukeGreen.copy(alpha = 0.85f) else Color(0xFF526159),
-                    fontSize = 5.sp,
+                    fontSize = 5.8.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
@@ -1815,7 +1817,7 @@ private fun SquareMiniCard(
                 Text(
                     labelText,
                     color = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF64748B),
-                    fontSize = if (isFloatingWindow) 5.1.sp else 5.5.sp,
+                    fontSize = if (isFloatingWindow) 5.8.sp else 6.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.2.sp,
                 )
@@ -2172,9 +2174,9 @@ private fun ModuleShopFullView(
             }
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
-                Text("MODULE SHOP", color = NukeCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text("PLUGIN LIBRARY", color = NukeCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Text(
-                    if (state.catalogTrusted) "${state.modules.size} MODULES AVAILABLE" else "CATALOG READY",
+                    if (state.catalogTrusted) "${state.modules.size} PLUGINS AVAILABLE" else "CATALOG READY",
                     color = if (state.catalogTrusted) NukeGreen else NukeAmber,
                     fontSize = 7.sp,
                     maxLines = 1,
@@ -2219,7 +2221,7 @@ private fun ModuleShopFullView(
                 Box(Modifier.weight(1f)) {
                     if (query.isEmpty()) {
                         Text(
-                            "Search modules (e.g. GPU, Touch)...",
+                            "Search plugins (e.g. GPU, Touch)...",
                             fontSize = 10.sp,
                             color = NukeMuted,
                             maxLines = 1,
@@ -2323,7 +2325,7 @@ private fun ModuleShopFullView(
                 if (filtered.isEmpty()) {
                     item {
                         Text(
-                            if (query.isBlank()) "NO MODULES IN CATEGORY: $selectedCategory" else "NO MODULES MATCH: \"${query.take(20)}\"",
+                            if (query.isBlank()) "NO PLUGINS IN CATEGORY: $selectedCategory" else "NO PLUGINS MATCH: \"${query.take(20)}\"",
                             color = NukeMuted,
                             fontSize = 8.sp,
                             modifier = Modifier.padding(10.dp),
@@ -2414,7 +2416,7 @@ private fun ModuleShopCard(
                 Text(
                     when {
                         blocked != null -> "⚠ ${blocked.take(40)}"
-                        active -> "● AKTIF  v${module.version}"
+                        active -> "● ACTIVE  v${module.version}"
                         installed -> "✓ INSTALLED  v${module.version}"
                         else -> "v${module.version}${if (module.support.isNotBlank()) "  •  ${module.support.take(20)}" else ""}"
                     },
@@ -2474,7 +2476,7 @@ private fun CompactEndSessionGate(onCancel: () -> Unit, onConfirm: () -> Unit) {
             .border(.8.dp, NukeRed.copy(alpha = .55f), BayShape).padding(10.dp),
     ) {
         Text("END GAME NUKE SESSION?", color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .55.sp)
-        Text("Installed modules are restored in reverse activation order before the overlay ends.", color = NukeMuted, fontSize = 7.5.sp, lineHeight = 9.sp)
+        Text("Active plugins are restored in reverse activation order before the overlay ends.", color = NukeMuted, fontSize = 7.5.sp, lineHeight = 9.sp)
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Surface(Modifier.weight(1f).height(48.dp).nukePressFeedback().clickable(onClick = onCancel), color = NukePanelHigh, border = BorderStroke(.7.dp, NukeHairline), shape = ControlShape) {
@@ -2859,7 +2861,7 @@ private fun WingToolDeck(
                 ) { onTool(visual.tool) }
             }
             if (tools.isEmpty()) {
-                Text("NO VERIFIED MODULE", color = NukeMuted, fontSize = 8.sp, modifier = Modifier.padding(8.dp))
+                Text("NO VERIFIED PLUGIN", color = NukeMuted, fontSize = 8.sp, modifier = Modifier.padding(8.dp))
             }
         }
     }
@@ -3066,7 +3068,7 @@ private fun CommandDeck(
                 Row(Modifier.height(25.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, null, tint = NukeCyan, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("MISSION MODULES", color = NukeCyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+                    Text("MISSION PLUGINS", color = NukeCyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
                     Spacer(Modifier.weight(1f))
                     Text(
                         if (compactRail) "${tools.size} TOOLS  /  SWIPE" else "ALL ${tools.size} VISIBLE",

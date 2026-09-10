@@ -76,7 +76,7 @@ object NukeAntivirusEngine {
         val threats: List<DetectedThreat> = emptyList(),
         val lastScanTimestamp: Long = 0L,
         val scannedItemsCount: Int = 0,
-        val statusMessage: String = "System Clean & Secure"
+        val statusMessage: String = "No high-risk findings"
     )
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -341,9 +341,9 @@ object NukeAntivirusEngine {
             .edit().putLong(KEY_LAST_SCAN, now).apply()
 
         val statusMsg = if (threats.isEmpty()) {
-            "System Secure & Clean (0 Risks Detected)"
+            "No high-risk findings detected"
         } else {
-            "⚠️ ${threats.size} Security Risks Detected!"
+            "${threats.size} security finding(s) require review"
         }
 
         _state.update {
@@ -379,7 +379,7 @@ object NukeAntivirusEngine {
             }
             if (deleted) {
                 removeThreatFromState(threat.id)
-                NukeToast.success(appContext, "Threat payload removed: ${threat.title}")
+                NukeToast.success(appContext, "Selected file removed: ${threat.title}")
                 return true
             } else {
                 NukeToast.error(appContext, "Failed to delete file (Storage permission denied)")
@@ -397,7 +397,7 @@ object NukeAntivirusEngine {
             }
             if (success) {
                 removeThreatFromState(threat.id)
-                NukeToast.success(appContext, "Malicious app uninstalled: ${threat.title}")
+                NukeToast.success(appContext, "Selected app uninstalled: ${threat.title}")
                 return true
             } else {
                 // Launch user-facing system uninstall dialog
@@ -441,7 +441,7 @@ object NukeAntivirusEngine {
         if (NukeConnectionManager.isConnected()) {
             val res = NukeConnectionManager.executeCommand("pm disable-user --user 0 $pkg 2>/dev/null || pm disable $pkg", 3_000L)
             if (res?.isSuccess == true && (res.output.contains("disabled", ignoreCase = true) || res.output.contains("new state", ignoreCase = true))) {
-                NukeToast.success(appContext, "App isolated and frozen: ${threat.title}")
+                NukeToast.success(appContext, "Selected app disabled: ${threat.title}")
                 return true
             }
         }
@@ -454,7 +454,7 @@ object NukeAntivirusEngine {
         val appContext = context.applicationContext
         val currentThreats = _state.value.threats
         if (currentThreats.isEmpty()) {
-            NukeToast.success(appContext, "No threats detected on device.")
+            NukeToast.success(appContext, "No security findings require action.")
             return
         }
 
@@ -476,7 +476,7 @@ object NukeAntivirusEngine {
                 }
             }
             triggerDeepScan(appContext)
-            NukeToast.success(appContext, "🛡️ $neutralizedCount threats successfully neutralized!")
+            NukeToast.success(appContext, "$neutralizedCount selected finding(s) processed.")
         }
     }
 
@@ -485,7 +485,7 @@ object NukeAntivirusEngine {
             val updated = current.threats.filter { it.id != threatId }
             current.copy(
                 threats = updated,
-                statusMessage = if (updated.isEmpty()) "System Clean & Secure" else "⚠️ ${updated.size} Threats Remaining"
+                statusMessage = if (updated.isEmpty()) "No high-risk findings" else "${updated.size} finding(s) remaining"
             )
         }
     }
