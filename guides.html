@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050807">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+  <link rel="preload" href="assets/logo_nuke.webp" as="image" type="image/webp">
+  <link rel="stylesheet" href="style.css">
+  <link rel="stylesheet" href="style-v5.css">
+  <title>Game Nuke Guides — FPS, Thermal, Shizuku & Android Gaming</title>
+  <meta name="description" content="Panduan Game Nuke tentang FPS, frame time, thermal behavior, memory, Shizuku, network tools, dan tuning Android yang bertanggung jawab.">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <link rel="canonical" href="https://gamenukeofficial.com/guides.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Game Nuke Official">
+  <meta property="og:title" content="Game Nuke Guides — FPS, Thermal, Shizuku & Android Gaming">
+  <meta property="og:description" content="Panduan Game Nuke tentang FPS, frame time, thermal behavior, memory, Shizuku, network tools, dan tuning Android yang bertanggung jawab.">
+  <meta property="og:url" content="https://gamenukeofficial.com/guides.html">
+  <meta property="og:image" content="https://gamenukeofficial.com/assets/social-card.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","name":"Better tuning starts with better context.","url":"https://gamenukeofficial.com/guides.html","isPartOf":{"@type":"WebSite","name":"Game Nuke Official","url":"https://gamenukeofficial.com/"},"publisher":{"@type":"Organization","name":"Agung Developer","url":"https://gamenukeofficial.com/"}}</script>
+</head>
+<body>
+  <header class="page-topbar">
+    <div class="container nav-shell">
+      <a class="brand" href="index.html" aria-label="Game Nuke Official home"><span class="brand-mark"><img src="assets/logo_nuke.webp" width="40" height="40" alt=""></span><span class="brand-copy"><strong>GAME NUKE</strong><span>OFFICIAL</span></span></a>
+      <a class="back-home" href="index.html">← Back to product</a>
+    </div>
+  </header>
+  <main class="content-page">
+    <div class="container">
+      <div class="content-hero">
+        <span class="eyebrow">GUIDES</span>
+        <h1>Better tuning starts with better context.</h1>
+        <p>Panduan praktis untuk memahami angka telemetry dan jalur akses Android sebelum mengubah profile atau utility pada perangkat.</p>
+      </div>
+      <div class="content-shell">
+        <article class="prose">
+<section id="telemetry"><h2>Reading FPS, frame time, thermal, and memory</h2><p>FPS adalah jumlah frame yang ditampilkan dalam satu detik, tetapi angka ini bukan satu-satunya indikator kualitas sesi. Dua sesi dapat sama-sama menunjukkan 120 FPS tetapi terasa berbeda jika frame time tidak stabil. Frame time mengukur waktu yang dibutuhkan untuk menghasilkan satu frame; pola yang lebih konsisten biasanya terasa lebih halus daripada angka FPS tinggi yang naik-turun tajam.</p><h3>Frame pacing matters</h3><p>Jika frame time ideal untuk 120 FPS berada sekitar 8,3 ms, lonjakan sesekali ke 20–30 ms dapat terasa sebagai stutter walaupun average FPS masih terlihat tinggi. Karena itu Game Nuke menempatkan frame-related telemetry bersama data lain, bukan mengubah satu angka menjadi indikator “bagus/buruk” tanpa konteks.</p><h3>Thermal data is context, not a target</h3><p>Suhu perangkat dipengaruhi ambient temperature, charging, brightness, network radio, casing, dan beban game. Jangan mengejar satu angka suhu universal. Perhatikan tren: apakah suhu terus naik, apakah performa turun setelah beberapa menit, dan apakah sistem mulai membatasi frekuensi untuk menjaga perangkat.</p><h3>Memory does not need to be empty</h3><p>Android menggunakan RAM kosong untuk cache agar aplikasi bisa dibuka lebih cepat. Memory yang terpakai bukan otomatis masalah. Yang lebih penting adalah apakah sistem sering membunuh proses, terjadi reload, atau ada pressure yang mengganggu sesi. Utility pembersihan sebaiknya digunakan hanya ketika ada alasan yang jelas, bukan terus-menerus.</p></section>
+<section id="shizuku"><h2>When Shizuku is useful — and when it is not</h2><p>Shizuku menyediakan cara bagi aplikasi untuk mengakses API sistem tertentu menggunakan privilege yang berasal dari ADB atau root, tanpa setiap aplikasi harus menjalankan shell command sendiri. Pada perangkat non-root, aktivasi biasanya dilakukan melalui Wireless Debugging. Game Nuke dapat menggunakan jalur ini untuk fungsi tertentu ketika build dan perangkat mendukungnya.</p><h3>Core vs elevated functions</h3><p>Core feature Game Nuke tidak semuanya membutuhkan Shizuku. Telemetry atau kontrol tertentu dapat menggunakan API Android biasa. Jalur elevated hanya relevan untuk fungsi yang membutuhkan akses lebih tinggi. Mengaktifkan Shizuku tidak otomatis membuat semua game lebih cepat dan bukan pengganti optimasi sistem yang baik.</p><h3>Practical setup considerations</h3><p>Wireless Debugging dapat mati setelah reboot atau ketika pengaturan developer berubah, tergantung perangkat. Beberapa vendor juga memiliki battery optimization agresif yang memengaruhi service background. Jika fitur elevated berhenti bekerja, periksa status Shizuku terlebih dahulu sebelum mengubah banyak pengaturan lain.</p><h3>Permission hygiene</h3><p>Berikan izin hanya ketika Anda memahami fitur yang memerlukannya. Jika Anda tidak menggunakan jalur Shizuku, Anda tidak perlu mempertahankan akses tersebut hanya karena tersedia. Pendekatan permission-minimal membantu mengurangi kompleksitas troubleshooting.</p></section>
+<section id="thermal"><h2>Why stable performance is more than peak FPS</h2><p>Benchmark singkat sering memperlihatkan kemampuan puncak perangkat, sedangkan sesi game yang panjang memperlihatkan kemampuan berkelanjutan. Ketika SoC, baterai, dan area internal memanas, sistem dapat menurunkan frekuensi CPU/GPU. Inilah salah satu alasan performa menit ke-20 dapat berbeda dari menit pertama.</p><h3>Look for trends</h3><p>Perhatikan hubungan antara thermal trend, frame time, dan power behavior. Jika FPS turun bersamaan dengan suhu yang terus meningkat, kemungkinan sistem sedang mengubah operating point. Jika suhu stabil tetapi frame time tetap buruk, penyebabnya mungkin berbeda: shader compilation, network events, background process, atau limit dari game itu sendiri.</p><h3>Balanced profiles can be better</h3><p>Profile paling agresif tidak selalu memberi pengalaman terbaik. Menahan perangkat pada beban maksimum dapat menghasilkan panas lebih cepat dan akhirnya memicu throttling. Profile yang lebih seimbang dapat mempertahankan performa lebih konsisten untuk sesi panjang, terutama pada perangkat dengan cooling terbatas.</p><h3>Physical conditions still matter</h3><p>Software tidak dapat menghapus batas fisik. Charging sambil bermain, ruangan panas, casing tebal, brightness tinggi, atau jaringan seluler yang bekerja keras dapat meningkatkan panas. Game Nuke dapat membantu membaca kondisi, tetapi pengguna tetap perlu mempertimbangkan lingkungan dan kebiasaan penggunaan.</p></section>
+<section id="network"><h2>Network tools: what they can and cannot change</h2><p>DNS membantu proses resolusi nama domain. Mengganti DNS dapat memperbaiki reliability atau waktu resolusi pada kondisi tertentu, tetapi tidak secara langsung mengubah jarak fisik ke server game atau kualitas routing ISP. Ping game dipengaruhi oleh jaringan lokal, ISP, peering, congestion, lokasi server, dan transport protocol.</p><p>Gunakan network tools untuk troubleshooting terukur: bandingkan kondisi sebelum dan sesudah, hindari mengaktifkan banyak tweak sekaligus, dan catat perubahan yang benar-benar memberi dampak.</p></section>
+<section id="safe-use"><h2>A practical rule for every tuning feature</h2><p>Ubah satu hal pada satu waktu, ukur hasilnya, dan simpan baseline. Jika beberapa tweak diaktifkan bersamaan, sulit mengetahui mana yang membantu atau justru menimbulkan masalah. Pendekatan ini juga membuat rollback lebih mudah ketika perangkat, game, atau Android version berubah.</p></section></article>
+        <aside class="content-aside" aria-label="On this page"><strong>ON THIS PAGE</strong><a href="#telemetry">Telemetry</a><a href="#shizuku">Shizuku</a><a href="#thermal">Thermal</a><a href="#network">Network</a><a href="#safe-use">Safe tuning</a></aside>
+      </div>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <div class="footer-brand"><a class="brand" href="index.html"><span class="brand-mark"><img src="assets/logo_nuke.webp" width="44" height="44" alt=""></span><span class="brand-copy"><strong>GAME NUKE</strong><span>OFFICIAL</span></span></a><p>Official information and distribution portal for the Game Nuke Android utility.</p></div>
+      <div class="footer-links"><div><strong>Product</strong><a href="index.html#fitur">Features</a><a href="index.html#editions">Editions</a><a href="guides.html">Guides</a><a href="about.html">About</a></div><div><strong>Legal</strong><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="contact.html">Contact</a></div></div>
+      <div class="footer-release"><span>OFFICIAL SITE</span><strong>Game Nuke</strong><small>Android utility project</small><a class="text-button" href="index.html">Visit product page →</a></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 Agung Developer. Game Nuke Official.</span><span>Independent Android utility project.</span></div>
+  </footer>
+</body>
+</html>

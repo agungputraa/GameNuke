@@ -1,0 +1,68 @@
+name: Automatic Release & Web Sync
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  sync-release-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract Release Metadata & Update version.json
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME=$(git describe --tags --abbrev=0 || echo "v2.3.0-prem")
+          fi
+          CLEAN_VERSION="${TAG_NAME#v}"
+          
+          echo "Processing Release Tag: $TAG_NAME (Version: $CLEAN_VERSION)"
+          
+          ASSET_NAME=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .name' "$GITHUB_EVENT_PATH" | head -n 1)
+          DOWNLOAD_URL=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .browser_download_url' "$GITHUB_EVENT_PATH" | head -n 1)
+          ASSET_SIZE_BYTES=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .size' "$GITHUB_EVENT_PATH" | head -n 1)
+          
+          if [ -z "$ASSET_NAME" ] || [ "$ASSET_NAME" = "null" ]; then
+            ASSET_NAME="GameNuke-Premium-v${CLEAN_VERSION}.apk"
+            DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${ASSET_NAME}"
+            SIZE_MB="24.3"
+          else
+            SIZE_MB=$(echo "scale=1; $ASSET_SIZE_BYTES / 1048576" | bc || echo "24.3")
+          fi
+
+          PUB_DATE=$(date -u +"%Y-%m-%d")
+
+          # Update version.json safely
+          jq --arg ver "$CLEAN_VERSION" \
+             --arg dl "$DOWNLOAD_URL" \
+             --arg sz "$SIZE_MB" \
+             --arg dt "$PUB_DATE" \
+             '.versionName = $ver | .downloadUrl = $dl | .apkSizeMb = $sz | .publishedAt = $dt' \
+             version.json > version.json.tmp && mv version.json.tmp version.json
+
+          echo "Updated version.json:"
+          cat version.json
+
+      - name: Commit and Push Updated version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add version.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync version.json for release ${{ github.event.release.tag_name }} [skip ci]" && git push origin main)
+
+      - name: Deploy to gh-pages Branch
+        run: |
+          git checkout -B gh-pages
+          git add .
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-deploy Edge CDN metadata for ${{ github.event.release.tag_name }} [skip ci]" && git push origin gh-pages --force)
