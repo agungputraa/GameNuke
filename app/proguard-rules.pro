@@ -39,9 +39,8 @@
 }
 
 # --- Obfuscation config ---
-# Only third-party libs get repackaged. App classes keep their names so that
-# the AndroidManifest component references always resolve correctly.
--keepattributes Exceptions, InnerClasses, Signature, *Annotation*, EnclosingMethod, SourceFile, LineNumberTable
+-renamesourcefileattribute ""
+-keepattributes Exceptions, InnerClasses, Signature, *Annotation*, EnclosingMethod
 -dontwarn java.lang.invoke.**
 -dontwarn sun.misc.Unsafe
 
@@ -72,7 +71,6 @@
 -keep class com.neon.gametweak.SafePreferences { *; }
 -keep class com.neon.gametweak.NukeAdBlockDetector { *; }
 -keep class com.neon.gametweak.AppUpdateController { *; }
--keep class com.neon.gametweak.IntegrityGuard { *; }
 -keep class com.neon.gametweak.NukeAdbOrchestrator { *; }
 -keep class com.neon.gametweak.NukeDisplayProfileController { *; }
 -keep class com.neon.gametweak.AdbManager { *; }

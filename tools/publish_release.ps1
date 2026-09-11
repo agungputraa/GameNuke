@@ -94,12 +94,12 @@ if (Test-Path $VersionJsonPath) {
     $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
     $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
     $vJson.releaseNotes = @(
-        "Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
-        "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
-        "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
-        "Performance & Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
-        "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
-        "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
+        "Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
+        "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
+        "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
+        "Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays",
+        "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
+        "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
     )
     
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
@@ -170,12 +170,12 @@ $lines = @(
     "Official Standalone Release with Dual-Sync Edge CDN Updates.",
     "",
     "Highlights:",
-    "- Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring.",
-    "- Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules.",
+    "- Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense.",
+    "- Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning.",
+    "- Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback.",
+    "- Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays.",
+    "- Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay.",
     "- Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement.",
-    "- Performance & Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles.",
-    "- Device System Editor: Safe system parameter tuning with category filtering and profile backup.",
-    "- Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery.",
     "",
     "Integrity:",
     "- File: $ApkName",

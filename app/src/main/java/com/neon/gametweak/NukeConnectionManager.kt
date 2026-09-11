@@ -65,6 +65,7 @@ object NukeConnectionManager {
         timeoutMs: Long = 7_500L,
         maxOutputChars: Int = 131_072,
     ): NukeCommandResult? {
+        if (IntegrityGuard.isCompromised()) return null
         return when (activeBackend()) {
             Backend.IADB -> runCatching {
                 NukeIadbBridge.execute(command, timeoutMs, maxOutputChars)
@@ -108,6 +109,7 @@ object NukeConnectionManager {
      * (Shizuku, iAdb, or Wireless ADB). Returns true when the daemon is responding to PING.
      */
     fun bootstrapPersistentCore(context: android.content.Context): Boolean {
+        if (IntegrityGuard.isCompromised()) return false
         if (NukeDaemonClient.ping(force = true)) return true
 
         // Try getting APK path via sourceDir first (fastest) or pm path fallback

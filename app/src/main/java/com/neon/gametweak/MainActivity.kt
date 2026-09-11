@@ -299,7 +299,16 @@ class MainActivity : ComponentActivity() {
             integrityCheckScheduled = true
             lifecycleScope.launch(Dispatchers.Default) {
                 val result = runCatching { IntegrityGuard.check(applicationContext) }.getOrNull()
-                if (result?.compromised == true) NukeAdManager.mainAppReady = false
+                if (result?.compromised == true) {
+                    NukeAdManager.mainAppReady = false
+                    withContext(Dispatchers.Main) {
+                        NukeToast.error(
+                            applicationContext,
+                            "Integrity Notice: Unofficial or modified APK detected. Core gaming acceleration features disabled.",
+                            long = true
+                        )
+                    }
+                }
             }
         }
     }

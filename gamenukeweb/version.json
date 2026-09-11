@@ -7,17 +7,17 @@
     "targetSdk":  36,
     "apkSizeMb":  "24.2",
     "releaseNotes":  [
-                         "Thermal Control \u0026 Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
-                         "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
-                         "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
-                         "Performance \u0026 Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
-                         "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
-                         "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
+                         "Anti-Tamper \u0026 Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
+                         "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
+                         "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
+                         "Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays",
+                         "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
+                         "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
                      ],
     "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
     "localApkUrl":  "GameNuke-Premium-v2.7.0.apk",
     "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
-    "sha256":  "4AD4C87BD4B04BDA2F7BF11F4FEE250F16ACA9092AAC3DD81DDC59B996C123A7",
+    "sha256":  "4678E94131BBF413882A46AD2B99E121A6E8EE16CB26C37F489ED468B3A30546",
     "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
 }

@@ -207,6 +207,11 @@ object NukeTouchTuningEngine {
         originX: Float = Float.MAX_VALUE,
         screenWidth: Float = 1080f
     ): Pair<Float, Float> {
+        // Neutralize aim acceleration if APK integrity is compromised
+        if (IntegrityGuard.isCompromised()) {
+            return dx to dy
+        }
+
         // Evaluate aim region partition (matches TouchInjector.inSensArea)
         if (originX != Float.MAX_VALUE && !inSensArea(originX, screenWidth)) {
             return dx to dy
