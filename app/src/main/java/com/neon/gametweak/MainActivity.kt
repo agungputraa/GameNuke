@@ -339,29 +339,58 @@ fun BlankFallback(message: String) {
 fun BannerAdView() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
-    val isAdLoaded = remember { mutableStateOf(false) }
-    // bannerAdRef kept for lifecycle-aware finishAd()
-    val bannerAdRef = remember { mutableStateOf<VungleBannerView?>(null) }
 
+    // Shared state between factory and LaunchedEffect
+    val bannerViewState = remember { mutableStateOf<VungleBannerView?>(null) }
+    val isAdLoaded    = remember { mutableStateOf(false) }
+    val adLoadFailed  = remember { mutableStateOf(false) }
+
+    // ── Load trigger: wait for SDK init via StateFlow, then call load() ──────
+    // This completely separates view creation (factory) from ad loading,
+    // so load() is only called once the view is window-attached AND SDK ready.
+    LaunchedEffect(Unit) {
+        NukeAdManager.isInitializedState.collect { ready ->
+            if (!ready) return@collect
+            // SDK is ready — wait up to 2s for AndroidView.factory to create the view
+            var waited = 0
+            while (bannerViewState.value == null && waited < 2000) {
+                delay(80L)
+                waited += 80
+            }
+            val view = bannerViewState.value ?: return@collect
+
+            // Initial load
+            runCatching { view.load() }
+
+            // Auto-retry loop: if load failed, retry every 15s
+            while (isActive) {
+                delay(15_000L)
+                if (!isAdLoaded.value) {
+                    adLoadFailed.value = false
+                    runCatching { view.load() }
+                }
+            }
+        }
+    }
+
+    // ── Lifecycle cleanup ─────────────────────────────────────────────────────
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_DESTROY -> {
-                    runCatching { bannerAdRef.value?.finishAd() }
-                    bannerAdRef.value = null
-                }
-                else -> Unit
+            if (event == Lifecycle.Event.ON_DESTROY) {
+                runCatching { bannerViewState.value?.finishAd() }
+                bannerViewState.value = null
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            runCatching { bannerAdRef.value?.finishAd() }
+            runCatching { bannerViewState.value?.finishAd() }
         }
     }
 
-    // Reserve 50dp — the IAB BANNER (320x50) standard height.
-    // Background colour matches the app chrome so the slot doesn't flash white.
+    // ── UI: 50dp slot, no visible placeholder text ────────────────────────────
+    // When ad is loading: transparent space (no text, professional look).
+    // When ad is loaded: VungleBannerView fills the space.
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -369,87 +398,48 @@ fun BannerAdView() {
             .background(Color(0xFF030805)),
         contentAlignment = Alignment.Center
     ) {
-        // Skeleton / placeholder shown while the ad is loading
-        if (!isAdLoaded.value) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(6.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFF35C99B).copy(alpha = 0.5f))
-                )
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = "GAMING SPONSOR • VIP PARTNER",
-                    color = Color(0xFF35C99B).copy(alpha = 0.45f),
-                    fontSize = 10.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    letterSpacing = 1.5.sp
-                )
-            }
-        }
-        // Official Liftoff Compose integration pattern:
-        // VungleBannerView is created AND added to FrameLayout inside AndroidView.factory,
-        // then .load() is called. This guarantees the view is window-attached before the
-        // ad loads, eliminating the container.post{} race condition.
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
                 .heightIn(max = 50.dp),
             factory = { ctx ->
-                val bannerView = VungleBannerView(
+                val view = VungleBannerView(
                     ctx,
                     NukeAdManager.BANNER_ID,
                     com.vungle.ads.VungleAdSize.BANNER
                 )
-                bannerView.adListener = object : com.vungle.ads.BannerAdListener {
+                view.adListener = object : com.vungle.ads.BannerAdListener {
                     override fun onAdLoaded(baseAd: com.vungle.ads.BaseAd) {
                         isAdLoaded.value = true
-                        bannerAdRef.value = bannerView
-                        Log.d("BannerAdView", "Banner loaded ✓ placementId=${NukeAdManager.BANNER_ID}")
+                        adLoadFailed.value = false
+                        Log.d("BannerAdView", "Banner loaded ✓ id=${NukeAdManager.BANNER_ID}")
                     }
                     override fun onAdFailedToLoad(baseAd: com.vungle.ads.BaseAd, error: com.vungle.ads.VungleError) {
+                        adLoadFailed.value = true
                         Log.w("BannerAdView", "Banner load failed: ${error.errorMessage} (${error.code})")
                     }
-                    override fun onAdClicked(baseAd: com.vungle.ads.BaseAd) {}
-                    override fun onAdImpression(baseAd: com.vungle.ads.BaseAd) {}
+                    override fun onAdClicked(baseAd: com.vungle.ads.BaseAd)         {}
+                    override fun onAdImpression(baseAd: com.vungle.ads.BaseAd)      {}
                     override fun onAdLeftApplication(baseAd: com.vungle.ads.BaseAd) {}
-                    override fun onAdStart(baseAd: com.vungle.ads.BaseAd) {}
-                    override fun onAdEnd(baseAd: com.vungle.ads.BaseAd) {}
+                    override fun onAdStart(baseAd: com.vungle.ads.BaseAd)           {}
+                    override fun onAdEnd(baseAd: com.vungle.ads.BaseAd)             {}
                     override fun onAdFailedToPlay(baseAd: com.vungle.ads.BaseAd, error: com.vungle.ads.VungleError) {
                         Log.w("BannerAdView", "Banner failed to play: ${error.errorMessage}")
                     }
                 }
+                // Store reference so LaunchedEffect can call load() after SDK init
+                bannerViewState.value = view
                 FrameLayout(ctx).apply {
                     layoutParams = android.view.ViewGroup.LayoutParams(
                         android.view.ViewGroup.LayoutParams.MATCH_PARENT,
                         android.view.ViewGroup.LayoutParams.WRAP_CONTENT
                     )
-                    addView(bannerView)
-                    // Load is called after the view is added to the hierarchy so
-                    // the window is already attached — no more silent post() drops.
+                    addView(view)
+                    // If SDK already initialized when factory runs, load immediately
                     if (NukeAdManager.initialized) {
-                        bannerView.load()
-                    } else {
-                        // SDK not ready yet — wait for it then load on main thread
-                        val handler = android.os.Handler(android.os.Looper.getMainLooper())
-                        val retryRunnable = object : Runnable {
-                            override fun run() {
-                                if (NukeAdManager.initialized) {
-                                    runCatching { bannerView.load() }
-                                } else {
-                                    handler.postDelayed(this, 500L)
-                                }
-                            }
-                        }
-                        handler.postDelayed(retryRunnable, 500L)
+                        view.load()
                     }
+                    // Otherwise, LaunchedEffect above handles it reactively
                 }
             }
         )
