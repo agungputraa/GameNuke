@@ -71,9 +71,10 @@ object NukeDaemonClient {
         curve: Int = 1,
         smooth: Boolean = true,
         minCutoff: Float = 1.0f,
-        beta: Float = 0.007f
+        beta: Float = 0.007f,
+        dragShot: Boolean = true
     ): Boolean {
-        val cmd = "TOUCH_CONFIG|$sx|$sy|$area|$curve|$smooth|$minCutoff|$beta"
+        val cmd = "TOUCH_CONFIG|$sx|$sy|$area|$curve|$smooth|$minCutoff|$beta|$dragShot"
         val resp = runCatching { request(cmd, 1500) }.getOrNull()
         return resp == "TOUCH_CONFIGURED"
     }

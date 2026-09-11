@@ -314,7 +314,7 @@ object NukeLiveChatRepository {
     ) {
         val text = rawText.trim()
         if (text.isBlank()) {
-            onComplete?.invoke(false, "Pesan tidak boleh kosong")
+            onComplete?.invoke(false, "Message cannot be empty")
             return
         }
 
@@ -337,7 +337,7 @@ object NukeLiveChatRepository {
             _isSending.value = true
             try {
                 val header = buildDeviceAuthHeader(appContext)
-                val fullPayload = "$header\n💬 <b>PESAN PENGGUNA:</b>\n<blockquote>${htmlEscape(text)}</blockquote>\n\n<i>👉 Geser/Swipe pesan ini untuk membalas langsung ke pengguna.</i>\n<i>#UID_$uid</i>"
+                val fullPayload = "$header\n💬 <b>USER MESSAGE:</b>\n<blockquote>${htmlEscape(text)}</blockquote>\n\n<i>👉 Swipe this message to reply directly to user.</i>\n<i>#UID_$uid</i>"
 
                 val inlineKeyboard = JSONArray().apply {
                     put(JSONArray().apply {
@@ -444,7 +444,7 @@ object NukeLiveChatRepository {
             _isSending.value = true
             try {
                 val header = buildDeviceAuthHeader(appContext)
-                val fullCaption = "$header\n📷 <b>FOTO / SCREENSHOT:</b>\n<blockquote>${htmlEscape(localMsg.text)}</blockquote>\n\n<i>👉 Geser/Swipe pesan ini untuk membalas langsung ke pengguna.</i>\n<i>#UID_$uid</i>"
+                val fullCaption = "$header\n📷 <b>PHOTO / SCREENSHOT:</b>\n<blockquote>${htmlEscape(localMsg.text)}</blockquote>\n\n<i>👉 Swipe this message to reply directly to user.</i>\n<i>#UID_$uid</i>"
 
                 val apiUrl = "https://api.telegram.org/bot$BOT_TOKEN/sendPhoto"
                 val (success, response) = executeMultipartPhoto(apiUrl, ADMIN_CHAT_ID, fullCaption, localFile)
@@ -600,14 +600,14 @@ object NukeLiveChatRepository {
     ) {
         val trimmed = newText.trim()
         if (trimmed.isBlank()) {
-            onComplete?.invoke(false, "Pesan tidak boleh kosong")
+            onComplete?.invoke(false, "Message cannot be empty")
             return
         }
 
         val appContext = context.applicationContext
         val target = _messages.value.find { it.id == localId }
         if (target == null) {
-            onComplete?.invoke(false, "Pesan tidak ditemukan")
+            onComplete?.invoke(false, "Message not found")
             return
         }
 
@@ -626,7 +626,7 @@ object NukeLiveChatRepository {
 
                 if (tgId != null && tgId > 0L) {
                     val header = buildDeviceAuthHeader(appContext)
-                    val fullPayload = "$header\n💬 <b>Pesan Pengguna:</b> <i>(diedit)</i>\n<blockquote>${htmlEscape(trimmed)}</blockquote>\n━━━━━━━━━━━━━━━━━━━━\n<i>👉 Swipe pesan ini untuk membalas langsung ke user.</i>\n<i>#uid_$uid</i>"
+                    val fullPayload = "$header\n💬 <b>User Message:</b> <i>(edited)</i>\n<blockquote>${htmlEscape(trimmed)}</blockquote>\n━━━━━━━━━━━━━━━━━━━━\n<i>👉 Swipe this message to reply directly to user.</i>\n<i>#uid_$uid</i>"
 
                     val inlineKeyboard = JSONArray().apply {
                         put(JSONArray().apply {
@@ -665,7 +665,7 @@ object NukeLiveChatRepository {
         val appContext = context.applicationContext
         val target = _messages.value.find { it.id == localId }
         if (target == null) {
-            onComplete?.invoke(false, "Pesan tidak ditemukan")
+            onComplete?.invoke(false, "Message not found")
             return
         }
 
@@ -1056,22 +1056,22 @@ object NukeLiveChatRepository {
 
         when {
             data.startsWith("reply_") -> {
-                answerCallbackQuery(cbId, "👉 Geser/Swipe pesan ini di Telegram untuk membalas ke #UID_$targetUid.")
+                answerCallbackQuery(cbId, "👉 Swipe this message in Telegram to reply to #UID_$targetUid.")
             }
             data.startsWith("cmd_") -> {
-                answerCallbackQuery(cbId, "⚡ Quick Command Menu dibuka.")
+                answerCallbackQuery(cbId, "⚡ Quick Command Menu opened.")
                 if (msgId > 0L) {
                     updateTelegramMessageKeyboard(chatId, msgId, buildQuickCommandKeyboard(targetUid))
                 }
             }
             data.startsWith("closecmd_") -> {
-                answerCallbackQuery(cbId, "Menu Quick Command ditutup.")
+                answerCallbackQuery(cbId, "Quick Command Menu closed.")
                 if (msgId > 0L) {
                     updateTelegramMessageKeyboard(chatId, msgId, buildDefaultKeyboard(targetUid))
                 }
             }
             data.startsWith("customcmd_") -> {
-                answerCallbackQuery(cbId, "Ketik /cmd <perintah> dengan swipe pesan #UID_$targetUid", showAlert = true)
+                answerCallbackQuery(cbId, "Type /cmd <command> by replying to #UID_$targetUid", showAlert = true)
             }
             data.startsWith("exec_") -> {
                 // Format: exec_{targetUid}_{action}
@@ -1081,7 +1081,7 @@ object NukeLiveChatRepository {
                     val (cmdLabel, shellCmd) = when (action) {
                         "boost" -> "Nuke Max Boost" to "/cmd nuke --boost"
                         "cool" -> "Thermal Cool Down" to "/cmd dumpsys thermal"
-                        "bat" -> "Status Baterai" to "/cmd dumpsys battery"
+                        "bat" -> "Battery Status" to "/cmd dumpsys battery"
                         "top" -> "Top Processes" to "/cmd top -n 1 -m 5"
                         else -> "Shell Command" to "/cmd uname -a"
                     }

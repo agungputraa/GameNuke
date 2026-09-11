@@ -303,31 +303,31 @@ object NukeModuleJsonImporter {
   "author": "Agung Developer / YourChannelName",
   "version": "1.0",
   "target_oem": "UNIVERSAL",
-  "description": "Optimasi respon layar, zero-edge mistouch filter, dan unlock refresh rate 120Hz.",
+  "description": "Screen touch response optimization, zero-edge mistouch filter, and 120Hz peak refresh rate unlock.",
   "parameters": [
     {
       "source": "SYSTEM",
       "key": "edge_touch_prevention",
       "value": "0",
-      "description": "Menonaktifkan deadzone layar samping untuk respon sentuhan tepi layar yang optimal"
+      "description": "Disables edge screen deadzones for optimal border touch responsiveness"
     },
     {
       "source": "SYSTEM",
       "key": "pointer_speed",
       "value": "7",
-      "description": "Kecepatan kursor dan responsivitas sentuhan maksimal"
+      "description": "Maximum pointer speed and touch responsiveness"
     },
     {
       "source": "GLOBAL",
       "key": "peak_refresh_rate",
       "value": "120.0",
-      "description": "Memaksa layar berjalan pada refresh rate puncak 120Hz"
+      "description": "Forces display to run at peak 120Hz refresh rate"
     },
     {
       "source": "GLOBAL",
       "key": "window_animation_scale",
       "value": "0.5",
-      "description": "Animasi jendela ultra cepat (0.5x) untuk latency minimal"
+      "description": "Ultra-fast window animation (0.5x) for minimal visual latency"
     },
     {
       "source": "PROP",

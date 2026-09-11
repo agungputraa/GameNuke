@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Game Nuke</string>
-    <string name="nuke_macro_service_desc">Game Nuke Macro Touch Engine — Menjalankan kombo tombol cepat dan makro permainan saat bermain game.</string>
+    <string name="nuke_macro_service_desc">Game Nuke Macro Touch Engine — Executes high-speed button combos and gaming macros during active gameplay.</string>
 </resources>

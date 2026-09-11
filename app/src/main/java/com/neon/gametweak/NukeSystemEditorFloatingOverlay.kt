@@ -593,7 +593,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
         if (filtered.isEmpty()) {
             val emptyTv = TextView(context).apply {
-                text = if (query.isNotEmpty()) "Tidak ada parameter yang cocok dengan '$query'" else "Tidak ada parameter dalam kategori ini"
+                text = if (query.isNotEmpty()) "No parameters match '$query'" else "No parameters in this category"
                 setTextColor(Color.parseColor(TEXT_DIM))
                 textSize = 10f
                 typeface = Typeface.MONOSPACE
@@ -890,7 +890,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 inputRow.addView(applyBtn)
 
                 val cancelBtn = TextView(context).apply {
-                    text = "BATAL"
+                    text = "CANCEL"
                     setTextColor(Color.parseColor(TEXT_DIM))
                     textSize = 8.5f
                     typeface = Typeface.DEFAULT_BOLD
@@ -911,7 +911,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                         setPadding(0, dp(6f), 0, 0)
                     }
                     revertRow.addView(TextView(context).apply {
-                        text = "↩ Kembalikan ke nilai bawaan (Stock)"
+                        text = "↩ Revert to original value (Stock)"
                         setTextColor(Color.parseColor(AMBER))
                         textSize = 8.5f
                         typeface = Typeface.DEFAULT_BOLD
@@ -931,7 +931,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
                 // Security footer
                 editPanel.addView(TextView(context).apply {
-                    text = "🛡 SafeGuard Aktif · Backup dibuat otomatis sebelum modifikasi"
+                    text = "🛡 SafeGuard Active · Automatic backup created prior to modification"
                     setTextColor(Color.parseColor(TEXT_DIM))
                     textSize = 7.5f
                     typeface = Typeface.MONOSPACE

@@ -1146,8 +1146,8 @@ class AdbManager private constructor(context: Context) {
 
                 runCatching {
                     NotificationHelper(mContext).updateNotification(
-                        "Mencari Device Control...",
-                        "Pastikan Wireless Debugging aktif.",
+                        "Searching for Device Control...",
+                        "Ensure Wireless Debugging is active.",
                         true,
                         false,
                         null,

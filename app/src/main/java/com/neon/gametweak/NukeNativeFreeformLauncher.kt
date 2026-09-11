@@ -105,7 +105,7 @@ object NukeNativeFreeformLauncher {
         mainHandler.post {
             NukeToast.unsupported(
                 context,
-                "⚡ Aktifkan Shizuku / ADB untuk membuka $label dalam mode Jendela Mengambang",
+                "⚡ Activate Shizuku / ADB to open $label in Floating Window mode",
                 long = true
             )
         }
@@ -184,7 +184,7 @@ object NukeNativeFreeformLauncher {
                 }
             } else {
                 mainHandler.post {
-                    NukeToast.unsupported(context, "⚡ Fitur Jendela Mengambang untuk $label membutuhkan Shizuku / ADB aktif.")
+                    NukeToast.unsupported(context, "⚡ Floating Window for $label requires active Shizuku / ADB.")
                 }
             }
         } catch (e: Throwable) {
@@ -197,12 +197,12 @@ object NukeNativeFreeformLauncher {
                     executeInAppFreeformLaunch(context, intent, bounds, label)
                 } else {
                     mainHandler.post {
-                        NukeToast.error(context, "Gagal meluncurkan $label dalam mode mengambang")
+                        NukeToast.error(context, "Failed to launch $label in floating mode")
                     }
                 }
             } else {
                 mainHandler.post {
-                    NukeToast.unsupported(context, "⚡ Fitur Jendela Mengambang untuk $label membutuhkan Shizuku / ADB aktif.")
+                    NukeToast.unsupported(context, "⚡ Floating Window for $label requires active Shizuku / ADB.")
                 }
             }
         }
@@ -382,7 +382,7 @@ object NukeNativeFreeformLauncher {
                         NukeConnectionManager.executeCommand("am force-stop $packageName", 3_000L)
                     }
                     hideClosePill(context)
-                    NukeToast.success(context, "✓ $label ditutup")
+                    NukeToast.success(context, "✓ $label closed")
                 }
             }
             addView(closeTv)

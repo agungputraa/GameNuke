@@ -198,7 +198,7 @@ object NukeAppUpdater {
     private fun launchInstaller(context: Context, apkFile: File) {
         try {
             if (!apkFile.exists() || apkFile.length() < 1024 * 512) {
-                NukeToast.error(context, "File APK tidak valid atau unduhan belum selesai", true)
+                NukeToast.error(context, "APK file is invalid or download incomplete", true)
                 return
             }
 
@@ -209,7 +209,7 @@ object NukeAppUpdater {
                         if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                     }
                     context.startActivity(settingsIntent)
-                    NukeToast.success(context, "Izinkan instalasi aplikasi dari sumber ini untuk Game Nuke", long = true)
+                    NukeToast.success(context, "Allow installation from this source for Game Nuke", long = true)
                     return
                 }
             }

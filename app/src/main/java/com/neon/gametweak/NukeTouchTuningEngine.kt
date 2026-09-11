@@ -80,6 +80,7 @@ object NukeTouchTuningEngine {
     @Volatile var euroEnabled = true
     @Volatile var euroMinCutoff = 1.0f
     @Volatile var euroBeta = 0.007f
+    @Volatile var dragShotCurve = true
 
     val currentXMultiplier: Float get() = xMultiplier
     val currentYMultiplier: Float get() = yMultiplier
@@ -607,7 +608,8 @@ object NukeTouchTuningEngine {
                             curve = curveMode,
                             smooth = euroEnabled,
                             minCutoff = euroMinCutoff,
-                            beta = euroBeta
+                            beta = euroBeta,
+                            dragShot = dragShotCurve
                         )
                         daemonTouchActive = true
                         true
@@ -644,7 +646,8 @@ object NukeTouchTuningEngine {
                         curve = curveMode,
                         smooth = euroEnabled,
                         minCutoff = euroMinCutoff,
-                        beta = euroBeta
+                        beta = euroBeta,
+                        dragShot = dragShotCurve
                     )
                 }
             } catch (_: Throwable) {}

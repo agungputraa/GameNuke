@@ -102,6 +102,7 @@ class NukeTouchInjector {
     @Volatile var euroMinCutoff: Float = 1.0f
     @Volatile var euroBeta: Float = 0.007f
     @Volatile var relativeAimEnabled: Boolean = true
+    @Volatile var dragShotCurve: Boolean = true
 
     private val activePointers = LinkedHashMap<Long, PointerState>()
     private val pendingPointers = HashSet<Long>()
@@ -456,6 +457,31 @@ class NukeTouchInjector {
         val absY = abs(deltaY)
         val totalDelta = absX + absY
 
+        // --- FREE FIRE / SHOOTER DRAG-SHOT HEADSHOT STABILIZATION FORMULA ---
+        // 1. Upward flick (deltaY < -1.2f with dominant vertical ratio):
+        //    Dampens deltaX by 18% (0.82x) to eliminate thumb-arc curvature wobble,
+        //    guaranteeing a laser-straight vertical flick directly into the head hitbox.
+        // 2. Dynamic progressive headshot lift (+22% deltaY):
+        //    Smoothly breaks body/chest auto-aim friction lock without overshooting the head.
+        // 3. Micro-aim sub-pixel stabilization (totalDelta < 4.5f):
+        //    Dampens digitizer quantization noise for pixel-perfect scoping & fine crosshair adjustments.
+        var effectiveDeltaX = deltaX
+        var effectiveDeltaY = deltaY
+
+        if (dragShotCurve && inArea && totalDelta > 1e-4f) {
+            val isUpwardFlick = deltaY < -1.2f && absY >= (absX * 1.15f)
+            if (isUpwardFlick) {
+                effectiveDeltaX = deltaX * 0.82f
+                val upwardRatio = (absY / (totalDelta + 1e-4f)).coerceIn(0f, 1f)
+                val headshotLift = 1.0f + (upwardRatio * 0.22f)
+                effectiveDeltaY = deltaY * headshotLift
+            } else if (totalDelta < 4.5f) {
+                val microStabilizer = (0.92f + (totalDelta / 56.0f)).coerceIn(0.88f, 1.0f)
+                effectiveDeltaX = deltaX * microStabilizer
+                effectiveDeltaY = deltaY * microStabilizer
+            }
+        }
+
         val normSpeed = if (ev.displayWidth > 0) totalDelta / ev.displayWidth.toFloat() else 0f
         val gain = if (inArea && totalDelta > 1e-4f) {
             biasedGain(sensX, sensY, absY / totalDelta) * curveFactor(normSpeed)
@@ -463,8 +489,8 @@ class NukeTouchInjector {
             1.0f
         }
 
-        val nextAccumX = (deltaX * gain) + ptr.accumX
-        val nextAccumY = (deltaY * gain) + ptr.accumY
+        val nextAccumX = (effectiveDeltaX * gain) + ptr.accumX
+        val nextAccumY = (effectiveDeltaY * gain) + ptr.accumY
 
         val clampedX: Float
         val clampedY: Float

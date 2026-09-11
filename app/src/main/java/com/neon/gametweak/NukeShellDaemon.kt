@@ -176,7 +176,7 @@ object NukeShellDaemon {
     }
 
     private fun handleTouchConfig(line: String): String {
-        // TOUCH_CONFIG|<sensX>|<sensY>|<area>|<curve>|<smoothing>|<minCutoff>|<beta>
+        // TOUCH_CONFIG|<sensX>|<sensY>|<area>|<curve>|<smoothing>|<minCutoff>|<beta>|<dragShot>
         val parts = line.split('|')
         val sx = parts.getOrNull(1)?.toFloatOrNull() ?: 1.0f
         val sy = parts.getOrNull(2)?.toFloatOrNull() ?: 1.0f
@@ -185,8 +185,9 @@ object NukeShellDaemon {
         val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: true
         val minCutoff = parts.getOrNull(6)?.toFloatOrNull() ?: 1.0f
         val beta = parts.getOrNull(7)?.toFloatOrNull() ?: 0.007f
+        val dragShot = parts.getOrNull(8)?.toBooleanStrictOrNull() ?: true
 
-        frb.axeron.server.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta)
+        frb.axeron.server.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)
         return "TOUCH_CONFIGURED"
     }
 

@@ -356,7 +356,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
 
         // Cancel Button
         val cancelBtn = TextView(context).apply {
-            text = "✕ Batal"
+            text = "✕ Cancel"
             textSize = 11f
             setTextColor(Color.parseColor("#64748B"))
             gravity = Gravity.CENTER
@@ -574,7 +574,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
                     }
                 }
                 val emptyDesc = TextView(context).apply {
-                    text = "Tanyakan rekomendasi setting game, konsultasi panas/cooling, atau konsultasi optimasi langsung dengan Agung Developer!"
+                    text = "Ask for game setting recommendations, thermal/cooling tips, or optimization advice directly from developer!"
                     textSize = 10f
                     setTextColor(Color.parseColor("#94A3B8"))
                     gravity = Gravity.CENTER

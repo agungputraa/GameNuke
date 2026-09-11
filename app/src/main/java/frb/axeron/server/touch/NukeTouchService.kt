@@ -161,7 +161,8 @@ object NukeTouchService {
         curve: Int = NukeTouchInjector.CURVE_ACCELERATE,
         smoothing: Boolean = true,
         minCutoff: Float = 1.0f,
-        beta: Float = 0.007f
+        beta: Float = 0.007f,
+        dragShot: Boolean = true
     ) {
         injector.sensX = sx
         injector.sensY = sy
@@ -170,6 +171,7 @@ object NukeTouchService {
         injector.euroEnabled = smoothing
         injector.euroMinCutoff = minCutoff
         injector.euroBeta = beta
-        Log.i(TAG, "Touch configured: X=%.2f Y=%.2f area=%d curve=%d smooth=%b".format(sx, sy, area, curve, smoothing))
+        injector.dragShotCurve = dragShot
+        Log.i(TAG, "Touch configured: X=%.2f Y=%.2f area=%d curve=%d smooth=%b dragShot=%b".format(sx, sy, area, curve, smoothing, dragShot))
     }
 }

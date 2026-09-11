@@ -1375,12 +1375,12 @@ private fun ExecutiveModuleImportDialog(
                         parsedResult = res.getOrNull()
                         errorMessage = null
                     } else {
-                        errorMessage = res.exceptionOrNull()?.message ?: "Gagal membaca struktur modul JSON"
+                        errorMessage = res.exceptionOrNull()?.message ?: "Failed to parse JSON module structure"
                         parsedResult = null
                     }
                 }
             }.onFailure {
-                errorMessage = "Gagal membuka file: ${it.localizedMessage}"
+                errorMessage = "Failed to open file: ${it.localizedMessage}"
                 parsedResult = null
             }
         }
@@ -1399,7 +1399,7 @@ private fun ExecutiveModuleImportDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Impor modul tuning buatan developer/creator (.json) untuk optimasi gaming instan.",
+                    "Import developer/creator tuning modules (.json) for instant gaming optimization.",
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )
@@ -1441,7 +1441,7 @@ private fun ExecutiveModuleImportDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.ContentPaste, contentDescription = null, tint = if (selectedTab == 1) StudioSky else StudioTextDim, modifier = Modifier.size(13.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("PASTE TEKS", color = if (selectedTab == 1) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text("PASTE CODE", color = if (selectedTab == 1) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1463,14 +1463,14 @@ private fun ExecutiveModuleImportDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(24.dp))
                             Spacer(Modifier.height(6.dp))
-                            Text("PILIH FILE PLUGIN .JSON", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-                            Text("Buka dari penyimpanan internal atau unduhan", color = StudioTextDim, fontSize = 9.sp)
+                            Text("SELECT .JSON PLUGIN FILE", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                            Text("Browse internal storage or downloads", color = StudioTextDim, fontSize = 9.sp)
                         }
                     }
                 } else {
                     // Paste text field
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("KODE JSON PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text("PLUGIN JSON CODE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         TextButton(
                             onClick = {
                                 val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -1482,17 +1482,17 @@ private fun ExecutiveModuleImportDialog(
                                         parsedResult = res.getOrNull()
                                         errorMessage = null
                                     } else {
-                                        errorMessage = res.exceptionOrNull()?.message ?: "Format JSON tidak valid"
+                                        errorMessage = res.exceptionOrNull()?.message ?: "Invalid JSON format"
                                         parsedResult = null
                                     }
                                 } else {
-                                    NukeToast.error(context, "Clipboard kosong!")
+                                    NukeToast.error(context, "Clipboard is empty!")
                                 }
                             }
                         ) {
                             Icon(Icons.Rounded.ContentPaste, contentDescription = null, tint = StudioSky, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text("TEMPEL DARI CLIPBOARD", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                            Text("PASTE FROM CLIPBOARD", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -1506,7 +1506,7 @@ private fun ExecutiveModuleImportDialog(
                                     parsedResult = res.getOrNull()
                                     errorMessage = null
                                 } else {
-                                    errorMessage = res.exceptionOrNull()?.message ?: "Format JSON tidak valid"
+                                    errorMessage = res.exceptionOrNull()?.message ?: "Invalid JSON format"
                                     parsedResult = null
                                 }
                             } else {
@@ -1517,7 +1517,7 @@ private fun ExecutiveModuleImportDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(100.dp),
-                        placeholder = { Text("Paste kode modul JSON di sini...", color = StudioTextDim, fontSize = 10.sp) },
+                        placeholder = { Text("Paste JSON module code here...", color = StudioTextDim, fontSize = 10.sp) },
                         shape = RoundedCornerShape(8.dp),
                         colors = OutlinedTextFieldDefaults.colors(
                             focusedBorderColor = StudioSky,
@@ -1589,7 +1589,7 @@ private fun ExecutiveModuleImportDialog(
                                         .background(StudioEmerald.copy(alpha = 0.15f))
                                         .padding(horizontal = 6.dp, vertical = 2.dp)
                                 ) {
-                                    Text("✓ ${module.safeCount} AMAN", color = StudioEmerald, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                                    Text("✓ ${module.safeCount} SAFE", color = StudioEmerald, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                                 }
 
                                 if (module.blockedCount > 0) {
@@ -1605,7 +1605,7 @@ private fun ExecutiveModuleImportDialog(
                             }
 
                             Spacer(Modifier.height(8.dp))
-                            Text("PARAMETER DALAM PLUGIN:", color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                            Text("PARAMETERS IN PLUGIN:", color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
 
                             module.allItems.take(8).forEach { item ->
@@ -1631,7 +1631,7 @@ private fun ExecutiveModuleImportDialog(
                             }
 
                             if (module.allItems.size > 8) {
-                                Text("+ ${module.allItems.size - 8} parameter lainnya...", color = StudioTextDim, fontSize = 8.5.sp)
+                                Text("+ ${module.allItems.size - 8} additional parameters...", color = StudioTextDim, fontSize = 8.5.sp)
                             }
                         }
                     }
@@ -1666,7 +1666,7 @@ private fun ExecutiveModuleImportDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("BATAL", color = StudioTextMuted, fontSize = 10.5.sp)
+                Text("CANCEL", color = StudioTextMuted, fontSize = 10.5.sp)
             }
         }
     )
@@ -1858,7 +1858,7 @@ private fun ExecutiveModuleExportDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${activeParams.size} Parameter Disertakan", color = StudioEmerald, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text("${activeParams.size} Parameters Included", color = StudioEmerald, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
                     Text("Verified Safe Schema", color = StudioTextDim, fontSize = 9.5.sp)
                 }
 
@@ -1870,17 +1870,17 @@ private fun ExecutiveModuleExportDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("PREVIEW FILE .JSON:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("PREVIEW .JSON FILE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                             cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Preset", generatedJson))
-                            NukeToast.success(context, "Kode JSON disalin ke clipboard!")
+                            NukeToast.success(context, "JSON code copied to clipboard!")
                         }
                     ) {
                         Icon(Icons.Rounded.ContentCopy, contentDescription = null, tint = StudioSky, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("SALIN JSON", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                        Text("COPY JSON", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -1916,7 +1916,7 @@ private fun ExecutiveModuleExportDialog(
                                 putExtra(Intent.EXTRA_SUBJECT, moduleName)
                                 putExtra(Intent.EXTRA_TEXT, generatedJson)
                             }
-                            context.startActivity(Intent.createChooser(sendIntent, "Bagikan Modul JSON Game Nuke"))
+                            context.startActivity(Intent.createChooser(sendIntent, "Share Game Nuke JSON Module"))
                         }
                         .padding(horizontal = 10.dp, vertical = 7.dp)
                 ) {
@@ -1941,14 +1941,14 @@ private fun ExecutiveModuleExportDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.FileUpload, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("SIMPAN FILE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                        Text("SAVE FILE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
                     }
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("TUTUP", color = StudioTextMuted, fontSize = 10.5.sp)
+                Text("CANCEL", color = StudioTextMuted, fontSize = 10.5.sp)
             }
         }
     )
@@ -1968,13 +1968,13 @@ private fun ExecutiveCreatorGuideDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("PANDUAN CREATOR PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text("PLUGIN CREATOR GUIDE", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Buat modul tuning (.json) untuk dibagikan ke komunitas atau rekan Anda. Modul yang diimpor akan divalidasi secara ketat oleh sistem keamanan Game Nuke sebelum diterapkan.",
+                    "Create tuning modules (.json) to share with your community or teammates. Imported modules are strictly verified by Game Nuke security before being applied.",
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )
@@ -1989,28 +1989,28 @@ private fun ExecutiveCreatorGuideDialog(
                     border = BorderStroke(1.dp, StudioBorderLight)
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
-                        Text("ATURAN & STANDAR KEAMANAN:", color = StudioEmerald, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text("SAFETY RULES & COMPLIANCE:", color = StudioEmerald, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text("1. Source yang didukung: 'SYSTEM', 'GLOBAL', 'SECURE', dan 'PROP'.", color = StudioTextPrimary, fontSize = 9.5.sp)
-                        Text("2. Nilai aman: Angka, flag boolean (0/1), float (misal 120.0).", color = StudioTextPrimary, fontSize = 9.5.sp)
-                        Text("3. Anti-Bootloop SafeGuard: Parameter berbahaya (misal lcd_density, bootloader, zygote flags) akan otomatis ditolak oleh Game Nuke agar HP user tidak bootloop.", color = StudioAmber, fontSize = 9.5.sp)
+                        Text("1. Supported sources: 'SYSTEM', 'GLOBAL', 'SECURE', and 'PROP'.", color = StudioTextPrimary, fontSize = 9.5.sp)
+                        Text("2. Safe values: Integers, boolean flags (0/1), floats (e.g. 120.0).", color = StudioTextPrimary, fontSize = 9.5.sp)
+                        Text("3. Anti-Bootloop SafeGuard: High-risk parameters (e.g. lcd_density, bootloader, zygote flags) are strictly rejected to prevent bootloops.", color = StudioAmber, fontSize = 9.5.sp)
                     }
                 }
 
                 Spacer(Modifier.height(10.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("STRUKTUR JSON SIAP PAKAI:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text("READY-TO-USE JSON STRUCTURE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                             cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Template", templateJson))
-                            NukeToast.success(context, "Template JSON disalin ke clipboard!")
+                            NukeToast.success(context, "JSON template copied to clipboard!")
                         }
                     ) {
                         Icon(Icons.Rounded.ContentCopy, contentDescription = null, tint = StudioEmerald, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("SALIN TEMPLATE", color = StudioEmerald, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                        Text("COPY TEMPLATE", color = StudioEmerald, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 

@@ -70,6 +70,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var pointerSeekBar: SeekBar? = null
     private var jitterSwitch: Switch? = null
     private var relativeAimSwitch: Switch? = null
+    private var dragShotSwitch: Switch? = null
     private var dpiStatusTv: TextView? = null
     private var dpiChipViews = mutableListOf<TextView>()
     private var areaChipViews = mutableListOf<TextView>()
@@ -84,6 +85,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var jitterCutoff: Float = 1.0f
     private var jitterBeta: Float = 0.007f
     private var relativeAim: Boolean = true
+    private var dragShotEnabled: Boolean = true
     private var pointerSpeed: Int = 0
     private var physicalDpi: Int = 0
     private var currentDpiOffset: Int = 0
@@ -119,6 +121,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         jitterCutoff = prefs.getFloat("touch_jitter_cutoff", NukeTouchTuningEngine.euroMinCutoff)
         jitterBeta = prefs.getFloat("touch_jitter_beta", NukeTouchTuningEngine.euroBeta)
         relativeAim = prefs.getBoolean("touch_relative_aim", true)
+        dragShotEnabled = prefs.getBoolean("touch_dragshot_curve", true)
         pointerSpeed = prefs.getInt("touch_pointer_speed", 0)
 
         // Sync to engine runtime
@@ -129,6 +132,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         NukeTouchTuningEngine.euroEnabled = jitterSmoothing
         NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
         NukeTouchTuningEngine.euroBeta = jitterBeta
+        NukeTouchTuningEngine.dragShotCurve = dragShotEnabled
     }
 
     private fun persistState() {
@@ -141,6 +145,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             .putFloat("touch_jitter_cutoff", jitterCutoff)
             .putFloat("touch_jitter_beta", jitterBeta)
             .putBoolean("touch_relative_aim", relativeAim)
+            .putBoolean("touch_dragshot_curve", dragShotEnabled)
             .putInt("touch_pointer_speed", pointerSpeed)
             .apply()
 
@@ -151,13 +156,14 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         NukeTouchTuningEngine.euroEnabled = jitterSmoothing
         NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
         NukeTouchTuningEngine.euroBeta = jitterBeta
+        NukeTouchTuningEngine.dragShotCurve = dragShotEnabled
         NukeTouchTuningEngine.syncToDaemon(context)
     }
 
     fun show() {
         if (rootView != null) return
         if (!Settings.canDrawOverlays(context)) {
-            NukeToast.error(context, "Izin Display over other apps diperlukan untuk Touch Listener")
+            NukeToast.error(context, "Display over other apps permission required for Touch Listener")
             return
         }
 
@@ -212,13 +218,13 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             if (isCoreActive) {
                 statusBadge?.text = "● ACTIVE"
                 statusBadge?.setTextColor(Color.parseColor("#00FF88"))
-                statusSubtext?.text = "Kernel Touch Listener aktif — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                statusSubtext?.text = "Kernel Touch Listener Active — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
                 statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
                 masterSwitch?.isChecked = true
             } else {
                 statusBadge?.text = "○ STANDBY"
                 statusBadge?.setTextColor(Color.parseColor("#64748B"))
-                statusSubtext?.text = "Standby — Ketuk tombol di samping untuk mengaktifkan"
+                statusSubtext?.text = "Standby — Tap the switch to activate"
                 statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
                 masterSwitch?.isChecked = false
             }
@@ -270,6 +276,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         body.addView(buildDetectionAreaCard())
         body.addView(spacer(8))
         body.addView(buildResponseCurveCard())
+        body.addView(spacer(8))
+        body.addView(buildDragShotHeadshotCard())
         body.addView(spacer(8))
         body.addView(buildJitterFilterCard())
         body.addView(spacer(8))
@@ -402,9 +410,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         statusSubtext = TextView(context).apply {
             text = if (NukeTouchTuningEngine.isDaemonTouchActive)
-                "Kernel Touch Listener aktif — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                "Kernel Touch Listener Active — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
             else
-                "Standby — Ketuk tombol di samping untuk mengaktifkan"
+                "Standby — Tap the switch to activate"
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
         }
@@ -419,7 +427,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setOnCheckedChangeListener { _, isChecked ->
                 prefs.edit().putBoolean("touch_listener_active", isChecked).apply()
                 if (isChecked) {
-                    statusSubtext?.text = "⌛ Menghubungkan ke Touch Listener Kernel..."
+                    statusSubtext?.text = "⌛ Connecting to Kernel Touch Listener..."
                     statusSubtext?.setTextColor(Color.parseColor("#F59E0B"))
                     statusBadge?.text = "● STARTING..."
                     statusBadge?.setTextColor(Color.parseColor("#F59E0B"))
@@ -429,14 +437,14 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                             if (ok) {
                                 statusBadge?.text = "● ACTIVE"
                                 statusBadge?.setTextColor(Color.parseColor("#00FF88"))
-                                statusSubtext?.text = "✓ Touch Listener Aktif — Sensitivitas in-game bekerja live"
+                                statusSubtext?.text = "✓ Touch Listener Active — In-game sensitivity working live"
                                 statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
                                 masterSwitch?.isChecked = true
                                 prefs.edit().putBoolean("touch_listener_active", true).apply()
                             } else {
                                 statusBadge?.text = "⚠ STANDBY"
                                 statusBadge?.setTextColor(Color.parseColor("#EF4444"))
-                                statusSubtext?.text = "Gagal start Touch Listener. Hubungkan Shizuku / ADB terlebih dahulu."
+                                statusSubtext?.text = "Failed to start Touch Listener. Connect Shizuku / ADB first."
                                 statusSubtext?.setTextColor(Color.parseColor("#EF4444"))
                                 masterSwitch?.isChecked = false
                                 prefs.edit().putBoolean("touch_listener_active", false).apply()
@@ -446,7 +454,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 } else {
                     statusBadge?.text = "○ STANDBY"
                     statusBadge?.setTextColor(Color.parseColor("#64748B"))
-                    statusSubtext?.text = "Touch Listener dinonaktifkan (Input default layar)"
+                    statusSubtext?.text = "Touch Listener deactivated (Stock screen input restored)"
                     statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
                     NukeTouchTuningEngine.stopDaemonTouchAsync()
                     NukeTouchTuningEngine.resetToSystemDefaults(context)
@@ -476,7 +484,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             gravity = Gravity.CENTER_VERTICAL
         }
         xHeaderRow.addView(TextView(context).apply {
-            text = "Sumbu X (Horizontal / Aim)"
+            text = "X-Axis (Horizontal / Aim)"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -534,7 +542,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             gravity = Gravity.CENTER_VERTICAL
         }
         yHeaderRow.addView(TextView(context).apply {
-            text = "Sumbu Y (Vertical / Drag Shot)"
+            text = "Y-Axis (Vertical / Drag Shot)"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -597,7 +605,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#38BDF8"))
         })
         card.addView(TextView(context).apply {
-            text = "Pilih area layar tempat multiplier aktif. Setengah kanan disarankan agar analog kiri tidak terpengaruh."
+            text = "Select screen area where multiplier is active. Right half recommended so left analog joystick remains unaffected."
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
@@ -608,9 +616,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         val options = listOf(
-            Triple(NukeTouchTuningEngine.AREA_RIGHT, "Setengah Kanan", "Bidik / Tembak (Disarankan)"),
-            Triple(NukeTouchTuningEngine.AREA_ALL, "Seluruh Layar", "Layar Penuh"),
-            Triple(NukeTouchTuningEngine.AREA_LEFT, "Setengah Kiri", "Gerakan / Joystick")
+            Triple(NukeTouchTuningEngine.AREA_RIGHT, "Right Half", "Aim / Fire (Recommended)"),
+            Triple(NukeTouchTuningEngine.AREA_ALL, "Full Screen", "All Display"),
+            Triple(NukeTouchTuningEngine.AREA_LEFT, "Left Half", "Movement / Joystick")
         )
 
         areaChipViews.clear()
@@ -667,7 +675,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#38BDF8"))
         })
         card.addView(TextView(context).apply {
-            text = "Accelerate: Halus saat geser perlahan (micro-aim), responsif cepat saat flick drag shot."
+            text = "Accelerate: Smooth micro-aim for precise scoping, high responsiveness for flick drag shots."
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
@@ -727,6 +735,46 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
     }
 
+    private fun buildDragShotHeadshotCard(): View {
+        val card = cardLayout()
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        val col = LinearLayout(context).apply {
+            orientation = LinearLayout.VERTICAL
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        }
+        col.addView(TextView(context).apply {
+            text = "FREE FIRE DRAG-SHOT HEADSHOT CURVE"
+            textSize = 9f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#FF4D6D"))
+        })
+        col.addView(TextView(context).apply {
+            text = "Stabilizes upward flicks with thumb-arc wobble suppression (-18% ΔX), dynamic headshot lift (+22% ΔY) to break chest auto-aim lock, and sub-pixel micro-aim stabilization."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, 0)
+        })
+        headerRow.addView(col)
+
+        dragShotSwitch = Switch(context).apply {
+            isChecked = dragShotEnabled
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#FF4D6D"))
+            trackTintList = ColorStateList.valueOf(Color.parseColor("#4A1525"))
+            setOnCheckedChangeListener { _, isChecked ->
+                dragShotEnabled = isChecked
+                persistState()
+            }
+        }
+        headerRow.addView(dragShotSwitch)
+        card.addView(headerRow)
+
+        return card
+    }
+
     private fun buildJitterFilterCard(): View {
         val card = cardLayout()
 
@@ -745,7 +793,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#F8FAFC"))
         })
         col.addView(TextView(context).apply {
-            text = "Menghilangkan micro-tremor getaran jari saat membidik presisi jarak jauh"
+            text = "Eliminates finger micro-tremors during high-precision long-range aiming"
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
         })
@@ -779,7 +827,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#F8FAFC"))
         })
         aimCol.addView(TextView(context).apply {
-            text = "Memungkinkan putaran kamera tak terbatas melampaui tepi fisik layar"
+            text = "Enables continuous camera panning beyond physical screen borders"
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
         })
@@ -817,7 +865,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             gravity = Gravity.CENTER_VERTICAL
         }
         ptrRow.addView(TextView(context).apply {
-            text = "Pointer Speed Sistem (-7 s/d +7)"
+            text = "System Pointer Speed (-7 to +7)"
             textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -864,7 +912,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         })
 
         dpiStatusTv = TextView(context).apply {
-            text = "Meningkatkan density virtual layar agar tarikan drag shot Free Fire lebih tajam & responsif."
+            text = "Boosts virtual screen density for crisper, more responsive Free Fire drag shots."
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
         }
@@ -919,7 +967,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         scope.launch {
             if (!NukeConnectionManager.isConnected()) {
                 mainHandler.post {
-                    dpiStatusTv?.text = "⚠ ADB/Shizuku belum terhubung untuk mengubah DPI."
+                    dpiStatusTv?.text = "⚠ ADB/Shizuku not connected to modify DPI."
                     dpiStatusTv?.setTextColor(Color.parseColor("#F59E0B"))
                 }
                 return@launch
@@ -927,7 +975,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             if (offset == 0) {
                 val ok = NukeTouchTuningEngine.resetDragShotDpi()
                 mainHandler.post {
-                    dpiStatusTv?.text = if (ok) "✓ DPI dikembalikan ke default layar" else "Gagal reset DPI"
+                    dpiStatusTv?.text = if (ok) "✓ DPI reset to screen default" else "Failed to reset DPI"
                     dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
                 }
             } else {
@@ -935,7 +983,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 val targetDpi = (physicalDpi + offset).coerceIn(320, 640)
                 val ok = NukeTouchTuningEngine.applyDragShotDpi(targetDpi)
                 mainHandler.post {
-                    dpiStatusTv?.text = if (ok) "✓ DPI aktif: ${physicalDpi} → $targetDpi (+$offset DPI) — Drag shot siap" else "Gagal set DPI"
+                    dpiStatusTv?.text = if (ok) "✓ DPI active: ${physicalDpi} → $targetDpi (+$offset DPI) — Drag shot ready" else "Failed to set DPI"
                     dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
                 }
             }
@@ -953,7 +1001,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         })
 
         val readoutTv = TextView(context).apply {
-            text = "Geser jari di bawah untuk menguji responsivitas X & Y"
+            text = "Swipe below to test X & Y responsiveness"
             textSize = 8.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
             setTextColor(Color.parseColor("#94A3B8"))
@@ -1051,7 +1099,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                         return true
                     }
                     MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        readoutTv.text = "Lepas — Siap untuk pengujian sentuhan berikutnya"
+                        readoutTv.text = "Released — Ready for next touch test"
                         readoutTv.setTextColor(Color.parseColor("#94A3B8"))
                         currentX = -1f
                         currentY = -1f

@@ -1921,7 +1921,7 @@ private fun DensityStepperCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, null, tint = NukeGreen, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("LEBAR TERKECIL / DPI (SKALA LAYAR)", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
+                    Text("MINIMUM WIDTH / DPI (DISPLAY SCALE)", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
                 }
                 Box(
                     Modifier
@@ -1938,10 +1938,10 @@ private fun DensityStepperCard(
                 horizontalArrangement = Arrangement.spacedBy(3.dp),
             ) {
                 listOf(
-                    360 to "360\nBesar",
+                    360 to "360\nLarge",
                     411 to "411\nNormal",
-                    480 to "480\nKecil",
-                    540 to "540\nLicin",
+                    480 to "480\nCompact",
+                    540 to "540\nSmooth",
                     600 to "600\nUltra"
                 ).forEach { (dpi, label) ->
                     val isSelected = (currentDpi - dpi).let { if (it < 0) -it else it } < 25
