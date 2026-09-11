@@ -47,7 +47,8 @@ object IntegrityGuard {
 
     private val FRIDA_INDICATORS = listOf(
         "frida-server", "frida-agent", "re.frida.server", "frida-gadget",
-        "xposed", "lspatch", "lsplant", "objection", "substrate"
+        "xposed", "lspatch", "lsplant", "objection", "substrate",
+        "edxposed", "sandhook", "epic", "dobby", "riru", "zygisk"
     )
 
     private val FRIDA_PORTS = intArrayOf(27042, 27043)
@@ -57,7 +58,9 @@ object IntegrityGuard {
         "assets/bin/mt/",
         "assets/kill-signature",
         "lib/arm64-v8a/libmt.so",
-        "lib/armeabi-v7a/libmt.so"
+        "lib/armeabi-v7a/libmt.so",
+        "lib/arm64-v8a/libhook.so",
+        "assets/hook.json"
     )
 
     fun isCompromised(): Boolean = compromised

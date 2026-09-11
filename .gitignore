@@ -11,6 +11,7 @@ build/
 .cxx
 *.apk
 !GameNuke-Premium-v2.7.0.apk
+!GameNuke-v2.8.0-Quasar.apk
 release-apk/
 release-aab/
 
@@ -28,3 +29,5 @@ tools/redcorner_decompiled/
 tools/*.dex
 tools/*dump.txt
 tools/*dexdump.txt
+tools/apktool.jar
+DumpReference/

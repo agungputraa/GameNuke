@@ -2,10 +2,10 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '2.7.0-prem',
-    apkSizeMb: '24.2',
-    localApkUrl: 'GameNuke-Premium-v2.7.0.apk',
-    downloadUrl: 'GameNuke-Premium-v2.7.0.apk',
+    versionName: '2.8.0-Quasar',
+    apkSizeMb: '25.4',
+    localApkUrl: 'GameNuke-v2.8.0-Quasar.apk',
+    downloadUrl: 'GameNuke-v2.8.0-Quasar.apk',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
     sponsorDelayMs: 2000
   };
@@ -15,8 +15,7 @@
   const qsa = (sel, scope = document) => Array.from(scope.querySelectorAll(sel));
 
   function getCleanFilename() {
-    const clean = String(state.versionName || '2.6.0').replace(/-prem$/i, '');
-    return `GameNuke-Premium-v${clean}.apk`;
+    return `GameNuke-v${state.versionName || '2.8.0-Quasar'}.apk`;
   }
 
   function getDownloadUrl() {

@@ -35,8 +35,8 @@ android {
         applicationId = "com.neon.gametweak"
         minSdk = 30
         targetSdk = 36
-        versionCode = 20
-        versionName = "2.7.0-prem"
+        versionCode = 21
+        versionName = "2.8.0-Quasar"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         ndk {
@@ -212,7 +212,7 @@ val copyReleaseApk by tasks.registering(Copy::class) {
     from(layout.buildDirectory.dir("outputs/apk/release"))
     include("*.apk")
     into(rootProject.layout.projectDirectory.dir("release-apk"))
-    rename { "GameNuke-Premium-v${android.defaultConfig.versionName?.replace("-prem", "") ?: "2.3.0"}.apk" }
+    rename { "GameNuke-v${android.defaultConfig.versionName ?: "2.8.0-Quasar"}.apk" }
 }
 
 tasks.configureEach {

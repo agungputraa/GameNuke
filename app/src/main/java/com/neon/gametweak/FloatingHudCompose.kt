@@ -1247,13 +1247,13 @@ private fun TacticalEnginesDeckView(
             SectionDivider("DEVICE PERFORMANCE CONTROLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TacticalHardwareCard(Icons.Outlined.Speed, "CPU PROFILE", "PERF", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "NET PRIORITY", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.Bolt, "LOCAL NET", "ON", "OFF", checked = isVpnOn, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.TouchApp, "TOUCH TUNE", "ACTIVE", "STD", checked = isTouchOn, onToggle = { callbacks.onQuickAction("touch_response") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.SportsEsports, "GAME MODE", "PERF", "STD", checked = isGameOn, onToggle = { callbacks.onQuickAction("game_mode") }, modifier = Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TacticalHardwareCard(Icons.Outlined.TouchApp, "TOUCH TUNE", "ACTIVE", "STD", checked = isTouchOn, onToggle = { callbacks.onQuickAction("touch_response") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO TUNE", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.SportsEsports, "GAME MODE", "PERF", "STD", checked = isGameOn, onToggle = { callbacks.onQuickAction("game_mode") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "PACKET BOOST", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Bolt, "NET ENGINE", "ACTIVE", "OFF", checked = isVpnOn, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
             }
         }
         Spacer(Modifier.height(4.dp))

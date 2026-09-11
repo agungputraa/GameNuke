@@ -38,9 +38,13 @@
     public static *** i(...);
 }
 
-# --- Obfuscation config ---
+# --- Obfuscation & Security Hardening config ---
 -renamesourcefileattribute ""
 -keepattributes Exceptions, InnerClasses, Signature, *Annotation*, EnclosingMethod
+-optimizationpasses 5
+-overloadaggressively
+-repackageclasses ""
+-allowaccessmodification
 -dontwarn java.lang.invoke.**
 -dontwarn sun.misc.Unsafe
 
@@ -178,4 +182,23 @@
 -keep class frb.axeron.server.touch.** { *; }
 -keepclassmembers class frb.axeron.server.touch.** { *; }
 -dontwarn frb.axeron.server.touch.**
+
+# --- Go Mobile DNS Tunnel (libgojni.so — native gomobile bridge) ---
+# anehprodns.* and go.* are native Go Mobile JNI stubs.
+# JNI function names in libgojni.so (e.g. Java_go_Seq_init, Java_anehprodns_Anehprodns_start)
+# require exact class and method names. Do not shrink or obfuscate!
+-keep class anehprodns.** { *; }
+-keepclassmembers class anehprodns.** { *; }
+-keep interface anehprodns.** { *; }
+-dontwarn anehprodns.**
+
+-keep class go.** { *; }
+-keepclassmembers class go.** { *; }
+-keep interface go.** { *; }
+-dontwarn go.**
+
+# NukeGameVpnService and trampoline
+-keep class com.neon.gametweak.NukeGameVpnService { *; }
+-keep class com.neon.gametweak.NukeVpnPermissionActivity { *; }
+
 

@@ -17,6 +17,7 @@ import android.os.SystemClock
 import android.provider.Settings
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities
+import android.net.VpnService
 import android.net.wifi.WifiInfo
 import android.net.wifi.WifiManager
 import android.util.Log
@@ -188,6 +189,7 @@ class FloatingBoosterService : Service() {
     override fun onCreate() {
         super.onCreate()
         activeInstance = this
+        NukeDynamicSessionRestoreManager.onSessionStart(applicationContext)
         NukeAntivirusEngine.init(applicationContext)
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
         prefs = getSharedPreferences(PREFS, Context.MODE_PRIVATE)
@@ -201,10 +203,10 @@ class FloatingBoosterService : Service() {
 
         scope.launch { hudTools.pingMs.collect { value -> composeHudState.update { it.copy(probeMs = value) } } }
         scope.launch { hudTools.pingEnabled.collect { enabled -> composeHudState.update { it.copy(probeEnabled = enabled, quickToolStates = it.quickToolStates + ("ping_monitor" to enabled)) } } }
-        // Sync local network tools to floating HUD cards
+        // Sync gaming DNS VPN state to floating HUD vpn_boost card
         scope.launch {
-            NukeNetPacer.status.collect { vpn ->
-                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vpn_boost" to vpn.isConnected)) }
+            NukeGameVpnService.isRunningFlow.collect { running ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vpn_boost" to running)) }
             }
         }
 
@@ -921,6 +923,7 @@ class FloatingBoosterService : Service() {
     private fun handleBrightnessSlider(percent: Int) {
         val pct = percent.coerceIn(5, 100)
         composeHudState.update { it.copy(brightnessPercent = pct) }
+        NukeDynamicSessionRestoreManager.markBrightnessModified()
         scope.launch(Dispatchers.IO) {
             val adb = AdbManager.getInstance(applicationContext)
             val raw = ((pct / 100.0f) * 255).roundToInt().coerceIn(10, 255)
@@ -936,6 +939,7 @@ class FloatingBoosterService : Service() {
     private fun handleDpiSlider(dpi: Int) {
         val targetDp = dpi.coerceIn(320, 640)
         composeHudState.update { it.copy(displayDpi = targetDp) }
+        NukeDynamicSessionRestoreManager.markDpiModified()
         scope.launch(Dispatchers.IO) {
             // Invert to match gamer Smallest Width DP expectation:
             // higher targetDp -> lower density -> UI elements shrink, screen becomes spacious!
@@ -982,6 +986,7 @@ class FloatingBoosterService : Service() {
         }
         when (action) {
             "game_mode" -> {
+                NukeDynamicSessionRestoreManager.markGameModeModified()
                 val local = engine ?: run { toastOutcome("Game Nuke core is not ready"); return }
                 val current = prefs.safeBoolean(K_ADAPTIVE_GAME_MODE, false)
                 val target = !current
@@ -992,6 +997,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "dnd" -> {
+                NukeDynamicSessionRestoreManager.markDndModified()
                 scope.launch {
                     val applied = applyGamingDndShell(nextVal)
                     toastOutcome(when {
@@ -1002,6 +1008,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "touch_response" -> {
+                NukeDynamicSessionRestoreManager.markTouchModified()
                 scope.launch {
                     val report = NukeTouchTuningEngine.apply(
                         context = applicationContext,
@@ -1018,6 +1025,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "net_boost" -> {
+                NukeDynamicSessionRestoreManager.markNetBoostModified()
                 val local = engine
                 if (local != null) {
                     scope.launch {
@@ -1036,6 +1044,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "hotspot" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("hotspot", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     if (nextVal) {
@@ -1129,6 +1138,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "silent_mode" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("silent_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     val nextRinger = if (nextVal) 0 else 2
@@ -1144,6 +1154,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "reading_mode" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("reading_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
@@ -1216,6 +1227,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "airplane_mode" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("airplane_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
@@ -1229,6 +1241,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "vibration" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("vibration", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
@@ -1243,6 +1256,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "cpu_turbo" -> {
+                NukeDynamicSessionRestoreManager.markCpuTurboModified()
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     val script = if (nextVal) {
@@ -1263,6 +1277,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "screen_timeout_extend" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("screen_timeout_extend", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     // 30 minutes = 1800000ms, default = 60000ms (1 min)
@@ -1272,6 +1287,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "data_saver" -> {
+                NukeDynamicSessionRestoreManager.recordQuickSettingModification("data_saver", currentActive)
                 scope.launch(Dispatchers.IO) {
                     val adb = AdbManager.getInstance(applicationContext)
                     if (nextVal) {
@@ -1302,11 +1318,13 @@ class FloatingBoosterService : Service() {
                 toastOutcome(if (overlay.isShowing) "Task Manager: OPEN" else "Task Manager: CLOSED")
             }
             "magic_touch" -> {
+                NukeDynamicSessionRestoreManager.markTouchModified()
                 val overlay = NukeMagicTouchPanelOverlay.getInstance(applicationContext)
                 overlay.toggle()
                 toastOutcome(if (overlay.isShowing) "Touch Listener: OPEN" else "Touch Listener: CLOSED")
             }
             "gpu_tuner" -> {
+                NukeDynamicSessionRestoreManager.markGpuTunerModified()
                 val overlay = NukeGpuGraphicsPanelOverlay.getInstance(applicationContext)
                 overlay.toggle()
                 toastOutcome(if (overlay.isShowing) "GPU & Display Tuner: OPEN 🎮" else "GPU & Display Tuner: CLOSED")
@@ -1358,18 +1376,29 @@ class FloatingBoosterService : Service() {
             }
 
             "vpn_boost" -> {
-                if (NukeNetPacer.isRunning) NukeNetPacer.stopBoost(applicationContext)
-                else {
-                    NukeNetPacer.startBoost(applicationContext)
-                    scope.launch {
-                        runCatching { NukeNetPacer.connect("one.one.one.one", 443).use { } }
-                            .onSuccess { toastOutcome("Game Nuke TCP connect: ${NukeNetPacer.status.value.measuredPingMs} ms (not game latency)") }
-                            .onFailure { toastOutcome("Local network check unavailable") }
+                NukeDynamicSessionRestoreManager.markVpnModified()
+                if (NukeGameVpnService.isRunning(applicationContext)) {
+                    // ── Stop gaming tunnel ──────────────────────────────────
+                    NukeGameVpnService.stop(applicationContext)
+                    toastOutcome("Net Engine: DEACTIVATED")
+                } else {
+                    // ── Start gaming tunnel — check permission first ────────
+                    val vpnIntent = VpnService.prepare(applicationContext)
+                    if (vpnIntent == null) {
+                        // Permission already granted — start immediately
+                        NukeGameVpnService.start(applicationContext)
+                        toastOutcome("Net Engine: ACTIVE (Low-Latency Tunnel)")
+                    } else {
+                        // Need to ask user for VPN permission.
+                        val permIntent = Intent(applicationContext, NukeVpnPermissionActivity::class.java)
+                            .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                        applicationContext.startActivity(permIntent)
+                        toastOutcome("Net Engine: Allow tunnel permission to activate")
                     }
                 }
-                toastOutcome("Local network tools: " + if (NukeNetPacer.isRunning) "ON (Game Nuke connections only)" else "OFF")
             }
             "brightness_lock" -> {
+                NukeDynamicSessionRestoreManager.markBrightnessModified()
                 scope.launch(Dispatchers.IO) {
                     val script = if (nextVal) {
                         """
@@ -1391,6 +1420,7 @@ class FloatingBoosterService : Service() {
                 }
             }
             "fps_lock" -> {
+                NukeDynamicSessionRestoreManager.markFpsLockModified()
                 scope.launch(Dispatchers.IO) {
                     val nextHz = NukeUniversalFpsLock.cycleNextTarget(applicationContext)
                     val active = nextHz > 0
@@ -1412,6 +1442,7 @@ class FloatingBoosterService : Service() {
 
             "check_update" -> { AppUpdateController.openOfficialWebsite(applicationContext) }
             "footstep_boost" -> {
+                NukeDynamicSessionRestoreManager.markAudioBoostModified()
                 val nextActive = NukeAudioBooster.toggleFootstepBoost(applicationContext)
                 toastOutcome(if (nextActive) "Audio Focus Profile: ACTIVE (1kHz–4kHz emphasis)" else "Audio Focus Profile: OFF")
             }
@@ -3459,6 +3490,7 @@ class FloatingBoosterService : Service() {
             prefs.edit().putBoolean("hud_keep_awake", false).apply()
         }
         clearSessionMarker(); engine = null; targetPackage = null
+        runCatching { NukeDynamicSessionRestoreManager.restoreAllModified(applicationContext) }
         runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
         NukeAdManager.markGamingSessionEnded(applicationContext)
         publishRuntime(null)
@@ -3541,6 +3573,7 @@ class FloatingBoosterService : Service() {
         NukeAudioBooster.disableBoost()
         val appContext = applicationContext
         CoroutineScope(Dispatchers.IO).launch {
+            runCatching { NukeDynamicSessionRestoreManager.restoreAllModified(appContext) }
             runCatching { NukeSystemOptimizer.restoreSystemDefaults(appContext) }
             runCatching { NukeUniversalFpsLock.setTargetFps(appContext, 0) }
             runCatching { NukeTouchTuningEngine.resetToSystemDefaults(appContext) }
