@@ -586,11 +586,15 @@ object NukeTouchTuningEngine {
                     }
                 }
 
-                // 2. Fallback: Socket daemon client
-                if (!NukeDaemonClient.ping()) {
-                    NukeConnectionManager.bootstrapPersistentCore(context)
+                // 2. Fallback: Socket daemon client (Native ADB / Persistent Core)
+                if (!NukeDaemonClient.ping(force = true)) {
+                    if (AdbManager.getInstance(context).isConnected()) {
+                        AdbManager.getInstance(context).ensurePersistentCore()
+                    } else {
+                        NukeConnectionManager.bootstrapPersistentCore(context)
+                    }
                 }
-                if (NukeDaemonClient.ping()) {
+                if (NukeDaemonClient.ping(force = true)) {
                     val started = NukeDaemonClient.touchStart(libPath)
                     if (started) {
                         NukeDaemonClient.touchConfig(
@@ -604,11 +608,14 @@ object NukeTouchTuningEngine {
                             dragShot = dragShotCurve
                         )
                         daemonTouchActive = true
+                        android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Native Daemon (TCP/Socket)")
                         true
                     } else {
+                        android.util.Log.w("NukeTouchTuningEngine", "touchStart returned false from daemon")
                         false
                     }
                 } else {
+                    android.util.Log.w("NukeTouchTuningEngine", "NukeDaemonClient unreachable via ping")
                     false
                 }
             } catch (t: Throwable) {

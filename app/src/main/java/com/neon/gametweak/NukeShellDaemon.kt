@@ -26,11 +26,13 @@ import kotlin.concurrent.thread
  * - OOM score is reduced so MIUI/HyperOS won't kill it during memory pressure.
  */
 object NukeShellDaemon {
+    const val TCP_PORT = 18294
     private const val PACKAGE = "com.neon.gametweak"
     private const val TAG = "GameNukeCore"
     private val running = AtomicBoolean(true)
     private val lastKnownPackageUid = AtomicInteger(-1)
-    private val pool = Executors.newFixedThreadPool(4)
+    private val expectedToken = java.util.concurrent.atomic.AtomicReference<String>("")
+    private val pool = Executors.newFixedThreadPool(6)
 
     @JvmStatic
     fun main(args: Array<String>) {
@@ -40,12 +42,30 @@ object NukeShellDaemon {
         if (passedUid != null && passedUid > 0) {
             lastKnownPackageUid.set(passedUid)
         }
+        val passedToken = args.firstOrNull { it.startsWith("--token=") }?.substringAfter("--token=")
+        if (!passedToken.isNullOrBlank()) {
+            expectedToken.set(passedToken.trim())
+        }
 
         if (Looper.myLooper() == null) {
             runCatching { Looper.prepareMainLooper() }
         }
 
-        val server = runCatching { LocalServerSocket(NukeDaemonClient.SOCKET_NAME) }.getOrNull() ?: return
+        // Loopback TCP Server (Bypasses SELinux untrusted_app restrictions on Android 11-15+)
+        val tcpServer = runCatching {
+            java.net.ServerSocket().apply {
+                reuseAddress = true
+                bind(java.net.InetSocketAddress(java.net.InetAddress.getByName("127.0.0.1"), TCP_PORT), 50)
+            }
+        }.getOrNull()
+
+        // Legacy UNIX domain socket server (for root/shell callers)
+        val localServer = runCatching { LocalServerSocket(NukeDaemonClient.SOCKET_NAME) }.getOrNull()
+
+        if (tcpServer == null && localServer == null) {
+            Log.e(TAG, "Failed to bind both TCP port $TCP_PORT and LocalServerSocket!")
+            return
+        }
 
         runCatching {
             java.io.File("/proc/${Process.myPid()}/oom_score_adj").writeText("-800")
@@ -60,7 +80,7 @@ object NukeShellDaemon {
                 Runtime.getRuntime().exec("settings put system pointer_speed 0; setprop persist.vendor.touch.game_mode 0").waitFor()
             }
         })
-        Log.i(TAG, "Core started pid=${Process.myPid()} uid=${Process.myUid()} expectedPkgUid=${lastKnownPackageUid.get()}")
+        Log.i(TAG, "Core started pid=${Process.myPid()} uid=${Process.myUid()} expectedPkgUid=${lastKnownPackageUid.get()} tcp=${tcpServer != null} local=${localServer != null}")
 
         thread(name = "Nuke-Core-Watchdog", isDaemon = true) {
             // Passive background watchdog: periodically updates UID without ever killing the daemon
@@ -74,16 +94,31 @@ object NukeShellDaemon {
             }
         }
 
-        thread(name = "Nuke-Core-Socket", isDaemon = false) {
-            try {
-                while (running.get()) {
-                    val socket = runCatching { server.accept() }.getOrNull() ?: break
-                    pool.execute { handle(socket) }
+        if (tcpServer != null) {
+            thread(name = "Nuke-Core-TCP", isDaemon = false) {
+                try {
+                    while (running.get()) {
+                        val client = runCatching { tcpServer.accept() }.getOrNull() ?: break
+                        pool.execute { handleTcp(client) }
+                    }
+                } finally {
+                    running.set(false)
+                    runCatching { tcpServer.close() }
                 }
-            } finally {
-                running.set(false)
-                runCatching { server.close() }
-                pool.shutdownNow()
+            }
+        }
+
+        if (localServer != null) {
+            thread(name = "Nuke-Core-Socket", isDaemon = false) {
+                try {
+                    while (running.get()) {
+                        val socket = runCatching { localServer.accept() }.getOrNull() ?: break
+                        pool.execute { handle(socket) }
+                    }
+                } finally {
+                    running.set(false)
+                    runCatching { localServer.close() }
+                }
             }
         }
 
@@ -93,6 +128,48 @@ object NukeShellDaemon {
             while (running.get()) {
                 try { Thread.sleep(30_000) } catch (_: InterruptedException) { break }
             }
+        }
+    }
+
+    private fun handleTcp(socket: java.net.Socket) {
+        try {
+            socket.soTimeout = 125000
+            val reader = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
+            val rawLine = reader.readLine().orEmpty()
+
+            val tokenReq = expectedToken.get().orEmpty()
+            var isAuthorized = false
+            var line = rawLine
+            if (rawLine.startsWith("TOKEN|")) {
+                val clientTok = rawLine.substringAfter("TOKEN|").substringBefore('|')
+                line = rawLine.substringAfter("TOKEN|").substringAfter('|')
+                if (tokenReq.isEmpty() || clientTok == tokenReq) {
+                    isAuthorized = true
+                }
+            } else {
+                if (tokenReq.isEmpty()) {
+                    isAuthorized = true
+                }
+            }
+
+            val writer = socket.getOutputStream().bufferedWriter(Charsets.UTF_8)
+            if (!isAuthorized) {
+                writer.write("DENIED\n")
+                writer.flush()
+                return
+            }
+
+            val (response, shouldStop) = processCommand(line)
+            writer.write(response)
+            writer.write("\n")
+            writer.flush()
+
+            if (shouldStop) {
+                triggerDaemonKill()
+            }
+        } catch (_: Throwable) {
+        } finally {
+            runCatching { socket.close() }
         }
     }
 
@@ -110,52 +187,69 @@ object NukeShellDaemon {
                     (expected > 0 && peer == expected) ||
                     (peer >= 10000)
 
+            val writer = socket.outputStream.bufferedWriter(Charsets.UTF_8)
             if (!isAuthorized) {
-                socket.outputStream.bufferedWriter().use { it.write("DENIED\n") }
+                writer.write("DENIED\n")
+                writer.flush()
                 return
             }
             if (expected <= 0 && peer >= 10000) {
                 lastKnownPackageUid.set(peer)
             }
 
-            val line = BufferedReader(InputStreamReader(socket.inputStream)).readLine().orEmpty()
-            val response = when {
-                line == "PING" -> "PONG|${Process.myPid()}"
-                line == "STOP" -> {
-                    runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
-                    running.set(false)
-                    "BYE"
-                }
-                line.startsWith("EXEC|") -> executeRequest(line)
-                line.startsWith("TOUCH_START") -> {
-                    val candidate = line.substringAfter("TOUCH_START|", "").trim()
-                    val libPath = candidate.ifEmpty { "/data/local/tmp/libtouch.so" }
-                    val count = frb.axeron.server.touch.NukeTouchService.start(libPath)
-                    "TOUCH_STARTED|$count"
-                }
-                line.startsWith("TOUCH_CONFIG|") -> handleTouchConfig(line)
-                line == "TOUCH_STOP" -> {
-                    frb.axeron.server.touch.NukeTouchService.stop()
-                    "TOUCH_STOPPED"
-                }
-                line == "TOUCH_STATUS" -> {
-                    "TOUCH_STATUS|${frb.axeron.server.touch.NukeTouchService.isRunning()}"
-                }
-                else -> "ERROR|PROTOCOL"
+            val reader = BufferedReader(InputStreamReader(socket.inputStream, Charsets.UTF_8))
+            val rawLine = reader.readLine().orEmpty()
+            val line = if (rawLine.startsWith("TOKEN|")) rawLine.substringAfter("TOKEN|").substringAfter('|') else rawLine
+            val (response, shouldStop) = processCommand(line)
+            writer.write(response)
+            writer.write("\n")
+            writer.flush()
+
+            if (shouldStop) {
+                triggerDaemonKill()
             }
-            socket.outputStream.bufferedWriter().use {
-                it.write(response)
-                it.write("\n")
-                it.flush()
-            }
-            if (line == "STOP") thread(isDaemon = true) {
-                try { Thread.sleep(80) } catch (_: Throwable) {}
-                runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
-                runCatching { Looper.getMainLooper()?.quit() }
-                Process.killProcess(Process.myPid())
-            }
-        } catch (_: Throwable) {} finally {
+        } catch (_: Throwable) {
+        } finally {
             runCatching { socket.close() }
+        }
+    }
+
+    private fun processCommand(line: String): Pair<String, Boolean> {
+        var shouldStop = false
+        val response = when {
+            line == "PING" -> "PONG|${Process.myPid()}"
+            line == "STOP" -> {
+                runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+                running.set(false)
+                shouldStop = true
+                "BYE"
+            }
+            line.startsWith("EXEC|") -> executeRequest(line)
+            line.startsWith("TOUCH_START") -> {
+                val candidate = line.substringAfter("TOUCH_START|", "").trim()
+                val libPath = candidate.ifEmpty { "/data/local/tmp/libtouch.so" }
+                val count = frb.axeron.server.touch.NukeTouchService.start(libPath)
+                "TOUCH_STARTED|$count"
+            }
+            line.startsWith("TOUCH_CONFIG|") -> handleTouchConfig(line)
+            line == "TOUCH_STOP" -> {
+                frb.axeron.server.touch.NukeTouchService.stop()
+                "TOUCH_STOPPED"
+            }
+            line == "TOUCH_STATUS" -> {
+                "TOUCH_STATUS|${frb.axeron.server.touch.NukeTouchService.isRunning()}"
+            }
+            else -> "ERROR|PROTOCOL"
+        }
+        return Pair(response, shouldStop)
+    }
+
+    private fun triggerDaemonKill() {
+        thread(isDaemon = true) {
+            try { Thread.sleep(80) } catch (_: Throwable) {}
+            runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+            runCatching { Looper.getMainLooper()?.quit() }
+            Process.killProcess(Process.myPid())
         }
     }
 

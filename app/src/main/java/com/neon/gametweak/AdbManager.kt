@@ -373,7 +373,9 @@ class AdbManager private constructor(context: Context) {
         executeCommandDirect(setupEnv, timeoutMs = 3_000L, maxOutputChars = 256)
 
         // ── Shizuku's exact launch pattern with ANDROID_DATA and detached stdio ──
-        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH=$quotedApk; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
+        val tok = NukeDaemonClient.getToken(mContext)
+        val tokenArg = if (tok.isNotEmpty()) "--token=$tok" else ""
+        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH=$quotedApk; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid $tokenArg </dev/null >/dev/null 2>&1)&"
         writeTraceLog("BOOTSTRAP CMD: $launch")
         val result = executeCommandDirect(launch, timeoutMs = 4_500L, maxOutputChars = 4_096)
         if (!result.isSuccess && result.exitCode != 0) {

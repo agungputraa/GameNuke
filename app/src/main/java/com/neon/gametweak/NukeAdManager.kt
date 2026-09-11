@@ -565,7 +565,7 @@ object NukeAdManager {
                     }
                 }
                 override fun onAdFailedToLoad(baseAd: BaseAd, error: VungleError) {
-                    Log.w(TAG, "Banner load failed: ${error.errorMessage}")
+                    Log.w(TAG, "Banner load failed: ${error.errorMessage} (code=${error.code})")
                     onLoaded?.invoke(false)
                 }
                 override fun onAdClicked(baseAd: BaseAd)        {}

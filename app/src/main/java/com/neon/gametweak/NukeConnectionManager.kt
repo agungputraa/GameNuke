@@ -139,7 +139,9 @@ object NukeConnectionManager {
         executeCommand("mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j '$targetApk' lib/arm64-v8a/libtouch.so -d /data/local/tmp/ >/dev/null 2>&1 || cp '$nativeDir/libtouch.so' /data/local/tmp/libtouch.so 2>/dev/null; chmod 755 /data/local/tmp/libtouch.so 2>/dev/null", timeoutMs = 3000L)
 
         // Launch Shizuku-style daemon with detached stdio and proper DEX cache
-        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH='$targetApk'; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
+        val tok = NukeDaemonClient.getToken(context)
+        val tokenArg = if (tok.isNotEmpty()) "--token=$tok" else ""
+        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH='$targetApk'; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid $tokenArg </dev/null >/dev/null 2>&1)&"
         Log.i(TAG, "Bootstrapping daemon via ${connectionLabel()}: $launch")
         
         var execResult = executeCommand(launch, timeoutMs = 4500L)

@@ -1,5 +1,6 @@
 package com.neon.gametweak
 
+import android.content.Context
 import android.net.LocalSocket
 import android.net.LocalSocketAddress
 import android.os.Looper
@@ -7,16 +8,41 @@ import android.os.SystemClock
 import android.util.Base64
 import java.io.BufferedReader
 import java.io.InputStreamReader
+import java.net.InetSocketAddress
+import java.net.Socket
 
 object NukeDaemonClient {
     const val SOCKET_NAME = "gamenuke.core.v1"
+    const val TCP_PORT = 18294
     private const val PING_CACHE_MS = 600L
     @Volatile private var lastPingAt = 0L
     @Volatile private var lastPing = false
+    @Volatile private var authToken: String = ""
+
+    fun init(context: Context) {
+        if (authToken.isEmpty()) {
+            val sp = context.getSharedPreferences("nuke_daemon_sec", Context.MODE_PRIVATE)
+            var tok = sp.getString("token", null)
+            if (tok.isNullOrBlank()) {
+                tok = java.util.UUID.randomUUID().toString()
+                sp.edit().putString("token", tok).apply()
+            }
+            authToken = tok
+        }
+    }
+
+    fun getToken(context: Context? = null): String {
+        if (authToken.isNotEmpty()) return authToken
+        if (context != null) {
+            init(context)
+            return authToken
+        }
+        return ""
+    }
 
     fun ping(force: Boolean = false): Boolean {
-        // If called from Main UI Thread, NEVER execute blocking UNIX domain socket I/O!
-        // A failed socket connect blocks 1200ms when daemon is not running, causing UI freezes/ANR.
+        // If called from Main UI Thread, NEVER execute blocking socket I/O!
+        // A failed socket connect blocks when daemon is not running, causing UI freezes/ANR.
         if (Looper.myLooper() == Looper.getMainLooper()) {
             return lastPing
         }
@@ -93,23 +119,60 @@ object NukeDaemonClient {
         return resp == "TOUCH_STATUS|true"
     }
 
-    /**
-     * Sends a request to the abstract UNIX domain socket server.
-     * Note: LocalSocket.connect(endpoint, timeout) throws UnsupportedOperationException on Android!
-     * We must use the 1-argument connect(endpoint) and set soTimeout on the socket for read timeouts.
-     */
-    private fun request(line: String, timeoutMs: Int): String {
-        val socket = LocalSocket()
+    private fun requestTcp(line: String, timeoutMs: Int): String {
+        val socket = Socket()
         try {
-            socket.soTimeout = timeoutMs.coerceAtLeast(100)
-            socket.connect(LocalSocketAddress(SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT))
-            val writer = socket.outputStream.bufferedWriter()
-            writer.write(line)
+            socket.tcpNoDelay = true
+            socket.soTimeout = timeoutMs.coerceAtLeast(150)
+            socket.connect(InetSocketAddress("127.0.0.1", TCP_PORT), timeoutMs.coerceIn(200, 2000))
+            val tok = authToken
+            val payload = if (tok.isNotEmpty()) "TOKEN|$tok|$line" else line
+            val writer = socket.getOutputStream().bufferedWriter(Charsets.UTF_8)
+            writer.write(payload)
             writer.write("\n")
             writer.flush()
-            return BufferedReader(InputStreamReader(socket.inputStream)).readLine().orEmpty()
+            val resp = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8)).readLine().orEmpty()
+            if (resp == "DENIED") {
+                throw java.io.IOException("Daemon TCP rejected authentication")
+            }
+            return resp
         } finally {
             runCatching { socket.close() }
         }
     }
+
+    private fun requestLocal(line: String, timeoutMs: Int): String {
+        val socket = LocalSocket()
+        try {
+            socket.soTimeout = timeoutMs.coerceAtLeast(150)
+            socket.connect(LocalSocketAddress(SOCKET_NAME, LocalSocketAddress.Namespace.ABSTRACT))
+            val writer = socket.outputStream.bufferedWriter(Charsets.UTF_8)
+            writer.write(line)
+            writer.write("\n")
+            writer.flush()
+            return BufferedReader(InputStreamReader(socket.inputStream, Charsets.UTF_8)).readLine().orEmpty()
+        } finally {
+            runCatching { socket.close() }
+        }
+    }
+
+    /**
+     * Sends a request to the daemon.
+     * Priority 1: High-speed loopback TCP (127.0.0.1:18294) - SELinux-proof on Android 11-15+
+     * Priority 2: Abstract UNIX domain socket (for legacy shell / root environments)
+     */
+    private fun request(line: String, timeoutMs: Int): String {
+        val tcpResult = runCatching { requestTcp(line, timeoutMs) }
+        if (tcpResult.isSuccess && tcpResult.getOrNull()?.isNotEmpty() == true) {
+            return tcpResult.getOrThrow()
+        }
+
+        val localResult = runCatching { requestLocal(line, timeoutMs) }
+        if (localResult.isSuccess && localResult.getOrNull()?.isNotEmpty() == true) {
+            return localResult.getOrThrow()
+        }
+
+        throw tcpResult.exceptionOrNull() ?: localResult.exceptionOrNull() ?: java.io.IOException("Daemon unreachable")
+    }
 }
+

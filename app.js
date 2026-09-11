@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '2.6.0-prem',
-    apkSizeMb: '30.1',
-    publishedAt: '2026-09-09',
+    versionName: '2.7.0-prem',
+    apkSizeMb: '24.2',
+    publishedAt: '2026-09-11',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };

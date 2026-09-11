@@ -56,6 +56,7 @@ import com.neon.gametweak.ui.theme.NukeEnterpriseTheme
 import com.neon.gametweak.ui.theme.Neon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -347,18 +348,46 @@ fun BannerAdView() {
     val bannerAdRef = remember { mutableStateOf<VungleBannerView?>(null) }
     val isAdLoaded = remember { mutableStateOf(false) }
 
-    LaunchedEffect(Unit) {
+    LaunchedEffect(lifecycleOwner) {
         // Wait gracefully until SDK initialization completes
         var attempts = 0
-        while (!NukeAdManager.initialized && attempts < 30) {
-            kotlinx.coroutines.delay(400L)
+        while (!NukeAdManager.initialized && attempts < 40) {
+            delay(350L)
             attempts++
         }
-        if (NukeAdManager.initialized) {
-            val ad = NukeAdManager.loadBannerInto(context, container) { success ->
+        if (!NukeAdManager.initialized) return@LaunchedEffect
+
+        // Resilient auto-retry and auto-refresh banner loop:
+        // - 12s backoff on unsold auction / error (Vungle error 10001)
+        // - 45s standard refresh cycle on ad loaded successfully
+        while (isActive) {
+            var loadSuccess = false
+            var loadFinished = false
+
+            val currentAd = NukeAdManager.loadBannerInto(context, container) { success ->
+                loadSuccess = success
                 isAdLoaded.value = success
+                loadFinished = true
             }
-            bannerAdRef.value = ad
+
+            if (currentAd != null) {
+                val oldAd = bannerAdRef.value
+                if (oldAd != null && oldAd != currentAd) {
+                    runCatching { oldAd.finishAd() }
+                }
+                bannerAdRef.value = currentAd
+            }
+
+            val startTime = System.currentTimeMillis()
+            while (!loadFinished && (System.currentTimeMillis() - startTime < 15000L)) {
+                delay(500L)
+            }
+
+            if (loadSuccess) {
+                delay(45_000L)
+            } else {
+                delay(12_000L)
+            }
         }
     }
 
@@ -400,12 +429,12 @@ fun BannerAdView() {
                 Box(
                     modifier = Modifier
                         .size(6.dp)
-                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .clip(CircleShape)
                         .background(Color(0xFF35C99B).copy(alpha = 0.5f))
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
-                    text = "GAMING SPONSOR",
+                    text = "GAMING SPONSOR • VIP PARTNER",
                     color = Color(0xFF35C99B).copy(alpha = 0.45f),
                     fontSize = 10.sp,
                     fontWeight = FontWeight.SemiBold,
@@ -422,6 +451,7 @@ fun BannerAdView() {
         )
     }
 }
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

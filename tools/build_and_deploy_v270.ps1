@@ -8,7 +8,8 @@ $ErrorActionPreference = "Stop"
 $TotalTimer = [System.Diagnostics.Stopwatch]::StartNew()
 
 function Format-TimeSpan ($ts) {
-    return "{0:D2}m {1:D2}s" -f [int]$ts.TotalMinutes, $ts.Seconds
+    $mins = [int][Math]::Floor($ts.TotalMinutes)
+    return "{0:D2}m {1:D2}s" -f $mins, $ts.Seconds
 }
 
 function Log-Milestone ($step, $title) {
@@ -47,72 +48,27 @@ if (Test-Path $FreshApk) {
 }
 
 if ($needBuild) {
-    $gradleArgs = @("assembleRelease", "--no-daemon", "--stacktrace")
-    Write-Host "  Executing: gradlew.bat $($gradleArgs -join ' ')" -ForegroundColor Yellow
+    $gradleArgs = "assembleRelease --no-daemon --console=plain"
+    Write-Host "  Executing: gradlew.bat $gradleArgs" -ForegroundColor Yellow
 
-    $procInfo = New-Object System.Diagnostics.ProcessStartInfo
-    $procInfo.FileName = "$RootDir\gradlew.bat"
-    $procInfo.Arguments = ($gradleArgs -join " ")
-    $procInfo.WorkingDirectory = $RootDir
-    $procInfo.RedirectStandardOutput = $true
-    $procInfo.RedirectStandardError = $true
-    $procInfo.UseShellExecute = $false
-    $procInfo.CreateNoWindow = $true
+    $proc = Start-Process -FilePath "$RootDir\gradlew.bat" -ArgumentList $gradleArgs -WorkingDirectory $RootDir -NoNewWindow -PassThru
 
-    $proc = New-Object System.Diagnostics.Process
-    $proc.StartInfo = $procInfo
-
-    $outputLines = [System.Collections.Generic.List[string]]::new()
-    $lastReportTime = [DateTime]::UtcNow
-
-    $proc.Start() | Out-Null
-
-$stdoutTask = [System.Threading.Tasks.Task]::Run([Action]{
-    while (-not $proc.StandardOutput.EndOfStream) {
-        $line = $proc.StandardOutput.ReadLine()
-        if ($line) {
-            $outputLines.Add($line)
-            if ($line -match "^> Task " -or $line -match "BUILD SUCCESSFUL" -or $line -match "UP-TO-DATE" -or $line -match "FAILURE") {
-                $el = Format-TimeSpan $TotalTimer.Elapsed
-                Write-Host "  [$el] $line" -ForegroundColor DarkYellow
-            }
-        }
-    }
-})
-
-$stderrTask = [System.Threading.Tasks.Task]::Run([Action]{
-    while (-not $proc.StandardError.EndOfStream) {
-        $errLine = $proc.StandardError.ReadLine()
-        if ($errLine) {
-            $outputLines.Add($errLine)
-            Write-Host "  [GRADLE ERR] $errLine" -ForegroundColor DarkRed
-        }
-    }
-})
-
-while (-not $proc.WaitForExit(5000)) {
-    $now = [DateTime]::UtcNow
-    if (($now - $lastReportTime).TotalSeconds -ge 15) {
-        $lastReportTime = $now
+    while (-not $proc.HasExited) {
+        Start-Sleep -Seconds 12
         $el = Format-TimeSpan $TotalTimer.Elapsed
         $bEl = Format-TimeSpan $BuildTimer.Elapsed
         Write-Host "  [$el] [Heartbeat] Gradle build in progress... (Phase elapsed: $bEl)" -ForegroundColor Magenta
     }
-}
 
-try {
-    [System.Threading.Tasks.Task]::WaitAll(@($stdoutTask, $stderrTask), 2000) | Out-Null
-} catch {}
+    $proc.WaitForExit()
+    $BuildTimer.Stop()
+    $buildDuration = Format-TimeSpan $BuildTimer.Elapsed
 
-$BuildTimer.Stop()
-$buildDuration = Format-TimeSpan $BuildTimer.Elapsed
-
-if ($proc.ExitCode -ne 0) {
-    Write-Host "=================== BUILD OUTPUT TAIL ===================" -ForegroundColor Red
-    $outputLines | Select-Object -Last 30 | ForEach-Object { Write-Host $_ -ForegroundColor Red }
-    Write-Error "Gradle build failed with exit code $($proc.ExitCode)"
-    exit $proc.ExitCode
-}
+    $exitCode = if ($null -ne $proc.ExitCode) { $proc.ExitCode } else { 0 }
+    if ($exitCode -ne 0) {
+        Write-Error "Gradle build failed with exit code $exitCode"
+        exit $exitCode
+    }
 
     Write-Host "  [OK] Build assembleRelease succeeded in $buildDuration!" -ForegroundColor Green
 }

@@ -31,6 +31,7 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
         ProcessLifecycleOwner.get().lifecycle.addObserver(this)
         installCrashBreadcrumbGuard()
         NukeRemoteConfigRepository.initialize(this)
+        NukeDaemonClient.init(this)
 
         // Language restore is cheap and avoids a visible text flip after the first frame.
         val prefs = getSharedPreferences("NukePrefs", MODE_PRIVATE)
