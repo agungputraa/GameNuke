@@ -5,7 +5,7 @@
   "publishedAt": "2026-09-11",
   "minAndroidVersion": 11,
   "targetSdk": 36,
-  "apkSizeMb": "24.3",
+  "apkSizeMb": "24.2",
   "releaseNotes": [
     "Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
     "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
@@ -14,7 +14,7 @@
     "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
     "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0-prem.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
   "localApkUrl": "GameNuke-Premium-v2.7.0.apk",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
   "sha256": "FE0A0CE7F3DFA4DE2BC2396ED3C699D45760C311FA00693D0768492EC650FD45",
