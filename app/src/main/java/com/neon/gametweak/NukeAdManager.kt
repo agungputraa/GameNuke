@@ -553,16 +553,17 @@ object NukeAdManager {
             bannerView.adListener = object : BannerAdListener {
                 override fun onAdLoaded(baseAd: BaseAd) {
                     Log.d(TAG, "Banner loaded ✓")
-                    container.post {
-                        container.removeAllViews()
-                        val lp = FrameLayout.LayoutParams(
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            FrameLayout.LayoutParams.WRAP_CONTENT,
-                            android.view.Gravity.CENTER
-                        )
-                        container.addView(bannerView, lp)
-                        onLoaded?.invoke(true)
-                    }
+                    // Add view synchronously — onAdLoaded fires on the main thread.
+                    // Using container.post{} can silently drop the runnable if the
+                    // FrameLayout is not yet attached to a window (Compose race condition).
+                    container.removeAllViews()
+                    val lp = FrameLayout.LayoutParams(
+                        FrameLayout.LayoutParams.MATCH_PARENT,
+                        FrameLayout.LayoutParams.WRAP_CONTENT,
+                        android.view.Gravity.CENTER_HORIZONTAL
+                    )
+                    container.addView(bannerView, lp)
+                    onLoaded?.invoke(true)
                 }
                 override fun onAdFailedToLoad(baseAd: BaseAd, error: VungleError) {
                     Log.w(TAG, "Banner load failed: ${error.errorMessage} (code=${error.code})")
