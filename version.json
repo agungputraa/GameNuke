@@ -7,17 +7,16 @@
   "targetSdk": 36,
   "apkSizeMb": "24.2",
   "releaseNotes": [
+    "Native Magic Touch Headshot Engine: Seamless flick curve stabilization with horizontal wobble suppression and progressive lift",
+    "Global English Interface: Standardized default language across all overlays, studios, and system dialogs",
     "Thermal Control & Telemetry Studio: Modernized obsidian cockpit overlay with instant touch responsiveness and hardware temperature monitoring",
-    "Google Play Compliance Overhaul: Standardized professional technical terminology across all system and overlay modules",
-    "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement",
-    "Performance & Memory Optimization: Refined low-overhead telemetry loops and kernel cache trimming profiles",
     "Device System Editor: Safe system parameter tuning with category filtering and profile backup",
-    "Dual-Sync Edge CDN Web Updater: Fast in-app update verification and distributed binary delivery"
+    "Ironclad Process Purifier: Smart background memory compaction with zero risk of screen freeze or reboot issues"
   ],
   "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
   "localApkUrl": "GameNuke-Premium-v2.7.0.apk",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
-  "sha256": "F0A2404E77DFBA844F6B1BBDAC05708FDF59211B56DA47F8BD44A1AC9F6E9779",
+  "sha256": "4AD4C87BD4B04BDA2F7BF11F4FEE250F16ACA9092AAC3DD81DDC59B996C123A7",
   "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
   "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
 }

@@ -457,18 +457,19 @@ class NukeTouchInjector {
         val absY = abs(deltaY)
         val totalDelta = absX + absY
 
-        // --- FREE FIRE / SHOOTER DRAG-SHOT HEADSHOT STABILIZATION FORMULA ---
+        // --- NATIVE MAGIC TOUCH HEADSHOT & FLICK STABILIZATION ENGINE ---
+        // Natively integrated into Magic Touch kinematics for effortless headshots and smooth aiming:
         // 1. Upward flick (deltaY < -1.2f with dominant vertical ratio):
         //    Dampens deltaX by 18% (0.82x) to eliminate thumb-arc curvature wobble,
-        //    guaranteeing a laser-straight vertical flick directly into the head hitbox.
+        //    guaranteeing a laser-straight vertical flick directly into the head hitbox (biased for Free Fire & shooters).
         // 2. Dynamic progressive headshot lift (+22% deltaY):
-        //    Smoothly breaks body/chest auto-aim friction lock without overshooting the head.
+        //    Smoothly breaks body/chest auto-aim friction lock without overshooting above the head.
         // 3. Micro-aim sub-pixel stabilization (totalDelta < 4.5f):
         //    Dampens digitizer quantization noise for pixel-perfect scoping & fine crosshair adjustments.
         var effectiveDeltaX = deltaX
         var effectiveDeltaY = deltaY
 
-        if (dragShotCurve && inArea && totalDelta > 1e-4f) {
+        if (inArea && totalDelta > 1e-4f) {
             val isUpwardFlick = deltaY < -1.2f && absY >= (absX * 1.15f)
             if (isUpwardFlick) {
                 effectiveDeltaX = deltaX * 0.82f

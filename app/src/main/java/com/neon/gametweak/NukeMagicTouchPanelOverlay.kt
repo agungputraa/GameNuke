@@ -70,7 +70,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var pointerSeekBar: SeekBar? = null
     private var jitterSwitch: Switch? = null
     private var relativeAimSwitch: Switch? = null
-    private var dragShotSwitch: Switch? = null
     private var dpiStatusTv: TextView? = null
     private var dpiChipViews = mutableListOf<TextView>()
     private var areaChipViews = mutableListOf<TextView>()
@@ -85,7 +84,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var jitterCutoff: Float = 1.0f
     private var jitterBeta: Float = 0.007f
     private var relativeAim: Boolean = true
-    private var dragShotEnabled: Boolean = true
     private var pointerSpeed: Int = 0
     private var physicalDpi: Int = 0
     private var currentDpiOffset: Int = 0
@@ -121,7 +119,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         jitterCutoff = prefs.getFloat("touch_jitter_cutoff", NukeTouchTuningEngine.euroMinCutoff)
         jitterBeta = prefs.getFloat("touch_jitter_beta", NukeTouchTuningEngine.euroBeta)
         relativeAim = prefs.getBoolean("touch_relative_aim", true)
-        dragShotEnabled = prefs.getBoolean("touch_dragshot_curve", true)
         pointerSpeed = prefs.getInt("touch_pointer_speed", 0)
 
         // Sync to engine runtime
@@ -132,7 +129,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         NukeTouchTuningEngine.euroEnabled = jitterSmoothing
         NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
         NukeTouchTuningEngine.euroBeta = jitterBeta
-        NukeTouchTuningEngine.dragShotCurve = dragShotEnabled
     }
 
     private fun persistState() {
@@ -145,7 +141,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             .putFloat("touch_jitter_cutoff", jitterCutoff)
             .putFloat("touch_jitter_beta", jitterBeta)
             .putBoolean("touch_relative_aim", relativeAim)
-            .putBoolean("touch_dragshot_curve", dragShotEnabled)
             .putInt("touch_pointer_speed", pointerSpeed)
             .apply()
 
@@ -156,7 +151,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         NukeTouchTuningEngine.euroEnabled = jitterSmoothing
         NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
         NukeTouchTuningEngine.euroBeta = jitterBeta
-        NukeTouchTuningEngine.dragShotCurve = dragShotEnabled
         NukeTouchTuningEngine.syncToDaemon(context)
     }
 
@@ -276,8 +270,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         body.addView(buildDetectionAreaCard())
         body.addView(spacer(8))
         body.addView(buildResponseCurveCard())
-        body.addView(spacer(8))
-        body.addView(buildDragShotHeadshotCard())
         body.addView(spacer(8))
         body.addView(buildJitterFilterCard())
         body.addView(spacer(8))
@@ -733,46 +725,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
             }
         }
-    }
-
-    private fun buildDragShotHeadshotCard(): View {
-        val card = cardLayout()
-
-        val headerRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val col = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        col.addView(TextView(context).apply {
-            text = "FREE FIRE DRAG-SHOT HEADSHOT CURVE"
-            textSize = 9f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#FF4D6D"))
-        })
-        col.addView(TextView(context).apply {
-            text = "Stabilizes upward flicks with thumb-arc wobble suppression (-18% ΔX), dynamic headshot lift (+22% ΔY) to break chest auto-aim lock, and sub-pixel micro-aim stabilization."
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#94A3B8"))
-            setPadding(0, (2 * d).toInt(), 0, 0)
-        })
-        headerRow.addView(col)
-
-        dragShotSwitch = Switch(context).apply {
-            isChecked = dragShotEnabled
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#FF4D6D"))
-            trackTintList = ColorStateList.valueOf(Color.parseColor("#4A1525"))
-            setOnCheckedChangeListener { _, isChecked ->
-                dragShotEnabled = isChecked
-                persistState()
-            }
-        }
-        headerRow.addView(dragShotSwitch)
-        card.addView(headerRow)
-
-        return card
     }
 
     private fun buildJitterFilterCard(): View {
