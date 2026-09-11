@@ -57,6 +57,11 @@ if (Test-Path $FallbackApk) {
     Copy-Item -Path $FallbackApk -Destination $ApkPath -Force
     Write-Host "   Updated $ApkPath with fresh build from $FallbackApk" -ForegroundColor Green
 }
+if (Test-Path $ApkPath) {
+    Copy-Item -Path $ApkPath -Destination "$RootDir\gamenukeweb\$TargetApkName" -Force
+    Copy-Item -Path $ApkPath -Destination "$RootDir\$TargetApkName" -Force
+    Write-Host "   Synced $TargetApkName to gamenukeweb/ and root repository." -ForegroundColor Green
+}
 
 if (-not (Test-Path $ApkPath)) {
     Write-Host "   Building signed release APK with Gradle assembleRelease..." -ForegroundColor Yellow
