@@ -1,7 +1,7 @@
 # Game Nuke 1-Click Release and GitHub Publisher
 # Automates: Dynamic Version Parsing -> Assemble Signed APK -> Update Metadata -> Deploy Web/README/Workflows -> Create GitHub Release -> Upload Asset
 
-$ErrorActionPreference = "Stop"
+$ErrorActionPreference = "Continue"
 
 $RootDir = Split-Path -Parent $PSScriptRoot
 Set-Location $RootDir
