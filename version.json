@@ -1,23 +1,23 @@
 {
-    "versionCode":  20,
-    "versionName":  "2.7.0-prem",
-    "appName":  "Game Nuke Premium",
-    "publishedAt":  "2026-09-11",
-    "minAndroidVersion":  11,
-    "targetSdk":  36,
-    "apkSizeMb":  "24.2",
-    "releaseNotes":  [
-                         "Anti-Tamper \u0026 Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
-                         "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
-                         "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
-                         "Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays",
-                         "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
-                         "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
-                     ],
-    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
-    "localApkUrl":  "GameNuke-Premium-v2.7.0.apk",
-    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
-    "sha256":  "FE0A0CE7F3DFA4DE2BC2396ED3C699D45760C311FA00693D0768492EC650FD45",
-    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
-    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
+  "versionCode": 20,
+  "versionName": "2.7.0-prem",
+  "appName": "Game Nuke Premium",
+  "publishedAt": "2026-09-11",
+  "minAndroidVersion": 11,
+  "targetSdk": 36,
+  "apkSizeMb": "24.3",
+  "releaseNotes": [
+    "Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
+    "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
+    "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
+    "Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays",
+    "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
+    "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
+  ],
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0-prem.apk",
+  "localApkUrl": "GameNuke-Premium-v2.7.0.apk",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.7.0-prem/GameNuke-Premium-v2.7.0.apk",
+  "sha256": "FE0A0CE7F3DFA4DE2BC2396ED3C699D45760C311FA00693D0768492EC650FD45",
+  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
 }
