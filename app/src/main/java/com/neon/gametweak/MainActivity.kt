@@ -337,16 +337,29 @@ fun BlankFallback(message: String) {
 @Composable
 fun BannerAdView() {
     val context = LocalContext.current
-    if (!ConsentManager.canRequestAds()) return
     val lifecycleOwner = LocalLifecycleOwner.current
-    val container = remember { FrameLayout(context) }
-    // Hold the VungleBannerView handle so we can clean it up on dispose
+    val container = remember { FrameLayout(context).apply {
+        layoutParams = FrameLayout.LayoutParams(
+            FrameLayout.LayoutParams.MATCH_PARENT,
+            FrameLayout.LayoutParams.MATCH_PARENT
+        )
+    } }
     val bannerAdRef = remember { mutableStateOf<VungleBannerView?>(null) }
+    val isAdLoaded = remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        if (!NukeAdManager.initialized) return@LaunchedEffect
-        val ad = NukeAdManager.loadBannerInto(context, container)
-        bannerAdRef.value = ad
+        // Wait gracefully until SDK initialization completes
+        var attempts = 0
+        while (!NukeAdManager.initialized && attempts < 30) {
+            kotlinx.coroutines.delay(400L)
+            attempts++
+        }
+        if (NukeAdManager.initialized) {
+            val ad = NukeAdManager.loadBannerInto(context, container) { success ->
+                isAdLoaded.value = success
+            }
+            bannerAdRef.value = ad
+        }
     }
 
     DisposableEffect(lifecycleOwner) {
@@ -366,12 +379,44 @@ fun BannerAdView() {
         }
     }
 
+    // Best Practice Mobile Ad Placement:
+    // Fixed standard 50dp height to prevent Cumulative Layout Shift (CLS)
+    // Dark obsidian background matching Game Nuke theme
     Box(
-        modifier = Modifier.fillMaxWidth(),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(50.dp)
+            .background(Color(0xFF030805)),
         contentAlignment = Alignment.Center
     ) {
+        if (!isAdLoaded.value) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(6.dp)
+                        .clip(androidx.compose.foundation.shape.CircleShape)
+                        .background(Color(0xFF35C99B).copy(alpha = 0.5f))
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "GAMING SPONSOR",
+                    color = Color(0xFF35C99B).copy(alpha = 0.45f),
+                    fontSize = 10.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    letterSpacing = 1.5.sp
+                )
+            }
+        }
         AndroidView(
-            modifier = Modifier.wrapContentSize(),
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(50.dp),
             factory = { container },
             update = { }
         )

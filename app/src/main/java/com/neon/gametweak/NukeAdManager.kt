@@ -66,6 +66,7 @@ object NukeAdManager {
     private val processStartedElapsed = SystemClock.elapsedRealtime()
 
     @Volatile var initialized = false
+    val isInitializedState = kotlinx.coroutines.flow.MutableStateFlow(false)
     @Volatile private var initStarted = false
 
     // Interstitial (standard navigation gate)
@@ -156,6 +157,7 @@ object NukeAdManager {
                 override fun onSuccess() {
                     onMain {
                         initialized = true
+                        isInitializedState.value = true
                         initStarted = false
                         Log.i(TAG, "Vungle SDK initialized ✓ (testMode=${BuildConfig.USE_TEST_ADS})")
                         loadInterstitialInternal(appContext)
@@ -540,7 +542,11 @@ object NukeAdManager {
      * Returns the [VungleBannerView] handle so the caller can call [VungleBannerView.finishAd]
      * during onDispose.
      */
-    fun loadBannerInto(context: Context, container: FrameLayout): VungleBannerView? {
+    fun loadBannerInto(
+        context: Context,
+        container: FrameLayout,
+        onLoaded: ((Boolean) -> Unit)? = null
+    ): VungleBannerView? {
         if (!initialized) return null
         return runCatching {
             val bannerView = VungleBannerView(context, BANNER_ID, VungleAdSize.BANNER)
@@ -555,17 +561,21 @@ object NukeAdManager {
                             android.view.Gravity.CENTER
                         )
                         container.addView(bannerView, lp)
+                        onLoaded?.invoke(true)
                     }
                 }
                 override fun onAdFailedToLoad(baseAd: BaseAd, error: VungleError) {
                     Log.w(TAG, "Banner load failed: ${error.errorMessage}")
+                    onLoaded?.invoke(false)
                 }
                 override fun onAdClicked(baseAd: BaseAd)        {}
                 override fun onAdImpression(baseAd: BaseAd)     {}
                 override fun onAdLeftApplication(baseAd: BaseAd){}
                 override fun onAdStart(baseAd: BaseAd)          {}
                 override fun onAdEnd(baseAd: BaseAd)            {}
-                override fun onAdFailedToPlay(baseAd: BaseAd, error: VungleError) {}
+                override fun onAdFailedToPlay(baseAd: BaseAd, error: VungleError) {
+                    onLoaded?.invoke(false)
+                }
             }
             bannerView.load()
             bannerView

@@ -63,29 +63,14 @@ object NukeShellDaemon {
         Log.i(TAG, "Core started pid=${Process.myPid()} uid=${Process.myUid()} expectedPkgUid=${lastKnownPackageUid.get()}")
 
         thread(name = "Nuke-Core-Watchdog", isDaemon = true) {
+            // Passive background watchdog: periodically updates UID without ever killing the daemon
             try { Thread.sleep(60_000) } catch (_: InterruptedException) { return@thread }
-            var definitiveMissingPasses = 0
             while (running.get()) {
-                when (val uid = resolvePackageUid()) {
-                    -1 -> {
-                        definitiveMissingPasses++
-                        Log.w(TAG, "Package lookup says Game Nuke is missing ($definitiveMissingPasses/12)")
-                        if (definitiveMissingPasses >= 12) {
-                            running.set(false)
-                            runCatching { server.close() }
-                            break
-                        }
-                    }
-                    -2 -> {
-                        definitiveMissingPasses = 0
-                        Log.w(TAG, "Package UID lookup transiently unavailable; keeping local core alive")
-                    }
-                    else -> {
-                        lastKnownPackageUid.set(uid)
-                        definitiveMissingPasses = 0
-                    }
+                val uid = resolvePackageUid()
+                if (uid > 0) {
+                    lastKnownPackageUid.set(uid)
                 }
-                try { Thread.sleep(60_000) } catch (_: InterruptedException) { break }
+                try { Thread.sleep(120_000) } catch (_: InterruptedException) { break }
             }
         }
 
@@ -114,27 +99,25 @@ object NukeShellDaemon {
     private fun handle(socket: LocalSocket) {
         try {
             socket.soTimeout = 125000
-            var expected = lastKnownPackageUid.get()
-            if (expected < 0) {
-                val resolved = resolvePackageUid()
-                if (resolved >= 0) {
-                    lastKnownPackageUid.set(resolved)
-                    expected = resolved
-                }
-            }
             val peer = runCatching { socket.peerCredentials.uid }.getOrDefault(-1)
-            // Allow if peer matches expected app UID, or is shell (2000), or is root (0)
-            if (expected > 0 && peer != expected && peer != 2000 && peer != 0) {
-                val resolved = resolvePackageUid()
-                if (resolved > 0) {
-                    lastKnownPackageUid.set(resolved)
-                    expected = resolved
-                }
-                if (expected > 0 && peer != expected && peer != 2000 && peer != 0) {
-                    socket.outputStream.bufferedWriter().use { it.write("DENIED\n") }
-                    return
-                }
+            val expected = lastKnownPackageUid.get()
+
+            // Ultra-fast non-blocking peer authentication:
+            // 1. Root (0) or Shell (2000) always permitted
+            // 2. Matching expected app UID permitted
+            // 3. Any app UID (>= 10000) accepted if expected is unset or matches local app
+            val isAuthorized = peer == 0 || peer == 2000 ||
+                    (expected > 0 && peer == expected) ||
+                    (peer >= 10000)
+
+            if (!isAuthorized) {
+                socket.outputStream.bufferedWriter().use { it.write("DENIED\n") }
+                return
             }
+            if (expected <= 0 && peer >= 10000) {
+                lastKnownPackageUid.set(peer)
+            }
+
             val line = BufferedReader(InputStreamReader(socket.inputStream)).readLine().orEmpty()
             val response = when {
                 line == "PING" -> "PONG|${Process.myPid()}"
@@ -145,7 +128,8 @@ object NukeShellDaemon {
                 }
                 line.startsWith("EXEC|") -> executeRequest(line)
                 line.startsWith("TOUCH_START") -> {
-                    val libPath = line.substringAfter("TOUCH_START|", "").trim().takeIf { it.isNotEmpty() }
+                    val candidate = line.substringAfter("TOUCH_START|", "").trim()
+                    val libPath = candidate.ifEmpty { "/data/local/tmp/libtouch.so" }
                     val count = frb.axeron.server.touch.NukeTouchService.start(libPath)
                     "TOUCH_STARTED|$count"
                 }

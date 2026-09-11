@@ -134,6 +134,10 @@ object NukeConnectionManager {
             Thread.sleep(200)
         }
 
+        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libtouch.so is available in /data/local/tmp
+        val nativeDir = context.applicationInfo.nativeLibraryDir
+        executeCommand("mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j '$targetApk' lib/arm64-v8a/libtouch.so -d /data/local/tmp/ >/dev/null 2>&1 || cp '$nativeDir/libtouch.so' /data/local/tmp/libtouch.so 2>/dev/null; chmod 755 /data/local/tmp/libtouch.so 2>/dev/null", timeoutMs = 3000L)
+
         // Launch Shizuku-style daemon with detached stdio and proper DEX cache
         val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH='$targetApk'; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
         Log.i(TAG, "Bootstrapping daemon via ${connectionLabel()}: $launch")
@@ -151,13 +155,15 @@ object NukeConnectionManager {
             runCatching { AdbManager.getInstance(context).ensurePersistentCore() }
         }
 
-        // Wait up to 3s for daemon to become reachable
+        // Wait up to 3.5s for daemon to become reachable
         for (i in 0 until 20) {
             if (NukeDaemonClient.ping(force = true)) {
                 Log.i(TAG, "Daemon core successfully started and reachable")
+                runCatching { AdbManager.getInstance(context).disablePhantomProcessKiller() }
+                executeCommand("PID=\$(pidof game-nuke-core 2>/dev/null); if [ -n \"\$PID\" ]; then echo -1000 > /proc/\$PID/oom_score_adj 2>/dev/null; renice -n -20 -p \$PID 2>/dev/null; fi", timeoutMs = 1500L)
                 return true
             }
-            try { Thread.sleep(150L) } catch (_: InterruptedException) { return false }
+            try { Thread.sleep(175L) } catch (_: InterruptedException) { return false }
         }
 
         // Final fallback: try native ADB manager

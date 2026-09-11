@@ -22,7 +22,7 @@ object NukeDaemonClient {
         }
         val now = SystemClock.elapsedRealtime()
         if (!force && now - lastPingAt < PING_CACHE_MS) return lastPing
-        val ok = runCatching { request("PING", 1200) }.getOrNull()?.startsWith("PONG|") == true
+        val ok = runCatching { request("PING", 2500) }.getOrNull()?.startsWith("PONG|") == true
         lastPingAt = now
         lastPing = ok
         return ok
@@ -31,7 +31,7 @@ object NukeDaemonClient {
     fun execute(command: String, timeoutMs: Long = 7500L, maxOutputChars: Int = 131072): NukeCommandResult? {
         val payload = Base64.encodeToString(command.toByteArray(Charsets.UTF_8), Base64.NO_WRAP)
         val response = runCatching {
-            request("EXEC|${timeoutMs.coerceIn(500, 120000)}|$payload", (timeoutMs + 1500).toInt().coerceAtMost(122000))
+            request("EXEC|${timeoutMs.coerceIn(500, 120000)}|$payload", (timeoutMs + 2000).toInt().coerceAtMost(125000))
         }.onFailure {
             lastPing = false
             lastPingAt = SystemClock.elapsedRealtime()
@@ -50,7 +50,7 @@ object NukeDaemonClient {
     }
 
     fun stop(): Boolean {
-        val ok = runCatching { request("STOP", 1000).startsWith("BYE") }.getOrDefault(false)
+        val ok = runCatching { request("STOP", 2000).startsWith("BYE") }.getOrDefault(false)
         if (ok) {
             lastPing = false
             lastPingAt = 0L
@@ -60,8 +60,12 @@ object NukeDaemonClient {
 
     fun touchStart(libPath: String? = null): Boolean {
         val payload = if (!libPath.isNullOrBlank()) "TOUCH_START|$libPath" else "TOUCH_START"
-        val resp = runCatching { request(payload, 2500) }.getOrNull()
-        return resp?.startsWith("TOUCH_STARTED|") == true
+        val resp = runCatching { request(payload, 5000) }.getOrNull()
+        if (resp?.startsWith("TOUCH_STARTED|") == true) {
+            val count = resp.substringAfter("TOUCH_STARTED|").toIntOrNull() ?: -1
+            return count >= 0
+        }
+        return false
     }
 
     fun touchConfig(
@@ -75,17 +79,17 @@ object NukeDaemonClient {
         dragShot: Boolean = true
     ): Boolean {
         val cmd = "TOUCH_CONFIG|$sx|$sy|$area|$curve|$smooth|$minCutoff|$beta|$dragShot"
-        val resp = runCatching { request(cmd, 1500) }.getOrNull()
+        val resp = runCatching { request(cmd, 3000) }.getOrNull()
         return resp == "TOUCH_CONFIGURED"
     }
 
     fun touchStop(): Boolean {
-        val resp = runCatching { request("TOUCH_STOP", 1500) }.getOrNull()
+        val resp = runCatching { request("TOUCH_STOP", 3000) }.getOrNull()
         return resp == "TOUCH_STOPPED"
     }
 
     fun touchStatus(): Boolean {
-        val resp = runCatching { request("TOUCH_STATUS", 1000) }.getOrNull()
+        val resp = runCatching { request("TOUCH_STATUS", 2000) }.getOrNull()
         return resp == "TOUCH_STATUS|true"
     }
 

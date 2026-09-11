@@ -231,10 +231,26 @@ class NukeTouchInjector {
 
     private fun injectNow(event: MotionEvent) {
         val qSize = injectQueue.size
-        if (qSize > 30) {
-            Log.w(TAG, "injectQueue backed up with $qSize events — releasing grab for safety")
-            NukeTouchService.emergencyReleaseGrab("injectQueue backlog: $qSize")
-            return
+        if (qSize > 40) {
+            // High gaming sampling rate backlog: drain older ACTION_MOVE events (coalesce) to catch up to real-time
+            var drained = 0
+            val it = injectQueue.iterator()
+            while (it.hasNext() && injectQueue.size > 20) {
+                val nextEv = it.next()
+                if (nextEv.actionMasked == MotionEvent.ACTION_MOVE) {
+                    it.remove()
+                    runCatching { nextEv.recycle() }
+                    drained++
+                }
+            }
+            if (drained > 0) {
+                Log.d(TAG, "Coalesced $drained stale ACTION_MOVE events from input queue")
+            }
+            if (injectQueue.size > 150) {
+                Log.w(TAG, "injectQueue critically backed up with ${injectQueue.size} events — releasing grab for safety")
+                NukeTouchService.emergencyReleaseGrab("injectQueue backlog: ${injectQueue.size}")
+                return
+            }
         }
         try {
             setDisplayIdMethod?.invoke(event, 0)

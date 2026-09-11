@@ -366,20 +366,21 @@ class AdbManager private constructor(context: Context) {
         val quotedApk = shellQuote(apkPath)
         val myUid = android.os.Process.myUid()
         val className = NukeShellDaemon::class.java.name
-        // ── Shizuku's exact launch pattern + /dev/null to prevent SIGPIPE ──
-        // Without /dev/null: when the ADB shell stream closes after this command returns,
-        // the daemon's inherited stdout fd becomes a broken pipe. Any write (even from the
-        // JVM internals) triggers SIGPIPE → daemon dies immediately.
-        // With /dev/null: stdout/stderr/stdin are detached from the ADB stream. The daemon
-        // lives independently, communicating only via Unix abstract socket.
-        val launch = "(export CLASSPATH=$quotedApk; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
+        val nativeLibDir = shellQuote(mContext.applicationInfo.nativeLibraryDir)
+
+        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libtouch.so is available in /data/local/tmp
+        val setupEnv = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j $quotedApk lib/arm64-v8a/libtouch.so -d /data/local/tmp/ >/dev/null 2>&1 || cp $nativeLibDir/libtouch.so /data/local/tmp/libtouch.so 2>/dev/null; chmod 755 /data/local/tmp/libtouch.so 2>/dev/null"
+        executeCommandDirect(setupEnv, timeoutMs = 3_000L, maxOutputChars = 256)
+
+        // ── Shizuku's exact launch pattern with ANDROID_DATA and detached stdio ──
+        val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH=$quotedApk; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid </dev/null >/dev/null 2>&1)&"
         writeTraceLog("BOOTSTRAP CMD: $launch")
         val result = executeCommandDirect(launch, timeoutMs = 4_500L, maxOutputChars = 4_096)
         if (!result.isSuccess && result.exitCode != 0) {
             writeTraceLog("PERSISTENT CORE BOOTSTRAP FAILED: exit=${result.exitCode} out=${result.output.take(500)}")
         }
-        // Wait for daemon to start accepting connections (up to ~2.4 seconds)
-        repeat(16) {
+        // Wait for daemon to start accepting connections (up to ~3.5 seconds)
+        repeat(20) {
             if (NukeDaemonClient.ping(force = true)) {
                 writeTraceLog("PERSISTENT CORE ONLINE (Shizuku-style fork, /dev/null)")
                 prefs.edit()
@@ -387,11 +388,17 @@ class AdbManager private constructor(context: Context) {
                     .putLong("daemon_start_time", System.currentTimeMillis())
                     .apply()
                 disablePhantomProcessKiller()
+                // Boost daemon scheduling priority and immunize from low memory killer
+                executeCommandDirect(
+                    "PID=\$(pidof game-nuke-core 2>/dev/null); if [ -n \"\$PID\" ]; then echo -1000 > /proc/\$PID/oom_score_adj 2>/dev/null; renice -n -20 -p \$PID 2>/dev/null; fi",
+                    timeoutMs = 1500L,
+                    maxOutputChars = 128
+                )
                 return true
             }
-            try { Thread.sleep(150L) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
+            try { Thread.sleep(175L) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
         }
-        writeTraceLog("PERSISTENT CORE BOOTSTRAP: daemon did not respond after 2.4s")
+        writeTraceLog("PERSISTENT CORE BOOTSTRAP: daemon did not respond after 3.5s")
         return false
     }
 

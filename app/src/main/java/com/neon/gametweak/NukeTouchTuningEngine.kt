@@ -556,27 +556,14 @@ object NukeTouchTuningEngine {
     val isDaemonTouchActive: Boolean get() = daemonTouchActive
 
     fun getLibTouchPath(context: Context): String {
+        val tmp = java.io.File("/data/local/tmp/libtouch.so")
+        if (tmp.exists() && tmp.length() > 0) return tmp.absolutePath
+
         val nativeDir = context.applicationInfo.nativeLibraryDir
         val direct = java.io.File(nativeDir, "libtouch.so")
         if (direct.exists()) return direct.absolutePath
 
-        val tmp = java.io.File("/data/local/tmp/libtouch.so")
-        if (tmp.exists()) return tmp.absolutePath
-
-        runCatching {
-            val apk = java.io.File(context.applicationInfo.sourceDir)
-            val zip = java.util.zip.ZipFile(apk)
-            val entry = zip.getEntry("lib/arm64-v8a/libtouch.so")
-            if (entry != null) {
-                zip.getInputStream(entry).use { input ->
-                    tmp.outputStream().use { output -> input.copyTo(output) }
-                }
-                Runtime.getRuntime().exec("chmod 755 /data/local/tmp/libtouch.so").waitFor()
-                return tmp.absolutePath
-            }
-        }
-
-        return direct.absolutePath
+        return "/data/local/tmp/libtouch.so"
     }
 
     fun startDaemonTouchAsync(context: Context, onComplete: ((Boolean) -> Unit)? = null) {

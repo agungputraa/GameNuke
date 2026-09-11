@@ -13,7 +13,7 @@ import java.util.concurrent.TimeUnit
  */
 object NukeTouchService {
     private const val TAG = "NukeTouchService"
-    private const val GRAB_GRACE_MS = 3000L
+    private const val GRAB_GRACE_MS = 30000L
 
     private val displayTransform = DisplayTransform()
     private val injector = NukeTouchInjector()
@@ -37,7 +37,11 @@ object NukeTouchService {
         val touch = TouchListener.INSTANCE
         if (!touch.isLoaded) {
             var loaded = false
-            if (!libPath.isNullOrBlank()) {
+            // Check /data/local/tmp/libtouch.so first as it is universally accessible to shell & binder
+            if (touch.load("/data/local/tmp/libtouch.so")) {
+                loaded = true
+            }
+            if (!loaded && !libPath.isNullOrBlank()) {
                 loaded = touch.load(libPath)
             }
             if (!loaded) {

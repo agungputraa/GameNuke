@@ -20,7 +20,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 object ConsentManager {
     private const val TAG = "ConsentManager"
 
-    private val canRequestAdsFlag = AtomicBoolean(false)
+    private val canRequestAdsFlag = AtomicBoolean(true)
+    val canRequestAdsFlow = kotlinx.coroutines.flow.MutableStateFlow(true)
 
     fun canRequestAds(): Boolean = canRequestAdsFlag.get()
 
@@ -35,6 +36,7 @@ object ConsentManager {
         }
         applyDefaultPrivacyConsent()
         canRequestAdsFlag.set(true)
+        canRequestAdsFlow.value = true
         Log.d(TAG, "Consent granted — Vungle GDPR/CCPA consent applied")
         onComplete(true)
     }

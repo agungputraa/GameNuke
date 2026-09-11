@@ -42,9 +42,8 @@ $BuildTimer = [System.Diagnostics.Stopwatch]::StartNew()
 $FreshApk = "$RootDir\app\build\outputs\apk\release\app-release.apk"
 $needBuild = $true
 
-if ((Test-Path $FreshApk) -and ((Get-Item $FreshApk).LastWriteTime -gt (Get-Date).AddMinutes(-10))) {
-    Write-Host "  [OK] Freshly compiled signed APK detected ($((Get-Item $FreshApk).Length) bytes, built at $((Get-Item $FreshApk).LastWriteTime)). Proceeding." -ForegroundColor Green
-    $needBuild = $false
+if (Test-Path $FreshApk) {
+    Remove-Item $FreshApk -Force -ErrorAction SilentlyContinue
 }
 
 if ($needBuild) {
