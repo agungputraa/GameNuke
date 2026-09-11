@@ -15,8 +15,17 @@ object OverlayPermissionController {
     fun requestManualGrant(context: Context): Boolean {
         if (hasOverlayPermission(context)) return true
         val manufacturer = Build.MANUFACTURER.lowercase(java.util.Locale.ROOT)
+        val isXiaomiFamily = manufacturer in setOf("xiaomi", "poco", "redmi") || systemProperty("ro.miui.ui.version.code").isNotEmpty()
+
+        // 1. Android Standard Overlay Permission (Direct package URI) - authoritative across all OEMs
+        val directOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
+
+        // 2. Android Standard Overlay Permission (Generic list fallback)
+        val genericOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+
+        // 3. OEM-specific permission editors for background popup / overlay permissions
         val vendor = when {
-            systemProperty("ro.miui.ui.version.code").isNotEmpty() || manufacturer in setOf("xiaomi", "poco", "redmi") ->
+            isXiaomiFamily ->
                 Intent("miui.intent.action.APP_PERM_EDITOR").setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
                     .putExtra("extra_pkgname", context.packageName)
             systemProperty("ro.build.version.opporom").isNotEmpty() || manufacturer in setOf("oppo", "realme", "oneplus") ->
@@ -26,12 +35,19 @@ object OverlayPermissionController {
                     .putExtra("packagename", context.packageName)
             else -> null
         }
-        val candidates = listOfNotNull(vendor,
-            Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}")),
-            Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}")))
+
+        // 4. App details settings as universal fail-safe
+        val appDetails = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
+
+        val candidates = listOfNotNull(directOverlay, genericOverlay, vendor, appDetails)
         for (intent in candidates) {
             if (runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)) {
-                NukeToast.unsupported(context, "Enable Display over other apps or Floating windows, then return to Game Nuke. On HyperOS, also check background popup permission.", long = true)
+                val message = if (isXiaomiFamily) {
+                    "Aktifkan 'Display over other apps'. Pada HyperOS/MIUI, pastikan juga izinkan 'Display pop-up windows while running in the background'."
+                } else {
+                    "Aktifkan izin 'Display over other apps' agar floating cockpit Game Nuke dapat muncul."
+                }
+                NukeToast.unsupported(context, message, long = true)
                 return true
             }
         }

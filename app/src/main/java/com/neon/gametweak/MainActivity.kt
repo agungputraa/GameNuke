@@ -469,6 +469,12 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
         NukeAdBlockDetectedDialog(
             status = manualAdBlockStatus,
             adbManager = adbManager,
+            onStatusUpdated = { updated ->
+                manualAdBlockStatus = updated
+                if (!updated.isDetected) {
+                    showManualAdBlockDialog = false
+                }
+            },
             onDismiss = { showManualAdBlockDialog = false },
         )
     }

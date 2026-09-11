@@ -72,6 +72,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -160,12 +161,34 @@ fun DashboardScreen(
     onOpenSystemEditor: () -> Unit = {},
 ) {
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val gateway = remember(adbManager) { NukeGamingShellGateway(adbManager) }
     var telemetry by remember { mutableStateOf(CommandCenterTelemetry()) }
     var showConnectionDialog by remember { mutableStateOf(false) }
     var adBlockStatus by remember { mutableStateOf(AdBlockStatus()) }
     var showAdBlockDialog by remember { mutableStateOf(false) }
     var adBlockChecked by remember { mutableStateOf(false) }
+
+    val lifecycleOwner = androidx.lifecycle.compose.LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                coroutineScope.launch(Dispatchers.IO) {
+                    val status = NukeAdBlockDetector.checkStatus(context, adbManager)
+                    withContext(Dispatchers.Main) {
+                        adBlockStatus = status
+                        if (!status.isDetected) {
+                            showAdBlockDialog = false
+                        }
+                    }
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -180,6 +203,14 @@ fun DashboardScreen(
                 adBlockStatus = status
                 if (status.isDetected) {
                     showAdBlockDialog = true
+                }
+            } else if (adBlockStatus.isDetected) {
+                val status = withContext(Dispatchers.IO) {
+                    NukeAdBlockDetector.checkStatus(context, adbManager)
+                }
+                if (!status.isDetected) {
+                    adBlockStatus = status
+                    showAdBlockDialog = false
                 }
             }
             delay(2_500L)
@@ -199,6 +230,12 @@ fun DashboardScreen(
         NukeAdBlockDetectedDialog(
             status = adBlockStatus,
             adbManager = adbManager,
+            onStatusUpdated = { updated ->
+                adBlockStatus = updated
+                if (!updated.isDetected) {
+                    showAdBlockDialog = false
+                }
+            },
             onDismiss = { showAdBlockDialog = false },
         )
     }

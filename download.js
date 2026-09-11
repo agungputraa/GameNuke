@@ -2,10 +2,10 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '2.6.0-prem',
-    apkSizeMb: '30.1',
-    localApkUrl: 'GameNuke-Premium-v2.6.0.apk',
-    downloadUrl: 'GameNuke-Premium-v2.6.0.apk',
+    versionName: '2.7.0-prem',
+    apkSizeMb: '24.2',
+    localApkUrl: 'GameNuke-Premium-v2.7.0.apk',
+    downloadUrl: 'GameNuke-Premium-v2.7.0.apk',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
     sponsorDelayMs: 2000
   };
