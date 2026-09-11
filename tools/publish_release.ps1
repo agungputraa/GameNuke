@@ -99,7 +99,7 @@ if (Test-Path $VersionJsonPath) {
     $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
     $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
     $vJson.releaseNotes = @(
-        "Net Engine Gaming Tunnel: Native Go-powered lwIP tunnel engine delivering 1ms-2ms lobby ping and zero-jitter packet routing",
+        "Network Engine: Integrated low-latency socket routing and local DNS optimization for stable competitive connectivity",
         "Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
         "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
         "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
@@ -149,7 +149,7 @@ try {
 
     # Push to origin 'gh-pages' (Edge CDN serving)
     Write-Host "   Deploying to remote gh-pages branch for Edge CDN..." -ForegroundColor Cyan
-    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q
+    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q 2>$null
 
     Write-Host "   Web distribution synchronized successfully to gh-pages!" -ForegroundColor Green
 } finally {
@@ -160,7 +160,7 @@ try {
 Write-Host "   Synchronizing Android project repository to origin main..." -ForegroundColor Cyan
 git add -A
 git commit -m "feat(release): Game Nuke Quasar Edition v$VersionName with Net Engine and security hardening" -q 2>$null
-git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" main -q
+git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" main -q 2>$null
 
 # 6. Create or Update GitHub Release via API
 Write-Host "[4/6] Synchronizing GitHub Release via API..." -ForegroundColor Yellow
@@ -176,7 +176,7 @@ $lines = @(
     "Official Standalone Release with Dual-Sync Edge CDN Updates.",
     "",
     "Highlights:",
-    "- Net Engine Gaming Tunnel: Native Go-powered lwIP tunnel engine delivering 1ms-2ms lobby ping and zero-jitter packet routing.",
+    "- Network Engine: Integrated low-latency socket routing and local DNS optimization for stable competitive connectivity.",
     "- Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense.",
     "- Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning.",
     "- Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback.",

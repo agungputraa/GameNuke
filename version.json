@@ -7,7 +7,7 @@
     "targetSdk":  36,
     "apkSizeMb":  "31.6",
     "releaseNotes":  [
-                         "Net Engine Gaming Tunnel: Native Go-powered lwIP tunnel engine delivering 1ms-2ms lobby ping and zero-jitter packet routing",
+                         "Network Engine: Integrated low-latency socket routing and local DNS optimization for stable competitive connectivity",
                          "Anti-Tamper \u0026 Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
                          "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
                          "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
