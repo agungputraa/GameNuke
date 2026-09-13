@@ -7,6 +7,7 @@
     "targetSdk": 36,
     "apkSizeMb": "40.4",
     "releaseNotes": [
+        "Hardware-Bound Refresh Rate Target: Minimalist seekbar & preset switch (90/120/144 FPS) with 60 FPS safety lockout on 90Hz+ panels and anti-unlocker validation",
         "Touch Engine Screen-Freeze Fix: Resolved sensitivity X/Y pointer deadlocks and unhandled ACTION_UP queue locks",
         "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification",
         "Android 16 Overlay Controller: Enterprise auto-grant via appops/Shizuku/iAdb and low-RAM bypass guidance",
@@ -18,7 +19,7 @@
     "downloadUrl": "GameNuke-v2.9.0-Void.apk",
     "localApkUrl": "GameNuke-v2.9.0-Void.apk",
     "githubReleaseUrl": "GameNuke-v2.9.0-Void.apk",
-    "sha256": "DDB919FB58C7FD3BC46781233C87F2FF4C77ABD7357CE0C9E3743B7BC181464C",
+    "sha256": "A84055F80587E275BF95EBAADC697D40CCBC9E2213B35ABBCF653790F21EEAE1",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
