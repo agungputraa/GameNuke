@@ -26,14 +26,12 @@ object NukeProcessPurgeGuardian {
 
     private const val TAG = "NukePurgeGuardian"
 
-    // Bloatware and social apps that can be safely stopped in background if NOT active or recording
+    // Bloatware, background trackers, and social apps that can be safely stopped in background if NOT active or recording
     private val COMMON_BLOATWARE_CANDIDATES = listOf(
         "com.facebook.katana",
         "com.facebook.orca",
         "com.instagram.android",
         "com.spotify.music",
-        "com.mi.appfinder",
-        "com.xiaomi.mipicks",
         "com.lazada.android",
         "com.shopee.id",
         "com.temporary.email.inboxes",
@@ -47,7 +45,39 @@ object NukeProcessPurgeGuardian {
         "com.alibaba.aliexpresshd",
         "com.ubercab",
         "com.grabtaxi.passenger",
-        "com.gojek.app"
+        "com.gojek.app",
+        // Xiaomi / HyperOS / MIUI non-essential background daemons
+        "com.miui.analytics",
+        "com.miui.msa.global",
+        "com.miui.daemon",
+        "com.miui.hybrid",
+        "com.miui.bugreport",
+        "com.mi.globalminusscreen",
+        "com.xiaomi.glgm",
+        "com.mi.appfinder",
+        "com.xiaomi.mipicks",
+        // Samsung OneUI background analytics & assistants
+        "com.samsung.android.rubin.app",
+        "com.samsung.android.bixby.agent",
+        "com.samsung.android.app.spage",
+        "com.samsung.android.ipsgeofence",
+        "com.sec.android.app.sbrowser",
+        // Realme / Oppo ColorOS background services
+        "com.heytap.mcs",
+        "com.heytap.market",
+        "com.oplus.appdetail",
+        "com.oplus.cosa",
+        // Vivo OriginOS / Funtouch background engines
+        "com.vivo.upslide",
+        "com.vivo.browser",
+        "com.vivo.appstore",
+        "com.bbk.appstore",
+        // Transsion / Infinix / Tecno background helpers
+        "com.transsion.palmswitch",
+        "com.transsion.carlcare",
+        "com.transsion.xshare",
+        "com.transsion.smartpanel",
+        "com.transsion.magazineservice"
     )
 
     /**
@@ -197,20 +227,31 @@ object NukeProcessPurgeGuardian {
         }
 
         // 3. Execute via privileged bridge or fallback to ActivityManager
+        // 3. Execute via privileged bridge and always invoke system memory trim
         val script = sb.toString()
         if (script.isNotBlank()) {
             val adb = AdbManager.getInstance(context)
-            if (adb.isConnected()) {
-                adb.executeCommand(script, "/", 6_000L)
+            val executed = if (adb.isConnected()) {
+                adb.executeCommand(script, "/", 6_000L) != null
             } else {
                 val res = NukeConnectionManager.executeCommand(script, 6_000L)
-                if (res == null || !res.isSuccess) {
-                    // Non-privileged fallback using standard ActivityManager
-                    for (pkg in targetList) {
-                        runCatching { am?.killBackgroundProcesses(pkg) }
-                    }
-                }
+                res != null && res.isSuccess
             }
+
+            // Universal fallback: Always apply standard ActivityManager memory reclaim
+            for (pkg in targetList) {
+                runCatching { am?.killBackgroundProcesses(pkg) }
+            }
+        } else {
+            for (pkg in targetList) {
+                runCatching { am?.killBackgroundProcesses(pkg) }
+            }
+        }
+
+        // JVM Heap & Dalvik garbage collection
+        runCatching {
+            System.gc()
+            Runtime.getRuntime().gc()
         }
 
         // Calculate freed memory

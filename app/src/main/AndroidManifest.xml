@@ -51,6 +51,7 @@
         <activity android:name=".MainActivity" android:exported="false" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" android:resizeableActivity="true" android:screenOrientation="unspecified" android:windowSoftInputMode="adjustResize|stateUnspecified">
         </activity>
         <activity android:name=".NukeImagePickerActivity" android:exported="false" android:excludeFromRecents="true" android:noHistory="true" android:taskAffinity="" android:launchMode="singleInstance" android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+        <activity android:name=".NukeOverlayBypassActivity" android:exported="false" android:excludeFromRecents="true" android:theme="@android:style/Theme.DeviceDefault.NoActionBar" android:resizeableActivity="true" android:screenOrientation="unspecified" />
         <receiver android:name=".PairingReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="com.neon.gametweak.ACTION_PAIR" />

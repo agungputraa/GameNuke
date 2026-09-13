@@ -339,7 +339,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             scope.launch {
                 val summary = NukeSystemParamRepository.rollbackAll(context)
                 withContext(Dispatchers.Main) {
-                    NukeToast.success(context, "Rollback: ${summary.successCount} parameter dipulihkan", long = true)
+                    NukeToast.success(context, "Rollback: ${summary.successCount} parameter(s) restored", long = true)
                     refreshList()
                 }
             }
@@ -709,7 +709,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             // Action Pill Button (Edit / Close / Lock)
             if (!isBlocked) {
                 val actionBtn = TextView(context).apply {
-                    text = if (isExpanded) "Tutup" else "Edit"
+                    text = if (isExpanded) "Close" else "Edit"
                     setTextColor(
                         if (isExpanded) Color.parseColor(ACCENT_BRIGHT)
                         else Color.parseColor(TEXT_SECONDARY)

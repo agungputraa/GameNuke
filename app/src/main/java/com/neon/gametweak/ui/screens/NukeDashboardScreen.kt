@@ -1,6 +1,7 @@
 package com.neon.gametweak.ui.screens
 
 import com.neon.gametweak.nukePressFeedback
+import com.neon.gametweak.OverlayPermissionController
 import android.app.ActivityManager
 import android.app.NotificationManager
 import android.content.Context
@@ -641,7 +642,11 @@ private fun ReadinessDeck(context: Context, telemetry: CommandCenterTelemetry, o
     val rows = listOf(
         ReadinessItem(("DEVICE CONTROL"), telemetry.adbConnected, connDetail, Icons.Rounded.Tune, onAdb),
         ReadinessItem(("FLOATING HUD"), telemetry.overlayReady, ("Overlay permission"), Icons.Rounded.Layers) {
-            runCatching { context.startActivity(Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))) }
+            if (!OverlayPermissionController.hasOverlayPermission(context)) {
+                OverlayPermissionController.requestManualGrant(context)
+            } else {
+                com.neon.gametweak.NukeToast.success(context, "Floating HUD overlay is enabled and ready.")
+            }
         },
         ReadinessItem(("SESSION TRACK"), telemetry.sessionReady, ("Gaming session active"), Icons.Rounded.Security, onAdb),
         ReadinessItem(("GAME FOCUS"), telemetry.dndReady, ("DND policy access"), Icons.Rounded.NotificationsOff) {

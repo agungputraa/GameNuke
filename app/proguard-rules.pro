@@ -58,6 +58,7 @@
 -keep class com.neon.gametweak.NukeVpnService { *; }
 -keep class com.neon.gametweak.NukeVpnTrampolineActivity { *; }
 -keep class com.neon.gametweak.GameLaunchSplashActivity { *; }
+-keep class com.neon.gametweak.NukeOverlayBypassActivity { *; }
 -keep class com.neon.gametweak.CallShieldRoleActivity { *; }
 -keep class com.neon.gametweak.NukeCallScreeningService { *; }
 -keep class com.neon.gametweak.PairingReceiver { *; }

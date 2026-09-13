@@ -1077,7 +1077,6 @@ class FloatingBoosterService : Service() {
             }
             "deep_clean" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val am = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
                     val memBefore = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
                     val statBefore = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
@@ -1085,7 +1084,10 @@ class FloatingBoosterService : Service() {
                     val myPkg = packageName
                     val gamePkg = NukeRuntimeState.state.value.activePackage ?: ""
 
-                    // Phase 1: Safe POSIX background process elimination (Strictly protects game, screen recorders, and Game Nuke)
+                    // Phase 1: High-Power safe zombie purge across all OEM skins (HyperOS, OneUI, ColorOS, OriginOS, Transsion)
+                    val (killedCount, _) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
+
+                    // Phase 2: Posix background process elimination via ADB or NukeConnectionManager
                     val killScript = """
                         for p in $(dumpsys activity processes 2>/dev/null | grep 'ProcessRecord{' | grep -E 'adj=(9[0-9]{2}|1[0-9]{3})' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u); do
                             [ -n "${'$'}p" ] && [ -d "/proc/${'$'}p" ] || continue
@@ -1100,20 +1102,14 @@ class FloatingBoosterService : Service() {
                             esac
                         done
                     """.trimIndent()
-                    adb.executeCommand(killScript, "/", 6_000L)
+                    val adb = AdbManager.getInstance(applicationContext)
+                    if (adb.isConnected()) {
+                        adb.executeCommand(killScript, "/", 5_000L)
+                    } else {
+                        NukeConnectionManager.executeCommand(killScript, 5_000L)
+                    }
 
-                    // Phase 2: Memory compaction, package cache trimming, and safe trim-memory
-                    val memScript = """
-                        am compact all 2>/dev/null
-                        pm trim-caches 999999999999 2>/dev/null
-                        for pkg in $(pm list packages -3 2>/dev/null | cut -d: -f2); do
-                            [ -n "${'$'}pkg" ] && [ "${'$'}pkg" != "$myPkg" ] && [ "${'$'}pkg" != "$gamePkg" ] && am send-trim-memory ${'$'}pkg RUNNING_LOW 2>/dev/null
-                        done
-                        sync
-                    """.trimIndent()
-                    adb.executeCommand(memScript, "/", 6_000L)
-
-                    // Phase 3: Safe storage junk purge (logcat, tombstones, ANR, public thumbnails, temp) - Never touch code_cache or game data!
+                    // Phase 3: Safe storage junk purge (logcat, tombstones, ANR, public thumbnails, temp)
                     NukeProcessPurgeGuardian.cleanCachesSafe(applicationContext)
 
                     // Phase 4: Engine-level deep reclaim and metrics sync
@@ -1132,8 +1128,8 @@ class FloatingBoosterService : Service() {
                     val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
 
                     withContext(Dispatchers.Main.immediate) {
-                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB available RAM" else "Memory maintenance completed"
-                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB available storage" else "Storage cleanup completed"
+                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB available RAM ($killedCount purged)" else "Memory optimized ($killedCount purged)"
+                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB storage freed" else "Storage caches trimmed"
                         toastOutcome("Deep Clean complete • $ramStr • $storStr")
                     }
                 }
@@ -1368,8 +1364,11 @@ class FloatingBoosterService : Service() {
                 NukeAiSentinel.toggle(applicationContext)
                 val active = NukeAiSentinel.enabled.value
                 val cooling = NukeAiSentinel.isCoolingActive.value
+                if (active) {
+                    NukeAiSentinel.forceSweepNow(applicationContext)
+                }
                 val msg = if (active) {
-                    if (cooling) "AI Sentinel: ACTIVE (Thermal response in progress)" else "AI Sentinel: ACTIVE (Adaptive session monitor)"
+                    if (cooling) "AI Sentinel: ACTIVE (Thermal response in progress)" else "AI Sentinel: ACTIVE (Adaptive session monitor & stabilization)"
                 } else {
                     "AI Sentinel: PAUSED"
                 }

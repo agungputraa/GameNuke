@@ -305,6 +305,9 @@ class AdbManager private constructor(context: Context) {
                 connectedFlag = true
                 clearAuthorizationRevokedHint()
                 saveTarget(endpoint.target())
+                thread(name = "Nuke-AutoOverlayGrant", isDaemon = true) {
+                    runCatching { OverlayPermissionController.tryAutoGrantViaBridge(mContext, silent = true) }
+                }
                 true
             } else if (discoveredEndpoint != null && tcpEndpointReachable(endpoint)) {
                 observeAuthorizationFailure("authorization rejected by reachable wireless ADB endpoint")
@@ -396,6 +399,9 @@ class AdbManager private constructor(context: Context) {
                     timeoutMs = 1500L,
                     maxOutputChars = 128
                 )
+                thread(name = "Nuke-AutoOverlayGrant", isDaemon = true) {
+                    runCatching { OverlayPermissionController.tryAutoGrantViaBridge(mContext, silent = true) }
+                }
                 return true
             }
             try { Thread.sleep(175L) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }

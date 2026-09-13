@@ -74,8 +74,12 @@ object NukeShellDaemon {
             java.io.File("/proc/${Process.myPid()}/oom_adj").writeText("-16")
         }
         Runtime.getRuntime().addShutdownHook(Thread {
-            runCatching { nuke.wandev.touch.TouchListener.INSTANCE.nativeSetGrab(false) }
-            runCatching { nuke.wandev.touch.TouchListener.INSTANCE.nativeStop() }
+            runCatching {
+                if (nuke.wandev.touch.TouchListener.INSTANCE.isLoaded) {
+                    nuke.wandev.touch.TouchListener.INSTANCE.nativeSetGrab(false)
+                    nuke.wandev.touch.TouchListener.INSTANCE.nativeStop()
+                }
+            }
             runCatching {
                 Runtime.getRuntime().exec("settings put system pointer_speed 0; setprop persist.vendor.touch.game_mode 0").waitFor()
             }

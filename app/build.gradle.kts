@@ -41,6 +41,7 @@ android {
         vectorDrawables { useSupportLibrary = true }
         ndk {
             abiFilters.add("arm64-v8a")
+            abiFilters.add("armeabi-v7a")
         }
     }
 
@@ -212,7 +213,7 @@ val copyReleaseApk by tasks.registering(Copy::class) {
     from(layout.buildDirectory.dir("outputs/apk/release"))
     include("*.apk")
     into(rootProject.layout.projectDirectory.dir("release-apk"))
-    rename { "GameNuke-v${android.defaultConfig.versionName ?: "2.8.0-Quasar"}.apk" }
+    rename { "GameNuke-v${android.defaultConfig.versionName ?: "2.9.0-Void"}.apk" }
 }
 
 tasks.configureEach {

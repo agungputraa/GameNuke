@@ -287,6 +287,9 @@ object NukeIadbBridge {
                 userServiceBinder = binder
                 connecting.set(false)
                 connectionLatch.getAndSet(null)?.countDown()
+                kotlin.concurrent.thread(name = "Nuke-IadbAutoOverlay", isDaemon = true) {
+                    runCatching { OverlayPermissionController.tryAutoGrantViaBridge(context, silent = true) }
+                }
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 Log.w(TAG, "iAdb UserService disconnected")

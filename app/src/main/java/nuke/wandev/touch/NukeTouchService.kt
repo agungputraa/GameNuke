@@ -390,6 +390,11 @@ object NukeTouchService {
         }
         activeSessions.clear()
 
+        // CRITICAL: flush all active real-finger pointers with ACTION_UP BEFORE releasing the
+        // hardware grab. This prevents the Android InputDispatcher from seeing orphaned DOWN
+        // events, which would cause the screen to appear frozen until the gesture timeout.
+        injector.flushAllActivePointers()
+
         val touch = TouchListener.INSTANCE
         if (touch.isLoaded) {
             runCatching { touch.nativeSetGrab(false) }
@@ -398,6 +403,10 @@ object NukeTouchService {
         grabActive = false
         TouchListener.setSink(null)
         displayTransform.stop()
+
+        // Allow inject thread 60 ms to drain queued UP events before interrupting it
+        try { Thread.sleep(60L) } catch (_: InterruptedException) {}
+
         injector.stop()
         listening = false
         Log.i(TAG, "Touch listener stopped and grab safely released")
@@ -434,6 +443,9 @@ object NukeTouchService {
         injector.euroMinCutoff = minCutoff
         injector.euroBeta = beta
         injector.dragShotCurve = dragShot
+        // Reset per-pointer accumulators so an in-flight gesture doesn't
+        // jump to the screen edge when sensitivity changes mid-touch.
+        injector.resetAccumulators()
         Log.i(TAG, "Touch configured: X=%.2f Y=%.2f area=%d curve=%d smooth=%b dragShot=%b".format(sx, sy, area, curve, smoothing, dragShot))
     }
 

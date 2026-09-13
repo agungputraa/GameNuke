@@ -197,7 +197,7 @@ fun CleanerScreen(adbManager: AdbManager) {
             ) {
                 checkAdBlockOrRun {
                     isWorking = true
-                    operation = ("MEMBERSIHKAN APP CACHE")
+                    operation = ("CLEARING APP CACHE")
                     scope.launch(Dispatchers.IO) {
                         val before = dirBytes(context.cacheDir)
                         runCatching { context.cacheDir.listFiles()?.forEach { it.deleteRecursively() } }
@@ -205,7 +205,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                         withContext(Dispatchers.Main) {
                             ownCacheBytes = after
                             lastGainMb = ((before - after).coerceAtLeast(0L) / (1024L * 1024L))
-                            operation = ("APP CACHE SELESAI")
+                            operation = ("APP CACHE CLEARED")
                             isWorking = false
                             context.findActivity()?.let { NukeAdManager.showInterstitial(it) }
                         }
@@ -538,7 +538,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                             scope.launch(Dispatchers.IO) {
                                 val (killed, freed) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
                                 withContext(Dispatchers.Main) {
-                                    val msg = if (freed > 0) "Optimasi selesai: +${freed}MB RAM dipulihkan ($killed proses)." else "Optimasi selesai ($killed proses diringankan)."
+                                    val msg = if (freed > 0) "Optimization complete: +${freed}MB RAM reclaimed ($killed processes)." else "Optimization complete ($killed processes relieved)."
                                     NukeToast.success(context, msg, long = true)
                                     fetchProcesses()
                                 }

@@ -23,7 +23,9 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withTimeoutOrNull
 import java.net.InetAddress
+import java.util.concurrent.atomic.AtomicBoolean
 
 /**
  * NukeGameVpnService — Exact Native Gaming DNS VPN Tunnel ported from AG Tools ML reference app.
@@ -82,6 +84,7 @@ class NukeGameVpnService : VpnService() {
     private var vpnInterface: ParcelFileDescriptor? = null
     private var tunnel: Tunnel? = null
     private val vpnScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val isStopping = AtomicBoolean(false)
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
@@ -146,9 +149,12 @@ class NukeGameVpnService : VpnService() {
                 Log.d(TAG, "Go tunnel event [$event]: $detail")
             }
 
+            // Detach file descriptor so Android Bionic libc fdsan does not panic on closure by Go runtime
+            val nativeFd = runCatching { pfd.detachFd() }.getOrElse { pfd.fd }
+
             // Start native gomobile / tun2socks / lwIP tunnel engine via libgojni.so
             val nativeTunnel = Anehprodns.start(
-                pfd.fd.toLong(),
+                nativeFd.toLong(),
                 config,
                 protector,
                 eventListener
@@ -156,6 +162,7 @@ class NukeGameVpnService : VpnService() {
 
             tunnel = nativeTunnel
             _isRunning.value = true
+            isStopping.set(false)
             broadcastStatus(true)
             Log.i(TAG, "⚡ Native Game DNS VPN tunnel ACTIVE: $VPN_ADDRESS (DNS: $FAKE_DNS_HOST -> $UPSTREAM_DNS_HOST)")
 
@@ -279,30 +286,51 @@ class NukeGameVpnService : VpnService() {
     }
 
     private fun teardown() {
-        _isRunning.value = false
-        try {
-            tunnel?.stop()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error stopping tunnel", e)
+        if (!isStopping.compareAndSet(false, true)) {
+            Log.d(TAG, "Net Engine teardown already in progress, skipping redundant request")
+            return
         }
+        _isRunning.value = false
+        broadcastStatus(false)
+
+        val activeTunnel = tunnel
         tunnel = null
 
-        try {
-            vpnInterface?.close()
-        } catch (e: Exception) {
-            Log.e(TAG, "Error closing pfd", e)
-        }
+        val activePfd = vpnInterface
         vpnInterface = null
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION")
-            stopForeground(true)
+        // Execute Go tunnel stop in Dispatchers.IO with timeout to avoid freezing Main Thread (ANR)
+        vpnScope.launch(Dispatchers.IO) {
+            try {
+                withTimeoutOrNull(2500L) {
+                    try {
+                        activeTunnel?.stop()
+                    } catch (e: Throwable) {
+                        Log.w(TAG, "Native Go tunnel stop warning: ${e.message}")
+                    }
+                }
+            } finally {
+                try {
+                    activePfd?.close()
+                } catch (e: Throwable) {
+                    Log.w(TAG, "VPN pfd close warning: ${e.message}")
+                }
+                isStopping.set(false)
+            }
         }
-        broadcastStatus(false)
+
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+                stopForeground(STOP_FOREGROUND_REMOVE)
+            } else {
+                @Suppress("DEPRECATION")
+                stopForeground(true)
+            }
+        } catch (e: Throwable) {
+            Log.w(TAG, "stopForeground error: ${e.message}")
+        }
         stopSelf()
-        Log.i(TAG, "Net Engine tunnel STOPPED")
+        Log.i(TAG, "Net Engine tunnel STOPPED gracefully")
     }
 
     // ── Broadcast ────────────────────────────────────────────────────────────

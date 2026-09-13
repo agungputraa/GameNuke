@@ -564,9 +564,9 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
 
         val killHogsBtn = Button(context).apply { installNukePressFeedback() }.apply {
-            text = "MANAGE LOAD"
+            text = "MANAGE LOAD & RAM"
             setTextColor(Color.WHITE)
-            textSize = 10.5f
+            textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#10B981"))
@@ -576,12 +576,12 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 rightMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Mengoptimalkan beban proses latar belakang & memori RAM..."
+                actionStatusTv?.text = "Optimizing background workload & reclaiming system RAM..."
                 actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
                 scope.launch {
                     val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
                     withContext(Dispatchers.Main) {
-                        actionStatusTv?.text = "✓ Optimasi beban selesai: +${freedMb}MB RAM dipulihkan ($killed proses)"
+                        actionStatusTv?.text = "✓ Workload optimized: +${freedMb}MB RAM restored ($killed processes purged)"
                         val freshData = collectHealthData()
                         renderTelemetry(freshData)
                     }
@@ -590,9 +590,9 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
 
         val cooldownBtn = Button(context).apply { installNukePressFeedback() }.apply {
-            text = "THERMAL CLEANUP"
+            text = "KILL ZOMBIE LOOPS"
             setTextColor(Color.WHITE)
-            textSize = 10.5f
+            textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#111A24"))
@@ -603,13 +603,13 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 leftMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Menstabilkan suhu CPU & merapikan siklus background..."
+                actionStatusTv?.text = "Reaping rogue zombie processes & cooling hardware..."
                 actionStatusTv?.setTextColor(Color.parseColor("#38BDF8"))
                 scope.launch {
                     val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
                     NukeProcessPurgeGuardian.cleanCachesSafe(context)
                     withContext(Dispatchers.Main) {
-                        actionStatusTv?.text = "✓ Stabilisasi termal selesai: $killedZombies loop dioptimalkan • cache dirapikan"
+                        actionStatusTv?.text = "✓ Thermal stabilization complete: $killedZombies rogue loop(s) terminated • cache trimmed"
                         val freshData = collectHealthData()
                         renderTelemetry(freshData)
                     }

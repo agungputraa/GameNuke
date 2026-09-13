@@ -538,9 +538,12 @@ class NukeTouchInjector {
     }
 
     private fun biasedGain(sx: Float, sy: Float, weight: Float): Float {
-        if (sx == sy) return sx
+        val safeSx = sx.coerceAtLeast(0.01f)
+        val safeSy = sy.coerceAtLeast(0.01f)
+        if (safeSx == safeSy) return safeSx
         val w = weight.coerceIn(0f, 1f).toDouble()
-        return (sx.toDouble().pow(1.0 - w) * sy.toDouble().pow(w)).toFloat()
+        val result = (safeSx.toDouble().pow(1.0 - w) * safeSy.toDouble().pow(w)).toFloat()
+        return if (result.isNaN() || result.isInfinite()) safeSx else result
     }
 
     private fun curveFactor(normalizedSpeed: Float): Float {
@@ -814,6 +817,45 @@ class NukeTouchInjector {
         while (injectQueue.isNotEmpty()) {
             runCatching { injectQueue.poll()?.recycle() }
         }
+    }
+
+    /**
+     * Emits ACTION_UP / ACTION_POINTER_UP for every currently-active pointer so the
+     * Android InputDispatcher never sees an orphaned DOWN event after Net Engine is disabled.
+     * Must be called BEFORE stop() so the inject thread is still alive to drain the queue.
+     */
+    @Synchronized
+    fun flushAllActivePointers() {
+        if (activePointers.isEmpty()) return
+        flushPendingMove()
+        val keys = activePointers.keys.toList()
+        for (key in keys) {
+            val ptr = activePointers[key] ?: continue
+            val isLast = (activePointers.size == 1)
+            runCatching { emit(if (isLast) MotionEvent.ACTION_UP else MotionEvent.ACTION_POINTER_UP, key) }
+            activePointers.remove(key)
+            usedIds[ptr.id] = false
+        }
+        moveDirty = false
+        Log.i(TAG, "flushAllActivePointers: all pointer UP events queued for clean shutdown")
+    }
+
+    /**
+     * Resets per-pointer accumulation state to the current raw physical position.
+     * Call this when sensitivity (sensX / sensY) changes while pointers are active to prevent
+     * the pointer from jumping to the screen edge due to stale accumulated deltas.
+     */
+    @Synchronized
+    fun resetAccumulators() {
+        for ((_, ptr) in activePointers) {
+            ptr.accumX = ptr.rawX
+            ptr.accumY = ptr.rawY
+            ptr.x = ptr.rawX
+            ptr.y = ptr.rawY
+            ptr.filterX.reset()
+            ptr.filterY.reset()
+        }
+        moveDirty = activePointers.isNotEmpty()
     }
 
     @Synchronized
