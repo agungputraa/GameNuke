@@ -3336,6 +3336,129 @@ summary:focus-visible {
   line-height: 1.45;
 }
 
+/* Previous Releases Archive (download.html) */
+.older-versions-card {
+  margin-top: 18px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.older-versions-header {
+  margin-bottom: 14px;
+}
+
+.older-versions-header .install-note-label {
+  display: block;
+  font-size: 9px;
+  letter-spacing: 0.15em;
+  color: var(--accent);
+  font-weight: 800;
+  margin-bottom: 4px;
+}
+
+.archive-subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.45;
+}
+
+.older-versions-list {
+  display: grid;
+  gap: 10px;
+}
+
+.old-ver-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  background: rgba(0, 0, 0, 0.25);
+  transition: border-color 0.2s ease, background-color 0.2s ease;
+}
+
+.old-ver-item:hover {
+  border-color: rgba(99, 255, 181, 0.28);
+  background: rgba(99, 255, 181, 0.03);
+}
+
+.old-ver-info {
+  display: grid;
+  gap: 3px;
+}
+
+.old-ver-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.old-ver-title strong {
+  font-size: 13px;
+  color: var(--text);
+  font-weight: 600;
+}
+
+.badge-ver {
+  font-family: var(--font-mono, monospace);
+  font-size: 10px;
+  padding: 2px 7px;
+  border-radius: 6px;
+  background: rgba(99, 255, 181, 0.1);
+  color: var(--accent);
+  border: 1px solid rgba(99, 255, 181, 0.2);
+  font-weight: 700;
+}
+
+.old-ver-meta {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.meta-sep {
+  opacity: 0.5;
+}
+
+.old-dl-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  font-size: 11.5px;
+  font-weight: 700;
+  border-radius: 8px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.dl-icon-sm {
+  width: 14px;
+  height: 14px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+
+@media (max-width: 480px) {
+  .old-ver-item {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+  }
+  .old-dl-btn {
+    justify-content: center;
+  }
+}
+
 /* ==========================================================================
    RESPONSIVE MEDIA QUERIES (CLEAN CASCADE)
    ========================================================================== */

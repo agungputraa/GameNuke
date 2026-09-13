@@ -3,7 +3,7 @@
 
   const DEFAULTS = {
     versionName: '2.9.0-Void',
-    apkSizeMb: '31.7',
+    apkSizeMb: '40.4',
     localApkUrl: 'GameNuke-v2.9.0-Void.apk',
     downloadUrl: 'GameNuke-v2.9.0-Void.apk',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
