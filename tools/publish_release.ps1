@@ -35,15 +35,15 @@ if (-not $Token -or -not $Owner -or -not $Repo) {
 
 # 2. Automatically parse version from app/build.gradle.kts
 $BuildGradle = Get-Content "$RootDir\app\build.gradle.kts" -Raw
-$VersionCode = 21
-$VersionName = "2.8.0-Quasar"
+$VersionCode = 22
+$VersionName = "2.9.0-Void"
 if ($BuildGradle -match 'versionCode\s*=\s*(\d+)') {
     $VersionCode = [int]$matches[1]
 }
 if ($BuildGradle -match 'versionName\s*=\s*"([^"]+)"') {
     $VersionName = $matches[1]
 }
-$CleanVersion = $VersionName.Replace("-Quasar", "").Replace("-prem", "")
+$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-prem", "")
 
 Write-Host "[1/6] Detected target version: v$VersionName (Code: $VersionCode)" -ForegroundColor Cyan
 
@@ -95,17 +95,19 @@ if (Test-Path $VersionJsonPath) {
     $vJson.sha256 = "$ApkSha256"
     $vJson.publishedAt = (Get-Date -Format "yyyy-MM-dd")
     $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
+    $vJson.localApkUrl = $TargetApkName
+    $vJson.githubReleaseUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
     
     $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
     $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
+    $vJson.appName = "Game Nuke Void Edition"
     $vJson.releaseNotes = @(
-        "Network Engine: Integrated low-latency socket routing and local DNS optimization for stable competitive connectivity",
-        "Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense",
-        "Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning",
-        "Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback",
-        "Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays",
-        "Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay",
-        "Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement"
+        "Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for both overlay and reticle pins",
+        "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification",
+        "Liftoff Monetize Optimization: Official VungleBannerView integration and clean passive screen rendering",
+        "Systemwide English Standardization: Complete enterprise-grade English localization across all dialogs and toasts",
+        "Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders",
+        "Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption"
     )
     
     $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
@@ -144,23 +146,18 @@ try {
     }
 
     git add .
-    $commitMsg = "Game Nuke Quasar Edition Web and Release Portal v$VersionName (Tailwind, Alpine.js, Edge CDN, GitHub Actions)"
+    $commitMsg = "Game Nuke Void Edition Web and Release Portal v$VersionName (Tailwind, Alpine.js, Edge CDN, GitHub Actions)"
     git commit -m $commitMsg -q
 
-    # Push to origin 'gh-pages' (Edge CDN serving)
-    Write-Host "   Deploying to remote gh-pages branch for Edge CDN..." -ForegroundColor Cyan
+    # Push to origin 'gh-pages' (Edge CDN serving) and 'main' (Web Release Portal)
+    Write-Host "   Deploying web portal to remote gh-pages and main branches..." -ForegroundColor Cyan
     git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q 2>$null
+    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:main --force -q 2>$null
 
-    Write-Host "   Web distribution synchronized successfully to gh-pages!" -ForegroundColor Green
+    Write-Host "   Web distribution synchronized successfully to both main and gh-pages!" -ForegroundColor Green
 } finally {
     Pop-Location
 }
-
-# Synchronize Android codebase to GitHub 'main' branch
-Write-Host "   Synchronizing Android project repository to origin main..." -ForegroundColor Cyan
-git add -A
-git commit -m "feat(release): Game Nuke Quasar Edition v$VersionName with Net Engine and security hardening" -q 2>$null
-git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" main -q 2>$null
 
 # 6. Create or Update GitHub Release via API
 Write-Host "[4/6] Synchronizing GitHub Release via API..." -ForegroundColor Yellow
@@ -171,18 +168,17 @@ $Headers = @{
 
 $Tag = "v$VersionName"
 $lines = @(
-    "Game Nuke Quasar Edition v$VersionName",
+    "Game Nuke Void Edition v$VersionName",
     "",
     "Official Standalone Release with Dual-Sync Edge CDN Updates.",
     "",
     "Highlights:",
-    "- Network Engine: Integrated low-latency socket routing and local DNS optimization for stable competitive connectivity.",
-    "- Anti-Tamper & Security Hardening: Multi-layer certificate cross-check, dex container integrity verification, and injection defense.",
-    "- Magic Touch Aim Stabilization: Low-latency headshot flick curve, thumb-arc wobble suppression, and sub-pixel micro-aim tuning.",
-    "- Universal Android 11+ Core Stability: Fail-safe input event lifecycle, zero screen lockup protection, and resilient privilege fallback.",
-    "- Systemwide English Standardization: Fully standardized technical terminology across all system panels and cockpit overlays.",
-    "- Process Purge Guardian: Intelligent background app memory trimming preventing thermal throttling during intense gameplay.",
-    "- Screen Boundary Clamping: Enhanced draggable overlay stability preventing accidental off-screen displacement.",
+    "- Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for overlay and reticle pins.",
+    "- Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification.",
+    "- Liftoff Monetize Optimization: Official VungleBannerView integration and clean passive screen rendering.",
+    "- Systemwide English Standardization: Complete enterprise-grade English localization across all dialogs and toasts.",
+    "- Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders.",
+    "- Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption.",
     "",
     "Integrity:",
     "- File: $ApkName",
@@ -194,7 +190,7 @@ $ReleaseBody = $lines -join "`n"
 $ReleasePayload = @{
     tag_name         = $Tag
     target_commitish = "main"
-    name             = "Game Nuke Quasar Edition v$VersionName"
+    name             = "Game Nuke Void Edition v$VersionName"
     body             = $ReleaseBody
     draft            = $false
     prerelease       = $false
@@ -249,7 +245,7 @@ if (-not $AssetAlreadyUploaded) {
 # 8. Final Status Report
 Write-Host "[6/6] Verifying Live Endpoints..." -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   SUCCESS! GAME NUKE QUASAR ECOSYSTEM IS ONLINE" -ForegroundColor Green
+Write-Host "   SUCCESS! GAME NUKE VOID ECOSYSTEM IS ONLINE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "   Landing Page : https://$Owner.github.io/$Repo/" -ForegroundColor Cyan
 Write-Host "   Metadata API : https://$Owner.github.io/$Repo/version.json" -ForegroundColor Cyan

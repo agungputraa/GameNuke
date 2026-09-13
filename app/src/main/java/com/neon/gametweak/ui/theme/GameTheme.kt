@@ -32,7 +32,7 @@ object Neon {
     // without changing functional call sites.
     val Accent      = NukeGreen
     val AccentDim   = NukeGreenDeep
-    val Magenta     = Color(0xFFFF2F78)
+    val Magenta     = Color(0xFFF43F5E)
     val Danger      = NukeDanger
     val Alert       = NukeWarning
     val Violet      = NukeViolet
@@ -40,7 +40,7 @@ object Neon {
     val Bg          = NukeBackground
     val BgRaised    = NukeSurface
     val BgCard      = NukeSurfaceHigh
-    val BgCardL     = Color(0xFF0F2018)
+    val BgCardL     = Color(0xFF1E293B)
     val BgInset     = NukeInset
     val Outline     = NukeOutline
     val TextDim     = NukeTextSecondary

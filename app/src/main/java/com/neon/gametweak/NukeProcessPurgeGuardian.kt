@@ -148,7 +148,7 @@ object NukeProcessPurgeGuardian {
     suspend fun purgeZombiesSafe(context: Context): Pair<Int, Long> = withContext(Dispatchers.IO) {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val memBefore = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-        val availBeforeMb = (memBefore?.availMem ?: 0L) / (1024 * 1024)
+        val availBeforeMb = memBefore.availMem / (1024 * 1024)
 
         // 0. First eliminate rogue zombie/defunct clusters and monitor loops
         val rogueKilled = killRogueZombieProcesses(context)
@@ -216,7 +216,7 @@ object NukeProcessPurgeGuardian {
         // Calculate freed memory
         kotlinx.coroutines.delay(200L)
         val memAfter = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-        val availAfterMb = (memAfter?.availMem ?: 0L) / (1024 * 1024)
+        val availAfterMb = memAfter.availMem / (1024 * 1024)
         val freedMb = (availAfterMb - availBeforeMb).coerceAtLeast(0L)
 
         Log.d(TAG, "Safe zombie purge completed: killed=$killedCount freedMb=$freedMb")
@@ -274,6 +274,8 @@ object NukeProcessPurgeGuardian {
      */
     suspend fun killRogueZombieProcesses(context: Context): Int = withContext(Dispatchers.IO) {
         val myPid = android.os.Process.myPid()
+        val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase() ?: ""
+        val activeGamePattern = if (activeGame.isNotEmpty()) "|*$activeGame*" else ""
         val script = """
             KILLED=0
 
@@ -289,7 +291,7 @@ object NukeProcessPurgeGuardian {
                   if [ -n "${'$'}P" ] && [ "${'$'}P" != "$myPid" ] && [ "${'$'}P" != "${'$'}${'$'}" ]; then
                     CMD=${'$'}(cat /proc/"${'$'}P"/cmdline 2>/dev/null | tr '\0' ' ')
                     case "${'$'}CMD" in
-                      *com.neon.gametweak*|*shizuku*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*) ;;
+                      *com.neon.gametweak*|*shizuku*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*|*screenrecord*|*recorder*|*live*$activeGamePattern) ;;
                       *)
                         kill -9 "${'$'}P" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
                         ;;
@@ -308,10 +310,16 @@ object NukeProcessPurgeGuardian {
               for PP in ${'$'}DEFUNCT_PPIDS; do
                 if [ -n "${'$'}PP" ] && [ "${'$'}PP" != "$myPid" ] && [ "${'$'}PP" != "${'$'}${'$'}" ]; then
                   COMM=${'$'}(cat /proc/"${'$'}PP"/comm 2>/dev/null)
-                  # Never kill core system processes
-                  if [ "${'$'}COMM" != "system_server" ] && [ "${'$'}COMM" != "zygote" ] && [ "${'$'}COMM" != "zygote64" ] && [ "${'$'}COMM" != "init" ] && [ "${'$'}COMM" != "adbd" ] && [ "${'$'}COMM" != "kthreadd" ]; then
-                    kill -9 "${'$'}PP" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
-                  fi
+                  CMDLINE=${'$'}(cat /proc/"${'$'}PP"/cmdline 2>/dev/null | tr '\0' ' ')
+                  # Never kill core system processes, active game, screen recorders, or Game Nuke
+                  case "${'$'}CMDLINE" in
+                    *com.neon.gametweak*|*shizuku*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*|*screenrecord*|*recorder*|*live*$activeGamePattern) ;;
+                    *)
+                      if [ "${'$'}COMM" != "system_server" ] && [ "${'$'}COMM" != "zygote" ] && [ "${'$'}COMM" != "zygote64" ] && [ "${'$'}COMM" != "init" ] && [ "${'$'}COMM" != "adbd" ] && [ "${'$'}COMM" != "kthreadd" ]; then
+                        kill -9 "${'$'}PP" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
+                      fi
+                      ;;
+                  esac
                 fi
               done
             fi

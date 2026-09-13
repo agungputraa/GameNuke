@@ -556,14 +556,20 @@ object NukeTouchTuningEngine {
     val isDaemonTouchActive: Boolean get() = daemonTouchActive
 
     fun getLibTouchPath(context: Context): String {
-        val tmp = java.io.File("/data/local/tmp/libtouch.so")
-        if (tmp.exists() && tmp.length() > 0) return tmp.absolutePath
+        val tmpWandev = java.io.File("/data/local/tmp/libwandev.so")
+        if (tmpWandev.exists() && tmpWandev.length() > 0) return tmpWandev.absolutePath
+
+        val tmpTouch = java.io.File("/data/local/tmp/libtouch.so")
+        if (tmpTouch.exists() && tmpTouch.length() > 0) return tmpTouch.absolutePath
 
         val nativeDir = context.applicationInfo.nativeLibraryDir
-        val direct = java.io.File(nativeDir, "libtouch.so")
-        if (direct.exists()) return direct.absolutePath
+        val directWandev = java.io.File(nativeDir, "libwandev.so")
+        if (directWandev.exists()) return directWandev.absolutePath
 
-        return "/data/local/tmp/libtouch.so"
+        val directTouch = java.io.File(nativeDir, "libtouch.so")
+        if (directTouch.exists()) return directTouch.absolutePath
+
+        return "/data/local/tmp/libwandev.so"
     }
 
     fun startDaemonTouchAsync(context: Context, onComplete: ((Boolean) -> Unit)? = null) {
@@ -571,8 +577,8 @@ object NukeTouchTuningEngine {
             val ok = try {
                 val libPath = getLibTouchPath(context)
 
-                // 1. Check if privileged Binder service is available (Shizuku / iAdb)
-                val shellService = NukeConnectionManager.getShellService()
+                // 1. Check if privileged Binder service is available (Shizuku / iAdb auto-reconnect)
+                val shellService = NukeConnectionManager.ensureShellService(2500L)
                 if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
                     val count = shellService.touchStart(libPath)
                     if (count >= 0) {
@@ -629,7 +635,7 @@ object NukeTouchTuningEngine {
     fun syncToDaemon(context: Context? = null) {
         kotlin.concurrent.thread(name = "nuke-sync-touch", isDaemon = true) {
             try {
-                val shellService = NukeConnectionManager.getShellService()
+                val shellService = NukeConnectionManager.ensureShellService(1000L)
                 if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
                     shellService.touchConfigure(
                         xMultiplier, yMultiplier, sensArea, curveMode,

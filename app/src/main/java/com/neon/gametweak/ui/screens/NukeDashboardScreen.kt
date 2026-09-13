@@ -139,6 +139,7 @@ private data class CommandCenterTelemetry(
     val overlayReady: Boolean = false,
     val sessionReady: Boolean = false,
     val dndReady: Boolean = false,
+    val batteryUnrestricted: Boolean = false,
     val shizukuAvailable: Boolean = false,
     val iadbAvailable: Boolean = false,
 )
@@ -258,8 +259,9 @@ fun DashboardScreen(
         telemetry.overlayReady,
         telemetry.sessionReady,
         telemetry.dndReady,
+        telemetry.batteryUnrestricted,
     ).count { it }
-    val readiness = readyCount / 4f
+    val readiness = readyCount / 5f
 
     LazyColumn(
         modifier = Modifier.fillMaxSize().background(Neon.Bg),
@@ -345,7 +347,7 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(("SESSION READINESS"), "$readyCount/4 ${("SYSTEM PATHS")}")
+            SectionRail(("SESSION READINESS"), "$readyCount/5 ${("SYSTEM PATHS")}")
             Spacer(Modifier.height(8.dp))
             ReadinessDeck(
                 context = context,
@@ -645,6 +647,12 @@ private fun ReadinessDeck(context: Context, telemetry: CommandCenterTelemetry, o
         ReadinessItem(("GAME FOCUS"), telemetry.dndReady, ("DND policy access"), Icons.Rounded.NotificationsOff) {
             runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
         },
+        ReadinessItem(("BATTERY GUARD"), telemetry.batteryUnrestricted, if (telemetry.batteryUnrestricted) ("Unrestricted (No Sleep)") else ("Tap to ignore limit"), Icons.Rounded.BatteryChargingFull) {
+            com.neon.gametweak.NukeBatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
+        },
+        ReadinessItem(("HARDWARE SYNC"), telemetry.currentHz > 0, "${telemetry.currentHz}Hz Active", Icons.Rounded.Speed) {
+            com.neon.gametweak.NukeToast.success(context, "Hardware sync: Display refresh rate ${telemetry.currentHz}Hz")
+        },
     )
     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
         rows.chunked(2).forEach { pair ->
@@ -683,7 +691,7 @@ private fun ReadinessTile(item: ReadinessItem, modifier: Modifier = Modifier) {
 private fun CommandTile(title: String, detail: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
         modifier.height(104.dp).clip(ReactorSmall)
-            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF0A1512), Color(0xFF020705))))
+            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF111720), Color(0xFF090D12))))
             .border(1.dp, accent.copy(alpha = .32f), ReactorSmall)
             .nukePressFeedback().clickable(onClick = onClick).padding(12.dp),
     ) {
@@ -845,6 +853,7 @@ private fun readCommandCenterTelemetry(
         sessionReady = NukeRuntimeState.state.value.overlayRunning ||
             context.getSharedPreferences("NukePrefs", Context.MODE_PRIVATE).safeBoolean("overlay_active_session", false),
         dndReady = notificationManager?.isNotificationPolicyAccessGranted == true,
+        batteryUnrestricted = com.neon.gametweak.NukeBatteryOptimizationHelper.isIgnoringBatteryOptimizations(context),
         shizukuAvailable = shizukuAvailable,
         iadbAvailable = iadbAvailable,
     )

@@ -136,8 +136,14 @@ object NukeShizukuBridge {
 
     /** Returns the active IShellService AIDL interface if bound and alive. */
     fun getShellService(): IShellService? {
-        val binder = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
-        return IShellService.Stub.asInterface(binder)
+        val binder = userServiceBinder?.takeIf { it.pingBinder() }
+        if (binder != null) {
+            return IShellService.Stub.asInterface(binder)
+        }
+        if (isRunning() && hasPermission()) {
+            bindUserService()
+        }
+        return null
     }
 
     /**
@@ -228,6 +234,29 @@ object NukeShizukuBridge {
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
+    private val connectionLatch = java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CountDownLatch?>(null)
+
+    /**
+     * Ensures UserService is bound and responsive. If not currently bound but Shizuku is running
+     * and permitted, attempts auto-bind and blocks up to [timeoutMs] ms. Safe on worker threads.
+     */
+    fun ensureConnected(timeoutMs: Long = 1500L): IShellService? {
+        val current = userServiceBinder?.takeIf { it.pingBinder() }
+        if (current != null) return IShellService.Stub.asInterface(current)
+
+        if (!isRunning() || !hasPermission()) return null
+
+        val latch = java.util.concurrent.CountDownLatch(1)
+        connectionLatch.set(latch)
+        bindUserService(force = true)
+
+        runCatching {
+            latch.await(timeoutMs.coerceIn(200L, 5000L), java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
+        val bound = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
+        return IShellService.Stub.asInterface(bound)
+    }
+
     private fun checkSelfPermission(): Boolean = runCatching {
         !Shizuku.isPreV11() &&
             Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
@@ -237,33 +266,38 @@ object NukeShizukuBridge {
         Shizuku.UserServiceArgs(
             ComponentName(context.packageName, ShellUserService::class.java.name)
         )
-            .daemon(false)               // Not a daemon — we manage lifecycle ourselves
+            .daemon(true)                // Standalone daemon — keeps touch listener alive across app minimize / background
             .processNameSuffix("shell")  // Nice name: com.neon.gametweak:shell
             .debuggable(false)
             .version(1)
 
     /**
      * Bind the ShellUserService inside the Shizuku process.
-     * Idempotent — will not bind twice.
+     * Idempotent — will not bind twice unless force=true.
      */
-    fun bindUserService() {
+    fun bindUserService(force: Boolean = false) {
+        if (force) {
+            connecting.set(false)
+        }
         if (!connecting.compareAndSet(false, true)) return
-        // Need a context. We'll get one lazily.
         val context = NukeApplication.instance ?: run {
             connecting.set(false)
+            connectionLatch.getAndSet(null)?.countDown()
             Log.w(TAG, "bindUserService: NukeApplication.instance is null, deferring")
             return
         }
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                Log.i(TAG, "Shizuku UserService connected")
+                Log.i(TAG, "Shizuku UserService connected (daemon=true)")
                 userServiceBinder = binder
                 connecting.set(false)
+                connectionLatch.getAndSet(null)?.countDown()
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 Log.w(TAG, "Shizuku UserService disconnected")
                 userServiceBinder = null
                 connecting.set(false)
+                connectionLatch.getAndSet(null)?.countDown()
             }
         }
         serviceConnection = connection
@@ -272,6 +306,7 @@ object NukeShizukuBridge {
         }.onFailure {
             Log.w(TAG, "Shizuku bindUserService failed: ${it.message}")
             connecting.set(false)
+            connectionLatch.getAndSet(null)?.countDown()
         }
     }
 }

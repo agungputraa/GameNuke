@@ -119,6 +119,26 @@ object NukeDaemonClient {
         return resp == "TOUCH_STATUS|true"
     }
 
+    fun touchTap(x: Float, y: Float, durationMs: Long = 15L): Boolean {
+        val resp = runCatching { request("TOUCH_TAP|$x|$y|$durationMs", 1500) }.getOrNull()
+        return resp == "OK"
+    }
+
+    fun touchHold(x: Float, y: Float, durationMs: Long): Boolean {
+        val resp = runCatching { request("TOUCH_HOLD|$x|$y|$durationMs", (durationMs + 1000).toInt()) }.getOrNull()
+        return resp == "OK"
+    }
+
+    fun touchSwipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long = 120L): Boolean {
+        val resp = runCatching { request("TOUCH_SWIPE|$x1|$y1|$x2|$y2|$durationMs", (durationMs + 1000).toInt()) }.getOrNull()
+        return resp == "OK"
+    }
+
+    fun setMacroPins(pinsConfig: String): Boolean {
+        val resp = runCatching { request("TOUCH_SET_PINS|$pinsConfig", 2500) }.getOrNull()
+        return resp == "OK"
+    }
+
     private fun requestTcp(line: String, timeoutMs: Int): String {
         val socket = Socket()
         try {

@@ -185,7 +185,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         body.addView(sectionTitle("RESOLUTION & DISPLAY SCALER"))
         body.addView(buildResolutionRow())
         body.addView(space(6))
-        body.addView(actionBtn("↺  RESTORE NATIVE DISPLAY", "#00FF88") {
+        body.addView(actionBtn("↺  RESTORE NATIVE DISPLAY", "#10B981") {
             setResolution("NATIVE")
         })
         body.addView(space(10))
@@ -226,7 +226,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         statusTv = TextView(context).apply {
             text = "Engine: Ready • Privileged Shell Active"
             textSize = 8.5f
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             gravity = Gravity.CENTER
             setPadding(0, dp2px(4), 0, dp2px(4))
         }
@@ -276,7 +276,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         titleCol.addView(TextView(context).apply {
             text = "🎮 GPU & DISPLAY TUNER"
             textSize = 11.5f
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         })
@@ -382,11 +382,11 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
     }
 
     private fun updateChipVisual(v: TextView, active: Boolean) {
-        v.setTextColor(Color.parseColor(if (active) "#00ff88" else "#94a3b8"))
+        v.setTextColor(Color.parseColor(if (active) "#10B981" else "#94a3b8"))
         v.background = GradientDrawable().apply {
             cornerRadius = 7f * d
             setColor(Color.parseColor(if (active) "#0d2618" else "#111c26"))
-            setStroke(dp2px(1), Color.parseColor(if (active) "#00ff88" else "#1e293b"))
+            setStroke(dp2px(1), Color.parseColor(if (active) "#10B981" else "#1e293b"))
         }
     }
 
@@ -421,7 +421,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
 
         val sw = Switch(context).apply {
             isChecked = checked
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             trackTintList = ColorStateList.valueOf(Color.parseColor("#1A3B2F"))
             setOnCheckedChangeListener { _, isChecked -> onChecked(isChecked) }
         }

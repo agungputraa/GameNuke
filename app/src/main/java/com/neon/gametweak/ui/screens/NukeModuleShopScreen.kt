@@ -177,9 +177,9 @@ fun NukeModuleShopScreen() {
                         NukeToast.success(context, if (enabled) ("${module.title} enabled") else ("${module.title} disabled"))
                     },
                     colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF07110E),
+                        checkedThumbColor = Color(0xFF090D12),
                         checkedTrackColor = Neon.Accent,
-                        uncheckedThumbColor = Color(0xFF9AA7A2),
+                        uncheckedThumbColor = Color(0xFF94A3B8),
                         uncheckedTrackColor = Neon.BgInset,
                     ),
                 )

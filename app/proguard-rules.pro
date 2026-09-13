@@ -178,10 +178,10 @@
 -keep interface com.vungle.** { *; }
 -dontwarn com.vungle.**
 
-# --- Native Touch Subsystem (Must match libtouch.so JNI signatures exactly) ---
--keep class frb.axeron.server.touch.** { *; }
--keepclassmembers class frb.axeron.server.touch.** { *; }
--dontwarn frb.axeron.server.touch.**
+# --- Native Touch Subsystem (Must match libwandev.so / libtouch.so JNI signatures exactly) ---
+-keep class nuke.wandev.touch.** { *; }
+-keepclassmembers class nuke.wandev.touch.** { *; }
+-dontwarn nuke.wandev.touch.**
 
 # --- Go Mobile DNS Tunnel (libgojni.so — native gomobile bridge) ---
 # anehprodns.* and go.* are native Go Mobile JNI stubs.

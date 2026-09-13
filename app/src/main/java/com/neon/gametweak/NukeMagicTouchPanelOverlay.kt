@@ -151,6 +151,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         NukeTouchTuningEngine.euroEnabled = jitterSmoothing
         NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
         NukeTouchTuningEngine.euroBeta = jitterBeta
+        // Always push the current values to the running daemon so sensitivity
+        // takes effect immediately — this is the critical path that was missing.
         NukeTouchTuningEngine.syncToDaemon(context)
     }
 
@@ -211,9 +213,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             val isCoreActive = NukeTouchTuningEngine.isDaemonTouchActive
             if (isCoreActive) {
                 statusBadge?.text = "● ACTIVE"
-                statusBadge?.setTextColor(Color.parseColor("#00FF88"))
+                statusBadge?.setTextColor(Color.parseColor("#10B981"))
                 statusSubtext?.text = "Kernel Touch Listener Active — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
-                statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
+                statusSubtext?.setTextColor(Color.parseColor("#10B981"))
                 masterSwitch?.isChecked = true
             } else {
                 statusBadge?.text = "○ STANDBY"
@@ -306,14 +308,14 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             text = "TOUCH LISTENER"
             textSize = 13f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
         })
 
         statusBadge = TextView(context).apply {
             text = if (NukeTouchTuningEngine.isDaemonTouchActive) "● ACTIVE" else "○ STANDBY"
             textSize = 9.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(if (NukeTouchTuningEngine.isDaemonTouchActive) Color.parseColor("#00FF88") else Color.parseColor("#64748B"))
+            setTextColor(if (NukeTouchTuningEngine.isDaemonTouchActive) Color.parseColor("#10B981") else Color.parseColor("#64748B"))
             setPadding((8 * d).toInt(), (2 * d).toInt(), (8 * d).toInt(), (2 * d).toInt())
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1500FF88"))
@@ -413,7 +415,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         masterSwitch = Switch(context).apply {
             isChecked = NukeTouchTuningEngine.isDaemonTouchActive || prefs.getBoolean("touch_listener_active", false)
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
 
             setOnCheckedChangeListener { _, isChecked ->
@@ -428,9 +430,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                         mainHandler.post {
                             if (ok) {
                                 statusBadge?.text = "● ACTIVE"
-                                statusBadge?.setTextColor(Color.parseColor("#00FF88"))
+                                statusBadge?.setTextColor(Color.parseColor("#10B981"))
                                 statusSubtext?.text = "✓ Touch Listener Active — In-game sensitivity working live"
-                                statusSubtext?.setTextColor(Color.parseColor("#00FF88"))
+                                statusSubtext?.setTextColor(Color.parseColor("#10B981"))
                                 masterSwitch?.isChecked = true
                                 prefs.edit().putBoolean("touch_listener_active", true).apply()
                             } else {
@@ -487,7 +489,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             text = "${"%.2f".format(sensX)}x"
             textSize = 11f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1500FF88"))
@@ -498,21 +500,28 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         card.addView(xHeaderRow)
 
         // SeekBar X: 1.00x to 3.50x (progress 0..50 => step 0.05 => 1.00 + progress * 0.05)
+        // Red Corner MagicTouchSettingsFeature: fIntBitsToFloat mapping: value/100 * (max-min) + min
         xSeekBar = SeekBar(context).apply {
             max = 50
             progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
-            progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            progressTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
                     if (fromUser) {
                         sensX = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
                         xValBadge?.text = "${"%.2f".format(sensX)}x"
-                        persistState()
+                        // Update engine value immediately so the live touchpad
+                        // canvas in the interactive card reflects the change in real-time.
+                        NukeTouchTuningEngine.xMultiplier = sensX
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {
+                    // Persist and sync to daemon only on finger-lift, not on every
+                    // pixel drag — this matches Red Corner's debounced touch callback.
+                    persistState()
+                }
             })
         }
         card.addView(xSeekBar)
@@ -556,6 +565,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         card.addView(yHeaderRow)
 
         // SeekBar Y: 1.00x to 3.50x
+        // Red Corner MagicTouchSettingsFeature: yMultiplier follows same formula as X.
         ySeekBar = SeekBar(context).apply {
             max = 50
             progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
@@ -566,11 +576,15 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     if (fromUser) {
                         sensY = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
                         yValBadge?.text = "${"%.2f".format(sensY)}x"
-                        persistState()
+                        // Update engine value immediately (same Red Corner pattern as X).
+                        NukeTouchTuningEngine.yMultiplier = sensY
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
+                override fun onStopTrackingTouch(sb: SeekBar?) {
+                    // Persist and sync on finger-lift only.
+                    persistState()
+                }
             })
         }
         card.addView(ySeekBar)
@@ -583,6 +597,35 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             ySeekBar?.progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
             persistState()
         })
+
+        // Reset Row (matches Red Corner's "Reset to Default" button in MagicTouchSettingsFeature)
+        card.addView(spacer(8))
+        val resetBtn = TextView(context).apply {
+            text = "↺  Reset to Default (1.80x / 2.20x)"
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#64748B"))
+            gravity = android.view.Gravity.CENTER
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+            background = android.graphics.drawable.GradientDrawable().apply {
+                setColor(Color.parseColor("#0F172A"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+            }
+            setOnClickListener {
+                sensX = 1.80f
+                sensY = 2.20f
+                xValBadge?.text = "${"%.2f".format(sensX)}x"
+                yValBadge?.text = "${"%.2f".format(sensY)}x"
+                xSeekBar?.progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+                ySeekBar?.progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+                persistState()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        card.addView(resetBtn)
 
         return card
     }
@@ -650,7 +693,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             val selected = (code == sensArea)
             chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
             chip.background = GradientDrawable().apply {
-                setColor(if (selected) Color.parseColor("#00FF88") else Color.parseColor("#1E293B"))
+                setColor(if (selected) Color.parseColor("#10B981") else Color.parseColor("#1E293B"))
                 cornerRadius = 8 * d
                 if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
             }
@@ -720,7 +763,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             val selected = (code == curveMode)
             chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
             chip.background = GradientDrawable().apply {
-                setColor(if (selected) Color.parseColor("#00E5FF") else Color.parseColor("#1E293B"))
+                setColor(if (selected) Color.parseColor("#38BDF8") else Color.parseColor("#1E293B"))
                 cornerRadius = 8 * d
                 if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
             }
@@ -753,7 +796,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         jitterSwitch = Switch(context).apply {
             isChecked = jitterSmoothing
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
             setOnCheckedChangeListener { _, isChecked ->
                 jitterSmoothing = isChecked
@@ -827,7 +870,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             text = if (pointerSpeed >= 0) "+$pointerSpeed" else "$pointerSpeed"
             textSize = 10.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
         }
         ptrRow.addView(pointerValBadge)
         card.addView(ptrRow)
@@ -835,8 +878,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         pointerSeekBar = SeekBar(context).apply {
             max = 14
             progress = pointerSpeed + 7
-            progressTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#00FF88"))
+            progressTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
+            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -928,7 +971,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 val ok = NukeTouchTuningEngine.resetDragShotDpi()
                 mainHandler.post {
                     dpiStatusTv?.text = if (ok) "✓ DPI reset to screen default" else "Failed to reset DPI"
-                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
+                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
                 }
             } else {
                 if (physicalDpi == 0) physicalDpi = NukeTouchTuningEngine.getPhysicalDensity()
@@ -936,7 +979,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 val ok = NukeTouchTuningEngine.applyDragShotDpi(targetDpi)
                 mainHandler.post {
                     dpiStatusTv?.text = if (ok) "✓ DPI active: ${physicalDpi} → $targetDpi (+$offset DPI) — Drag shot ready" else "Failed to set DPI"
-                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#00FF88") else Color.parseColor("#EF4444"))
+                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
                 }
             }
         }
@@ -969,20 +1012,20 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 style = Paint.Style.STROKE
             }
             private val trailPaint = Paint().apply {
-                color = Color.parseColor("#00FF88")
+                color = Color.parseColor("#10B981")
                 strokeWidth = 3f * d
                 style = Paint.Style.STROKE
                 strokeCap = Paint.Cap.ROUND
                 isAntiAlias = true
             }
             private val crosshairPaint = Paint().apply {
-                color = Color.parseColor("#00E5FF")
+                color = Color.parseColor("#38BDF8")
                 strokeWidth = 1.5f * d
                 style = Paint.Style.STROKE
                 isAntiAlias = true
             }
             private val pointPaint = Paint().apply {
-                color = Color.parseColor("#00FF88")
+                color = Color.parseColor("#10B981")
                 style = Paint.Style.FILL
                 isAntiAlias = true
             }
@@ -1031,7 +1074,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                         path.reset()
                         path.moveTo(event.x, event.y)
                         readoutTv.text = "Down: (X=${event.x.toInt()}, Y=${event.y.toInt()}) [Gain: X=${"%.2f".format(sensX)}x, Y=${"%.2f".format(sensY)}x]"
-                        readoutTv.setTextColor(Color.parseColor("#00FF88"))
+                        readoutTv.setTextColor(Color.parseColor("#10B981"))
                         invalidate()
                         return true
                     }
@@ -1046,7 +1089,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                         currentY = event.y
                         path.lineTo(event.x, event.y)
                         readoutTv.text = "ΔX: ${if (appliedDx >= 0) "+" else ""}${"%.1f".format(appliedDx)}  ΔY: ${if (appliedDy >= 0) "+" else ""}${"%.1f".format(appliedDy)} (Multiplier: ${"%.2f".format(sensX)}x / ${"%.2f".format(sensY)}x)"
-                        readoutTv.setTextColor(Color.parseColor("#00E5FF"))
+                        readoutTv.setTextColor(Color.parseColor("#38BDF8"))
                         invalidate()
                         return true
                     }
@@ -1121,7 +1164,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 setPadding((8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
                 setTextColor(if (isMatch) Color.parseColor("#080E18") else Color.parseColor("#94A3B8"))
                 background = GradientDrawable().apply {
-                    setColor(if (isMatch) Color.parseColor("#00FF88") else Color.parseColor("#1E293B"))
+                    setColor(if (isMatch) Color.parseColor("#10B981") else Color.parseColor("#1E293B"))
                     cornerRadius = 6 * d
                     if (!isMatch) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
                 }

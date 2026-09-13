@@ -4,11 +4,11 @@ import android.graphics.Color
 
 /** Shared visual tokens for the rebuilt floating cockpit. */
 object NukeHudPalette {
-    val Void = Color.parseColor("#020705")
+    val Void = Color.parseColor("#090D12")
     val Panel = Color.parseColor("#0D1A13")
     val PanelRaised = Color.parseColor("#0F2018")
     val PanelSoft = Color.parseColor("#0F2018")
-    val Green = Color.parseColor("#35C99B")
+    val Green = Color.parseColor("#10B981")
     val GreenDim = Color.rgb(34, 111, 66)
     val Cyan = Color.rgb(56, 217, 209)
     val Blue = Color.rgb(79, 116, 255)

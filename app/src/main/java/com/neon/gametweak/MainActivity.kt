@@ -316,7 +316,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onDestroy() {
         runCatching { AppUpdateController.unregister() }
-        if (!FloatingBoosterService.isRunning()) {
+        if (!FloatingBoosterService.isRunning() && !NukeTouchTuningEngine.isDaemonTouchActive) {
             runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
         }
         super.onDestroy()
@@ -328,10 +328,10 @@ fun BlankFallback(message: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF020705)),
+            .background(Color(0xFF090D12)),
         contentAlignment = Alignment.Center
     ) {
-        Text(message, color = Color(0xFF35C99B), fontWeight = FontWeight.Bold)
+        Text(message, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -340,106 +340,158 @@ fun BannerAdView() {
     val context = LocalContext.current
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    // Shared state between factory and LaunchedEffect
-    val bannerViewState = remember { mutableStateOf<VungleBannerView?>(null) }
-    val isAdLoaded    = remember { mutableStateOf(false) }
-    val adLoadFailed  = remember { mutableStateOf(false) }
+    val isAdLoaded = remember { mutableStateOf(false) }
+    val adLoadFailed = remember { mutableStateOf(false) }
+    var containerView by remember { mutableStateOf<FrameLayout?>(null) }
+    var currentBannerView by remember { mutableStateOf<VungleBannerView?>(null) }
+    val scope = rememberCoroutineScope()
 
-    // ── Load trigger: wait for SDK init via StateFlow, then call load() ──────
-    // This completely separates view creation (factory) from ad loading,
-    // so load() is only called once the view is window-attached AND SDK ready.
-    LaunchedEffect(Unit) {
-        NukeAdManager.isInitializedState.collect { ready ->
-            if (!ready) return@collect
-            // SDK is ready — wait up to 2s for AndroidView.factory to create the view
-            var waited = 0
-            while (bannerViewState.value == null && waited < 2000) {
-                delay(80L)
-                waited += 80
+    // Helper to instantiate and load a fresh VungleBannerView without error 206
+    fun loadFreshBanner() {
+        val container = containerView ?: return
+        if (!NukeAdManager.initialized) return
+
+        // Safely dispose old banner instance
+        currentBannerView?.let { old ->
+            runCatching {
+                container.removeView(old)
+                old.finishAd()
             }
-            val view = bannerViewState.value ?: return@collect
+        }
+        currentBannerView = null
 
-            // Initial load
-            runCatching { view.load() }
+        val newView = VungleBannerView(
+            context,
+            NukeAdManager.BANNER_ID,
+            com.vungle.ads.VungleAdSize.BANNER
+        )
+        newView.adListener = object : com.vungle.ads.BannerAdListener {
+            override fun onAdLoaded(baseAd: com.vungle.ads.BaseAd) {
+                isAdLoaded.value = true
+                adLoadFailed.value = false
+                Log.d("BannerAdView", "Banner loaded successfully ✓ [${NukeAdManager.BANNER_ID}]")
+            }
 
-            // Auto-retry loop: if load failed, retry every 15s
-            while (isActive) {
-                delay(15_000L)
-                if (!isAdLoaded.value) {
-                    adLoadFailed.value = false
-                    runCatching { view.load() }
+            override fun onAdFailedToLoad(baseAd: com.vungle.ads.BaseAd, adError: com.vungle.ads.VungleError) {
+                adLoadFailed.value = true
+                Log.w("BannerAdView", "Banner load failed: ${adError.errorMessage} (${adError.code})")
+                // Retry with a fresh instance after backoff (avoiding error 206)
+                scope.launch {
+                    delay(30_000L)
+                    if (!isAdLoaded.value) {
+                        loadFreshBanner()
+                    }
                 }
+            }
+
+            override fun onAdClicked(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdImpression(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdLeftApplication(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdStart(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdEnd(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdFailedToPlay(baseAd: com.vungle.ads.BaseAd, adError: com.vungle.ads.VungleError) {
+                Log.w("BannerAdView", "Banner failed to play: ${adError.errorMessage}")
+            }
+        }
+
+        val density = context.resources.displayMetrics.density
+        val bannerW = (320 * density).toInt()
+        val bannerH = (50 * density).toInt()
+        val lp = FrameLayout.LayoutParams(bannerW, bannerH).apply {
+            gravity = android.view.Gravity.CENTER
+        }
+
+        newView.adListener = object : com.vungle.ads.BannerAdListener {
+            override fun onAdLoaded(baseAd: com.vungle.ads.BaseAd) {
+                isAdLoaded.value = true
+                adLoadFailed.value = false
+                container.removeAllViews()
+                container.addView(newView, lp)
+                Log.d("BannerAdView", "Banner loaded and attached successfully ✓ [${NukeAdManager.BANNER_ID}]")
+            }
+
+            override fun onAdFailedToLoad(baseAd: com.vungle.ads.BaseAd, adError: com.vungle.ads.VungleError) {
+                adLoadFailed.value = true
+                Log.w("BannerAdView", "Banner load failed: ${adError.errorMessage} (${adError.code})")
+                // Retry with a fresh instance after backoff (avoiding error 206)
+                scope.launch {
+                    delay(30_000L)
+                    if (!isAdLoaded.value) {
+                        loadFreshBanner()
+                    }
+                }
+            }
+
+            override fun onAdClicked(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdImpression(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdLeftApplication(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdStart(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdEnd(baseAd: com.vungle.ads.BaseAd) {}
+            override fun onAdFailedToPlay(baseAd: com.vungle.ads.BaseAd, adError: com.vungle.ads.VungleError) {
+                Log.w("BannerAdView", "Banner failed to play: ${adError.errorMessage}")
+            }
+        }
+
+        currentBannerView = newView
+
+        runCatching {
+            newView.load()
+            Log.d("BannerAdView", "VungleBannerView.load() initiated for ${NukeAdManager.BANNER_ID}")
+        }.onFailure { ex ->
+            Log.e("BannerAdView", "Failed to invoke load() on banner view", ex)
+        }
+    }
+
+    // Trigger load when SDK initialization completes
+    LaunchedEffect(containerView) {
+        if (containerView == null) return@LaunchedEffect
+        NukeAdManager.isInitializedState.collect { ready ->
+            if (ready) {
+                loadFreshBanner()
             }
         }
     }
 
-    // ── Lifecycle cleanup ─────────────────────────────────────────────────────
+    // Lifecycle cleanup
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_DESTROY) {
-                runCatching { bannerViewState.value?.finishAd() }
-                bannerViewState.value = null
+                runCatching { currentBannerView?.finishAd() }
+                currentBannerView = null
+                containerView?.removeAllViews()
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
-            runCatching { bannerViewState.value?.finishAd() }
+            runCatching { currentBannerView?.finishAd() }
+            currentBannerView = null
+            containerView?.removeAllViews()
         }
     }
 
-    // ── UI: 50dp slot, no visible placeholder text ────────────────────────────
-    // When ad is loading: transparent space (no text, professional look).
-    // When ad is loaded: VungleBannerView fills the space.
+    // UI: Clean dedicated banner slot
     Box(
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .background(Color(0xFF030805)),
+            .background(Color(0xFF090D12)),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
             modifier = Modifier
                 .fillMaxWidth()
-                .heightIn(max = 50.dp),
+                .height(50.dp),
             factory = { ctx ->
-                val view = VungleBannerView(
-                    ctx,
-                    NukeAdManager.BANNER_ID,
-                    com.vungle.ads.VungleAdSize.BANNER
-                )
-                view.adListener = object : com.vungle.ads.BannerAdListener {
-                    override fun onAdLoaded(baseAd: com.vungle.ads.BaseAd) {
-                        isAdLoaded.value = true
-                        adLoadFailed.value = false
-                        Log.d("BannerAdView", "Banner loaded ✓ id=${NukeAdManager.BANNER_ID}")
-                    }
-                    override fun onAdFailedToLoad(baseAd: com.vungle.ads.BaseAd, error: com.vungle.ads.VungleError) {
-                        adLoadFailed.value = true
-                        Log.w("BannerAdView", "Banner load failed: ${error.errorMessage} (${error.code})")
-                    }
-                    override fun onAdClicked(baseAd: com.vungle.ads.BaseAd)         {}
-                    override fun onAdImpression(baseAd: com.vungle.ads.BaseAd)      {}
-                    override fun onAdLeftApplication(baseAd: com.vungle.ads.BaseAd) {}
-                    override fun onAdStart(baseAd: com.vungle.ads.BaseAd)           {}
-                    override fun onAdEnd(baseAd: com.vungle.ads.BaseAd)             {}
-                    override fun onAdFailedToPlay(baseAd: com.vungle.ads.BaseAd, error: com.vungle.ads.VungleError) {
-                        Log.w("BannerAdView", "Banner failed to play: ${error.errorMessage}")
-                    }
-                }
-                // Store reference so LaunchedEffect can call load() after SDK init
-                bannerViewState.value = view
                 FrameLayout(ctx).apply {
                     layoutParams = android.view.ViewGroup.LayoutParams(
                         android.view.ViewGroup.LayoutParams.MATCH_PARENT,
-                        android.view.ViewGroup.LayoutParams.WRAP_CONTENT
+                        android.view.ViewGroup.LayoutParams.MATCH_PARENT
                     )
-                    addView(view)
-                    // If SDK already initialized when factory runs, load immediately
+                    containerView = this
                     if (NukeAdManager.initialized) {
-                        view.load()
+                        loadFreshBanner()
                     }
-                    // Otherwise, LaunchedEffect above handles it reactively
                 }
             }
         )
@@ -687,7 +739,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     androidx.compose.ui.graphics.Brush.horizontalGradient(
                                         listOf(
                                             Color.Transparent,
-                                            Color(0xFF35C99B).copy(alpha = 0.25f),
+                                            Color(0xFF10B981).copy(alpha = 0.25f),
                                             Color.Transparent,
                                         )
                                     )
@@ -710,7 +762,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 "AGUNG · DEV",
-                                color = Color(0xFF35C99B),
+                                color = Color(0xFF10B981),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 2.5.sp,
@@ -748,7 +800,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     Modifier
                                         .width(3.dp)
                                         .height(34.dp)
-                                        .background(Color(0xFF35C99B))
+                                        .background(Color(0xFF10B981))
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Column {
@@ -780,7 +832,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF020705)),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF090D12)),
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }, modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
                             Icon(Icons.Rounded.Sort, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -793,37 +845,37 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                     Box(
                         modifier = Modifier.fillMaxWidth().height(1.dp).background(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color.Transparent, Color(0xFF35C99B).copy(alpha = 0.5f), Color(0xFF35C99B).copy(alpha = 0.5f), Color.Transparent)
+                                listOf(Color.Transparent, Color(0xFF10B981).copy(alpha = 0.5f), Color(0xFF10B981).copy(alpha = 0.5f), Color.Transparent)
                             )
                         )
                     )
-                    NavigationBar(containerColor = Color(0xFF020705), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
+                    NavigationBar(containerColor = Color(0xFF090D12), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
                     NavigationBarItem(
                         selected = currentRoute == "dashboard",
                         onClick = { navigateWithAd("dashboard") },
                         icon = { Icon(Icons.Rounded.Speed, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(("Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "games",
                         onClick = { navigateWithAd("games") },
                         icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(("Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "cleaner",
                         onClick = { navigateWithAd("cleaner") },
                         icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(("Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF35C99B), indicatorColor = Color(0xFF35C99B).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
 
                 }
                 }
             },
-            containerColor = Color(0xFF020705),
+            containerColor = Color(0xFF090D12),
             modifier = Modifier.navigationBarsPadding()
         ) { innerPadding ->
             Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
@@ -862,11 +914,11 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                 // Keep banners on high-value passive screens only. Do not cover diagnostics, Web UI,
                 // developer, or tutorial workflows where persistent ads are distracting.
                 if (currentRoute in setOf("dashboard", "games", "cleaner")) {
-                    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF020705))) {
+                    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF090D12))) {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(1.dp).background(
                                 androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    listOf(Color.Transparent, Color(0xFF35C99B).copy(alpha = 0.28f), Color.Transparent)
+                                    listOf(Color.Transparent, Color(0xFF10B981).copy(alpha = 0.28f), Color.Transparent)
                                 )
                             )
                         )
@@ -920,7 +972,7 @@ fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White, borderAccent: Color = Color(0xFF35C99B)) {
+fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White, borderAccent: Color = Color(0xFF10B981)) {
     val uriHandler = LocalUriHandler.current
     Box(
         modifier = Modifier

@@ -1,27 +1,29 @@
 # Game Nuke Official
 
-> Official information source for Game Nuke Premium, an Android gaming performance utility.
+> Official technical and product documentation for Game Nuke Quasar Edition, an Android gaming performance and telemetry utility.
 
 Canonical website: https://gamenukeofficial.com/
-Primary language: Indonesian
-Current release: v2.6.0-prem
+Primary language: English
+Current release: v2.8.0-Quasar
 Supported platform: Android 11–16, ARM64
-Core access model: no root required for core features; selected execution modes may use Shizuku/iAdb on compatible devices.
+Core access model: No root required for core features; elevated capabilities may use Shizuku or Wireless Debugging on compatible devices.
 
 ## What Game Nuke is
-Game Nuke groups Android gaming utilities into one performance cockpit. The official website describes telemetry, thermal monitoring, memory utilities, network/DNS tools, display controls, Shizuku-compatible execution modes, and a floating gaming cockpit.
+Game Nuke centralizes Android gaming utilities into one clean cockpit. The official website describes real-time telemetry (FPS, frame time, thermals, memory), touch responsiveness calibration, socket & DNS network stability, display controls, Shizuku-compatible execution modes, and a lightweight floating in-game cockpit.
 
 ## Official distribution
-- Web Edition: https://gamenukeofficial.com/
+- Standalone Web Edition: https://gamenukeofficial.com/
+- Direct APK Download: https://gamenukeofficial.com/download.html
 - Google Play Edition: https://play.google.com/store/apps/details?id=com.neon.gametweak
+- Official WhatsApp Community: https://www.whatsapp.com/channel/0029Vb8OBaTJJhzc7lFIBe2D
 
 ## Important product context
-Game Nuke is an independent Android utility project. The website states that the app operates at the Android system layer and is not designed to modify game installation files.
+Game Nuke is an independent Android utility project developed by Agung Developer. The utility operates strictly on the Android system utility layer and does not modify game installations or inject code into third-party game binaries.
 
 ## Preferred source sections
-- Capabilities: https://gamenukeofficial.com/#fitur
-- Editions: https://gamenukeofficial.com/#editions
+- Features: https://gamenukeofficial.com/#fitur
 - Cockpit: https://gamenukeofficial.com/#cockpit
+- Editions: https://gamenukeofficial.com/#editions
 - Installation: https://gamenukeofficial.com/#install
 - FAQ: https://gamenukeofficial.com/#faq
 

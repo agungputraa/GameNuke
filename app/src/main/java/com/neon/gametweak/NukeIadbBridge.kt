@@ -141,8 +141,14 @@ object NukeIadbBridge {
 
     /** Returns the active IShellService AIDL interface if bound and alive. */
     fun getShellService(): IShellService? {
-        val binder = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
-        return IShellService.Stub.asInterface(binder)
+        val binder = userServiceBinder?.takeIf { it.pingBinder() }
+        if (binder != null) {
+            return IShellService.Stub.asInterface(binder)
+        }
+        if (isRunning() && hasPermission()) {
+            bindUserService()
+        }
+        return null
     }
 
     /**
@@ -228,6 +234,29 @@ object NukeIadbBridge {
 
     // ── Private helpers ──────────────────────────────────────────────────────
 
+    private val connectionLatch = java.util.concurrent.atomic.AtomicReference<java.util.concurrent.CountDownLatch?>(null)
+
+    /**
+     * Ensures UserService is bound and responsive. If not currently bound but iAdb is running
+     * and permitted, attempts auto-bind and blocks up to [timeoutMs] ms. Safe on worker threads.
+     */
+    fun ensureConnected(timeoutMs: Long = 1500L): IShellService? {
+        val current = userServiceBinder?.takeIf { it.pingBinder() }
+        if (current != null) return IShellService.Stub.asInterface(current)
+
+        if (!isRunning() || !hasPermission()) return null
+
+        val latch = java.util.concurrent.CountDownLatch(1)
+        connectionLatch.set(latch)
+        bindUserService(force = true)
+
+        runCatching {
+            latch.await(timeoutMs.coerceIn(200L, 5000L), java.util.concurrent.TimeUnit.MILLISECONDS)
+        }
+        val bound = userServiceBinder?.takeIf { it.pingBinder() } ?: return null
+        return IShellService.Stub.asInterface(bound)
+    }
+
     private fun checkSelfPermission(): Boolean = runCatching {
         Iadb.checkSelfPermission() == PackageManager.PERMISSION_GRANTED
     }.getOrDefault(false)
@@ -236,28 +265,34 @@ object NukeIadbBridge {
         Iadb.UserServiceArgs(
             ComponentName(context.packageName, ShellUserService::class.java.name)
         )
-            .daemon(false)
+            .daemon(true)                // Standalone daemon — persists touch listener across app minimize
             .processNameSuffix("shell-iadb")
             .debuggable(false)
             .version(1)
 
-    fun bindUserService() {
+    fun bindUserService(force: Boolean = false) {
+        if (force) {
+            connecting.set(false)
+        }
         if (!connecting.compareAndSet(false, true)) return
         val context = NukeApplication.instance ?: run {
             connecting.set(false)
+            connectionLatch.getAndSet(null)?.countDown()
             Log.w(TAG, "bindUserService: NukeApplication.instance is null, deferring")
             return
         }
         val connection = object : ServiceConnection {
             override fun onServiceConnected(name: ComponentName?, binder: IBinder?) {
-                Log.i(TAG, "iAdb UserService connected")
+                Log.i(TAG, "iAdb UserService connected (daemon=true)")
                 userServiceBinder = binder
                 connecting.set(false)
+                connectionLatch.getAndSet(null)?.countDown()
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 Log.w(TAG, "iAdb UserService disconnected")
                 userServiceBinder = null
                 connecting.set(false)
+                connectionLatch.getAndSet(null)?.countDown()
             }
         }
         serviceConnection = connection
@@ -266,6 +301,7 @@ object NukeIadbBridge {
         }.onFailure {
             Log.w(TAG, "iAdb bindUserService failed: ${it.message}")
             connecting.set(false)
+            connectionLatch.getAndSet(null)?.countDown()
         }
     }
 }

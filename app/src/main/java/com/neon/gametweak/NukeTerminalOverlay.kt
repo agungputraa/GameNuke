@@ -182,7 +182,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#EE060A0F")) // Deep Obsidian Glass
                 cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#00FF88")) // Cyber Green Border
+                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981")) // Cyber Green Border
             }
             elevation = 24 * d
             clipToOutline = true
@@ -233,7 +233,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = ">_"
                 textSize = 13f
                 typeface = Typeface.MONOSPACE
-                setTextColor(Color.parseColor("#00FF88"))
+                setTextColor(Color.parseColor("#10B981"))
                 setPadding(0, 0, (6 * d).toInt(), 0)
             }
             addView(titleIcon)
@@ -252,11 +252,11 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = " $label "
                 textSize = 8.5f
                 typeface = Typeface.MONOSPACE
-                setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#00FF88") else Color.parseColor("#F59E0B"))
+                setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981") else Color.parseColor("#F59E0B"))
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#15202B"))
                     cornerRadius = 4 * d
-                    setStroke((0.8f * d).toInt(), if (NukeConnectionManager.isConnected()) Color.parseColor("#00FF88").and(0x66FFFFFF) else Color.parseColor("#F59E0B").and(0x66FFFFFF))
+                    setStroke((0.8f * d).toInt(), if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981").and(0x66FFFFFF) else Color.parseColor("#F59E0B").and(0x66FFFFFF))
                 }
                 setPadding((5 * d).toInt(), (1 * d).toInt(), (5 * d).toInt(), (1 * d).toInt())
                 layoutParams = LinearLayout.LayoutParams(
@@ -426,7 +426,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = "sh$ "
                 textSize = 11.5f
                 typeface = Typeface.MONOSPACE
-                setTextColor(Color.parseColor("#00FF88"))
+                setTextColor(Color.parseColor("#10B981"))
                 setPadding(0, 0, (4 * d).toInt(), 0)
             }
             addView(promptTv)
@@ -544,7 +544,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#000000"))
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#00FF88"))
+                    setColor(Color.parseColor("#10B981"))
                     cornerRadius = 8 * d
                 }
                 setPadding(0, 0, 0, 0)
@@ -611,7 +611,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             execProgressBar?.visibility = View.GONE
 
             if (result.stdout.isNotBlank()) {
-                appendConsoleLine(result.stdout.trimEnd(), Color.parseColor("#00FF88"))
+                appendConsoleLine(result.stdout.trimEnd(), Color.parseColor("#10B981"))
             }
             if (result.stderr.isNotBlank()) {
                 appendConsoleLine(result.stderr.trimEnd(), Color.parseColor("#EF4444"))
@@ -626,7 +626,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             backendBadgeTv?.let { tv ->
                 val label = NukeConnectionManager.connectionLabel()
                 tv.text = " $label "
-                tv.setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#00FF88") else Color.parseColor("#F59E0B"))
+                tv.setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981") else Color.parseColor("#F59E0B"))
             }
         }
     }

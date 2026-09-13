@@ -384,7 +384,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         val titleTv = TextView(context).apply {
             text = "DEVICE HEALTH & TELEMETRY"
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
@@ -444,7 +444,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         overallScoreTv = TextView(context).apply {
             text = "—"
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -526,7 +526,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             max = 100
             progress = 65
             progressDrawable = GradientDrawable().apply {
-                setColor(Color.parseColor("#00FF88"))
+                setColor(Color.parseColor("#10B981"))
                 cornerRadius = 3 * d
             }
         }
@@ -565,23 +565,23 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
 
         val killHogsBtn = Button(context).apply { installNukePressFeedback() }.apply {
             text = "MANAGE LOAD"
-            setTextColor(Color.BLACK)
+            setTextColor(Color.WHITE)
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#00FF88"))
+                setColor(Color.parseColor("#10B981"))
                 cornerRadius = 10 * d
             }
             layoutParams = LinearLayout.LayoutParams(0, (38 * d).toInt(), 1f).apply {
                 rightMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Hunting rogue zombies & optimizing background memory..."
-                actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                actionStatusTv?.text = "Mengoptimalkan beban proses latar belakang & memori RAM..."
+                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
                 scope.launch {
                     val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
                     withContext(Dispatchers.Main) {
-                        actionStatusTv?.text = "✓ Terminated eligible background hogs & zombies • +${freedMb}MB RAM"
+                        actionStatusTv?.text = "✓ Optimasi beban selesai: +${freedMb}MB RAM dipulihkan ($killed proses)"
                         val freshData = collectHealthData()
                         renderTelemetry(freshData)
                     }
@@ -603,13 +603,13 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                 leftMargin = (4 * d).toInt()
             }
             setOnClickListener {
-                actionStatusTv?.text = "Cooling down CPU & purging rogue background loops..."
+                actionStatusTv?.text = "Menstabilkan suhu CPU & merapikan siklus background..."
                 actionStatusTv?.setTextColor(Color.parseColor("#38BDF8"))
                 scope.launch {
                     val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
                     NukeProcessPurgeGuardian.cleanCachesSafe(context)
                     withContext(Dispatchers.Main) {
-                        actionStatusTv?.text = "✓ Thermal cleanup: $killedZombies rogue loop(s) killed • caches pruned"
+                        actionStatusTv?.text = "✓ Stabilisasi termal selesai: $killedZombies loop dioptimalkan • cache dirapikan"
                         val freshData = collectHealthData()
                         renderTelemetry(freshData)
                     }

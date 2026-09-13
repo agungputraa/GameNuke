@@ -52,8 +52,120 @@ object NukeConnectionManager {
         return NukeIadbBridge.getShellService() ?: NukeShizukuBridge.getShellService()
     }
 
+    /**
+     * Guarantees active privileged IShellService Binder, attempting auto-reconnect if needed.
+     * Blocks up to [timeoutMs] ms on background worker threads.
+     */
+    fun ensureShellService(timeoutMs: Long = 2000L): IShellService? {
+        val direct = getShellService()
+        if (direct != null && runCatching { direct.ping() }.getOrDefault(false)) {
+            return direct
+        }
+        val perBridgeTimeout = (timeoutMs / 2).coerceIn(400L, 2000L)
+        return NukeIadbBridge.ensureConnected(perBridgeTimeout)
+            ?: NukeShizukuBridge.ensureConnected(perBridgeTimeout)
+            ?: getShellService()
+    }
+
     /** Returns true if Touch Listener is supported through current connections. */
     fun isTouchSupported(): Boolean = getShellService() != null || NukeDaemonClient.ping() || isConnected()
+
+    /**
+     * Direct high-speed tap injection across available privileged backends (Binder -> Local Core TCP -> Shell fallback).
+     */
+    fun injectTap(x: Float, y: Float, durationMs: Long = 15L): Boolean {
+        // 1. Privileged Binder (Shizuku / iAdb)
+        val service = getShellService()
+        if (service != null) {
+            val ok = runCatching { service.injectTap(x, y, durationMs) }.getOrDefault(false)
+            if (ok) return true
+        }
+
+        // 2. Persistent Local Core Daemon (TCP 18294)
+        if (NukeDaemonClient.ping()) {
+            val ok = NukeDaemonClient.touchTap(x, y, durationMs)
+            if (ok) return true
+        }
+
+        // 3. Fallback: Shell command
+        val cmd = "input tap ${x.toInt()} ${y.toInt()}"
+        val res = executeCommand(cmd, timeoutMs = 2000L)
+        return res?.isSuccess == true
+    }
+
+    /**
+     * Direct high-speed hold injection across available privileged backends.
+     */
+    fun injectHold(x: Float, y: Float, durationMs: Long): Boolean {
+        // 1. Privileged Binder (Shizuku / iAdb)
+        val service = getShellService()
+        if (service != null) {
+            val ok = runCatching { service.injectHold(x, y, durationMs) }.getOrDefault(false)
+            if (ok) return true
+        }
+
+        // 2. Persistent Local Core Daemon
+        if (NukeDaemonClient.ping()) {
+            val ok = NukeDaemonClient.touchHold(x, y, durationMs)
+            if (ok) return true
+        }
+
+        // 3. Fallback: Shell swipe in place
+        val ipx = x.toInt()
+        val ipy = y.toInt()
+        val dur = durationMs.coerceIn(30L, 5000L)
+        val res = executeCommand("input swipe $ipx $ipy $ipx $ipy $dur", timeoutMs = dur + 2000L)
+        return res?.isSuccess == true
+    }
+
+    /**
+     * Direct swipe / drag injection (SWIPE macro) across available privileged backends.
+     */
+    fun injectSwipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long = 120L): Boolean {
+        // 1. Privileged Binder (Shizuku / iAdb)
+        val service = getShellService()
+        if (service != null) {
+            val ok = runCatching { service.injectSwipe(x1, y1, x2, y2, durationMs) }.getOrDefault(false)
+            if (ok) return true
+        }
+
+        // 2. Persistent Local Core Daemon
+        if (NukeDaemonClient.ping()) {
+            val ok = NukeDaemonClient.touchSwipe(x1, y1, x2, y2, durationMs)
+            if (ok) return true
+        }
+
+        // 3. Fallback: Shell input swipe
+        val dur = durationMs.coerceIn(20L, 2000L)
+        val res = executeCommand(
+            "input swipe ${x1.toInt()} ${y1.toInt()} ${x2.toInt()} ${y2.toInt()} $dur",
+            timeoutMs = dur + 2000L
+        )
+        return res?.isSuccess == true
+    }
+
+    /**
+     * Synchronizes active macro pins into the kernel Touch Listener in the privileged daemon/service.
+     * Enables hardware-level multi-touch detection and zero-latency burst execution.
+     */
+    fun syncMacroPins(pinsConfig: String): Boolean {
+        // 1. Privileged Binder
+        val service = getShellService()
+        if (service != null) {
+            val ok = runCatching {
+                service.setMacroPins(pinsConfig)
+                true
+            }.getOrDefault(false)
+            if (ok) return true
+        }
+
+        // 2. Persistent Local Core Daemon (TCP)
+        if (NukeDaemonClient.ping()) {
+            return NukeDaemonClient.setMacroPins(pinsConfig)
+        }
+
+        return false
+    }
 
     /**
      * Execute a shell command through the best available backend.
@@ -134,9 +246,9 @@ object NukeConnectionManager {
             Thread.sleep(200)
         }
 
-        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libtouch.so is available in /data/local/tmp
+        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libwandev.so is available in /data/local/tmp
         val nativeDir = context.applicationInfo.nativeLibraryDir
-        executeCommand("mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j '$targetApk' lib/arm64-v8a/libtouch.so -d /data/local/tmp/ >/dev/null 2>&1 || cp '$nativeDir/libtouch.so' /data/local/tmp/libtouch.so 2>/dev/null; chmod 755 /data/local/tmp/libtouch.so 2>/dev/null", timeoutMs = 3000L)
+        executeCommand("mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j '$targetApk' lib/arm64-v8a/libwandev.so -d /data/local/tmp/ >/dev/null 2>&1 || cp '$nativeDir/libwandev.so' /data/local/tmp/libwandev.so 2>/dev/null; chmod 755 /data/local/tmp/libwandev.so 2>/dev/null", timeoutMs = 3000L)
 
         // Launch Shizuku-style daemon with detached stdio and proper DEX cache
         val tok = NukeDaemonClient.getToken(context)
@@ -172,6 +284,41 @@ object NukeConnectionManager {
         runCatching { AdbManager.getInstance(context).ensurePersistentCore() }
 
         return NukeDaemonClient.ping(force = true)
+    }
+
+    /**
+     * Safely terminates an individual process after verifying it is not protected.
+     * Guaranteed never to kill current game, Game Nuke, screen recorders, or system core.
+     */
+    fun killProcessSafe(context: android.content.Context, packageName: String, pid: String?): Boolean {
+        if (NukeProcessPurgeGuardian.isProtected(context, packageName)) {
+            Log.w(TAG, "Refusing to kill protected package: $packageName")
+            return false
+        }
+        val cleanPkg = packageName.trim().substringBefore(':')
+        var success = false
+
+        // 1. Privileged shell command if connected
+        if (isConnected()) {
+            val cmd = StringBuilder()
+            cmd.append("am force-stop $cleanPkg 2>/dev/null || am kill $cleanPkg 2>/dev/null\n")
+            if (!pid.isNullOrBlank() && pid.all { it.isDigit() }) {
+                cmd.append("kill -9 $pid 2>/dev/null\n")
+            }
+            val res = executeCommand(cmd.toString(), timeoutMs = 2500L)
+            if (res != null && res.isSuccess) {
+                success = true
+            }
+        }
+
+        // 2. Standard ActivityManager non-root fallback
+        val am = context.getSystemService(android.content.Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+        runCatching {
+            am?.killBackgroundProcesses(cleanPkg)
+            success = true
+        }
+
+        return success
     }
 }
 

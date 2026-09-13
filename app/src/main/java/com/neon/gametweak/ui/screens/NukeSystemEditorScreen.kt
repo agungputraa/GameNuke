@@ -1727,10 +1727,10 @@ private fun ExecutiveModuleExportDialog(
                 context.contentResolver.openOutputStream(uri)?.use { stream ->
                     stream.write(generatedJson.toByteArray(Charsets.UTF_8))
                 }
-                NukeToast.success(context, "Preset JSON tersimpan di perangkat!")
+                NukeToast.success(context, "JSON preset saved to device successfully!")
                 onDismiss()
             }.onFailure {
-                NukeToast.error(context, "Gagal menyimpan file: ${it.localizedMessage}")
+                NukeToast.error(context, "Failed to save file: ${it.localizedMessage}")
             }
         }
     }
@@ -1748,7 +1748,7 @@ private fun ExecutiveModuleExportDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Ekspor settingan & parameter HP Anda ke format .json agar bisa dibagikan ke gamer lain atau penonton Anda.",
+                    "Export your tuned device settings and parameters to .json format to share with other gamers or your community.",
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )

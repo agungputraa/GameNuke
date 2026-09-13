@@ -420,10 +420,10 @@ fun NukeAdBlockDetectedDialog(
                                         currentStatus = updated
                                         onStatusUpdated(updated)
                                         if (!updated.isDetected) {
-                                            NukeToast.success(context, "Private DNS bersih! Membuka kunci tools...")
+                                            NukeToast.success(context, "Private DNS disabled! Unlocking tools...")
                                             onDismiss()
                                         } else {
-                                            NukeToast.unsupported(context, "Private DNS masih aktif: ${updated.detectedDnsSpecifier.ifBlank { "AdBlock" }}")
+                                            NukeToast.unsupported(context, "Private DNS still active: ${updated.detectedDnsSpecifier.ifBlank { "AdBlock" }}")
                                         }
                                     }
                                 },
@@ -493,7 +493,7 @@ fun NukeAdBlockDetectedDialog(
 
                 // Core Explanation
                 Text(
-                    ("Fitur core gaming booster terkunci karena terdeteksi AdBlocker / Private DNS aktif (%s).\n\nNonaktifkan Private DNS (pilih 'Off' atau 'Automatic') agar Game Nuke dapat berjalan optimal.").format(detectedTarget),
+                    ("Core gaming features are locked because an active AdBlocker or Private DNS was detected (%s).\n\nPlease turn off Private DNS (select 'Off' or 'Automatic') so Game Nuke can operate optimally.").format(detectedTarget),
                     color = Color(0xFFD6C2C4),
                     fontSize = 10.5.sp,
                     lineHeight = 15.sp
@@ -519,7 +519,7 @@ fun NukeAdBlockDetectedDialog(
                                 strokeWidth = 2.dp
                             )
                             Text(
-                                executionMessage.ifBlank { ("Memperbarui konfigurasi jaringan...") },
+                                executionMessage.ifBlank { ("Updating network configuration...") },
                                 color = Neon.Accent,
                                 fontSize = 10.5.sp,
                                 fontWeight = FontWeight.Bold
@@ -552,7 +552,7 @@ fun NukeAdBlockDetectedDialog(
                                     .border(1.dp, Neon.Accent, RoundedCornerShape(12.dp))
                                     .clickable {
                                         isExecuting = true
-                                        executionMessage = ("Menonaktifkan Private DNS via Shell...")
+                                        executionMessage = ("Disabling Private DNS via Shell...")
                                         coroutineScope.launch {
                                             val success = NukeAdBlockDetector.disableAdBlockViaShell(
                                                 context = context,
@@ -569,14 +569,14 @@ fun NukeAdBlockDetectedDialog(
                                             if (success || !updated.isDetected) {
                                                 NukeToast.success(
                                                     context,
-                                                    ("Private DNS berhasil dinonaktifkan! Core tools terbuka.")
+                                                    ("Private DNS successfully disabled! Core tools unlocked.")
                                                 )
                                                 onDismiss()
                                                 NukeAdManager.preload(context)
                                             } else {
                                                 NukeToast.unsupported(
                                                     context,
-                                                    ("Akses shell dibatasi ROM. Membuka menu Private DNS..."),
+                                                    ("Shell access restricted by OS. Opening Private DNS settings..."),
                                                     long = true
                                                 )
                                                 NukeAdBlockDetector.openPrivateDnsSettings(context)
@@ -615,7 +615,7 @@ fun NukeAdBlockDetectedDialog(
                                 .background(if (isPrivileged) androidx.compose.ui.graphics.SolidColor(Color(0xFF1B2420)) else Brush.horizontalGradient(listOf(Color(0xFF0C382A), Color(0xFF0A2B20))))
                                 .border(1.dp, if (isPrivileged) Color(0xFF2E453B) else Neon.Accent, RoundedCornerShape(12.dp))
                                 .clickable {
-                                    NukeToast.unsupported(context, "Pilih 'Off' atau 'Automatic' pada menu Private DNS.", long = true)
+                                    NukeToast.unsupported(context, "Select 'Off' or 'Automatic' in the Private DNS menu.", long = true)
                                     NukeAdBlockDetector.openPrivateDnsSettings(context)
                                 },
                             contentAlignment = Alignment.Center

@@ -247,7 +247,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0F1A17"))
                 cornerRadius = 8 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((0.8f * d).toInt(), Color.parseColor("#10B981"))
             }
             setPadding((10 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
         }
@@ -293,7 +293,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#00FF88"))
+                setColor(Color.parseColor("#10B981"))
             }
         }
         dragArea.addView(dot)
@@ -418,13 +418,13 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val killZombiesBtn = TextView(context).apply {
             text = "💀 ZOMBIES"
             textSize = 7.5f
-            setTextColor(Color.parseColor("#FF0055"))
+            setTextColor(Color.parseColor("#F43F5E"))
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#260813"))
                 cornerRadius = 6 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#FF0055"))
+                setStroke((0.8f * d).toInt(), Color.parseColor("#F43F5E"))
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -438,7 +438,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                     val killed = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
                     withContext(Dispatchers.Main) {
                         actionStatusTv?.text = if (killed > 0) "✓ Terminated $killed rogue zombie cluster(s)! CPU 100% clean." else "✓ 0 rogue zombies detected. System clean!"
-                        actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                        actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
                         refreshTasksList()
                     }
                 }
@@ -475,7 +475,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#00FF88"))
+                setColor(Color.parseColor("#10B981"))
                 cornerRadius = 6 * d
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -798,7 +798,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val ramBadge = TextView(context).apply {
             text = " ${item.estimatedRamMb} MB "
             textSize = 7f
-            setTextColor(if (isProt) Color.parseColor("#94A3B8") else Color.parseColor("#00FF88"))
+            setTextColor(if (isProt) Color.parseColor("#94A3B8") else Color.parseColor("#10B981"))
             typeface = Typeface.MONOSPACE
             background = GradientDrawable().apply {
                 setColor(if (isProt) Color.parseColor("#1E293B") else Color.parseColor("#142B22"))
@@ -942,10 +942,10 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             withContext(Dispatchers.Main) {
                 balanceBtn.text = "✓ OK"
-                balanceBtn.setTextColor(Color.parseColor("#00FF88"))
+                balanceBtn.setTextColor(Color.parseColor("#10B981"))
                 balanceBtn.isClickable = false
                 actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED: ${item.appLabel.uppercase()}"
-                actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
             }
         }
     }
@@ -981,7 +981,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                     .start()
 
                 actionStatusTv?.text = "✓ END REQUEST SENT: ${item.appLabel.uppercase()} • ~${item.estimatedRamMb} MB footprint"
-                actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
             }
         }
     }
@@ -1018,7 +1018,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.GONE
                 actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED FOR ${tasks.size} APPS"
-                actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
                 refreshTasksList()
             }
         }
@@ -1086,7 +1086,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             withContext(Dispatchers.Main) {
                 loadingProgressBar?.visibility = View.GONE
                 actionStatusTv?.text = "✓ END SAFE: $killedZombies zombie cluster(s) terminated • ${tasks.size} tasks ended • ~${freedTotalMb} MB RAM freed"
-                actionStatusTv?.setTextColor(Color.parseColor("#00FF88"))
+                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
                 refreshTasksList()
             }
         }

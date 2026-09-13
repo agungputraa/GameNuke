@@ -157,7 +157,7 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
 
             val titleView = TextView(context).apply {
                 text = "⚡ TACTICAL PIP WIKI"
-                setTextColor(Color.parseColor("#00FF88"))
+                setTextColor(Color.parseColor("#10B981"))
                 textSize = 11.5f
                 paint.isFakeBoldText = true
             }
@@ -175,8 +175,8 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
             val alphaSlider = SeekBar(context).apply {
                 max = 100
                 progress = (currentAlpha * 100).toInt()
-                thumbTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00FF88"))
-                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#00FF88"))
+                thumbTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10B981"))
+                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10B981"))
                 layoutParams = LinearLayout.LayoutParams((80 * d).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
@@ -194,7 +194,7 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
             // Minimize Button
             val minimizeBtn = TextView(context).apply {
                 text = " ─ "
-                setTextColor(Color.parseColor("#00FF88"))
+                setTextColor(Color.parseColor("#10B981"))
                 textSize = 12f
                 paint.isFakeBoldText = true
                 gravity = Gravity.CENTER

@@ -33,6 +33,7 @@ object NukeDynamicSessionRestoreManager {
     private val isFpsLockModified = AtomicBoolean(false)
     private val isDndModified = AtomicBoolean(false)
     private val isGpuTunerModified = AtomicBoolean(false)
+    private val isMacroModified = AtomicBoolean(false)
 
     // Baseline storage (captured before any modification)
     @Volatile private var baselineDensityOverride: Int? = null
@@ -68,6 +69,7 @@ object NukeDynamicSessionRestoreManager {
         isFpsLockModified.set(false)
         isDndModified.set(false)
         isGpuTunerModified.set(false)
+        isMacroModified.set(false)
         baselineQuickSettings.clear()
         modifiedQuickSettings.clear()
     }
@@ -179,6 +181,11 @@ object NukeDynamicSessionRestoreManager {
     fun markGpuTunerModified() {
         isGpuTunerModified.set(true)
         Log.d(TAG, "GPU / Display Tuner marked as modified in current session")
+    }
+
+    fun markMacroModified() {
+        isMacroModified.set(true)
+        Log.d(TAG, "Macro Studio marked as modified in current session")
     }
 
     fun recordQuickSettingModification(key: String, preValue: Any) {
@@ -303,6 +310,17 @@ object NukeDynamicSessionRestoreManager {
                 Log.i(TAG, "Restoring TCP socket parameters...")
                 executeShell("setprop net.tcp.delack 1 2>/dev/null ; sysctl -w net.ipv4.tcp_low_latency=0 2>/dev/null", context)
             }.onFailure { Log.w(TAG, "Error restoring Net Boost", it) }
+        }
+
+        // 11b. Macro Studio — stop any running macro
+        if (isMacroModified.getAndSet(false) || NukeMacroEngine.isRunning) {
+            runCatching {
+                Log.i(TAG, "Stopping Macro Studio engine...")
+                NukeMacroEngine.stopMacro()
+                withContext(Dispatchers.Main) {
+                    runCatching { NukeMacroStudioOverlay.getInstance(context).hide() }
+                }
+            }.onFailure { Log.w(TAG, "Error stopping Macro Studio", it) }
         }
 
         // 11. Quick settings restoration (Hotspot, Silent, Airplane, etc. if modified)

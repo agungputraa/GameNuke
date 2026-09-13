@@ -74,8 +74,8 @@ object NukeShellDaemon {
             java.io.File("/proc/${Process.myPid()}/oom_adj").writeText("-16")
         }
         Runtime.getRuntime().addShutdownHook(Thread {
-            runCatching { frb.axeron.server.touch.TouchListener.INSTANCE.nativeSetGrab(false) }
-            runCatching { frb.axeron.server.touch.TouchListener.INSTANCE.nativeStop() }
+            runCatching { nuke.wandev.touch.TouchListener.INSTANCE.nativeSetGrab(false) }
+            runCatching { nuke.wandev.touch.TouchListener.INSTANCE.nativeStop() }
             runCatching {
                 Runtime.getRuntime().exec("settings put system pointer_speed 0; setprop persist.vendor.touch.game_mode 0").waitFor()
             }
@@ -219,7 +219,7 @@ object NukeShellDaemon {
         val response = when {
             line == "PING" -> "PONG|${Process.myPid()}"
             line == "STOP" -> {
-                runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+                runCatching { nuke.wandev.touch.NukeTouchService.stop() }
                 running.set(false)
                 shouldStop = true
                 "BYE"
@@ -227,27 +227,93 @@ object NukeShellDaemon {
             line.startsWith("EXEC|") -> executeRequest(line)
             line.startsWith("TOUCH_START") -> {
                 val candidate = line.substringAfter("TOUCH_START|", "").trim()
-                val libPath = candidate.ifEmpty { "/data/local/tmp/libtouch.so" }
-                val count = frb.axeron.server.touch.NukeTouchService.start(libPath)
+                val libPath = candidate.ifEmpty { "/data/local/tmp/libwandev.so" }
+                val count = nuke.wandev.touch.NukeTouchService.start(libPath)
                 "TOUCH_STARTED|$count"
             }
             line.startsWith("TOUCH_CONFIG|") -> handleTouchConfig(line)
+            line.startsWith("TOUCH_TAP|") -> {
+                val parts = line.split('|')
+                val x = parts.getOrNull(1)?.toFloatOrNull() ?: 0f
+                val y = parts.getOrNull(2)?.toFloatOrNull() ?: 0f
+                val dur = parts.getOrNull(3)?.toLongOrNull() ?: 15L
+                val ok = nuke.wandev.touch.NukeTouchService.injectTap(x, y, dur)
+                if (ok) "OK" else "ERROR|INJECT"
+            }
+            line.startsWith("TOUCH_HOLD|") -> {
+                val parts = line.split('|')
+                val x = parts.getOrNull(1)?.toFloatOrNull() ?: 0f
+                val y = parts.getOrNull(2)?.toFloatOrNull() ?: 0f
+                val dur = parts.getOrNull(3)?.toLongOrNull() ?: 300L
+                val ok = nuke.wandev.touch.NukeTouchService.injectHold(x, y, dur)
+                if (ok) "OK" else "ERROR|INJECT"
+            }
+            line.startsWith("TOUCH_SWIPE|") -> {
+                val parts = line.split('|')
+                val x1 = parts.getOrNull(1)?.toFloatOrNull() ?: 0f
+                val y1 = parts.getOrNull(2)?.toFloatOrNull() ?: 0f
+                val x2 = parts.getOrNull(3)?.toFloatOrNull() ?: 0f
+                val y2 = parts.getOrNull(4)?.toFloatOrNull() ?: 0f
+                val dur = parts.getOrNull(5)?.toLongOrNull() ?: 120L
+                val ok = nuke.wandev.touch.NukeTouchService.injectSwipe(x1, y1, x2, y2, dur)
+                if (ok) "OK" else "ERROR|INJECT"
+            }
+            line.startsWith("TOUCH_SET_PINS|") -> {
+                val config = line.substringAfter("TOUCH_SET_PINS|", "")
+                handleSetMacroPins(config)
+            }
             line == "TOUCH_STOP" -> {
-                frb.axeron.server.touch.NukeTouchService.stop()
+                nuke.wandev.touch.NukeTouchService.stop()
                 "TOUCH_STOPPED"
             }
             line == "TOUCH_STATUS" -> {
-                "TOUCH_STATUS|${frb.axeron.server.touch.NukeTouchService.isRunning()}"
+                "TOUCH_STATUS|${nuke.wandev.touch.NukeTouchService.isRunning()}"
             }
             else -> "ERROR|PROTOCOL"
         }
         return Pair(response, shouldStop)
     }
 
+    private fun handleSetMacroPins(pinsConfig: String): String {
+        val list = if (pinsConfig.isBlank()) {
+            emptyList()
+        } else {
+            pinsConfig.split(";").mapNotNull { entry ->
+                val p = entry.split(",")
+                if (p.size >= 9) {
+                    nuke.wandev.touch.NukeTouchInjector.MacroPinTarget(
+                        id = p[0],
+                        index = p[1].toIntOrNull() ?: 1,
+                        x = p[2].toFloatOrNull() ?: 0f,
+                        y = p[3].toFloatOrNull() ?: 0f,
+                        radiusPx = p[4].toFloatOrNull() ?: 60f,
+                        mode = p[5].toIntOrNull() ?: 0,
+                        repeatCount = p[6].toIntOrNull() ?: 5,
+                        intervalMs = p[7].toLongOrNull() ?: 25L,
+                        holdDurationMs = p[8].toLongOrNull() ?: 100L,
+                        targetX = if (p.size > 9) p[9].toFloatOrNull() ?: 0f else 0f,
+                        targetY = if (p.size > 10) p[10].toFloatOrNull() ?: 0f else 0f,
+                        invertX = if (p.size > 11) p[11].toBoolean() else false,
+                        invertY = if (p.size > 12) p[12].toBoolean() else false,
+                        sensX = if (p.size > 13) p[13].toFloatOrNull() ?: 1.0f else 1.0f,
+                        sensY = if (p.size > 14) p[14].toFloatOrNull() ?: 1.0f else 1.0f,
+                        startDelayMs = if (p.size > 15) p[15].toLongOrNull() ?: 0L else 0L,
+                        tapDurationMs = if (p.size > 16) p[16].toLongOrNull() ?: 15L else 15L,
+                        enabled = if (p.size > 17) p[17].toBoolean() else true,
+                        label = if (p.size > 18) p[18] else "",
+                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L
+                    )
+                } else null
+            }
+        }
+        nuke.wandev.touch.NukeTouchService.setMacroPins(list)
+        return "OK"
+    }
+
     private fun triggerDaemonKill() {
         thread(isDaemon = true) {
             try { Thread.sleep(80) } catch (_: Throwable) {}
-            runCatching { frb.axeron.server.touch.NukeTouchService.stop() }
+            runCatching { nuke.wandev.touch.NukeTouchService.stop() }
             runCatching { Looper.getMainLooper()?.quit() }
             Process.killProcess(Process.myPid())
         }
@@ -258,14 +324,14 @@ object NukeShellDaemon {
         val parts = line.split('|')
         val sx = parts.getOrNull(1)?.toFloatOrNull() ?: 1.0f
         val sy = parts.getOrNull(2)?.toFloatOrNull() ?: 1.0f
-        val area = parts.getOrNull(3)?.toIntOrNull() ?: frb.axeron.server.touch.NukeTouchInjector.AREA_RIGHT
-        val curve = parts.getOrNull(4)?.toIntOrNull() ?: frb.axeron.server.touch.NukeTouchInjector.CURVE_ACCELERATE
+        val area = parts.getOrNull(3)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.AREA_RIGHT
+        val curve = parts.getOrNull(4)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.CURVE_ACCELERATE
         val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: true
         val minCutoff = parts.getOrNull(6)?.toFloatOrNull() ?: 1.0f
         val beta = parts.getOrNull(7)?.toFloatOrNull() ?: 0.007f
         val dragShot = parts.getOrNull(8)?.toBooleanStrictOrNull() ?: true
 
-        frb.axeron.server.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)
+        nuke.wandev.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)
         return "TOUCH_CONFIGURED"
     }
 

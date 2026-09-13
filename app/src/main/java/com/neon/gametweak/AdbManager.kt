@@ -368,8 +368,8 @@ class AdbManager private constructor(context: Context) {
         val className = NukeShellDaemon::class.java.name
         val nativeLibDir = shellQuote(mContext.applicationInfo.nativeLibraryDir)
 
-        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libtouch.so is available in /data/local/tmp
-        val setupEnv = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j $quotedApk lib/arm64-v8a/libtouch.so -d /data/local/tmp/ >/dev/null 2>&1 || cp $nativeLibDir/libtouch.so /data/local/tmp/libtouch.so 2>/dev/null; chmod 755 /data/local/tmp/libtouch.so 2>/dev/null"
+        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libwandev.so is available in /data/local/tmp
+        val setupEnv = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j $quotedApk lib/arm64-v8a/libwandev.so -d /data/local/tmp/ >/dev/null 2>&1 || cp $nativeLibDir/libwandev.so /data/local/tmp/libwandev.so 2>/dev/null; chmod 755 /data/local/tmp/libwandev.so 2>/dev/null"
         executeCommandDirect(setupEnv, timeoutMs = 3_000L, maxOutputChars = 256)
 
         // ── Shizuku's exact launch pattern with ANDROID_DATA and detached stdio ──

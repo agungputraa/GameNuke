@@ -65,6 +65,10 @@ import com.neon.gametweak.Tx
 import com.neon.gametweak.AdBlockStatus
 import com.neon.gametweak.NukeAdBlockDetector
 import com.neon.gametweak.NukeAdBlockDetectedDialog
+import com.neon.gametweak.NukeConnectionManager
+import com.neon.gametweak.NukeIadbBridge
+import com.neon.gametweak.NukeShizukuBridge
+import com.neon.gametweak.NukeDaemonClient
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -133,7 +137,7 @@ fun CleanerScreen(adbManager: AdbManager) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF020705)),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
@@ -145,39 +149,39 @@ fun CleanerScreen(adbManager: AdbManager) {
                             listOf(Color(0xFF0C241B), Color(0xFF06100C), Color(0xFF100D16)),
                         ),
                     )
-                    .border(1.dp, Color(0xFF35C99B).copy(alpha = .38f), RoundedCornerShape(16.dp))
+                    .border(1.dp, Color(0xFF10B981).copy(alpha = .38f), RoundedCornerShape(16.dp))
                     .padding(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
                         Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF35C99B).copy(alpha = .10f))
-                            .border(1.dp, Color(0xFF35C99B).copy(alpha = .35f), RoundedCornerShape(12.dp)),
+                            .background(Color(0xFF10B981).copy(alpha = .10f))
+                            .border(1.dp, Color(0xFF10B981).copy(alpha = .35f), RoundedCornerShape(12.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.CleaningServices, null, tint = Color(0xFF35C99B), modifier = Modifier.size(25.dp))
+                        Icon(Icons.Rounded.CleaningServices, null, tint = Color(0xFF10B981), modifier = Modifier.size(25.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(("NUKE OPTIMIZER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.2.sp)
                         Text(
-                            if (adbConnected) ("EXTENDED CONTROL ONLINE") else ("STANDARD CONTROL // CONNECT FOR DEEP ACTIONS"),
-                            color = if (adbConnected) Color(0xFF35C99B) else Color(0xFFFFB830),
+                            if (adbConnected) ("KONTROL PRIVILEGED ONLINE") else ("KONTROL STANDAR // SAMBUNGKAN ENGINE UNTUK AKSI MENDALAM"),
+                            color = if (adbConnected) Color(0xFF10B981) else Color(0xFFFFB830),
                             fontSize = 8.5.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    Box(Modifier.size(7.dp).background(if (adbConnected) Color(0xFF35C99B) else Color(0xFFFFB830), CircleShape))
+                    Box(Modifier.size(7.dp).background(if (adbConnected) Color(0xFF10B981) else Color(0xFFFFB830), CircleShape))
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    ("Cleanup is split into app cache, pressure-aware memory recovery, and supported storage cleanup."),
+                    ("Pembersihan cerdas mencakup cache aplikasi, pemulihan memori RAM, dan perapian penyimpanan."),
                     color = Color(0xFF9BB0A6), fontSize = 10.sp, lineHeight = 14.sp,
                 )
                 if (lastGainMb > 0L) {
                     Spacer(Modifier.height(8.dp))
-                    Text("${("LAST VERIFIED GAIN")}  +${lastGainMb}MB", color = Color(0xFF35C99B), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+                    Text("${("PEMULIHAN TERAKHIR")}  +${lastGainMb}MB", color = Color(0xFF10B981), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
                 }
             }
         }
@@ -185,7 +189,7 @@ fun CleanerScreen(adbManager: AdbManager) {
         item {
             OptimizerActionCard(
                 title = ("APP CACHE"),
-                detail = ("Clear Game Nuke temporary files only"),
+                detail = ("Bersihkan file sementara Game Nuke"),
                 value = "${"%.1f".format(ownCacheBytes / (1024.0 * 1024.0))} MB",
                 icon = Icons.Rounded.DeleteSweep,
                 accent = Color(0xFF35F2FF),
@@ -193,7 +197,7 @@ fun CleanerScreen(adbManager: AdbManager) {
             ) {
                 checkAdBlockOrRun {
                     isWorking = true
-                    operation = ("CLEARING APP CACHE")
+                    operation = ("MEMBERSIHKAN APP CACHE")
                     scope.launch(Dispatchers.IO) {
                         val before = dirBytes(context.cacheDir)
                         runCatching { context.cacheDir.listFiles()?.forEach { it.deleteRecursively() } }
@@ -201,7 +205,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                         withContext(Dispatchers.Main) {
                             ownCacheBytes = after
                             lastGainMb = ((before - after).coerceAtLeast(0L) / (1024L * 1024L))
-                            operation = ("APP CACHE COMPLETE")
+                            operation = ("APP CACHE SELESAI")
                             isWorking = false
                             context.findActivity()?.let { NukeAdManager.showInterstitial(it) }
                         }
@@ -213,10 +217,10 @@ fun CleanerScreen(adbManager: AdbManager) {
         item {
             OptimizerActionCard(
                 title = ("DEEP RECLAIM"),
-                detail = if (adbConnected) ("Measured memory reclaim with safe background handling") else ("Advanced reclaim unavailable on this device right now"),
+                detail = if (adbConnected) ("Pemulihan memori RAM aman dengan kompresi kernel") else ("Sambungkan engine privileged untuk pemulihan mendalam"),
                 value = if (adbConnected) ("READY") else ("BASIC MODE"),
                 icon = Icons.Rounded.Memory,
-                accent = Color(0xFF35C99B),
+                accent = Color(0xFF10B981),
                 enabled = adbConnected && !isWorking,
             ) {
                 checkAdBlockOrRun {
@@ -327,9 +331,9 @@ fun CleanerScreen(adbManager: AdbManager) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isWorking) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF35C99B))
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF10B981))
                     } else {
-                        Box(Modifier.size(6.dp).background(Color(0xFF35C99B), CircleShape))
+                        Box(Modifier.size(6.dp).background(Color(0xFF10B981), CircleShape))
                     }
                     Spacer(Modifier.width(8.dp))
                     Text(operation, color = Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
@@ -352,7 +356,7 @@ private fun OptimizerActionCard(
     val actualAccent = if (enabled) accent else Color(0xFF56635E)
     Row(
         Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(actualAccent.copy(alpha = .08f), Color(0xFF07100D), Color(0xFF020705))))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(actualAccent.copy(alpha = .08f), Color(0xFF111720), Color(0xFF090D12))))
             .border(1.dp, actualAccent.copy(alpha = .32f), RoundedCornerShape(12.dp))
             .nukePressFeedback().clickable(enabled = enabled, onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
@@ -382,7 +386,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
     var totalMemoryUsed by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
 
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF10B981)
     val danger = Color(0xFFFF1744)
     val alert = Color(0xFFFFB300)
     val bgCard = Color(0xFF06100C)
@@ -446,7 +450,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
     LaunchedEffect(Unit) { fetchProcesses() }
     val filteredList = processList.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF020705)).imePadding()) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)).imePadding()) {
 
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -510,17 +514,43 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                 }
             }
 
-            Box(
-                modifier = Modifier.fillMaxWidth().height(44.dp).clip(RoundedCornerShape(8.dp))
-                    .background(accent.copy(alpha = 0.10f))
-                    .border(1.5.dp, accent.copy(alpha = 0.55f), RoundedCornerShape(8.dp))
-                    .clickable { fetchProcesses() },
-                contentAlignment = Alignment.Center,
-            ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Refresh, null, tint = accent, modifier = Modifier.size(16.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text(("REFRESH PROCESS SNAPSHOT"), color = accent, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.5.sp)
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                Box(
+                    modifier = Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(8.dp))
+                        .background(accent.copy(alpha = 0.10f))
+                        .border(1.2.dp, accent.copy(alpha = 0.45f), RoundedCornerShape(8.dp))
+                        .nukePressFeedback()
+                        .clickable { fetchProcesses() },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Refresh, null, tint = accent, modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(("REFRESH"), color = accent, fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
+                    }
+                }
+                Box(
+                    modifier = Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFF38BDF8).copy(alpha = 0.12f))
+                        .border(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .nukePressFeedback()
+                        .clickable {
+                            scope.launch(Dispatchers.IO) {
+                                val (killed, freed) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
+                                withContext(Dispatchers.Main) {
+                                    val msg = if (freed > 0) "Optimasi selesai: +${freed}MB RAM dipulihkan ($killed proses)." else "Optimasi selesai ($killed proses diringankan)."
+                                    NukeToast.success(context, msg, long = true)
+                                    fetchProcesses()
+                                }
+                            }
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Bolt, null, tint = Color(0xFF38BDF8), modifier = Modifier.size(15.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(("OPTIMIZE ALL"), color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
+                    }
                 }
             }
         }
@@ -596,13 +626,57 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                             }
                         }
                         Spacer(Modifier.width(8.dp))
-                        Box(
-                            modifier = Modifier.size(32.dp).clip(RoundedCornerShape(8.dp))
-                                .background(rowAccent.copy(alpha = 0.08f))
-                                .border(1.dp, rowAccent.copy(alpha = 0.25f), RoundedCornerShape(8.dp)),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Rounded.Visibility, null, tint = rowAccent.copy(alpha = 0.75f), modifier = Modifier.size(15.dp))
+                        val isProtected = NukeProcessPurgeGuardian.isProtected(context, proc.name)
+                        val canEnd = !isProtected && !proc.isSystem
+                        if (canEnd) {
+                            Box(
+                                modifier = Modifier
+                                    .height(30.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFFF43F5E).copy(alpha = 0.15f))
+                                    .border(0.8.dp, Color(0xFFF43F5E).copy(alpha = 0.6f), RoundedCornerShape(6.dp))
+                                    .nukePressFeedback()
+                                    .clickable {
+                                        scope.launch(Dispatchers.IO) {
+                                            val ok = NukeConnectionManager.killProcessSafe(context, proc.name, proc.pid)
+                                            withContext(Dispatchers.Main) {
+                                                if (ok) {
+                                                    NukeToast.success(context, "Process ${proc.name} terminated successfully.")
+                                                    fetchProcesses()
+                                                } else {
+                                                    NukeToast.error(context, "Unable to terminate ${proc.name}.")
+                                                }
+                                            }
+                                        }
+                                    }
+                                    .padding(horizontal = 8.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Close, contentDescription = null, tint = Color(0xFFF43F5E), modifier = Modifier.size(13.dp))
+                                    Spacer(Modifier.width(3.dp))
+                                    Text("END TASK", color = Color(0xFFF43F5E), fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.6.sp)
+                                }
+                            }
+                        } else {
+                            Box(
+                                modifier = Modifier
+                                    .height(28.dp)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF1E293B).copy(alpha = 0.5f))
+                                    .border(0.8.dp, Color(0xFF334155), RoundedCornerShape(6.dp))
+                                    .clickable {
+                                        NukeToast.unsupported(context, "Process is protected (Active Game / Screen Recorder / System Core).")
+                                    }
+                                    .padding(horizontal = 7.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(11.dp))
+                                    Spacer(Modifier.width(3.dp))
+                                    Text("SAFE", color = Color(0xFF94A3B8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                }
+                            }
                         }
                     }
                 }
@@ -624,7 +698,7 @@ fun DiagnosticsConsoleScreen(adbManager: AdbManager) {
                 "Press RUN DIAGNOSTICS to collect a bounded report."
         )
     }
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF10B981)
     val textDim = Color(0xFF9BB0A6)
 
     fun copyReport() {
@@ -633,7 +707,7 @@ fun DiagnosticsConsoleScreen(adbManager: AdbManager) {
         NukeToast.success(context, ("Diagnostics copied"))
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF020705)).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier.size(9.dp).background(accent, CircleShape))
             Spacer(Modifier.width(10.dp))
@@ -719,7 +793,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
     var isCopying by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF10B981)
     val danger = Color(0xFFFF1744)
     val bgCard = Color(0xFF06100C)
     val bgInset = Color(0xFF0D1B15)
@@ -744,7 +818,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
     val baseUrl = "http://127.0.0.1:${webServer.apiPort}"
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF020705)),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -1478,11 +1552,11 @@ private fun copyFolderRecursive(context: Context, treeUri: Uri, parentDocId: Str
 
 @Composable
 fun DevScreen() {
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF10B981)
     val textDim = Color(0xFF9BB0A6)
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF020705))
+        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12))
             .verticalScroll(rememberScrollState()).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -1563,13 +1637,13 @@ fun DevScreen() {
 
 @Composable
 fun TutorialScreen() {
-    val accent = Color(0xFF35C99B)
+    val accent = Color(0xFF10B981)
     val textDim = Color(0xFF9BB0A6)
     val bgCard = Color(0xFF06100C)
     val bgInset = Color(0xFF0D1B15)
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF020705)),
+        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -1689,49 +1763,49 @@ fun GameProfileScreen(adbManager: AdbManager) {
     LaunchedEffect(Unit) { refreshCatalog() }
     val visibleApps = if (showAllApps) allLaunchable else gameList
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF020705))) {
+    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12))) {
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF35C99B), CircleShape))
+                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF10B981), CircleShape))
                     Spacer(Modifier.width(8.dp))
                     Text(("GAME SPACE // SESSION LAUNCHER"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                 }
                 Text(
-                    ("Game Nuke reads launcher apps through Android package visibility and prioritizes apps categorized as games. If OEM/game metadata is incomplete, use ALL APPS once; the selected app will be remembered as a game."),
+                    "Game Nuke scans all installed games and tunes the session upon launch. If a game is not auto-detected, use the ALL APPS tab.",
                     color = Color(0xFF9BB0A6), fontSize = 11.sp, lineHeight = 15.sp,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
                         Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(8.dp))
-                            .background(if (!showAllApps) Color(0xFF35C99B).copy(alpha = .18f) else Color(0xFF07110D))
-                            .border(1.dp, if (!showAllApps) Color(0xFF35C99B) else Color(0xFF26362F), RoundedCornerShape(8.dp))
+                            .background(if (!showAllApps) Color(0xFF10B981).copy(alpha = .18f) else Color(0xFF07110D))
+                            .border(1.dp, if (!showAllApps) Color(0xFF10B981) else Color(0xFF26362F), RoundedCornerShape(8.dp))
                             .clickable { showAllApps = false },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("${("DETECTED")}  ${gameList.size}", color = if (!showAllApps) Color(0xFF35C99B) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("DETECTED  ${gameList.size}", color = if (!showAllApps) Color(0xFF10B981) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                     Box(
                         Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(8.dp))
-                            .background(if (showAllApps) Color(0xFF35C99B).copy(alpha = .18f) else Color(0xFF07110D))
-                            .border(1.dp, if (showAllApps) Color(0xFF35C99B) else Color(0xFF26362F), RoundedCornerShape(8.dp))
+                            .background(if (showAllApps) Color(0xFF10B981).copy(alpha = .18f) else Color(0xFF07110D))
+                            .border(1.dp, if (showAllApps) Color(0xFF10B981) else Color(0xFF26362F), RoundedCornerShape(8.dp))
                             .clickable { showAllApps = true },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("${("ALL APPS")}  ${allLaunchable.size}", color = if (showAllApps) Color(0xFF35C99B) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("ALL APPS  ${allLaunchable.size}", color = if (showAllApps) Color(0xFF10B981) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                 }
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF06110D))
-                        .border(1.dp, Color(0xFF35C99B).copy(alpha = 0.24f), RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFF10B981).copy(alpha = 0.24f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                 ) {
                     Text(
-                        ("The HUD needs Display over other apps. The overlay runs as a user-started foreground gaming session for better reliability during long sessions."),
+                        "Game Nuke Floating HUD requires 'Display over other apps' permission so the gaming cockpit remains active during gameplay.",
                         color = Color(0xFF9BB0A6), fontSize = 9.sp, lineHeight = 13.sp,
                     )
                 }
@@ -1742,7 +1816,7 @@ fun GameProfileScreen(adbManager: AdbManager) {
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFF35C99B), strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+                        CircularProgressIndicator(color = Color(0xFF10B981), strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
                         Spacer(Modifier.height(8.dp))
                         Text(("SCANNING LAUNCHERS"), color = Color(0xFF9BB0A6), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                     }
@@ -1759,7 +1833,7 @@ fun GameProfileScreen(adbManager: AdbManager) {
                             color = Color(0xFF758980), fontSize = 10.sp, textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(14.dp))
-                        Button(onClick = { showAllApps = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF35C99B), contentColor = Color.Black), shape = RoundedCornerShape(8.dp), modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
+                        Button(onClick = { showAllApps = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.Black), shape = RoundedCornerShape(8.dp), modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
                             Text(("OPEN ALL APPS"), fontSize = 10.sp, fontWeight = FontWeight.Black)
                         }
                     }
@@ -1792,6 +1866,23 @@ fun GameProfileScreen(adbManager: AdbManager) {
 
                                     val pkg = game.packageName
                                     launchingPackage = pkg
+
+                                    val isEngineConnected = NukeConnectionManager.isConnected() ||
+                                        NukeIadbBridge.isConnected() ||
+                                        NukeShizukuBridge.isConnected() ||
+                                        adbManager.isConnected() ||
+                                        NukeDaemonClient.ping()
+
+                                    if (!isEngineConnected) {
+                                        NukeToast.error(
+                                            context,
+                                            "Please activate one of the 3 privileged engines (iAdb, Shizuku, or Wireless ADB) in Dashboard to enable Game Boost.",
+                                            long = true
+                                        )
+                                        launchingPackage = null
+                                        return@clickable
+                                    }
+
                                     if (!OverlayPermissionController.hasOverlayPermission(context)) {
                                         OverlayPermissionController.requestManualGrant(context)
                                         NukeToast.unsupported(context, ("Enable overlay permission, then tap this game again."), long = true)
@@ -1836,13 +1927,13 @@ fun GameProfileScreen(adbManager: AdbManager) {
                             Box(
                                 modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
                                     .background(Color(0xFF0D1B15))
-                                    .border(1.dp, Color(0xFF35C99B).copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
+                                    .border(1.dp, Color(0xFF10B981).copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 gameIcon?.let { iconBitmap ->
                                     Image(bitmap = iconBitmap, contentDescription = null, modifier = Modifier.size(36.dp))
                                 } ?: run {
-                                    Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF35C99B), modifier = Modifier.size(24.dp))
+                                    Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF10B981), modifier = Modifier.size(24.dp))
                                 }
                             }
                             Spacer(Modifier.width(14.dp))
@@ -1854,17 +1945,17 @@ fun GameProfileScreen(adbManager: AdbManager) {
                             Spacer(Modifier.width(8.dp))
                             Box(
                                 modifier = Modifier.height(34.dp).clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF35C99B).copy(alpha = 0.15f))
-                                    .border(1.dp, Color(0xFF35C99B), RoundedCornerShape(8.dp))
+                                    .background(Color(0xFF10B981).copy(alpha = 0.15f))
+                                    .border(1.dp, Color(0xFF10B981), RoundedCornerShape(8.dp))
                                     .padding(horizontal = 10.dp),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF35C99B), modifier = Modifier.size(15.dp))
+                                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF10B981), modifier = Modifier.size(15.dp))
                                     Spacer(Modifier.width(4.dp))
                                     Text(
                                         if (launchingPackage == game.packageName) "ARMING" else "BOOST",
-                                        color = Color(0xFF35C99B),
+                                        color = Color(0xFF10B981),
                                         fontSize = 10.sp,
                                         fontWeight = FontWeight.Black,
                                         letterSpacing = 1.5.sp,
@@ -1970,17 +2061,17 @@ fun NukeBoosterRewardDialog(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF35C99B), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(("Floating Gaming HUD & Crosshair"), color = Color(0xFFE0EAE5), fontSize = 10.sp)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF35C99B), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(("Display Settings & Memory Management"), color = Color(0xFFE0EAE5), fontSize = 10.sp)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF35C99B), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(("No Ads During Session & Full Feature Access"), color = Color(0xFFFFB830), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }

@@ -901,6 +901,7 @@ class FloatingBoosterService : Service() {
                 "deep_cooling" to NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).isShowing,
                 "antivirus" to NukeAntivirusFloatingOverlay.getInstance(applicationContext).isShowing,
                 "system_editor" to NukeSystemEditorFloatingOverlay.getInstance(applicationContext).isShowing,
+                "macro_studio" to NukeMacroStudioOverlay.getInstance(applicationContext).isShowing,
             )
             val dm = resources.displayMetrics
             val minPx = minOf(dm.widthPixels, dm.heightPixels).coerceAtLeast(720)
@@ -1375,6 +1376,26 @@ class FloatingBoosterService : Service() {
                 toastOutcome(msg)
             }
 
+            "macro_studio" -> {
+                NukeDynamicSessionRestoreManager.markMacroModified()
+                val studio = NukeMacroStudioOverlay.getInstance(applicationContext)
+                if (!studio.isShowing) {
+                    // Red Corner behaviour: hide the main launcher panel before opening the
+                    // full-screen mapping editor so it doesn't block pin placement.
+                    collapseHub()
+                    studio.show()
+                } else if (studio.isPanelHidden || !studio.isPanelOpen) {
+                    collapseHub()
+                    studio.openPanel()
+                } else {
+                    studio.closePanel(keepPinsActive = true)
+                }
+                val statusMsg = if (studio.isPanelOpen && !studio.isPanelHidden) "Macro Studio: OPEN"
+                    else if (studio.isShowing) "Macro Studio: PINS ACTIVE ON SCREEN"
+                    else "Macro Studio: CLOSED"
+                toastOutcome(statusMsg)
+            }
+
             "vpn_boost" -> {
                 NukeDynamicSessionRestoreManager.markVpnModified()
                 if (NukeGameVpnService.isRunning(applicationContext)) {
@@ -1387,13 +1408,13 @@ class FloatingBoosterService : Service() {
                     if (vpnIntent == null) {
                         // Permission already granted — start immediately
                         NukeGameVpnService.start(applicationContext)
-                        toastOutcome("Net Engine: ACTIVE (Low-Latency Tunnel)")
+                        toastOutcome("Net Engine: ACTIVE (Ultra Low-Latency Mode)")
                     } else {
                         // Need to ask user for VPN permission.
                         val permIntent = Intent(applicationContext, NukeVpnPermissionActivity::class.java)
                             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
                         applicationContext.startActivity(permIntent)
-                        toastOutcome("Net Engine: Allow tunnel permission to activate")
+                        toastOutcome("Net Engine: Permission required to activate")
                     }
                 }
             }

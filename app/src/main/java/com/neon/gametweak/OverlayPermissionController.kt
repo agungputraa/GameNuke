@@ -43,9 +43,9 @@ object OverlayPermissionController {
         for (intent in candidates) {
             if (runCatching { context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)); true }.getOrDefault(false)) {
                 val message = if (isXiaomiFamily) {
-                    "Aktifkan 'Display over other apps'. Pada HyperOS/MIUI, pastikan juga izinkan 'Display pop-up windows while running in the background'."
+                    "Enable 'Display over other apps'. On HyperOS/MIUI, also allow 'Display pop-up windows while running in the background'."
                 } else {
-                    "Aktifkan izin 'Display over other apps' agar floating cockpit Game Nuke dapat muncul."
+                    "Enable 'Display over other apps' to allow the Game Nuke floating cockpit."
                 }
                 NukeToast.unsupported(context, message, long = true)
                 return true

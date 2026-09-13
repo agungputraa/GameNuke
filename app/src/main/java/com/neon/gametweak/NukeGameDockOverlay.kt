@@ -193,12 +193,12 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 } else {
                     floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
                 }
-                setStroke((1 * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
             }
 
             val indicator = View(context).apply {
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#00FF88"))
+                    setColor(Color.parseColor("#10B981"))
                     cornerRadius = 2 * d
                 }
                 layoutParams = FrameLayout.LayoutParams((2.5f * d).toInt(), (24 * d).toInt(), Gravity.CENTER)
@@ -369,7 +369,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#F008120E")) // Dark glass obsidian
                 cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981"))
             }
             setPadding((12 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
             elevation = 16 * d
@@ -402,7 +402,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
         val subTv = TextView(context).apply {
             text = "Floating Multitask Hub"
             textSize = 8f
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
         }
         titleCol.addView(titleTv)
         titleCol.addView(subTv)
@@ -609,7 +609,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0E1C16"))
                 cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
             }
             isClickable = true
             isFocusable = true
@@ -623,12 +623,12 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#152C22"))
                 cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
             }
             val plusTv = TextView(context).apply {
                 text = "＋"
                 textSize = 18f
-                setTextColor(Color.parseColor("#00FF88"))
+                setTextColor(Color.parseColor("#10B981"))
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
             }
@@ -639,7 +639,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
         val nameTv = TextView(context).apply {
             text = "Add App"
             textSize = 8.5f
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             gravity = Gravity.CENTER
             typeface = Typeface.DEFAULT_BOLD
             layoutParams = LinearLayout.LayoutParams(
@@ -699,7 +699,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#F407120D"))
                 cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#00FF88"))
+                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981"))
             }
             setPadding((16 * d).toInt(), (14 * d).toInt(), (16 * d).toInt(), (14 * d).toInt())
 
@@ -722,7 +722,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 setTextColor(Color.BLACK)
                 typeface = Typeface.DEFAULT_BOLD
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#00FF88"))
+                    setColor(Color.parseColor("#10B981"))
                     cornerRadius = 6 * d
                 }
                 setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
@@ -796,7 +796,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 val checkTv = TextView(context).apply {
                     text = if (isChecked) "✓" else "＋"
                     textSize = 13f
-                    setTextColor(if (isChecked) Color.parseColor("#00FF88") else Color.parseColor("#64748B"))
+                    setTextColor(if (isChecked) Color.parseColor("#10B981") else Color.parseColor("#64748B"))
                     typeface = Typeface.DEFAULT_BOLD
                 }
                 itemRow.addView(checkTv)
@@ -810,7 +810,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                     } else {
                         savedCustom.add(pkg)
                         checkTv.text = "✓"
-                        checkTv.setTextColor(Color.parseColor("#00FF88"))
+                        checkTv.setTextColor(Color.parseColor("#10B981"))
                         itemRow.setBackgroundColor(Color.parseColor("#152A20"))
                     }
                 }

@@ -270,13 +270,13 @@ internal fun createFloatingHudComposeView(
     }
 }
 
-private val NukeGreen = Color(0xFF35C99B)
+private val NukeGreen = Color(0xFF10B981)
 private val NukeGreenDim = Color(0xFF68C900)
 private val NukeCyan = Color(0xFF00E5C8)
 private val NukeAmber = Color(0xFFFFB830)
 private val NukeRed = Color(0xFFFF4D6A)
 private val NukePurple = Color(0xFFA855F7)
-private val NukeVoid = Color(0xFF020705)
+private val NukeVoid = Color(0xFF090D12)
 private val NukePanel = Color(0xFF0D1A13)
 private val NukePanelHigh = Color(0xFF0F2018)
 private val NukePanelBright = Color(0xFF1C2E2A)
@@ -1080,6 +1080,7 @@ private fun TacticalEnginesDeckView(
     val isFootstepOn = states["footstep_boost"] ?: false
     val isWikiOn = states["wiki_pip"] ?: false
     val isDeepCoolingOn = states["deep_cooling"] ?: false
+    val isMacroStudioOn = states["macro_studio"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Header: Logo + game name + close ─────────────────────────────
@@ -1187,7 +1188,7 @@ private fun TacticalEnginesDeckView(
                     icon = Icons.Outlined.TouchApp,
                     title = "TOUCH LISTENER",
                     badgeText = "STUDIO",
-                    statusText = if (isMagicTouchOn) "ACTIVE • OPEN" else "TOUCH MULTIPLIER CONTROLS",
+                    statusText = if (isMagicTouchOn) "ACTIVE \u2022 OPEN" else "TOUCH MULTIPLIER CONTROLS",
                     isOpen = isMagicTouchOn,
                     onClick = { callbacks.onQuickAction("magic_touch") },
                     modifier = Modifier.weight(1f)
@@ -1196,7 +1197,7 @@ private fun TacticalEnginesDeckView(
                     icon = Icons.Outlined.SportsEsports,
                     title = "GPU TUNER",
                     badgeText = "ENGINE",
-                    statusText = if (isGpuTunerOn) "ACTIVE • OPEN" else "GRAPHICS PIPELINE",
+                    statusText = if (isGpuTunerOn) "ACTIVE \u2022 OPEN" else "GRAPHICS PIPELINE",
                     isOpen = isGpuTunerOn,
                     onClick = { callbacks.onQuickAction("gpu_tuner") },
                     modifier = Modifier.weight(1f)
@@ -1204,21 +1205,41 @@ private fun TacticalEnginesDeckView(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
+                    icon = Icons.Outlined.Extension,
+                    title = "MACRO STUDIO",
+                    badgeText = if (isMacroStudioOn) "RUNNING" else "BUILDER",
+                    statusText = if (isMacroStudioOn) "ACTIVE \u2022 OPEN" else "GAME MACRO AUTOMATION",
+                    isOpen = isMacroStudioOn,
+                    onClick = { callbacks.onQuickAction("macro_studio") },
+                    modifier = Modifier.weight(1f)
+                )
+                PanelLauncherCard(
                     icon = Icons.Outlined.HealthAndSafety,
                     title = "DEVICE HEALTH",
                     badgeText = "SENSORS",
-                    statusText = if (isPhoneHealthOn) "ACTIVE • OPEN" else "HARDWARE TELEMETRY",
+                    statusText = if (isPhoneHealthOn) "ACTIVE \u2022 OPEN" else "HARDWARE TELEMETRY",
                     isOpen = isPhoneHealthOn,
                     onClick = { callbacks.onQuickAction("phone_health") },
                     modifier = Modifier.weight(1f)
                 )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.MenuBook,
                     title = "WIKI PIP",
                     badgeText = "GUIDE",
-                    statusText = if (isWikiOn) "ACTIVE • OPEN" else "HERO & META COUNTER",
+                    statusText = if (isWikiOn) "ACTIVE \u2022 OPEN" else "HERO & META COUNTER",
                     isOpen = isWikiOn,
                     onClick = { callbacks.onQuickAction("wiki_pip") },
+                    modifier = Modifier.weight(1f)
+                )
+                PanelLauncherCard(
+                    icon = Icons.Outlined.DoNotDisturbOn,
+                    title = "LIVE CHAT",
+                    badgeText = "CHAT",
+                    statusText = if (isLiveChatOn) "ACTIVE \u2022 OPEN" else "DEV LIVE CHAT",
+                    isOpen = isLiveChatOn,
+                    onClick = { callbacks.onQuickAction("live_chat") },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -3311,7 +3332,7 @@ private fun StatusRail(message: String, dense: Boolean) {
 private fun probeText(snapshot: FloatingHudSnapshot): String = if (snapshot.probeEnabled) snapshot.probeMs?.let { "${it}ms" } ?: "TIMEOUT" else snapshot.ping
 private fun probeColor(snapshot: FloatingHudSnapshot): Color = when {
     !snapshot.probeEnabled || snapshot.probeMs == null -> Color(0xFF9BB0A6)
-    snapshot.probeMs < 50 -> Color(0xFF35C99B)
+    snapshot.probeMs < 50 -> Color(0xFF10B981)
     snapshot.probeMs <= 120 -> Color(0xFFFFB830)
     else -> Color(0xFFFF4D6A)
 }

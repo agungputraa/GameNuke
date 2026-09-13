@@ -59,9 +59,9 @@ class NukeFpsOverlayView(private val context: Context) {
 
                 // Color code based on stability
                 when {
-                    currentFps >= 90 -> fpsTextView?.setTextColor(Color.parseColor("#00ff88")) // Neon green
-                    currentFps >= 55 -> fpsTextView?.setTextColor(Color.parseColor("#00e5ff")) // Cyan
-                    else -> fpsTextView?.setTextColor(Color.parseColor("#ff0055"))             // Red warning
+                    currentFps >= 90 -> fpsTextView?.setTextColor(Color.parseColor("#10B981")) // Neon green
+                    currentFps >= 55 -> fpsTextView?.setTextColor(Color.parseColor("#38BDF8")) // Cyan
+                    else -> fpsTextView?.setTextColor(Color.parseColor("#F43F5E"))             // Red warning
                 }
 
                 frameCount = 0
@@ -148,7 +148,7 @@ class NukeFpsOverlayView(private val context: Context) {
 
         val fpsView = TextView(context).apply {
             text = "-- FPS"
-            setTextColor(Color.parseColor("#00FF88"))
+            setTextColor(Color.parseColor("#10B981"))
             textSize = 12f
             paint.isFakeBoldText = true
             setPadding(0, 0, (8 * d).toInt(), 0)
