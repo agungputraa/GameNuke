@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#050807">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" type="image/png" sizes="64x64" href="favicon.png">
+  <link rel="preload" href="assets/logo_nuke.webp" as="image" type="image/webp">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css?v=2.8.4">
+  <title>Game Nuke Guides — FPS, Thermal, Shizuku & Android Gaming</title>
+  <meta name="description" content="Practical guides on FPS telemetry, frame times, thermal management, Shizuku permissions, and responsible Android tuning.">
+  <meta name="robots" content="index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1">
+  <link rel="canonical" href="https://gamenukeofficial.com/guides.html">
+  <meta property="og:type" content="website">
+  <meta property="og:site_name" content="Game Nuke Official">
+  <meta property="og:title" content="Game Nuke Guides — FPS, Thermal, Shizuku & Android Gaming">
+  <meta property="og:description" content="Practical guides on FPS telemetry, frame times, thermal management, Shizuku permissions, and responsible Android tuning.">
+  <meta property="og:url" content="https://gamenukeofficial.com/guides.html">
+  <meta property="og:image" content="https://gamenukeofficial.com/assets/social-card.png">
+  <script type="application/ld+json">{"@context":"https://schema.org","@type":"TechArticle","name":"Better tuning starts with better context.","url":"https://gamenukeofficial.com/guides.html","isPartOf":{"@type":"WebSite","name":"Game Nuke Official","url":"https://gamenukeofficial.com/"},"publisher":{"@type":"Organization","name":"Agung Developer","url":"https://gamenukeofficial.com/"}}</script>
+</head>
+<body>
+  <header class="page-topbar">
+    <div class="container nav-shell">
+      <a class="brand" href="index.html" aria-label="Game Nuke Official home"><span class="brand-mark"><img src="assets/logo_nuke.webp" width="40" height="40" alt=""></span><span class="brand-copy"><strong>GAME NUKE</strong><span>OFFICIAL</span></span></a>
+      <a class="back-home" href="index.html">← Back to product</a>
+    </div>
+  </header>
+  <main class="content-page">
+    <div class="container">
+      <div class="content-hero">
+        <span class="eyebrow">GUIDES</span>
+        <h1>Better tuning starts with better context.</h1>
+        <p>A practical guide to understanding telemetry data, Android permission models, and responsible device tuning.</p>
+      </div>
+      <div class="content-shell">
+        <article class="prose">
+<section id="telemetry"><h2>Reading FPS, frame time, thermal, and memory</h2><p>FPS measures the number of frames displayed each second, but it does not tell the full story. Two sessions might both average 120 FPS, yet one may feel choppy if frame times fluctuate. Frame time measures the exact milliseconds needed to render each frame; a smooth, consistent line feels far better than high FPS with frequent micro-stutters.</p><h3>Frame pacing matters</h3><p>At 120 FPS, the target frame time is approximately 8.3 ms. An occasional spike to 25–30 ms causes noticeable stutter even if the average FPS counter looks steady. Game Nuke pairs FPS with frame consistency metrics so you see the complete picture.</p><h3>Thermal data is context, not a target</h3><p>Device temperature depends on ambient heat, charging state, screen brightness, cellular antennas, and case insulation. Focus on trends rather than chasing an arbitrary temperature number: is heat climbing steadily, does performance dip after several matches, or is the system reducing clock speeds?</p><h3>Memory does not need to be empty</h3><p>Android keeps unused RAM populated with cached processes to launch apps faster. High memory utilization is normal. What matters is whether the OS frequently kills active background tasks or causes reload freezes. Memory clean utilities should be run when needed, not on an aggressive constant loop.</p></section>
+<section id="shizuku"><h2>When Shizuku is useful — and when it is not</h2><p>Shizuku allows apps to call specific system APIs with ADB or elevated privileges without running manual shell scripts. On unrooted devices, activation is typically done via Android Wireless Debugging. Game Nuke leverages this pathway for certain deep utilities on supported devices.</p><h3>Core vs elevated functions</h3><p>Core Game Nuke tools do not require Shizuku. Standard telemetry and quick toggles operate using regular Android APIs. Elevated privileges are only needed for specific system-level configurations.</p><h3>Practical considerations</h3><p>Wireless Debugging may turn off after rebooting or changing developer options on some vendor ROMs. If an elevated tool stops responding, check Shizuku status before tweaking other settings.</p><h3>Permission hygiene</h3><p>Grant only what you actively use. If you only need live telemetry, you can use Game Nuke without enabling Shizuku at all.</p></section>
+<section id="thermal"><h2>Why stable performance is more than peak FPS</h2><p>Short benchmarks showcase burst performance, but extended gaming sessions demand sustained stability. As internal components heat up, Android's thermal engine scales back CPU/GPU frequencies to protect hardware. This is why performance in minute 20 often differs from minute 1.</p><h3>Look for trends</h3><p>Watch how temperature, frame consistency, and battery drain interact. If FPS drops as heat climbs, thermal mitigation is occurring. If temperatures are cool but stutter persists, consider game shader compilation or background sync tasks.</p><h3>Balanced profiles are often best</h3><p>Running a phone at maximum clocks produces heat faster, triggering aggressive throttling sooner. A balanced profile often delivers a much smoother, longer session.</p><h3>Physical conditions still matter</h3><p>Software cannot change hardware physics. Gaming while fast-charging, in warm rooms, or inside heavy insulated cases will increase heat. Game Nuke gives you the metrics to understand device behavior, but user habits and environment remain key.</p></section>
+<section id="network"><h2>Network tools: what they can and cannot change</h2><p>DNS resolves hostnames to IP addresses. Switching DNS servers can improve lookup speed and connection reliability, but it cannot alter physical fiber distances to game servers or resolve ISP transit congestion. Use network tools to troubleshoot connection stability methodically.</p></section>
+<section id="safe-use"><h2>A practical rule for every tuning feature</h2><p>Change one setting at a time, observe the results, and maintain a baseline. If you toggle multiple settings simultaneously, identifying what helped or caused an issue becomes difficult.</p></section></article>
+        <aside class="content-aside" aria-label="On this page"><strong>ON THIS PAGE</strong><a href="#telemetry">Telemetry</a><a href="#shizuku">Shizuku</a><a href="#thermal">Thermal</a><a href="#network">Network</a><a href="#safe-use">Safe tuning</a></aside>
+      </div>
+    </div>
+  </main>
+  <footer class="site-footer">
+    <div class="container footer-main">
+      <div class="footer-brand"><a class="brand" href="index.html"><span class="brand-mark"><img src="assets/logo_nuke.webp" width="44" height="44" alt=""></span><span class="brand-copy"><strong>GAME NUKE</strong><span>OFFICIAL</span></span></a><p>Official information and distribution portal for the Game Nuke Android utility.</p></div>
+      <div class="footer-links"><div><strong>Product</strong><a href="index.html#fitur">Features</a><a href="index.html#editions">Editions</a><a href="guides.html">Guides</a><a href="about.html">About</a></div><div><strong>Legal</strong><a href="privacy.html">Privacy</a><a href="terms.html">Terms</a><a href="contact.html">Contact</a></div></div>
+      <div class="footer-release"><span>OFFICIAL SITE</span><strong>Game Nuke</strong><small>Android utility project</small><a class="text-button" href="index.html">Visit product page →</a></div>
+    </div>
+    <div class="container footer-bottom"><span>© 2026 Agung Developer. Game Nuke Official.</span><span>Independent Android utility project.</span></div>
+  </footer>
+</body>
+</html>

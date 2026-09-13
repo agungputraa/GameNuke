@@ -1,0 +1,22 @@
+{
+    "versionCode": 23,
+    "versionName": "3.0.0-Vortex",
+    "appName": "Game Nuke Vortex Edition",
+    "publishedAt": "2026-09-14",
+    "minAndroidVersion": 11,
+    "targetSdk": 36,
+    "apkSizeMb": "40.4",
+    "releaseNotes": [
+        "Power Button Fix: Resolved critical bug where the power button triggered Google Voice / Assistant / Samsung Bixby during gameplay. Removed MediaSession VolumeProvider, replaced with safe WindowManager key interceptor — zero impact on power button on all brands (Vivo, Oppo, Samsung, Xiaomi, Infinix, Pova)",
+        "ADB Native Macro: Touch macro spam now works via native ADB daemon — identical to Shizuku and iAdb. Full 3-backend parity",
+        "Sensitivity X/Y Full Reset: All touch sensitivity overrides fully reverted to device defaults when touch listener is disabled or app is closed",
+        "Ultra-Powerful Touch Macro Spam Engine: Infinite hold-burst spamming for Gloo Wall with real-time priority loop and target coordinate redirection",
+        "Stability: Tested stable across Vivo, Oppo, Samsung, Infinix, Pova, and Android 11–16 devices"
+    ],
+    "downloadUrl": "GameNuke-v3.0.0-Vortex.apk",
+    "localApkUrl": "GameNuke-v3.0.0-Vortex.apk",
+    "githubReleaseUrl": "GameNuke-v3.0.0-Vortex.apk",
+    "sha256": "27278EA9165F4650A83FB2C6DD5672E39ADE393683B49F50592BA1DFFE1339B4",
+    "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
+    "previousReleases": [
