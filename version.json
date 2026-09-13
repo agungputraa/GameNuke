@@ -5,7 +5,7 @@
   "publishedAt": "2026-09-13",
   "minAndroidVersion": 11,
   "targetSdk": 36,
-  "apkSizeMb": "24.3",
+  "apkSizeMb": "31.7",
   "releaseNotes": [
     "Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for both overlay and reticle pins",
     "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification",
@@ -14,7 +14,7 @@
     "Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders",
     "Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption"
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.9.0-Void/GameNuke-Premium-v2.9.0-Void.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.9.0-Void/GameNuke-v2.9.0-Void.apk",
   "localApkUrl": "GameNuke-v2.9.0-Void.apk",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v2.9.0-Void/GameNuke-v2.9.0-Void.apk",
   "sha256": "3DD55C6E099404E61946A5887D076A20C707CA9436AC062F1BA26343F356D598",
