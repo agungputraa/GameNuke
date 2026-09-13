@@ -1,0 +1,23 @@
+{
+    "versionCode":  22,
+    "versionName":  "2.9.0-Void",
+    "appName":  "Game Nuke Void Edition",
+    "publishedAt":  "2026-09-13",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "31.7",
+    "releaseNotes":  [
+                         "Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for both overlay and reticle pins",
+                         "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash \u0026 Bloom filter verification",
+                         "Liftoff Monetize Optimization: Official VungleBannerView integration and clean passive screen rendering",
+                         "Systemwide English Standardization: Complete enterprise-grade English localization across all dialogs and toasts",
+                         "Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders",
+                         "Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.9.0-Void/GameNuke-v2.9.0-Void.apk",
+    "localApkUrl":  "GameNuke-v2.9.0-Void.apk",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v2.9.0-Void/GameNuke-v2.9.0-Void.apk",
+    "sha256":  "3DD55C6E099404E61946A5887D076A20C707CA9436AC062F1BA26343F356D598",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
+}
