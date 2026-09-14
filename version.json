@@ -7,18 +7,16 @@
     "targetSdk": 36,
     "apkSizeMb": "31.9",
     "releaseNotes": [
-        "Network Engine & VPN Tunnel Deactivation Fix: Completely eradicated ghost VPN tunnel and persistent system key icon bug. Closing VPN now immediately releases the Linux kernel TUN file descriptor, terminates tun2socks lwIP loop cleanly, and stops START_STICKY auto-resurrection.",
-        "Universal Process Purge: Safely cleans background heavy memory hogs while safeguarding active games, Game Nuke services, and screen recorder tools.",
-        "Universal Kernel Touch Listener: Multi-source libwandev.so auto-deployment across all Android 11+ devices and custom ROMs without external unzip dependency.",
-        "Macro Studio Pro Overhaul: Fully functional Drag/Swipe vector flick, sustained Hold, rapid 2X Double-Tap, multi-action Combo sequence, and periodic Auto-Retry.",
-        "Header UI Disambiguation: Resolved duplicate play icons with dedicated Edit/Test and Arm/Standby controls.",
-        "Sub-Millisecond Sensi X/Y & Macro Studio: Red Corner 1:1 hardware evdev grab with safety-net watchdog timer & zero-latency multi-touch routing.",
-        "Professional UI & Esports Strings: Sleek, professional UI copy and universal exception shielding across all system services."
+        "Universal Screen Preservation & Precision Touch: Eliminasi total distorsi aspek rasio (aspectFactor 2.22x) dan dragshot boost artifisial. Fast-path 1:1 murni menjamin akurasi kabel Fanny di Mobile Legends dan crosshair FPS tetap 100% presisi.",
+        "Universal Multi-Device Adaptive Engine: Mendukung seluruh tipe HP Android (Xiaomi/Poco, Samsung, Oppo, Vivo, Realme, Asus ROG) dengan resolusi dinamis (720p, 1080p, 2K) dan berbagai rasio layar tanpa ketergantungan model tertentu.",
+        "Streamlined Pengaturan Layar: Antarmuka bersih berisi Sensitivitas Sumbu X, Sumbu Y (dengan tombol reset 1.00x normal), Detection Zone (Sisi Kanan Aim / Seluruh Layar / Sisi Kiri), Speed Response Curve (Linear 1:1, Accel, Decel), dan Macro Studio.",
+        "Network Engine & VPN Tunnel Deactivation Fix: Melepaskan file descriptor kernel TUN secara instan, mematikan loop tun2socks lwIP, dan mencegah icon VPN hantu.",
+        "Universal Process Purge: Membersihkan aplikasi latar belakang rakus RAM tanpa menyentuh game aktif maupun overlay Game Nuke."
     ],
     "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
     "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
     "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "sha256": "C6F47CF7D23099E846E189457849D513BF857DAFCE2243C019819DE986EF0C2F",
+    "sha256": "F0E72CD9E0A848E80EC4B464894330F406AC43A9C01B92E0857CA7C4796CFDDD",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
