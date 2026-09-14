@@ -1,10 +1,10 @@
 # Game Nuke Official
 
-> Official technical and product documentation for Game Nuke Hypernova Edition, an Android gaming performance and telemetry utility.
+> Official technical and product documentation for Game Nuke Zenith Edition, an Android gaming performance and telemetry utility.
 
 Canonical website: https://gamenukeofficial.com/
 Primary language: English
-Current release: v3.1.0-Hypernova
+Current release: v3.1.1-Zenith
 Supported platform: Android 11–16, ARM64
 Core access model: No root required for core features; elevated capabilities may use Shizuku or Wireless Debugging on compatible devices.
 

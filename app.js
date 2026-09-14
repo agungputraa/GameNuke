@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '3.1.0-Hypernova',
-    apkSizeMb: '40.5',
-    publishedAt: '2026-09-14',
+    versionName: '3.1.1-Zenith',
+    apkSizeMb: '31.7',
+    publishedAt: '2026-09-15',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };

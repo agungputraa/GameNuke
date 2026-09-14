@@ -2,10 +2,10 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '3.1.0-Hypernova',
-    apkSizeMb: '42.4',
-    localApkUrl: 'GameNuke-v3.1.0-Hypernova.apk',
-    downloadUrl: 'GameNuke-v3.1.0-Hypernova.apk',
+    versionName: '3.1.1-Zenith',
+    apkSizeMb: '31.7',
+    localApkUrl: 'GameNuke-v3.1.1-Zenith.apk',
+    downloadUrl: 'GameNuke-v3.1.1-Zenith.apk',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
     sponsorDelayMs: 2000
   };
@@ -15,7 +15,7 @@
   const qsa = (sel, scope = document) => Array.from(scope.querySelectorAll(sel));
 
   function getCleanFilename() {
-    return `GameNuke-v${state.versionName || '3.1.0-Hypernova'}.apk`;
+    return `GameNuke-v${state.versionName || '3.1.1-Zenith'}.apk`;
   }
 
   function getDownloadUrl() {

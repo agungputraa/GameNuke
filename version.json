@@ -1,48 +1,56 @@
 {
-    "versionCode":  24,
-    "versionName":  "3.1.0-Hypernova",
-    "appName":  "Game Nuke Hypernova Edition",
-    "publishedAt":  "2026-09-14",
-    "minAndroidVersion":  11,
-    "targetSdk":  36,
-    "apkSizeMb":  "31.7",
-    "releaseNotes":  [
-                         "Macro Studio Pro Overhaul: Fully functional Drag/Swipe vector flick, sustained Hold, rapid 2X Double-Tap, multi-action Combo sequence, and periodic Auto-Retry",
-                         "Header UI Disambiguation: Resolved duplicate play icons with dedicated Edit/Test and Arm/Standby controls",
-                         "Universal Kernel Touch Listener: Multi-source libwandev.so auto-deployment \u0026 self-healing extraction across all Android 11+ devices and custom ROMs without external unzip dependency",
-                         "Sub-Millisecond Sensi X/Y \u0026 Macro Studio: Red Corner 1:1 hardware evdev grab with safety-net watchdog timer \u0026 zero-latency multi-touch routing",
-                         "Professional UI \u0026 Esports Strings: Sleek, professional UI copy and universal exception shielding"
-                     ],
-    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.1.0-Hypernova/GameNuke-v3.1.0-Hypernova.apk",
-    "localApkUrl":  "GameNuke-v3.1.0-Hypernova.apk",
-    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.1.0-Hypernova/GameNuke-v3.1.0-Hypernova.apk",
-    "sha256":  "DE3A5B4A16EBC03BD61C478CF461C15D83B7A7879236DC4B370E278F0B93D3FC",
-    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
-    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
-    "previousReleases":  [
-                             {
-                                 "versionName":  "3.0.0-Vortex",
-                                 "apkName":  "GameNuke-v3.0.0-Vortex.apk",
-                                 "apkSizeMb":  "42.4",
-                                 "publishedAt":  "2026-09-14"
-                             },
-                             {
-                                 "versionName":  "2.9.0-Void",
-                                 "apkName":  "GameNuke-v2.9.0-Void.apk",
-                                 "apkSizeMb":  "40.4",
-                                 "publishedAt":  "2026-09-13"
-                             },
-                             {
-                                 "versionName":  "2.8.0-Quasar",
-                                 "apkName":  "GameNuke-v2.8.0-Quasar.apk",
-                                 "apkSizeMb":  "31.6",
-                                 "publishedAt":  "2026-09-12"
-                             },
-                             {
-                                 "versionName":  "2.7.0-prem",
-                                 "apkName":  "GameNuke-Premium-v2.7.0.apk",
-                                 "apkSizeMb":  "24.2",
-                                 "publishedAt":  "2026-09-11"
-                             }
-                         ]
+    "versionCode": 25,
+    "versionName": "3.1.1-Zenith",
+    "appName": "Game Nuke Zenith Edition",
+    "publishedAt": "2026-09-15",
+    "minAndroidVersion": 11,
+    "targetSdk": 36,
+    "apkSizeMb": "31.9",
+    "releaseNotes": [
+        "Network Engine & VPN Tunnel Deactivation Fix: Completely eradicated ghost VPN tunnel and persistent system key icon bug. Closing VPN now immediately releases the Linux kernel TUN file descriptor, terminates tun2socks lwIP loop cleanly, and stops START_STICKY auto-resurrection.",
+        "Universal Process Purge: Safely cleans background heavy memory hogs while safeguarding active games, Game Nuke services, and screen recorder tools.",
+        "Universal Kernel Touch Listener: Multi-source libwandev.so auto-deployment across all Android 11+ devices and custom ROMs without external unzip dependency.",
+        "Macro Studio Pro Overhaul: Fully functional Drag/Swipe vector flick, sustained Hold, rapid 2X Double-Tap, multi-action Combo sequence, and periodic Auto-Retry.",
+        "Header UI Disambiguation: Resolved duplicate play icons with dedicated Edit/Test and Arm/Standby controls.",
+        "Sub-Millisecond Sensi X/Y & Macro Studio: Red Corner 1:1 hardware evdev grab with safety-net watchdog timer & zero-latency multi-touch routing.",
+        "Professional UI & Esports Strings: Sleek, professional UI copy and universal exception shielding across all system services."
+    ],
+    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
+    "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
+    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
+    "sha256": "C6F47CF7D23099E846E189457849D513BF857DAFCE2243C019819DE986EF0C2F",
+    "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
+    "previousReleases": [
+        {
+            "versionName": "3.1.0-Hypernova",
+            "apkName": "GameNuke-v3.1.0-Hypernova.apk",
+            "apkSizeMb": "31.7",
+            "publishedAt": "2026-09-14"
+        },
+        {
+            "versionName": "3.0.0-Vortex",
+            "apkName": "GameNuke-v3.0.0-Vortex.apk",
+            "apkSizeMb": "42.4",
+            "publishedAt": "2026-09-14"
+        },
+        {
+            "versionName": "2.9.0-Void",
+            "apkName": "GameNuke-v2.9.0-Void.apk",
+            "apkSizeMb": "40.4",
+            "publishedAt": "2026-09-13"
+        },
+        {
+            "versionName": "2.8.0-Quasar",
+            "apkName": "GameNuke-v2.8.0-Quasar.apk",
+            "apkSizeMb": "31.6",
+            "publishedAt": "2026-09-12"
+        },
+        {
+            "versionName": "2.7.0-prem",
+            "apkName": "GameNuke-Premium-v2.7.0.apk",
+            "apkSizeMb": "24.2",
+            "publishedAt": "2026-09-11"
+        }
+    ]
 }
