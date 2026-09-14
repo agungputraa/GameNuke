@@ -2,8 +2,8 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '3.0.0-Vortex',
-    apkSizeMb: '40.4',
+    versionName: '3.1.0-Hypernova',
+    apkSizeMb: '40.5',
     publishedAt: '2026-09-14',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
