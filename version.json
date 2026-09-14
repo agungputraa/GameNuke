@@ -1,0 +1,48 @@
+{
+    "versionCode":  24,
+    "versionName":  "3.1.0-Hypernova",
+    "appName":  "Game Nuke Hypernova Edition",
+    "publishedAt":  "2026-09-14",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "apkSizeMb":  "40.5",
+    "releaseNotes":  [
+                         "Zero-Crash Architecture: Universal exception shielding across all system services, window managers, and threads",
+                         "All-Brand OEM Support: Tailored gaming optimizations and throttle disablers for all 13 major Android manufacturers (Xiaomi/HyperOS, Samsung OneUI, Oppo/Realme ColorOS, Vivo OriginOS, Transsion XOS/HiOS, Motorola, Asus ROG, RedMagic, Sony, Android 11+)",
+                         "Enterprise Deep Clean: 4-phase drop_caches, framework trim-caches, logcat flush, and crash-dump purge",
+                         "Linux Defunct Zombie Purge: True /proc status scanner terminating rogue user-space zombie loops without touching kernel processes",
+                         "Creator Protection: 100% immunity for active screen recorders (OEM \u0026 Google Play Store) and active games"
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.1.0-Hypernova/GameNuke-v3.1.0-Hypernova.apk",
+    "localApkUrl":  "GameNuke-v3.1.0-Hypernova.apk",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.1.0-Hypernova/GameNuke-v3.1.0-Hypernova.apk",
+    "sha256":  "50ABC03ACD92E223492C3024D87FF18F7EF0B946B98207CA9FC7F2348A8C67DB",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "previousReleases":  [
+                             {
+                                 "versionName":  "3.0.0-Vortex",
+                                 "apkName":  "GameNuke-v3.0.0-Vortex.apk",
+                                 "apkSizeMb":  "42.4",
+                                 "publishedAt":  "2026-09-14"
+                             },
+                             {
+                                 "versionName":  "2.9.0-Void",
+                                 "apkName":  "GameNuke-v2.9.0-Void.apk",
+                                 "apkSizeMb":  "40.4",
+                                 "publishedAt":  "2026-09-13"
+                             },
+                             {
+                                 "versionName":  "2.8.0-Quasar",
+                                 "apkName":  "GameNuke-v2.8.0-Quasar.apk",
+                                 "apkSizeMb":  "31.6",
+                                 "publishedAt":  "2026-09-12"
+                             },
+                             {
+                                 "versionName":  "2.7.0-prem",
+                                 "apkName":  "GameNuke-Premium-v2.7.0.apk",
+                                 "apkSizeMb":  "24.2",
+                                 "publishedAt":  "2026-09-11"
+                             }
+                         ]
+}
