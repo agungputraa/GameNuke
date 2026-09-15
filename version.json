@@ -12,7 +12,7 @@
     "Streamlined Android 13-16 Overlay Authorization: Menghapus pengalihan paksa bypass activity dan memprioritaskan switch izin overlay langsung bawaan sistem.",
     "Degraded Mode Resilience for OEM SELinux: Menangani pembatasan ioctl EVIOCGRAB pada Samsung Knox dan ColorOS secara elegan tanpa error."
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-Premium-v3.1.1-Zenith.apk",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
   "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
   "sha256": "9436B87C5646C0C6E34F46A74BD47F4A4030C7A2BA7E88B5149625B989E74603",
@@ -50,5 +50,5 @@
       "publishedAt": "2026-09-11"
     }
   ],
-  "apkSizeMb": "24.3"
+  "apkSizeMb": "31.8"
 }
