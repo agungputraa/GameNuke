@@ -1,43 +1,58 @@
 {
-    "versionCode": 22,
-    "versionName": "2.9.0-Void",
-    "appName": "Game Nuke Void Edition",
-    "publishedAt": "2026-09-13",
+    "versionCode": 26,
+    "versionName": "3.2.0-Orion",
+    "appName": "Game Nuke Orion Edition",
+    "publishedAt": "2026-09-16",
     "minAndroidVersion": 11,
     "targetSdk": 36,
-    "apkSizeMb": "40.4",
     "releaseNotes": [
-        "Hardware-Bound Refresh Rate Target: Minimalist seekbar & preset switch (90/120/144 FPS) with 60 FPS safety lockout on 90Hz+ panels and anti-unlocker validation",
-        "Touch Engine Screen-Freeze Fix: Resolved sensitivity X/Y pointer deadlocks and unhandled ACTION_UP queue locks",
-        "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification",
-        "Android 16 Overlay Controller: Enterprise auto-grant via appops/Shizuku/iAdb and low-RAM bypass guidance",
-        "Dual ABI Architecture: Added armeabi-v7a alongside arm64-v8a for universal Android 11–16 device coverage",
-        "Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for overlay and reticle pins",
-        "Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders",
-        "Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption"
+        "Multi-Pin Macro Engine: Trigger multiple macro pins simultaneously or with custom stagger delay in 1 click directly from the Macro Studio.",
+        "In-App Global Translation Engine: Full multi-language support powered by Google Translate with zero-latency offline caching.",
+        "Intelligent Notification Shield: Suppressed repetitive connection notifications when connected via iAdb or Shizuku for a clean notification tray.",
+        "Enterprise Web Admin Command Center: Unified licensing, subscriber control, and Sandbox/Production switch hosted safely on GitHub Pages."
     ],
-    "downloadUrl": "GameNuke-v2.9.0-Void.apk",
-    "localApkUrl": "GameNuke-v2.9.0-Void.apk",
-    "githubReleaseUrl": "GameNuke-v2.9.0-Void.apk",
-    "sha256": "DDD809DFEB568B11B754C9A4F9494F91451D6865027F58ECD4482CF8FA05027F",
+    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.0-Orion/GameNuke-v3.2.0-Orion.apk",
+    "localApkUrl": "GameNuke-v3.2.0-Orion.apk",
+    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.0-Orion/GameNuke-v3.2.0-Orion.apk",
+    "sha256": "A39FCE28D7786ACD244C88CF86F7428E6CB9BB6238CC6F73F03EB264D6A9A29E",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
         {
+            "versionName": "3.1.1-Zenith",
+            "apkName": "GameNuke-v3.1.1-Zenith.apk",
+            "apkSizeMb": "31.7",
+            "publishedAt": "2026-09-15"
+        },
+        {
+            "versionName": "3.1.0-Hypernova",
+            "apkName": "GameNuke-v3.1.0-Hypernova.apk",
+            "apkSizeMb": "31.7",
+            "publishedAt": "2026-09-14"
+        },
+        {
+            "versionName": "3.0.0-Vortex",
+            "apkName": "GameNuke-v3.0.0-Vortex.apk",
+            "apkSizeMb": "42.4",
+            "publishedAt": "2026-09-14"
+        },
+        {
+            "versionName": "2.9.0-Void",
+            "apkName": "GameNuke-v2.9.0-Void.apk",
+            "apkSizeMb": "40.4",
+            "publishedAt": "2026-09-13"
+        },
+        {
             "versionName": "2.8.0-Quasar",
-            "edition": "Quasar Edition",
             "apkName": "GameNuke-v2.8.0-Quasar.apk",
             "apkSizeMb": "31.6",
-            "minAndroid": "11–16",
-            "publishedAt": "2026-09-11"
+            "publishedAt": "2026-09-12"
         },
         {
             "versionName": "2.7.0-prem",
-            "edition": "Premium Edition",
             "apkName": "GameNuke-Premium-v2.7.0.apk",
             "apkSizeMb": "24.2",
-            "minAndroid": "11–14",
-            "publishedAt": "2026-09-10"
+            "publishedAt": "2026-09-11"
         }
     ]
 }

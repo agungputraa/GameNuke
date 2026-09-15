@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '2.7.0-prem',
-    apkSizeMb: '24.2',
-    publishedAt: '2026-09-11',
+    versionName: '3.1.1-Zenith',
+    apkSizeMb: '31.7',
+    publishedAt: '2026-09-15',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };
@@ -13,7 +13,7 @@
 
   function setText(selector, value) { qsa(selector).forEach((node) => { node.textContent = value; }); }
   function formatDate(value) {
-    if (!value) return '09 Sep 2026';
+    if (!value) return '14 Sep 2026';
     try { return new Intl.DateTimeFormat('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).format(new Date(`${value}T00:00:00`)); }
     catch (_) { return value; }
   }

@@ -3336,38 +3336,101 @@ summary:focus-visible {
   line-height: 1.45;
 }
 
-/* Previous Releases Archive (download.html) */
+/* Previous Releases Archive Collapsible Dropdown (download.html) */
 .older-versions-card {
   margin-top: 18px;
-  padding: 18px;
+  padding: 14px 18px;
   border: 1px solid var(--line);
   border-radius: 16px;
   background: rgba(255, 255, 255, 0.02);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.older-versions-header {
-  margin-bottom: 14px;
+.older-versions-card[open] {
+  padding: 18px;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(99, 255, 181, 0.25);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }
 
-.older-versions-header .install-note-label {
-  display: block;
-  font-size: 9px;
-  letter-spacing: 0.15em;
+.older-versions-summary {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  user-select: none;
+  list-style: none;
+  gap: 12px;
+}
+
+.older-versions-summary::-webkit-details-marker {
+  display: none;
+}
+
+.older-versions-summary-content {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  text-align: left;
+}
+
+.older-versions-summary-content .install-note-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 9.5px;
+  letter-spacing: 0.14em;
   color: var(--accent);
   font-weight: 800;
-  margin-bottom: 4px;
 }
 
-.archive-subtitle {
+.older-versions-summary-content .archive-subtitle {
   margin: 0;
   color: var(--muted);
   font-size: 11px;
-  line-height: 1.45;
+  line-height: 1.4;
+}
+
+.older-versions-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--accent);
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background 0.2s ease;
+  flex-shrink: 0;
+}
+
+.older-versions-chevron svg {
+  width: 16px;
+  height: 16px;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  fill: none;
+}
+
+.older-versions-card[open] .older-versions-chevron {
+  transform: rotate(180deg);
+  background: rgba(99, 255, 181, 0.15);
+  border-color: rgba(99, 255, 181, 0.3);
 }
 
 .older-versions-list {
   display: grid;
   gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  animation: olderVerFadeIn 0.25s ease-out;
+}
+
+@keyframes olderVerFadeIn {
+  from { opacity: 0; transform: translateY(-6px); }
+  to { opacity: 1; transform: translateY(0); }
 }
 
 .old-ver-item {

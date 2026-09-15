@@ -1,0 +1,746 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Nuke - VIP Admin Command Center</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700;800&family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg-main: #060a08;
+  --bg-card: #0c1410;
+  --bg-card-hover: #121d17;
+  --border: #1a2b22;
+  --border-gold: #ffb830;
+  --primary: #10b981;
+  --gold: #ffb830;
+  --danger: #ef4444;
+  --text-main: #f1f5f9;
+  --text-dim: #94a3b8;
+  --font-main: 'Plus Jakarta Sans', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  background-color: var(--bg-main);
+  color: var(--text-main);
+  font-family: var(--font-main);
+  min-height: 100vh;
+  padding: 20px;
+}
+.container { max-width: 1100px; margin: 0 auto; }
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 20px;
+  margin-bottom: 20px;
+}
+.gold-glow { border-color: rgba(255, 184, 48, 0.4); box-shadow: 0 0 20px rgba(255, 184, 48, 0.08); }
+.green-glow { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 0 20px rgba(16, 185, 129, 0.08); }
+h1, h2, h3 { font-weight: 800; }
+header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+.logo-badge {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.badge-crown {
+  width: 40px;
+  height: 40px;
+  background: rgba(255, 184, 48, 0.15);
+  border: 1px solid var(--border-gold);
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 20px;
+}
+.btn {
+  background: var(--primary);
+  color: #000;
+  border: none;
+  font-family: var(--font-main);
+  font-weight: 700;
+  padding: 10px 18px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+}
+.btn:hover { opacity: 0.9; transform: translateY(-1px); }
+.btn-gold { background: var(--gold); }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-outline { background: transparent; border: 1px solid var(--border); color: var(--text-dim); }
+.btn-outline:hover { border-color: var(--text-main); color: var(--text-main); }
+.input {
+  background: #080d0a;
+  border: 1px solid var(--border);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-family: var(--font-mono);
+  font-size: 13px;
+  outline: none;
+  width: 100%;
+}
+.input:focus { border-color: var(--primary); }
+.grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+.grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; margin-bottom: 20px; }
+.stat-card {
+  background: #0a110d;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 16px;
+}
+.stat-card .val { font-size: 24px; font-weight: 800; font-family: var(--font-mono); margin-top: 6px; }
+.table-wrap { overflow-x: auto; margin-top: 15px; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; }
+th, td { padding: 12px; text-align: left; border-bottom: 1px solid var(--border); }
+th { color: var(--text-dim); font-size: 11px; text-transform: uppercase; letter-spacing: 0.5px; }
+td { font-family: var(--font-mono); font-size: 12px; }
+.status-pill {
+  display: inline-block;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+.pill-active { background: rgba(16, 185, 129, 0.15); color: #10b981; border: 1px solid rgba(16, 185, 129, 0.3); }
+.pill-expired { background: rgba(239, 68, 68, 0.15); color: #ef4444; border: 1px solid rgba(239, 68, 68, 0.3); }
+.mode-toggle-box {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  background: #09100c;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.mode-tag {
+  display: inline-block;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+.tag-prod { background: rgba(16, 185, 129, 0.2); color: #10b981; border: 1px solid #10b981; }
+.tag-sand { background: rgba(255, 184, 48, 0.2); color: #ffb830; border: 1px solid #ffb830; }
+#loginView { max-width: 400px; margin: 80px auto; }
+@media (max-width: 768px) {
+  .grid-2 { grid-template-columns: 1fr; }
+}
+</style>
+</head>
+<body>
+<div class="container">
+
+<div id="loginView" class="card gold-glow">
+  <div style="text-align:center;margin-bottom:20px;">
+    <div style="font-size:36px;margin-bottom:8px;">👑</div>
+    <h2>Game Nuke Admin</h2>
+    <p style="color:var(--text-dim);font-size:12px;margin-top:4px;">Secure Command Center Login</p>
+  </div>
+  <div style="display:flex;flex-direction:column;gap:12px;">
+    <div>
+      <label style="font-size:11px;color:var(--text-dim);font-weight:700;">USERNAME</label>
+      <input id="loginUser" class="input" type="text" placeholder="Username" style="margin-top:4px;">
+    </div>
+    <div>
+      <label style="font-size:11px;color:var(--text-dim);font-weight:700;">PASSWORD</label>
+      <input id="loginPass" class="input" type="password" placeholder="Password" style="margin-top:4px;">
+    </div>
+    <div id="loginErr" style="color:var(--danger);font-size:12px;display:none;"></div>
+    <button class="btn btn-gold" style="width:100%;justify-content:center;margin-top:8px;" onclick="doLogin()">SIGN IN</button>
+  </div>
+</div>
+
+<div id="dashboardView" style="display:none;">
+  <header>
+    <div class="logo-badge">
+      <div class="badge-crown">👑</div>
+      <div>
+        <h2 style="letter-spacing:0.5px;">GAME NUKE VIP</h2>
+        <p style="color:var(--text-dim);font-size:11px;">Central Licensing & Gateway Dashboard</p>
+      </div>
+    </div>
+    <div style="display:flex;align-items:center;gap:12px;">
+      <span id="headerModeTag" class="mode-tag tag-prod">PRODUCTION</span>
+      <button class="btn btn-outline" onclick="doLogout()">LOGOUT</button>
+    </div>
+  </header>
+
+  <div class="grid-4">
+    <div class="stat-card">
+      <div style="color:var(--text-dim);font-size:11px;font-weight:700;">TOTAL LICENSED DEVICES</div>
+      <div class="val" id="statTotalDevices" style="color:#38bdf8;">-</div>
+    </div>
+    <div class="stat-card">
+      <div style="color:var(--text-dim);font-size:11px;font-weight:700;">ACTIVE VIP SUBSCRIPTIONS</div>
+      <div class="val" id="statActiveVip" style="color:var(--primary);">-</div>
+    </div>
+    <div class="stat-card">
+      <div style="color:var(--text-dim);font-size:11px;font-weight:700;">EXPIRED PASSES</div>
+      <div class="val" id="statExpiredVip" style="color:var(--danger);">-</div>
+    </div>
+    <div class="stat-card">
+      <div style="color:var(--text-dim);font-size:11px;font-weight:700;">PAYMENT GATEWAY MODE</div>
+      <div class="val" id="statModeText" style="color:var(--gold);font-size:18px;">-</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="mode-toggle-box">
+      <div>
+        <h3 style="font-size:15px;margin-bottom:4px;">Payment Gateway Mode (Sandbox vs Production)</h3>
+        <p style="color:var(--text-dim);font-size:12px;">Toggle between Sandbox simulation mode and Live real payments without updating the Android APK.</p>
+      </div>
+      <button id="modeToggleBtn" class="btn btn-gold" onclick="toggleMode()">SWITCH TO SANDBOX</button>
+    </div>
+  </div>
+
+  <div class="grid-2">
+    <div class="card green-glow">
+      <h3 style="font-size:15px;margin-bottom:14px;">⚡ Grant / Activate Device VIP</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);font-weight:700;">DEVICE HARDWARE ID</label>
+          <input id="grantDeviceId" class="input" type="text" placeholder="e.g. 7643f8a02c... or Android ID" style="margin-top:4px;">
+        </div>
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);font-weight:700;">VIP DURATION</label>
+          <select id="grantDays" class="input" style="margin-top:4px;">
+            <option value="7">7 Days (Weekly Pass)</option>
+            <option value="30" selected>30 Days (Monthly Pass)</option>
+            <option value="90">90 Days (Quarterly Pass)</option>
+            <option value="180">180 Days (Semi-Annual Pass)</option>
+            <option value="365">365 Days (Annual Pass)</option>
+            <option value="9999">9999 Days (Lifetime Pass)</option>
+          </select>
+        </div>
+        <button class="btn" style="width:100%;justify-content:center;margin-top:6px;" onclick="doGrant()">GRANT VIP ACCESS</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="font-size:15px;margin-bottom:14px;">🔍 Search Subscribed Device</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div>
+          <label style="font-size:11px;color:var(--text-dim);font-weight:700;">SEARCH BY DEVICE ID</label>
+          <input id="searchQuery" class="input" type="text" placeholder="Type Device ID to filter..." oninput="filterDevices()" style="margin-top:4px;">
+        </div>
+        <p style="color:var(--text-dim);font-size:12px;margin-top:4px;">Search and manage individual client devices, inspect expiration dates, or immediately revoke/extend access.</p>
+        <button class="btn btn-outline" style="justify-content:center;margin-top:6px;" onclick="loadDevices()">REFRESH DEVICE LIST</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="font-size:15px;">📱 Managed Client Devices</h3>
+      <span id="deviceCountLabel" style="font-size:12px;color:var(--text-dim);">-</span>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Device ID</th>
+            <th>Tier Plan</th>
+            <th>Status</th>
+            <th>Remaining</th>
+            <th>Expires At</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody id="deviceTableBody">
+          <tr><td colspan="6" style="text-align:center;color:var(--text-dim);">Loading devices...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+      <h3 style="font-size:15px;">💳 Recent Payment Transactions</h3>
+      <button class="btn btn-outline" style="padding:4px 10px;font-size:11px;" onclick="loadOrders()">Refresh Orders</button>
+    </div>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Order ID</th>
+            <th>Device ID</th>
+            <th>Plan</th>
+            <th>Amount</th>
+            <th>Status</th>
+            <th>Created</th>
+          </tr>
+        </thead>
+        <tbody id="orderTableBody">
+          <tr><td colspan="6" style="text-align:center;color:var(--text-dim);">Loading transactions...</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+      <div>
+        <h3 style="font-size:15px;">🛡️ Floating Booster Remote Feature Killswitch (GitHub Sync)</h3>
+        <p style="color:var(--text-dim);font-size:12px;margin-top:2px;">Disable any buggy or high-risk floating component remotely without releasing a new APK build.</p>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-outline" style="padding:6px 12px;font-size:11px;" onclick="copyBoosterJson()">📋 Copy JSON</button>
+        <button class="btn btn-gold" style="padding:6px 12px;font-size:11px;" onclick="downloadBoosterJson()">💾 Download booster_features.json</button>
+      </div>
+    </div>
+    
+    <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));gap:12px;margin-top:14px;" id="boosterFeaturesGrid">
+      <!-- Feature cards populated dynamically -->
+    </div>
+
+    <div style="margin-top:16px;background:#080d0a;border:1px solid var(--border);border-radius:10px;padding:14px;">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <input type="checkbox" id="emActive" onchange="generateBoosterConfig()">
+        <label for="emActive" style="font-weight:700;font-size:13px;color:var(--gold);">Broadcast Emergency Notice to All Users</label>
+      </div>
+      <input id="emMsg" class="input" type="text" placeholder="e.g. Scheduled server maintenance today 12:00 - 14:00 UTC." oninput="generateBoosterConfig()">
+    </div>
+
+    <div style="margin-top:14px;">
+      <label style="font-size:11px;color:var(--text-dim);font-weight:700;">PREVIEW JSON OUTPUT (booster_features.json)</label>
+      <textarea id="jsonOutput" class="input" style="height:140px;margin-top:4px;resize:vertical;font-size:11px;line-height:1.4;" readonly></textarea>
+    </div>
+  </div>
+</div>
+
+</div>
+
+<script>
+const API_BASE = "https://gamenukevip.agungofficialdev.workers.dev";
+let authToken = localStorage.getItem("gn_admin_token") || "";
+let currentMode = "production";
+let allDevices = [];
+
+function checkAuth() {
+  if (authToken) {
+    document.getElementById("loginView").style.display = "none";
+    document.getElementById("dashboardView").style.display = "block";
+    loadAll();
+  } else {
+    document.getElementById("loginView").style.display = "block";
+    document.getElementById("dashboardView").style.display = "none";
+  }
+}
+
+async function doLogin() {
+  const u = document.getElementById("loginUser").value.trim();
+  const p = document.getElementById("loginPass").value.trim();
+  const err = document.getElementById("loginErr");
+  err.style.display = "none";
+
+  try {
+    const res = await fetch(API_BASE + "/api/admin/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username: u, password: p })
+    });
+    const json = await res.json();
+    if (json.success && json.token) {
+      authToken = json.token;
+      localStorage.setItem("gn_admin_token", authToken);
+      checkAuth();
+    } else {
+      err.textContent = json.error || "Invalid username or password";
+      err.style.display = "block";
+    }
+  } catch (e) {
+    err.textContent = "Network error: " + e.message;
+    err.style.display = "block";
+  }
+}
+
+function doLogout() {
+  authToken = "";
+  localStorage.removeItem("gn_admin_token");
+  checkAuth();
+}
+
+async function apiFetch(endpoint, options = {}) {
+  options.headers = options.headers || {};
+  options.headers["Authorization"] = "Bearer " + authToken;
+  const res = await fetch(API_BASE + endpoint, options);
+  if (res.status === 401) {
+    doLogout();
+    throw new Error("Session expired");
+  }
+  return res.json();
+}
+
+async function loadAll() {
+  await loadConfig();
+  await loadDevices();
+  await loadOrders();
+}
+
+async function loadConfig() {
+  try {
+    const json = await apiFetch("/api/admin/config");
+    if (json.success) {
+      currentMode = json.mode || "production";
+      renderModeUI();
+    }
+  } catch (_) {}
+}
+
+function renderModeUI() {
+  const isProd = currentMode === "production";
+  const tag = document.getElementById("headerModeTag");
+  const statText = document.getElementById("statModeText");
+  const toggleBtn = document.getElementById("modeToggleBtn");
+
+  if (isProd) {
+    tag.textContent = "PRODUCTION";
+    tag.className = "mode-tag tag-prod";
+    statText.textContent = "PRODUCTION (Live)";
+    statText.style.color = "var(--primary)";
+    toggleBtn.textContent = "SWITCH TO SANDBOX";
+    toggleBtn.className = "btn btn-gold";
+  } else {
+    tag.textContent = "SANDBOX";
+    tag.className = "mode-tag tag-sand";
+    statText.textContent = "SANDBOX (Testing)";
+    statText.style.color = "var(--gold)";
+    toggleBtn.textContent = "SWITCH TO PRODUCTION";
+    toggleBtn.className = "btn";
+  }
+}
+
+async function toggleMode() {
+  const nextMode = currentMode === "production" ? "sandbox" : "production";
+  if (!confirm("Are you sure you want to switch to " + nextMode.toUpperCase() + " mode?")) return;
+  try {
+    const json = await apiFetch("/api/admin/config", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: nextMode })
+    });
+    if (json.success) {
+      currentMode = json.mode;
+      renderModeUI();
+      alert("System switched to " + currentMode.toUpperCase() + " mode!");
+    }
+  } catch (e) {
+    alert("Error toggling mode: " + e.message);
+  }
+}
+
+async function loadDevices() {
+  try {
+    const json = await apiFetch("/api/admin/devices");
+    if (json.success) {
+      allDevices = json.devices || [];
+      renderDevices(allDevices);
+      updateStats(allDevices);
+    }
+  } catch (_) {}
+}
+
+function updateStats(devices) {
+  const total = devices.length;
+  const active = devices.filter(d => d.status === "active").length;
+  const expired = total - active;
+  document.getElementById("statTotalDevices").textContent = total;
+  document.getElementById("statActiveVip").textContent = active;
+  document.getElementById("statExpiredVip").textContent = expired;
+  document.getElementById("deviceCountLabel").textContent = total + " total records";
+}
+
+function renderDevices(devices) {
+  const tbody = document.getElementById("deviceTableBody");
+  if (!devices || devices.length === 0) {
+    tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:var(--text-dim);'>No subscribed devices recorded yet.</td></tr>";
+    return;
+  }
+  let html = "";
+  for (const d of devices) {
+    const isActive = d.status === "active";
+    const pill = isActive
+      ? "<span class='status-pill pill-active'>Active</span>"
+      : "<span class='status-pill pill-expired'>Expired</span>";
+    const expiryDate = d.expiresAt ? new Date(d.expiresAt).toLocaleDateString() : "-";
+    const remainingText = isActive ? (d.remainingDays + " days") : "0 days";
+
+    html += "<tr>" +
+      "<td style='font-weight:700;'>" + escapeHtml(d.deviceId) + "</td>" +
+      "<td>" + escapeHtml(d.planId || "VIP") + "</td>" +
+      "<td>" + pill + "</td>" +
+      "<td>" + remainingText + "</td>" +
+      "<td>" + expiryDate + "</td>" +
+      "<td>" +
+        "<button class='btn' style='padding:4px 8px;font-size:11px;margin-right:6px;' onclick='quickExtend(\"" + escapeHtml(d.deviceId) + "\", 30)'>+30d</button>" +
+        "<button class='btn btn-danger' style='padding:4px 8px;font-size:11px;' onclick='revokeDevice(\"" + escapeHtml(d.deviceId) + "\")'>Revoke</button>" +
+      "</td>" +
+    "</tr>";
+  }
+  tbody.innerHTML = html;
+}
+
+function filterDevices() {
+  const q = document.getElementById("searchQuery").value.toLowerCase().trim();
+  if (!q) {
+    renderDevices(allDevices);
+    return;
+  }
+  const filtered = allDevices.filter(d => d.deviceId.toLowerCase().includes(q));
+  renderDevices(filtered);
+}
+
+async function doGrant() {
+  const deviceId = document.getElementById("grantDeviceId").value.trim();
+  const days = document.getElementById("grantDays").value;
+  if (!deviceId) {
+    alert("Please enter a Device ID");
+    return;
+  }
+  try {
+    const json = await apiFetch("/api/admin/grant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId, durationDays: days })
+    });
+    if (json.success) {
+      alert("VIP granted to device: " + deviceId + " for " + days + " days!");
+      document.getElementById("grantDeviceId").value = "";
+      loadDevices();
+    }
+  } catch (e) {
+    alert("Error granting VIP: " + e.message);
+  }
+}
+
+async function quickExtend(deviceId, days) {
+  if (!confirm("Extend VIP by " + days + " days for device " + deviceId + "?")) return;
+  try {
+    const json = await apiFetch("/api/admin/grant", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId, durationDays: days })
+    });
+    if (json.success) {
+      loadDevices();
+    }
+  } catch (e) {
+    alert("Error extending: " + e.message);
+  }
+}
+
+async function revokeDevice(deviceId) {
+  if (!confirm("Are you sure you want to revoke VIP access for device " + deviceId + "?")) return;
+  try {
+    const json = await apiFetch("/api/admin/revoke", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ deviceId })
+    });
+    if (json.success) {
+      loadDevices();
+    }
+  } catch (e) {
+    alert("Error revoking: " + e.message);
+  }
+}
+
+async function loadOrders() {
+  try {
+    const json = await apiFetch("/api/admin/orders");
+    const tbody = document.getElementById("orderTableBody");
+    if (!json.success || !json.orders || json.orders.length === 0) {
+      tbody.innerHTML = "<tr><td colspan='6' style='text-align:center;color:var(--text-dim);'>No payment transactions recorded yet.</td></tr>";
+      return;
+    }
+    let html = "";
+    for (const o of json.orders) {
+      const isPaid = o.status === "completed";
+      const pill = isPaid
+        ? "<span class='status-pill pill-active'>Paid</span>"
+        : "<span class='status-pill' style='background:rgba(255,184,48,0.15);color:#ffb830;'>Pending</span>";
+      const dateStr = o.createdAt ? new Date(o.createdAt).toLocaleString() : "-";
+      html += "<tr>" +
+        "<td style='font-weight:700;'>" + escapeHtml(o.orderId) + "</td>" +
+        "<td>" + escapeHtml(o.deviceId || "-") + "</td>" +
+        "<td>" + escapeHtml(o.planId || "-") + "</td>" +
+        "<td style='color:var(--gold);'>Rp " + Number(o.amount).toLocaleString() + "</td>" +
+        "<td>" + pill + "</td>" +
+        "<td>" + dateStr + "</td>" +
+      "</tr>";
+    }
+    tbody.innerHTML = html;
+  } catch (_) {}
+}
+
+const BOOSTER_FEATURE_KEYS = [
+  { key: "touch_tuning", name: "Magic Touch & Tuning", desc: "Low-level evdev touch injector & tuning" },
+  { key: "macro_studio", name: "Macro Studio & Multi-Pin", desc: "Floating macro studio overlay & multi-pin engine" },
+  { key: "cyber_jukebox", name: "Cyber Jukebox Audio", desc: "Floating gaming audio player & synthesizer" },
+  { key: "screen_record", name: "Screen Record Guardian", desc: "Display recording guardian & frame capture" },
+  { key: "system_optimizer", name: "System Optimizer", desc: "CPU governor & aggressive thermal scheduler" },
+  { key: "antivirus", name: "Security & Antivirus", desc: "Memory & package integrity risk scanner" },
+  { key: "network_vpn", name: "Gaming VPN & Tunnel", desc: "Ping latency stabilizer & route accelerator" },
+  { key: "task_manager", name: "Task Manager & Purge", desc: "Background process cleaner & memory guardian" },
+  { key: "gpu_graphics", name: "GPU Graphics Panel", desc: "Vulkan/OpenGL texture & shader optimizer" },
+  { key: "fps_lock", name: "Universal FPS Limiter", desc: "Dynamic display refresh rate & frame locker" }
+];
+
+let boosterState = {
+  overrides: {}
+};
+
+function initBoosterGrid() {
+  const container = document.getElementById("boosterFeaturesGrid");
+  if (!container) return;
+  let html = "";
+  for (const f of BOOSTER_FEATURE_KEYS) {
+    html += `
+      <div style="background:#09100c;border:1px solid var(--border);border-radius:10px;padding:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <strong style="font-size:13px;color:#f1f5f9;">${f.name}</strong>
+          <label style="position:relative;display:inline-block;width:38px;height:20px;">
+            <input type="checkbox" id="feat_${f.key}" checked onchange="generateBoosterConfig()" style="opacity:0;width:0;height:0;">
+            <span style="position:absolute;cursor:pointer;top:0;left:0;right:0;bottom:0;background:#1e2836;border-radius:20px;transition:0.3s;" id="slider_${f.key}"></span>
+          </label>
+        </div>
+        <p style="font-size:11px;color:var(--text-dim);margin:4px 0 8px 0;">${f.desc}</p>
+        <input id="reason_${f.key}" class="input" type="text" placeholder="Disable reason (shown to users)..." oninput="generateBoosterConfig()" style="font-size:11px;padding:6px 10px;">
+      </div>
+    `;
+  }
+  container.innerHTML = html;
+
+  for (const f of BOOSTER_FEATURE_KEYS) {
+    const cb = document.getElementById(`feat_${f.key}`);
+    const slider = document.getElementById(`slider_${f.key}`);
+    slider.style.backgroundColor = cb.checked ? "var(--primary)" : "#334155";
+    cb.addEventListener("change", () => {
+      slider.style.backgroundColor = cb.checked ? "var(--primary)" : "#334155";
+    });
+  }
+
+  loadCurrentBoosterJson();
+}
+
+async function loadCurrentBoosterJson() {
+  try {
+    const res = await fetch("booster_features.json?t=" + Date.now());
+    if (res.ok) {
+      const data = await res.json();
+      if (data.component_overrides) {
+        for (const [k, v] of Object.entries(data.component_overrides)) {
+          const cb = document.getElementById(`feat_${k}`);
+          const reasonInput = document.getElementById(`reason_${k}`);
+          const slider = document.getElementById(`slider_${k}`);
+          if (cb) {
+            cb.checked = v.enabled !== false;
+            if (slider) slider.style.backgroundColor = cb.checked ? "var(--primary)" : "#334155";
+          }
+          if (reasonInput && v.disabled_reason) {
+            reasonInput.value = v.disabled_reason;
+          }
+        }
+      }
+      if (data.emergency_broadcast) {
+        const emActive = document.getElementById("emActive");
+        const emMsg = document.getElementById("emMsg");
+        if (emActive) emActive.checked = !!data.emergency_broadcast.active;
+        if (emMsg && data.emergency_broadcast.message) emMsg.value = data.emergency_broadcast.message;
+      }
+    }
+  } catch (_) {}
+  generateBoosterConfig();
+}
+
+function generateBoosterConfig() {
+  const disabledComponents = [];
+  const overrides = {};
+
+  for (const f of BOOSTER_FEATURE_KEYS) {
+    const cb = document.getElementById(`feat_${f.key}`);
+    const reasonInput = document.getElementById(`reason_${f.key}`);
+    const isEnabled = cb ? cb.checked : true;
+    const reason = (reasonInput ? reasonInput.value : "").trim();
+
+    overrides[f.key] = {
+      enabled: isEnabled,
+      disabled_reason: isEnabled ? "" : (reason || "Temporarily disabled by developer for maintenance.")
+    };
+
+    if (!isEnabled) {
+      disabledComponents.push(f.key);
+    }
+  }
+
+  const emActive = document.getElementById("emActive");
+  const emMsg = document.getElementById("emMsg");
+
+  const configObj = {
+    version: 1,
+    last_updated: new Date().toISOString().split("T")[0],
+    disabled_components: disabledComponents,
+    disabled_panels: [],
+    component_overrides: overrides,
+    emergency_broadcast: {
+      active: emActive ? emActive.checked : false,
+      message: emMsg ? emMsg.value.trim() : ""
+    }
+  };
+
+  const jsonStr = JSON.stringify(configObj, null, 2);
+  const out = document.getElementById("jsonOutput");
+  if (out) out.value = jsonStr;
+  return jsonStr;
+}
+
+function copyBoosterJson() {
+  const jsonStr = generateBoosterConfig();
+  navigator.clipboard.writeText(jsonStr).then(() => {
+    alert("Copied booster_features.json to clipboard!");
+  }).catch(() => {
+    alert("Please copy text manually from the preview box below.");
+  });
+}
+
+function downloadBoosterJson() {
+  const jsonStr = generateBoosterConfig();
+  const blob = new Blob([jsonStr], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = "booster_features.json";
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+checkAuth();
+initBoosterGrid();
+</script>
+</body>
+</html>
