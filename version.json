@@ -6,17 +6,16 @@
     "minAndroidVersion": 11,
     "targetSdk": 36,
     "releaseNotes": [
-        "Professional Precision Sensi X & Sensi Y: Kontrol sensitivitas sumbu horizontal (X) dan vertikal (Y) ultra-presisi (1.00x - 3.00x) dengan tombol fine-tuning (+/- 0.02) dan reset instan 1.00x stock pass-through. Semua preset dan gimmick telah dihapus demi akurasi kompetitif esports murni.",
-        "Zero-Freeze Intelligent Hardware Grab & Banking App Safety Shield: Watchdog cerdas otomatis mendeteksi aplikasi perbankan (SeaBank, BCA, Mandiri, BRI, DANA, OVO, Shopee, dll.) dan System UI untuk melepaskan kernel grab secara instan sehingga layar tidak akan pernah macet atau freeze.",
-        "Zero-Overlay Volume Key Trigger Engine: Menghapus window overlay tak terlihat dan beralih ke broadcast audio sistem sehingga navigasi gestur MIUI/HyperOS dan usapan layar tetap lancar 100%.",
-        "Monotonic Incremental Delta Touch Engine: Responsivitas sentuh 0-delay tanpa lag dan tanpa akselerasi liar.",
-        "Network Engine & VPN Tunnel Deactivation: Melepaskan file descriptor kernel TUN seketika dan menghentikan loop tun2socks lwIP secara bersih.",
-        "Universal Process Purge: Membersihkan aplikasi latar belakang rakus RAM tanpa menyentuh game aktif maupun overlay Game Nuke."
+        "Universal Cross-OEM Touch Alignment: Menghapus resolusi hardcoded dan mengimplementasikan multi-tier dynamic resolution fallback via system metrics. Koordinat sentuhan dan makro pin 100% presisi 1:1 di semua merk HP Android 11+ (Samsung, Xiaomi, Vivo, Oppo, Realme, Infinix, Tecno, Pixel).",
+        "Zero-Allocation Hot-Loop Injection: Mengeliminasi alokasi GC reflection di frekuensi 120-240Hz pada NukeTouchInjector, memberantas micro-stutter dan frame drop saat gameplay intens.",
+        "Anti-Deadlock Move Drain Guarantee: Mencegah crosshair/aim membeku pada driver layar sentuh OEM (Goodix, Focaltech, Novatek) yang tidak memancarkan SYN_REPORT.",
+        "Streamlined Android 13-16 Overlay Authorization: Menghapus pengalihan paksa bypass activity dan memprioritaskan switch izin overlay langsung bawaan sistem.",
+        "Degraded Mode Resilience for OEM SELinux: Menangani pembatasan ioctl EVIOCGRAB pada Samsung Knox dan ColorOS secara elegan tanpa error."
     ],
     "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
     "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
     "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "sha256": "6C36B663FC4994B00CD5106E7A3065C6679AAB983E95AB36746D355D5B033B60",
+    "sha256": "9436B87C5646C0C6E34F46A74BD47F4A4030C7A2BA7E88B5149625B989E74603",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
