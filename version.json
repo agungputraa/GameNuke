@@ -7,16 +7,17 @@
     "targetSdk": 36,
     "apkSizeMb": "31.9",
     "releaseNotes": [
-        "Universal Screen Preservation & Precision Touch: Eliminasi total distorsi aspek rasio (aspectFactor 2.22x) dan dragshot boost artifisial. Fast-path 1:1 murni menjamin akurasi kabel Fanny di Mobile Legends dan crosshair FPS tetap 100% presisi.",
+        "Auto Headshot / Dragshot Assist: Dilengkapi kurva akselerasi usapan ke atas (flick upward boost) responsif instan khusus game FPS (Free Fire, PUBG, CODM) yang membuat rasio headshot jauh lebih mudah tanpa membuat gesekan horizontal liar.",
+        "Monotonic Incremental Delta Touch Engine: Memperbaiki bug perlambatan kursor (deceleration pull-down) dan menjamin pengiriman event sentuh 0-delay tanpa lag.",
         "Universal Multi-Device Adaptive Engine: Mendukung seluruh tipe HP Android (Xiaomi/Poco, Samsung, Oppo, Vivo, Realme, Asus ROG) dengan resolusi dinamis (720p, 1080p, 2K) dan berbagai rasio layar tanpa ketergantungan model tertentu.",
-        "Streamlined Pengaturan Layar: Antarmuka bersih berisi Sensitivitas Sumbu X, Sumbu Y (dengan tombol reset 1.00x normal), Detection Zone (Sisi Kanan Aim / Seluruh Layar / Sisi Kiri), Speed Response Curve (Linear 1:1, Accel, Decel), dan Macro Studio.",
+        "Streamlined Pengaturan Layar: Antarmuka baru dilengkapi tombol sakelar Headshot Dragshot, Preset Cepat Free Fire & MOBA Fanny, Sensi X, Sensi Y (dengan tombol reset 1.00x normal), Detection Zone, dan Speed Response Curve.",
         "Network Engine & VPN Tunnel Deactivation Fix: Melepaskan file descriptor kernel TUN secara instan, mematikan loop tun2socks lwIP, dan mencegah icon VPN hantu.",
         "Universal Process Purge: Membersihkan aplikasi latar belakang rakus RAM tanpa menyentuh game aktif maupun overlay Game Nuke."
     ],
     "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
     "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
     "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "sha256": "CDFFC258D4227FC6167EEE4DDD8FE88B2D761CA083A433C4B4142C23B50C62DF",
+    "sha256": "84CDCE0D9D4BA75EF1E128CE3CBA241675E152F67AFE91BCC4F7E653F3074FD0",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
