@@ -1,53 +1,54 @@
 {
-    "versionCode": 25,
-    "versionName": "3.1.1-Zenith",
-    "appName": "Game Nuke Zenith Edition",
-    "publishedAt": "2026-09-15",
-    "minAndroidVersion": 11,
-    "targetSdk": 36,
-    "releaseNotes": [
-        "Universal Cross-OEM Touch Alignment: Menghapus resolusi hardcoded dan mengimplementasikan multi-tier dynamic resolution fallback via system metrics. Koordinat sentuhan dan makro pin 100% presisi 1:1 di semua merk HP Android 11+ (Samsung, Xiaomi, Vivo, Oppo, Realme, Infinix, Tecno, Pixel).",
-        "Zero-Allocation Hot-Loop Injection: Mengeliminasi alokasi GC reflection di frekuensi 120-240Hz pada NukeTouchInjector, memberantas micro-stutter dan frame drop saat gameplay intens.",
-        "Anti-Deadlock Move Drain Guarantee: Mencegah crosshair/aim membeku pada driver layar sentuh OEM (Goodix, Focaltech, Novatek) yang tidak memancarkan SYN_REPORT.",
-        "Streamlined Android 13-16 Overlay Authorization: Menghapus pengalihan paksa bypass activity dan memprioritaskan switch izin overlay langsung bawaan sistem.",
-        "Degraded Mode Resilience for OEM SELinux: Menangani pembatasan ioctl EVIOCGRAB pada Samsung Knox dan ColorOS secara elegan tanpa error."
-    ],
-    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
-    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "sha256": "9436B87C5646C0C6E34F46A74BD47F4A4030C7A2BA7E88B5149625B989E74603",
-    "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
-    "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
-    "previousReleases": [
-        {
-            "versionName": "3.1.0-Hypernova",
-            "apkName": "GameNuke-v3.1.0-Hypernova.apk",
-            "apkSizeMb": "31.7",
-            "publishedAt": "2026-09-14"
-        },
-        {
-            "versionName": "3.0.0-Vortex",
-            "apkName": "GameNuke-v3.0.0-Vortex.apk",
-            "apkSizeMb": "42.4",
-            "publishedAt": "2026-09-14"
-        },
-        {
-            "versionName": "2.9.0-Void",
-            "apkName": "GameNuke-v2.9.0-Void.apk",
-            "apkSizeMb": "40.4",
-            "publishedAt": "2026-09-13"
-        },
-        {
-            "versionName": "2.8.0-Quasar",
-            "apkName": "GameNuke-v2.8.0-Quasar.apk",
-            "apkSizeMb": "31.6",
-            "publishedAt": "2026-09-12"
-        },
-        {
-            "versionName": "2.7.0-prem",
-            "apkName": "GameNuke-Premium-v2.7.0.apk",
-            "apkSizeMb": "24.2",
-            "publishedAt": "2026-09-11"
-        }
-    ]
+  "versionCode": 25,
+  "versionName": "3.1.1-Zenith",
+  "appName": "Game Nuke Zenith Edition",
+  "publishedAt": "2026-09-15",
+  "minAndroidVersion": 11,
+  "targetSdk": 36,
+  "releaseNotes": [
+    "Universal Cross-OEM Touch Alignment: Menghapus resolusi hardcoded dan mengimplementasikan multi-tier dynamic resolution fallback via system metrics. Koordinat sentuhan dan makro pin 100% presisi 1:1 di semua merk HP Android 11+ (Samsung, Xiaomi, Vivo, Oppo, Realme, Infinix, Tecno, Pixel).",
+    "Zero-Allocation Hot-Loop Injection: Mengeliminasi alokasi GC reflection di frekuensi 120-240Hz pada NukeTouchInjector, memberantas micro-stutter dan frame drop saat gameplay intens.",
+    "Anti-Deadlock Move Drain Guarantee: Mencegah crosshair/aim membeku pada driver layar sentuh OEM (Goodix, Focaltech, Novatek) yang tidak memancarkan SYN_REPORT.",
+    "Streamlined Android 13-16 Overlay Authorization: Menghapus pengalihan paksa bypass activity dan memprioritaskan switch izin overlay langsung bawaan sistem.",
+    "Degraded Mode Resilience for OEM SELinux: Menangani pembatasan ioctl EVIOCGRAB pada Samsung Knox dan ColorOS secara elegan tanpa error."
+  ],
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-Premium-v3.1.1-Zenith.apk",
+  "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
+  "sha256": "9436B87C5646C0C6E34F46A74BD47F4A4030C7A2BA7E88B5149625B989E74603",
+  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
+  "previousReleases": [
+    {
+      "versionName": "3.1.0-Hypernova",
+      "apkName": "GameNuke-v3.1.0-Hypernova.apk",
+      "apkSizeMb": "31.7",
+      "publishedAt": "2026-09-14"
+    },
+    {
+      "versionName": "3.0.0-Vortex",
+      "apkName": "GameNuke-v3.0.0-Vortex.apk",
+      "apkSizeMb": "42.4",
+      "publishedAt": "2026-09-14"
+    },
+    {
+      "versionName": "2.9.0-Void",
+      "apkName": "GameNuke-v2.9.0-Void.apk",
+      "apkSizeMb": "40.4",
+      "publishedAt": "2026-09-13"
+    },
+    {
+      "versionName": "2.8.0-Quasar",
+      "apkName": "GameNuke-v2.8.0-Quasar.apk",
+      "apkSizeMb": "31.6",
+      "publishedAt": "2026-09-12"
+    },
+    {
+      "versionName": "2.7.0-prem",
+      "apkName": "GameNuke-Premium-v2.7.0.apk",
+      "apkSizeMb": "24.2",
+      "publishedAt": "2026-09-11"
+    }
+  ],
+  "apkSizeMb": "24.3"
 }
