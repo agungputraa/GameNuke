@@ -1,24 +1,29 @@
 {
-    "versionCode": 25,
-    "versionName": "3.1.1-Zenith",
-    "appName": "Game Nuke Zenith Edition",
-    "publishedAt": "2026-09-15",
+    "versionCode": 26,
+    "versionName": "3.2.0-Orion",
+    "appName": "Game Nuke Orion Edition",
+    "publishedAt": "2026-09-16",
     "minAndroidVersion": 11,
     "targetSdk": 36,
     "releaseNotes": [
-        "Universal Cross-OEM Touch Alignment: Menghapus resolusi hardcoded dan mengimplementasikan multi-tier dynamic resolution fallback via system metrics. Koordinat sentuhan dan makro pin 100% presisi 1:1 di semua merk HP Android 11+ (Samsung, Xiaomi, Vivo, Oppo, Realme, Infinix, Tecno, Pixel).",
-        "Zero-Allocation Hot-Loop Injection: Mengeliminasi alokasi GC reflection di frekuensi 120-240Hz pada NukeTouchInjector, memberantas micro-stutter dan frame drop saat gameplay intens.",
-        "Anti-Deadlock Move Drain Guarantee: Mencegah crosshair/aim membeku pada driver layar sentuh OEM (Goodix, Focaltech, Novatek) yang tidak memancarkan SYN_REPORT.",
-        "Streamlined Android 13-16 Overlay Authorization: Menghapus pengalihan paksa bypass activity dan memprioritaskan switch izin overlay langsung bawaan sistem.",
-        "Degraded Mode Resilience for OEM SELinux: Menangani pembatasan ioctl EVIOCGRAB pada Samsung Knox dan ColorOS secara elegan tanpa error."
+        "Multi-Pin Macro Engine: Trigger multiple macro pins simultaneously or with custom stagger delay in 1 click directly from the Macro Studio.",
+        "In-App Global Translation Engine: Full multi-language support powered by Google Translate with zero-latency offline caching.",
+        "Intelligent Notification Shield: Suppressed repetitive connection notifications when connected via iAdb or Shizuku for a clean notification tray.",
+        "Enterprise Web Admin Command Center: Unified licensing, subscriber control, and Sandbox/Production switch hosted safely on GitHub Pages."
     ],
-    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "localApkUrl": "GameNuke-v3.1.1-Zenith.apk",
-    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.1.1-Zenith/GameNuke-v3.1.1-Zenith.apk",
-    "sha256": "9436B87C5646C0C6E34F46A74BD47F4A4030C7A2BA7E88B5149625B989E74603",
+    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.0-Orion/GameNuke-v3.2.0-Orion.apk",
+    "localApkUrl": "GameNuke-v3.2.0-Orion.apk",
+    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.0-Orion/GameNuke-v3.2.0-Orion.apk",
+    "sha256": "A39FCE28D7786ACD244C88CF86F7428E6CB9BB6238CC6F73F03EB264D6A9A29E",
     "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
     "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
     "previousReleases": [
+        {
+            "versionName": "3.1.1-Zenith",
+            "apkName": "GameNuke-v3.1.1-Zenith.apk",
+            "apkSizeMb": "31.7",
+            "publishedAt": "2026-09-15"
+        },
         {
             "versionName": "3.1.0-Hypernova",
             "apkName": "GameNuke-v3.1.0-Hypernova.apk",
