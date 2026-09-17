@@ -1,21 +1,21 @@
 {
-    "versionCode": 27,
-    "versionName": "3.2.1-Spectra",
-    "appName": "Game Nuke Spectra Edition",
-    "publishedAt": "2026-09-18",
-    "minAndroidVersion": 11,
-    "targetSdk": 36,
-    "releaseNotes": [
-        "Zero-Latency Touch Engine: Eliminated touchscreen freeze by disabling evdev grab during bridge bootstrap (Shizuku, iADB, Native ADB).",
-        "Watchdog Ghost Touch Eliminator: Added watchdog auto-release and guaranteed ACTION_UP lifecycle on all macro modes (Rapid, Tap, Hold, Swipe, Double Tap).",
-        "Ironclad Game & Screen Recorder Immunity: Sentinel, Task Manager, Kill Zombie, Manage Load, and Deep Clean 100% guarantee no active game or recorder is ever stopped.",
-        "HyperOS, MIUI & OneUI Compatibility: Hardened against aggressive OEM process killers and background touch restrictions.",
-        "Macro Studio Non-Interfering Overlay: Fullscreen canvas touch-through mode ensuring responsive zero-lag touch controls during intense gaming."
-    ],
-    "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
-    "localApkUrl": "GameNuke-v3.2.1-Spectra.apk",
-    "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
-    "sha256": "B820191678EBC843A4FDF3D74ADDB89894C7421DE56C18AA47D02B9BCB572B50",
-    "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
-    "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
+  "versionCode": 27,
+  "versionName": "3.2.1-Spectra",
+  "appName": "Game Nuke Spectra Edition",
+  "publishedAt": "2026-09-17",
+  "minAndroidVersion": 11,
+  "targetSdk": 36,
+  "releaseNotes": [
+    "Zero-Latency Touch Engine: Eliminated touchscreen freeze by disabling evdev grab during bridge bootstrap (Shizuku, iADB, Native ADB).",
+    "Watchdog Ghost Touch Eliminator: Added watchdog auto-release and guaranteed ACTION_UP lifecycle on all macro modes (Rapid, Tap, Hold, Swipe, Double Tap).",
+    "Ironclad Game & Screen Recorder Immunity: Sentinel, Task Manager, Kill Zombie, Manage Load, and Deep Clean 100% guarantee no active game or recorder is ever stopped.",
+    "HyperOS, MIUI & OneUI Compatibility: Hardened against aggressive OEM process killers and background touch restrictions.",
+    "Macro Studio Non-Interfering Overlay: Fullscreen canvas touch-through mode ensuring responsive zero-lag touch controls during intense gaming."
+  ],
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
+  "localApkUrl": "GameNuke-v3.2.1-Spectra.apk",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
+  "sha256": "B820191678EBC843A4FDF3D74ADDB89894C7421DE56C18AA47D02B9BCB572B50",
+  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
 }
