@@ -1659,45 +1659,48 @@ summary:focus-visible {
 
 .device-modules {
   display: grid;
-  gap: 5px;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
 }
 
 .device-module {
   position: relative;
-  min-height: 44px;
-  display: grid;
-  grid-template-columns: 28px 1fr auto;
+  min-height: 38px;
+  display: flex;
   align-items: center;
-  gap: 7px;
-  padding: 7px 8px;
+  gap: 6px;
+  padding: 6px 7px;
   border: 1px solid rgba(206, 255, 230, 0.08);
-  border-radius: 10px;
+  border-radius: 9px;
   background: rgba(255, 255, 255, 0.012);
+  min-width: 0;
 }
 
 .device-module.is-active {
-  border-color: rgba(99, 255, 181, 0.2);
-  background: rgba(99, 255, 181, 0.035);
+  border-color: rgba(99, 255, 181, 0.25);
+  background: rgba(99, 255, 181, 0.045);
 }
 
 .device-module > span {
-  width: 27px;
-  height: 27px;
+  width: 22px;
+  height: 22px;
+  min-width: 22px;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 6px;
   background: rgba(99, 255, 181, 0.055);
   color: var(--accent);
 }
 
 .device-module > span .icon {
-  width: 13px;
-  height: 13px;
+  width: 11px;
+  height: 11px;
 }
 
 .device-module > div {
   display: grid;
-  line-height: 1;
+  line-height: 1.1;
+  min-width: 0;
 }
 
 .device-module strong {
@@ -1945,9 +1948,8 @@ summary:focus-visible {
 
 .feature-bento {
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr) minmax(0, 0.8fr);
-  grid-auto-rows: minmax(240px, auto);
-  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
 }
 
 .feature-panel {
@@ -1960,22 +1962,29 @@ summary:focus-visible {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease);
+  min-height: 250px;
+  transition: border-color 0.25s var(--ease), transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 
 .feature-panel:hover {
-  border-color: rgba(99, 255, 181, 0.22);
-  transform: translateY(-2px);
+  border-color: rgba(99, 255, 181, 0.35);
+  transform: translateY(-3px);
+  box-shadow: 0 14px 35px -10px rgba(16, 185, 129, 0.16);
 }
 
 .feature-panel-hero {
-  grid-row: span 2;
-  min-height: 480px;
+  grid-column: span 2;
+  min-height: 280px;
+}
+
+.feature-panel-wide {
+  grid-column: span 3;
+  min-height: 210px;
 }
 
 .feature-panel-graph {
-  grid-column: span 2;
-  min-height: 280px;
+  grid-column: span 1;
+  min-height: 250px;
 }
 
 .feature-label {
@@ -3946,3 +3955,192 @@ summary:focus-visible {
     transform: none !important;
   }
 }
+
+/* ==========================================================================
+   VIP ACCESS & PRICING PLANS SECTION (NEW)
+   ========================================================================== */
+.vip-section {
+  padding: 85px 0;
+  background: radial-gradient(ellipse at 50% 0%, rgba(16, 185, 129, 0.06), transparent 70%), var(--bg);
+  position: relative;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+.vip-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 36px;
+}
+
+.vip-card {
+  position: relative;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: linear-gradient(160deg, rgba(16, 24, 20, 0.94), rgba(7, 10, 9, 0.98));
+  padding: 24px 20px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  transition: all 0.3s var(--ease);
+  backdrop-filter: blur(14px);
+}
+
+.vip-card:hover {
+  transform: translateY(-4px);
+  border-color: rgba(99, 255, 181, 0.35);
+  box-shadow: 0 16px 40px -10px rgba(16, 185, 129, 0.16);
+}
+
+.vip-card.featured {
+  border-color: rgba(99, 255, 181, 0.45);
+  background: linear-gradient(160deg, rgba(20, 36, 28, 0.96), rgba(8, 14, 11, 0.98));
+  box-shadow: 0 0 35px -8px rgba(99, 255, 181, 0.22);
+}
+
+.vip-badge-tag {
+  position: absolute;
+  top: -11px;
+  right: 18px;
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: #04140b;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 999px;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+}
+
+.vip-plan-name {
+  font-size: 18px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.02em;
+  margin: 0;
+}
+
+.vip-plan-desc {
+  font-size: 12px;
+  color: #839189;
+  margin: 5px 0 14px;
+  line-height: 1.4;
+}
+
+.vip-price-box {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 14px;
+}
+
+.vip-price-val {
+  font-family: var(--font-mono);
+  font-size: 25px;
+  font-weight: 800;
+  color: var(--accent);
+  letter-spacing: -0.03em;
+}
+
+.vip-price-dur {
+  font-size: 11px;
+  color: #728078;
+  font-weight: 600;
+}
+
+.vip-perks-list {
+  list-style: none;
+  padding: 0;
+  margin: 0 0 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.vip-perks-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  font-size: 12px;
+  color: #c0ccc5;
+  line-height: 1.35;
+}
+
+.vip-perks-list li svg {
+  width: 14px;
+  height: 14px;
+  color: var(--accent);
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.vip-trust-banner {
+  margin-top: 32px;
+  padding: 16px 22px;
+  border-radius: var(--radius);
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.nav-community-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(37, 211, 102, 0.08);
+  border: 1px solid rgba(37, 211, 102, 0.25);
+  color: #8affc2;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s var(--ease);
+}
+.nav-community-btn:hover {
+  background: rgba(37, 211, 102, 0.16);
+  border-color: rgba(37, 211, 102, 0.5);
+  color: #bffff0;
+}
+
+.nav-admin-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 999px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fcd34d;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.2s var(--ease);
+}
+.nav-admin-btn:hover {
+  background: rgba(245, 158, 11, 0.16);
+  border-color: rgba(245, 158, 11, 0.5);
+  color: #fef3c7;
+}
+
+@media (max-width: 1024px) {
+  .vip-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+@media (max-width: 640px) {
+  .vip-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
