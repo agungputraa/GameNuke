@@ -1,5 +1,6 @@
 package com.neon.gametweak.ui.screens
 
+import com.neon.gametweak.tr
 import com.neon.gametweak.nukePressFeedback
 import com.neon.gametweak.OverlayPermissionController
 import android.app.ActivityManager
@@ -348,7 +349,7 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(("SESSION READINESS"), "$readyCount/5 ${("SYSTEM PATHS")}")
+            SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
             Spacer(Modifier.height(8.dp))
             ReadinessDeck(
                 context = context,
@@ -358,29 +359,29 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(("NUKE DECK"), ("HIGH-VALUE CONTROLS"))
+            SectionRail(tr("NUKE DECK"), tr("HIGH-VALUE CONTROLS"))
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 CommandTile(
-                    ("GAME SPACE"), ("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
+                    tr("GAME SPACE"), tr("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
                     Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
                 )
                 CommandTile(
-                    ("DEEP CLEAN"), ("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
+                    tr("DEEP CLEAN"), tr("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
                     Color(0xFFFFB830), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
                 )
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth()) {
                 CommandTile(
-                    ("SYSTEM EDITOR"), ("Find & tweak parameters safely"), Icons.Rounded.Tune,
+                    tr("SYSTEM EDITOR"), tr("Find & tweak parameters safely"), Icons.Rounded.Tune,
                     Color(0xFF00E5FF), Modifier.fillMaxWidth(), { handleToolClick(onOpenSystemEditor) },
                 )
             }
             Spacer(Modifier.height(8.dp))
             Row(Modifier.fillMaxWidth()) {
                 CommandTile(
-                    ("DEVICE CONTROL"), if (telemetry.adbConnected) ("Connected via ${telemetry.connectionMode}") else ("Select connection method"),
+                    tr("DEVICE CONTROL"), if (telemetry.adbConnected) "${tr("Connected via")} ${telemetry.connectionMode}" else tr("Select connection method"),
                     Icons.Rounded.Adb, if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
                     Modifier.fillMaxWidth(),
                 ) {
@@ -438,7 +439,7 @@ private fun ReactorCommandHero(
                 Spacer(Modifier.width(14.dp))
                 Column(Modifier.weight(1f)) {
                     Text(
-                        ("Command Center"),
+                        tr("Command Center"),
                         color = Color.White,
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
@@ -446,14 +447,14 @@ private fun ReactorCommandHero(
                     )
                     Spacer(Modifier.height(3.dp))
                     Text(
-                        if (telemetry.adbConnected) "${telemetry.connectionMode} • ${("Ready")}" else ("Standard Mode Ready"),
+                        if (telemetry.adbConnected) "${telemetry.connectionMode} • ${tr("Ready")}" else tr("Standard Mode Ready"),
                         color = accent,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.SemiBold,
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(
-                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${("Adaptive gaming optimization engine")}",
+                        "Game Nuke v${BuildConfig.VERSION_NAME} • ${tr("Adaptive gaming optimization engine")}",
                         color = Neon.TextDim,
                         fontSize = 10.sp,
                         maxLines = 1,
@@ -467,7 +468,7 @@ private fun ReactorCommandHero(
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(
-                            ("System Readiness"),
+                            tr("System Readiness"),
                             color = Neon.TextDim,
                             fontSize = 11.sp,
                             fontWeight = FontWeight.Medium,
@@ -489,7 +490,7 @@ private fun ReactorCommandHero(
             val activity = LocalContext.current.findActivity()
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 ReactorButton(
-                    ("Launch Game Session"),
+                    tr("Launch Game Session"),
                     Icons.Rounded.PlayArrow,
                     Neon.Accent,
                     Modifier.weight(1.4f),
@@ -501,7 +502,7 @@ private fun ReactorCommandHero(
                     }
                 }
                 ReactorButton(
-                    if (telemetry.adbConnected) ("Connected") else ("Connect"),
+                    if (telemetry.adbConnected) tr("Connected") else tr("Connect"),
                     Icons.Rounded.DeveloperMode,
                     accent,
                     Modifier.weight(1f),
@@ -531,7 +532,7 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
     ) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             AnimatedSpeedometer(
-                label = ("CPU Load"),
+                label = tr("CPU Load"),
                 value = cpu,
                 valueText = telemetry.cpuLoad?.let { "$it%" } ?: "--",
                 accent = Color(0xFF35F2FF),
@@ -546,7 +547,7 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
                         .padding(horizontal = 8.dp, vertical = 3.dp),
                 ) {
                     Text(
-                        if (telemetry.temperatureC > 43f) ("HIGH TEMP") else ("OPTIMAL"),
+                        if (telemetry.temperatureC > 43f) tr("HIGH TEMP") else tr("OPTIMAL"),
                         color = if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent,
                         fontSize = 9.sp,
                         fontWeight = FontWeight.Bold,
@@ -561,13 +562,13 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
                     fontWeight = FontWeight.Bold,
                 )
                 Text(
-                    ("Refresh Rate"),
+                    tr("Refresh Rate"),
                     color = Neon.TextDim,
                     fontSize = 9.sp,
                 )
             }
             AnimatedSpeedometer(
-                label = ("RAM Usage"),
+                label = tr("RAM Usage"),
                 value = ram,
                 valueText = "$ram%",
                 accent = Neon.Accent,
@@ -618,14 +619,14 @@ private fun AnimatedSpeedometer(
 private fun TelemetryMatrix(telemetry: CommandCenterTelemetry) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetricTile(("DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF35F2FF), Modifier.weight(1f))
-            MetricTile(("THERMAL"), "${"%.1f".format(telemetry.temperatureC)}°C", Icons.Rounded.Thermostat, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent, Modifier.weight(1f))
-            MetricTile(("BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFB830), Modifier.weight(1f))
+            MetricTile(tr("DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(tr("THERMAL"), "${"%.1f".format(telemetry.temperatureC)}°C", Icons.Rounded.Thermostat, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent, Modifier.weight(1f))
+            MetricTile(tr("BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFB830), Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetricTile(("RAM"), "${"%.1f".format(telemetry.ramUsedGb)}/${"%.1f".format(telemetry.ramTotalGb)}G", Icons.Rounded.Memory, Neon.Accent, Modifier.weight(1f))
-            MetricTile(("STORAGE"), "${"%.1f".format(telemetry.storageFreeGb)}G ${("FREE")}", Icons.Rounded.Storage, Color(0xFF9877FF), Modifier.weight(1f))
-            MetricTile(("NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(tr("RAM"), "${"%.1f".format(telemetry.ramUsedGb)}/${"%.1f".format(telemetry.ramTotalGb)}G", Icons.Rounded.Memory, Neon.Accent, Modifier.weight(1f))
+            MetricTile(tr("STORAGE"), "${"%.1f".format(telemetry.storageFreeGb)}G ${tr("FREE")}", Icons.Rounded.Storage, Color(0xFF9877FF), Modifier.weight(1f))
+            MetricTile(tr("NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF35F2FF), Modifier.weight(1f))
         }
     }
 }
@@ -634,28 +635,28 @@ private fun TelemetryMatrix(telemetry: CommandCenterTelemetry) {
 private fun ReadinessDeck(context: Context, telemetry: CommandCenterTelemetry, onAdb: () -> Unit) {
     val connLabel = telemetry.connectionMode
     val connDetail = when {
-        telemetry.adbConnected -> ("via $connLabel")
-        telemetry.iadbAvailable -> ("iAdb ready · tap to connect")
-        telemetry.shizukuAvailable -> ("Shizuku ready · tap to connect")
-        else -> ("Wireless ADB / Shizuku / iAdb")
+        telemetry.adbConnected -> "${tr("via")} $connLabel"
+        telemetry.iadbAvailable -> "iAdb ready · tap to connect"
+        telemetry.shizukuAvailable -> "Shizuku ready · tap to connect"
+        else -> "Wireless ADB / Shizuku / iAdb"
     }
     val rows = listOf(
-        ReadinessItem(("DEVICE CONTROL"), telemetry.adbConnected, connDetail, Icons.Rounded.Tune, onAdb),
-        ReadinessItem(("FLOATING HUD"), telemetry.overlayReady, ("Overlay permission"), Icons.Rounded.Layers) {
+        ReadinessItem(tr("DEVICE CONTROL"), telemetry.adbConnected, connDetail, Icons.Rounded.Tune, onAdb),
+        ReadinessItem(tr("FLOATING HUD"), telemetry.overlayReady, tr("Overlay permission"), Icons.Rounded.Layers) {
             if (!OverlayPermissionController.hasOverlayPermission(context)) {
                 OverlayPermissionController.requestManualGrant(context)
             } else {
                 com.neon.gametweak.NukeToast.success(context, "Floating HUD overlay is enabled and ready.")
             }
         },
-        ReadinessItem(("SESSION TRACK"), telemetry.sessionReady, ("Gaming session active"), Icons.Rounded.Security, onAdb),
-        ReadinessItem(("GAME FOCUS"), telemetry.dndReady, ("DND policy access"), Icons.Rounded.NotificationsOff) {
+        ReadinessItem(tr("SESSION TRACK"), telemetry.sessionReady, tr("Gaming session active"), Icons.Rounded.Security, onAdb),
+        ReadinessItem(tr("GAME FOCUS"), telemetry.dndReady, tr("DND policy access"), Icons.Rounded.NotificationsOff) {
             runCatching { context.startActivity(Intent(Settings.ACTION_NOTIFICATION_POLICY_ACCESS_SETTINGS)) }
         },
-        ReadinessItem(("BATTERY GUARD"), telemetry.batteryUnrestricted, if (telemetry.batteryUnrestricted) ("Unrestricted (No Sleep)") else ("Tap to ignore limit"), Icons.Rounded.BatteryChargingFull) {
+        ReadinessItem(tr("BATTERY GUARD"), telemetry.batteryUnrestricted, if (telemetry.batteryUnrestricted) tr("Unrestricted (No Sleep)") else tr("Tap to ignore limit"), Icons.Rounded.BatteryChargingFull) {
             com.neon.gametweak.NukeBatteryOptimizationHelper.requestIgnoreBatteryOptimizations(context)
         },
-        ReadinessItem(("HARDWARE SYNC"), telemetry.currentHz > 0, "${telemetry.currentHz}Hz Active", Icons.Rounded.Speed) {
+        ReadinessItem(tr("HARDWARE SYNC"), telemetry.currentHz > 0, "${telemetry.currentHz}Hz Active", Icons.Rounded.Speed) {
             com.neon.gametweak.NukeToast.success(context, "Hardware sync: Display refresh rate ${telemetry.currentHz}Hz")
         },
     )
@@ -705,7 +706,7 @@ private fun CommandTile(title: String, detail: String, icon: ImageVector, accent
                 Icon(icon, null, tint = accent, modifier = Modifier.size(18.dp))
             }
             Spacer(Modifier.weight(1f))
-            Text(("OPEN >"), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+            Text(tr("OPEN >"), color = accent, fontSize = 7.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
         }
         Spacer(Modifier.height(9.dp))
         Text(title, color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = .4.sp)
@@ -724,9 +725,9 @@ private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Icon(Icons.Rounded.Tune, null, tint = accent, modifier = Modifier.size(19.dp))
             Spacer(Modifier.width(8.dp))
-            Text(("SESSION INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
+            Text(tr("SESSION INTELLIGENCE"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 11.sp, letterSpacing = 1.4.sp)
             Spacer(Modifier.weight(1f))
-            Text(if (telemetry.adbConnected) ("EXTENDED") else ("STANDARD"), color = accent, fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+            Text(if (telemetry.adbConnected) tr("EXTENDED") else tr("STANDARD"), color = accent, fontSize = 8.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
         }
         Spacer(Modifier.height(8.dp))
         Text(

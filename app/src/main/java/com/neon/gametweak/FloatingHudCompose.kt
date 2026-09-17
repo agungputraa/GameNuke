@@ -1,6 +1,7 @@
 package com.neon.gametweak
 
 import android.content.Context
+import kotlin.math.roundToInt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloat
@@ -162,7 +163,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import java.util.Locale
-import kotlin.math.roundToInt
 
 internal enum class FloatingHudTool {
     CROSSHAIR,
@@ -251,20 +251,24 @@ internal fun createFloatingHudComposeView(
     setViewCompositionStrategy(ViewCompositionStrategy.DisposeOnDetachedFromWindow)
     setContent {
         val currentDensity = androidx.compose.ui.platform.LocalDensity.current
-        // Guarantee clean, crisp, untruncated UI geometry across all screen DPIs and system font sizes
+        // Respect accessibility font scaling while keeping the compact floating HUD within usable bounds.
         val stableDensity = androidx.compose.ui.unit.Density(
             density = currentDensity.density,
-            fontScale = currentDensity.fontScale.coerceIn(0.85f, 1.15f)
+            fontScale = currentDensity.fontScale.coerceIn(0.90f, 1.30f)
         )
-        androidx.compose.runtime.CompositionLocalProvider(
-            androidx.compose.ui.platform.LocalDensity provides stableDensity
-        ) {
-            val snapshot by state.collectAsStateWithLifecycle()
-            val modules by moduleState.collectAsStateWithLifecycle()
-            if (wing == FloatingHudWing.PORTRAIT) {
-                NukePortraitCockpit(snapshot = snapshot, moduleState = modules, callbacks = callbacks)
-            } else {
-                NukeFloatingWing(snapshot = snapshot, moduleState = modules, wing = wing, callbacks = callbacks)
+        val currentAppLanguage by NukeTranslationManager.currentLanguage.collectAsState()
+
+        androidx.compose.runtime.key(currentAppLanguage) {
+            androidx.compose.runtime.CompositionLocalProvider(
+                androidx.compose.ui.platform.LocalDensity provides stableDensity
+            ) {
+                val snapshot by state.collectAsStateWithLifecycle()
+                val modules by moduleState.collectAsStateWithLifecycle()
+                if (wing == FloatingHudWing.PORTRAIT) {
+                    NukePortraitCockpit(snapshot = snapshot, moduleState = modules, callbacks = callbacks)
+                } else {
+                    NukeFloatingWing(snapshot = snapshot, moduleState = modules, wing = wing, callbacks = callbacks)
+                }
             }
         }
     }
@@ -403,7 +407,7 @@ private fun toolsFor(remote: NukeRemoteHudDefinition): List<ToolVisual> = remote
         "cpu_monitor" -> FloatingHudTool.CPU_CLOCKS to Icons.Outlined.Radar
         else -> null
     } ?: return@mapNotNull null
-    ToolVisual(mapping.first, panel.title, panel.subtitle, mapping.second)
+    ToolVisual(mapping.first, tr(panel.title), tr(panel.subtitle), mapping.second)
 }
 
 private data class ToggleVisual(
@@ -414,11 +418,11 @@ private data class ToggleVisual(
 
 private fun quickControlsFor(remote: NukeRemoteHudDefinition): List<ToggleVisual> = remote.quickControls.mapNotNull { item ->
     when (item.id) {
-        "adaptive_mode" -> ToggleVisual(FloatingHudToggle.GAME_MODE, item.title, Icons.Outlined.SportsEsports)
-        "focus" -> ToggleVisual(FloatingHudToggle.DND, item.title, Icons.Outlined.DoNotDisturbOn)
-        "network_boost" -> ToggleVisual(FloatingHudToggle.NETWORK_BOOST, item.title, Icons.Outlined.Bolt)
-        "crosshair_toggle" -> ToggleVisual(FloatingHudToggle.CROSSHAIR, item.title, Icons.Outlined.GpsFixed)
-        "keep_awake" -> ToggleVisual(FloatingHudToggle.KEEP_AWAKE, item.title, Icons.Outlined.ScreenRotation)
+        "adaptive_mode" -> ToggleVisual(FloatingHudToggle.GAME_MODE, tr(item.title), Icons.Outlined.SportsEsports)
+        "focus" -> ToggleVisual(FloatingHudToggle.DND, tr(item.title), Icons.Outlined.DoNotDisturbOn)
+        "network_boost" -> ToggleVisual(FloatingHudToggle.NETWORK_BOOST, tr(item.title), Icons.Outlined.Bolt)
+        "crosshair_toggle" -> ToggleVisual(FloatingHudToggle.CROSSHAIR, tr(item.title), Icons.Outlined.GpsFixed)
+        "keep_awake" -> ToggleVisual(FloatingHudToggle.KEEP_AWAKE, tr(item.title), Icons.Outlined.ScreenRotation)
         else -> null
     }
 }
@@ -821,7 +825,7 @@ private fun NukePortraitCockpit(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(32.dp)
+                        .height(48.dp)
                         .clip(ControlShape)
                         .background(NukePanelBright)
                         .border(0.8.dp, NukeGreen.copy(alpha = 0.35f), ControlShape)
@@ -946,7 +950,7 @@ private fun NukePortraitCockpit(
                 Row(
                     Modifier
                         .fillMaxWidth()
-                        .height(30.dp),
+                        .height(40.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     val tabs = listOf(
@@ -1062,6 +1066,8 @@ private fun TacticalEnginesDeckView(
     snapshot: FloatingHudSnapshot,
     callbacks: FloatingHudCallbacks,
 ) {
+    val subState by NukeSubscriptionManager.subscriptionState.collectAsState()
+    val isVip = subState.isActive
     val states = snapshot.quickToolStates
     val isGameOn = states["game_mode"] ?: false
     val isTouchOn = states["touch_response"] ?: false
@@ -1081,13 +1087,15 @@ private fun TacticalEnginesDeckView(
     val isWikiOn = states["wiki_pip"] ?: false
     val isDeepCoolingOn = states["deep_cooling"] ?: false
     val isMacroStudioOn = states["macro_studio"] ?: false
+    val isCyberJukeboxOn = states["cyber_jukebox"] ?: false
+    val isAntivirusOn = states["antivirus"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Header: Logo + game name + close ─────────────────────────────
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(32.dp)
+                .height(48.dp)
                 .clip(ControlShape)
                 .background(NukePanelBright)
                 .border(.8.dp, NukeGreen.copy(alpha = .35f), ControlShape)
@@ -1190,6 +1198,7 @@ private fun TacticalEnginesDeckView(
                     badgeText = "STUDIO",
                     statusText = if (isMagicTouchOn) "ACTIVE \u2022 OPEN" else "TOUCH MULTIPLIER CONTROLS",
                     isOpen = isMagicTouchOn,
+                    isVipGated = !isVip,
                     onClick = { callbacks.onQuickAction("magic_touch") },
                     modifier = Modifier.weight(1f)
                 )
@@ -1210,6 +1219,7 @@ private fun TacticalEnginesDeckView(
                     badgeText = if (isMacroStudioOn) "RUNNING" else "BUILDER",
                     statusText = if (isMacroStudioOn) "ACTIVE \u2022 OPEN" else "GAME MACRO AUTOMATION",
                     isOpen = isMacroStudioOn,
+                    isVipGated = !isVip,
                     onClick = { callbacks.onQuickAction("macro_studio") },
                     modifier = Modifier.weight(1f)
                 )
@@ -1263,18 +1273,39 @@ private fun TacticalEnginesDeckView(
                     modifier = Modifier.weight(1f)
                 )
             }
-
-            // ── TACTICAL HARDWARE TUNING — 3 column square grid ───────────────
-            SectionDivider("DEVICE PERFORMANCE CONTROLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TacticalHardwareCard(Icons.Outlined.Speed, "CPU PROFILE", "PERF", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.TouchApp, "TOUCH TUNE", "ACTIVE", "STD", checked = isTouchOn, onToggle = { callbacks.onQuickAction("touch_response") }, modifier = Modifier.weight(1f))
+                PanelLauncherCard(
+                    icon = Icons.Outlined.Terminal,
+                    title = "CYBER TERMINAL",
+                    badgeText = "SHELL",
+                    statusText = if (isTerminalOn) "ACTIVE • RUNNING" else "ADB ROOT CONSOLE",
+                    isOpen = isTerminalOn,
+                    onClick = { callbacks.onQuickAction("terminal") },
+                    modifier = Modifier.weight(1f),
+                    customAccent = NukeGreen
+                )
+                PanelLauncherCard(
+                    icon = Icons.Outlined.Security,
+                    title = "APP SECURITY",
+                    badgeText = "AUDIT",
+                    statusText = if (isAntivirusOn) "ACTIVE • AUDIT" else "PACKAGE SAFETY SCAN",
+                    isOpen = isAntivirusOn,
+                    onClick = { callbacks.onQuickAction("antivirus") },
+                    modifier = Modifier.weight(1f)
+                )
+            }
+
+            // ── HARDWARE OPTIMIZER — 3-column compact grid ─────────────────
+            SectionDivider("HARDWARE OPTIMIZER")
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                TacticalHardwareCard(Icons.Outlined.Speed, "CPU TURBO", "PERF", "AUTO", checked = isCpuTurboOn, onToggle = { callbacks.onQuickAction("cpu_turbo") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.TouchApp, "INPUT TUNER", "ACTIVE", "STD", checked = isTouchOn, onToggle = { callbacks.onQuickAction("touch_response") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(Icons.Outlined.SportsEsports, "GAME MODE", "PERF", "STD", checked = isGameOn, onToggle = { callbacks.onQuickAction("game_mode") }, modifier = Modifier.weight(1f))
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO TUNE", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "PACKET BOOST", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.Bolt, "NET ENGINE", "ACTIVE", "OFF", checked = isVpnOn, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO BOOST", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "PACKET PRIO", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Bolt, "VPN TUNNEL", "ACTIVE", "OFF", checked = isVpnOn, isVipGated = !isVip, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -1363,6 +1394,10 @@ private fun QuickActionsDeckView(
     isCleaning: Boolean,
     onTriggerClean: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var showFpsDialog by rememberSaveable { mutableStateOf(false) }
+
     val states = snapshot.quickToolStates
     val unsupported = snapshot.unsupportedQuickTools
 
@@ -1400,12 +1435,14 @@ private fun QuickActionsDeckView(
     val isGameDockOn = states["game_dock"] ?: false
     val isDeepCoolingOn = states["deep_cooling"] ?: false
     val isAntivirusOn = states["antivirus"] ?: false
+    val isTaskManagerOn = states["task_manager"] ?: false
 
-    Column(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
         // ── Compact Header ───────────────────────────────────────────────────
         Row(
             Modifier.fillMaxWidth()
-                .height(32.dp)
+                .height(48.dp)
                 .clip(ControlShape)
                 .background(NukePanelBright)
                 .border(.8.dp, NukeCyan.copy(alpha = .25f), ControlShape)
@@ -1414,8 +1451,8 @@ private fun QuickActionsDeckView(
         ) {
             Box(
                 Modifier.size(20.dp).clip(BayShape)
-                    .background(NukeCyan.copy(alpha = .15f))
-                    .border(.7.dp, NukeCyan.copy(alpha = .5f), BayShape),
+                .background(NukeCyan.copy(alpha = .15f))
+                .border(.7.dp, NukeCyan.copy(alpha = .5f), BayShape),
                 contentAlignment = Alignment.Center,
             ) { Icon(Icons.Outlined.Widgets, null, tint = NukeCyan, modifier = Modifier.size(11.dp)) }
             Spacer(Modifier.width(6.dp))
@@ -1457,16 +1494,9 @@ private fun QuickActionsDeckView(
                 modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
-                // ── Top Action Bar: Crosshair Studio, TCP Ping, Live FPS ──
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "STUDIO", "STUDIO", checked = isCrosshairOn, onToggle = { callbacks.onQuickAction("crosshair_studio") }, modifier = Modifier.weight(1f))
-                    SquareMiniCard(Icons.Outlined.NetworkCheck, "TCP PING", "ON", "OFF", checked = snapshot.probeEnabled, onToggle = { callbacks.onQuickAction("ping_monitor") }, modifier = Modifier.weight(1f))
-                    SquareMiniCard(Icons.Outlined.Speed, "LIVE FPS", "ON", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f))
-                }
+                // ── Top Action Bar (Compact Enterprise Utilities) ──
                 Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
+                    Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     TopActionPill(
@@ -1475,7 +1505,7 @@ private fun QuickActionsDeckView(
                         badge = "${state.modules.size}",
                         tint = NukeCyan,
                         active = false,
-                        modifier = Modifier.wrapContentWidth(),
+                        modifier = Modifier.weight(1f),
                         onClick = onOpenModuleShop
                     )
                     TopActionPill(
@@ -1484,26 +1514,17 @@ private fun QuickActionsDeckView(
                         badge = null,
                         tint = NukeGreen,
                         active = isCleaning,
-                        modifier = Modifier.wrapContentWidth(),
+                        modifier = Modifier.weight(1f),
                         onClick = { if (!isCleaning) onTriggerClean() }
                     )
                     TopActionPill(
-                        icon = Icons.Outlined.Forum,
-                        label = "LIVE CHAT",
-                        badge = if (isLiveChatOn) "❐ OPEN" else "❐ WIN",
+                        icon = Icons.Outlined.NetworkCheck,
+                        label = "TCP PROBE",
+                        badge = if (snapshot.probeEnabled) (snapshot.probeMs?.let { "${it}ms" } ?: "WAIT…") else "OFF",
                         tint = NukeCyan,
-                        active = isLiveChatOn,
-                        modifier = Modifier.wrapContentWidth(),
-                        onClick = { callbacks.onQuickAction("live_chat") }
-                    )
-                    TopActionPill(
-                        icon = Icons.Outlined.Terminal,
-                        label = "TERMINAL",
-                        badge = if (isTerminalOn) "❐ OPEN" else "❐ WIN",
-                        tint = NukeGreen,
-                        active = isTerminalOn,
-                        modifier = Modifier.wrapContentWidth(),
-                        onClick = { callbacks.onQuickAction("terminal") }
+                        active = snapshot.probeEnabled,
+                        modifier = Modifier.weight(1f),
+                        onClick = { callbacks.onQuickAction("ping_monitor") }
                     )
                 }
 
@@ -1511,44 +1532,69 @@ private fun QuickActionsDeckView(
                 BrightnessSliderCard(percent = snapshot.brightnessPercent, onChanged = callbacks.onBrightnessChanged)
                 DensityStepperCard(currentDpi = snapshot.displayDpi, onChanged = callbacks.onDpiChanged)
 
-                // ── DISPLAY & ENVIRONMENT — 3 column square grid ─────────────────
+                // ── DISPLAY & ENVIRONMENT — 4 column compact square grid ─────────
                 SectionDivider("DISPLAY & ENVIRONMENT")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.Speed, "REFRESH TARGET", fpsLockBadge, "AUTO", checked = fpsLockHz > 0 || isFpsLockOn, onToggle = { callbacks.onQuickAction("fps_lock") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Speed, "REFRESH TARGET", fpsLockBadge, "AUTO", checked = fpsLockHz > 0 || isFpsLockOn, onToggle = { showFpsDialog = true }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.MonitorHeart, "FPS HUD", "CHIP", "OFF", checked = isFpsChipOn, onToggle = { callbacks.onQuickAction("fps_overlay") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
-                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "OVERLAY", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onToggle(FloatingHudToggle.CROSSHAIR, !isCrosshairOn) }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.GpsFixed, "CROSSHAIR", "STUDIO", "OFF", checked = isCrosshairOn, onToggle = { callbacks.onQuickAction("crosshair_studio") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
                     SquareMiniCard(Icons.Outlined.Brightness6, "BRIGHT LOCK", "MAX", "AUTO", checked = isBrightnessLockOn, onToggle = { callbacks.onQuickAction("brightness_lock") }, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SquareMiniCard(Icons.Outlined.ScreenRotation, "ROTATION", "LOCKED", "AUTO", checked = isRotationOn, onToggle = { callbacks.onQuickAction("rotation_lock") }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.Nightlight, "EYE COMFORT", "WARM", "OFF", checked = isReadingOn, onToggle = { callbacks.onQuickAction("reading_mode") }, modifier = Modifier.weight(1f), supported = !unsupported.contains("reading_mode"))
                     SquareMiniCard(Icons.Outlined.DarkMode, "DARK THEME", "NIGHT", "DAY", checked = isDarkOn, onToggle = { callbacks.onQuickAction("dark_mode") }, modifier = Modifier.weight(1f), supported = !unsupported.contains("dark_mode"))
+                    SquareMiniCard(Icons.Outlined.AirplanemodeActive, "AIRPLANE", "ON", "OFF", checked = isAirplaneOn, onToggle = { callbacks.onQuickAction("airplane_mode") }, modifier = Modifier.weight(1f))
                 }
 
-                // ── DEVICE & SYSTEM CONTROLS — 3 column square grid ───────────────
-                SectionDivider("DEVICE & SYSTEM CONTROLS")
+                // ── TACTICAL & DEVICE CONTROLS — 4 column compact square grid ───────
+                SectionDivider("TACTICAL & DEVICE CONTROLS")
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SquareMiniCard(Icons.Outlined.DoNotDisturbOn, "DND MODE", "MUTED", "OFF", checked = isDndOn, onToggle = { callbacks.onQuickAction("dnd") }, modifier = Modifier.weight(1f), isWarning = true)
                     SquareMiniCard(Icons.Outlined.HourglassEmpty, "TIMEOUT", "+30M", "1M", checked = isScreenTimeoutOn, onToggle = { callbacks.onQuickAction("screen_timeout_extend") }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.BatterySaver, "BATTERY", "SAVE", "OFF", checked = isBatteryOn, onToggle = { callbacks.onQuickAction("battery_saver") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.VolumeOff, "SILENT", "MUTED", "SOUND", checked = isSilentOn, onToggle = { callbacks.onQuickAction("silent_mode") }, modifier = Modifier.weight(1f), isWarning = true)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.VolumeOff, "SILENT", "MUTED", "SOUND", checked = isSilentOn, onToggle = { callbacks.onQuickAction("silent_mode") }, modifier = Modifier.weight(1f), isWarning = true)
                     SquareMiniCard(Icons.Outlined.WifiTethering, "HOTSPOT", "ON", "OFF", checked = isHotspotOn, onToggle = { callbacks.onQuickAction("hotspot") }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.Bluetooth, "BLUETOOTH", "ON", "OFF", checked = isBluetoothOn, onToggle = { callbacks.onQuickAction("bluetooth") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Widgets, "CYBER DECK", "PORTAL", "OFF", checked = isGameDockOn, onToggle = { callbacks.onQuickAction("game_dock") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.DataSaverOn, "DATA SAVER", "ACTIVE", "OFF", checked = isDataSaverOn, onToggle = { callbacks.onQuickAction("data_saver") }, modifier = Modifier.weight(1f))
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SquareMiniCard(Icons.Outlined.Widgets, "CYBER DECK", "PORTAL", "OFF", checked = isGameDockOn, onToggle = { callbacks.onQuickAction("game_dock") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
-                    SquareMiniCard(Icons.Outlined.Security, "APP SECURITY", "MONITOR", "READY", checked = isAntivirusOn, onToggle = { callbacks.onQuickAction("antivirus") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
-                    SquareMiniCard(Icons.Outlined.CleaningServices, "CACHE TRIM", "OPTIMIZE", "READY", checked = false, onToggle = { callbacks.onQuickAction("zombie_clean") }, modifier = Modifier.weight(1f), isWarning = false)
+                    SquareMiniCard(Icons.Outlined.Security, "TASK MGR", "END TASK", "RUNNING", checked = isTaskManagerOn, onToggle = { callbacks.onQuickAction("task_manager") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.MonitorHeart, "SYS HEALTH", "HEALTH", "STD", checked = isPhoneHealthOn, onToggle = { callbacks.onQuickAction("phone_health") }, modifier = Modifier.weight(1f), isFloatingWindow = true)
+                    SquareMiniCard(Icons.Outlined.Speed, "SCREENSHOT", "CAPTURE", "READY", checked = false, onToggle = { callbacks.onQuickAction("screenshot") }, modifier = Modifier.weight(1f))
+                    SquareMiniCard(Icons.Outlined.Bolt, "HAPTIC", "ON", "OFF", checked = isVibrationOn, onToggle = { callbacks.onQuickAction("vibration") }, modifier = Modifier.weight(1f))
                 }
             }
         }
         StatusRail(state.message, true)
     }
+
+    if (showFpsDialog) {
+        FpsTargetBubbleView(
+            currentHz = fpsLockHz,
+            onDismiss = { showFpsDialog = false },
+            onApply = { targetHz ->
+                NukeDynamicSessionRestoreManager.markFpsLockModified()
+                val active = targetHz > 0
+                runCatching {
+                    context.getSharedPreferences("nuke_prefs", Context.MODE_PRIVATE)
+                        .edit().putBoolean("nuke_quick_fps_lock", active).apply()
+                }
+                scope.launch {
+                    NukeUniversalFpsLock.setTargetFps(context, targetHz)
+                    val msg = if (targetHz > 0) "Refresh Target: ${targetHz}Hz ($targetHz FPS) diterapkan" else "Refresh Target: DYNAMIC (Auto) dipulihkan"
+                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                }
+            }
+        )
+    }
+}
 }
 
-// ── Expandable Panel Launcher Card ──
+// ── Expandable Panel Launcher Card (Minimalist & Compact) ──
 @Composable
 private fun PanelLauncherCard(
     icon: ImageVector,
@@ -1559,9 +1605,10 @@ private fun PanelLauncherCard(
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
     customAccent: Color? = null,
+    isVipGated: Boolean = false,
 ) {
     val accent = customAccent ?: NukeGreen
-    val cardShape = RoundedCornerShape(8.dp)
+    val cardShape = RoundedCornerShape(6.dp)
     val bg by animateColorAsState(
         if (isOpen) Color(0xFF142B22) else Color(0xFF0C131A),
         tween(120), "panelBg"
@@ -1573,12 +1620,12 @@ private fun PanelLauncherCard(
 
     Box(
         modifier = modifier.nukeCardEntrance().nukePressFeedback()
-            .height(50.dp)
+            .height(38.dp)
             .clip(cardShape)
             .background(bg)
-            .border(if (isOpen) 1.dp else 0.7.dp, border, cardShape)
+            .border(if (isOpen) 0.9.dp else 0.6.dp, border, cardShape)
             .clickable(onClick = onClick)
-            .padding(horizontal = 7.dp, vertical = 5.dp),
+            .padding(horizontal = 6.dp, vertical = 3.dp),
     ) {
         Row(
             Modifier.fillMaxSize(),
@@ -1591,15 +1638,15 @@ private fun PanelLauncherCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(26.dp)
-                        .clip(RoundedCornerShape(5.dp))
+                        .size(22.dp)
+                        .clip(RoundedCornerShape(4.dp))
                         .background(if (isOpen) accent.copy(alpha = 0.22f) else Color(0xFF141E28))
-                        .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.6f) else Color(0xFF1F2E3D), RoundedCornerShape(5.dp)),
+                        .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.6f) else Color(0xFF1F2E3D), RoundedCornerShape(4.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(icon, null, tint = if (isOpen) accent else Color(0xFF88A0B2), modifier = Modifier.size(14.dp))
+                    Icon(icon, null, tint = if (isOpen) accent else Color(0xFF88A0B2), modifier = Modifier.size(12.dp))
                 }
-                Spacer(Modifier.width(6.dp))
+                Spacer(Modifier.width(5.dp))
                 Column(
                     modifier = Modifier.weight(1f),
                     verticalArrangement = Arrangement.Center,
@@ -1607,16 +1654,16 @@ private fun PanelLauncherCard(
                     Text(
                         text = title,
                         color = if (isOpen) accent else Color.White,
-                        fontSize = 8.5.sp,
+                        fontSize = 7.8.sp,
                         fontWeight = FontWeight.Black,
-                        letterSpacing = 0.3.sp,
+                        letterSpacing = 0.2.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
                         text = statusText,
                         color = if (isOpen) accent.copy(alpha = 0.85f) else Color(0xFF64748B),
-                        fontSize = 6.8.sp,
+                        fontSize = 6.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
@@ -1624,20 +1671,30 @@ private fun PanelLauncherCard(
                 }
             }
 
-            Spacer(Modifier.width(4.dp))
+            Spacer(Modifier.width(3.dp))
 
             Box(
                 modifier = Modifier
-                    .clip(RoundedCornerShape(4.dp))
-                    .background(if (isOpen) accent.copy(alpha = 0.20f) else Color(0xFF121B24))
-                    .border(0.6.dp, if (isOpen) accent.copy(alpha = 0.60f) else Color(0xFF1C2A38), RoundedCornerShape(4.dp))
-                    .padding(horizontal = 4.dp, vertical = 2.5.dp),
+                    .clip(RoundedCornerShape(3.dp))
+                    .background(
+                        if (isVipGated) Color(0xFF261A08)
+                        else if (isOpen) accent.copy(alpha = 0.20f)
+                        else Color(0xFF121B24)
+                    )
+                    .border(
+                        0.5.dp,
+                        if (isVipGated) Color(0xFFF59E0B)
+                        else if (isOpen) accent.copy(alpha = 0.60f)
+                        else Color(0xFF1C2A38),
+                        RoundedCornerShape(3.dp)
+                    )
+                    .padding(horizontal = 4.dp, vertical = 1.5.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 Text(
-                    text = if (isOpen) "❐ OPEN" else "❐ $badgeText",
-                    color = if (isOpen) accent else Color(0xFF8499AB),
-                    fontSize = 6.sp,
+                    text = if (isVipGated) "🔒 VIP" else if (isOpen) "❐ OPEN" else "❐ $badgeText",
+                    color = if (isVipGated) Color(0xFFF59E0B) else if (isOpen) accent else Color(0xFF8499AB),
+                    fontSize = 5.5.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     softWrap = false,
@@ -1647,7 +1704,7 @@ private fun PanelLauncherCard(
     }
 }
 
-// ── Tactical Hardware Military Card ──
+// ── Tactical Hardware Military Card (Minimalist & Compact) ──
 @Composable
 private fun TacticalHardwareCard(
     icon: ImageVector,
@@ -1657,8 +1714,9 @@ private fun TacticalHardwareCard(
     checked: Boolean,
     onToggle: () -> Unit,
     modifier: Modifier = Modifier,
+    isVipGated: Boolean = false,
 ) {
-    val tacticalShape = CutCornerShape(topEnd = 8.dp, bottomStart = 4.dp)
+    val tacticalShape = CutCornerShape(topEnd = 6.dp, bottomStart = 3.dp)
     val bg by animateColorAsState(
         if (checked) Color(0xFF091610) else Color(0xFF090E11),
         tween(120), "tacticalBg"
@@ -1674,18 +1732,18 @@ private fun TacticalHardwareCard(
 
     Box(
         modifier = modifier.nukeCardEntrance().nukePressFeedback()
-            .height(54.dp)
+            .height(52.dp)
             .clip(tacticalShape)
             .background(bg)
-            .border(if (checked) 1.dp else 0.7.dp, border, tacticalShape)
+            .border(if (checked) 0.9.dp else 0.6.dp, border, tacticalShape)
             .clickable(onClick = onToggle)
             .padding(horizontal = 5.dp, vertical = 4.dp),
     ) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopEnd)
-                .width(12.dp)
-                .height(2.5.dp)
+                .width(10.dp)
+                .height(2.dp)
                 .clip(RoundedCornerShape(1.dp))
                 .background(if (checked) NukeGreen else Color(0xFF22362C))
         )
@@ -1701,54 +1759,66 @@ private fun TacticalHardwareCard(
             ) {
                 Box(
                     modifier = Modifier
-                        .size(19.dp)
-                        .clip(CutCornerShape(topEnd = 3.dp))
+                        .size(17.dp)
+                        .clip(CutCornerShape(topEnd = 2.dp))
                         .background(if (checked) NukeGreen.copy(alpha = 0.20f) else Color(0xFF121B16))
-                        .border(0.6.dp, if (checked) NukeGreen.copy(alpha = 0.6f) else Color(0xFF1F2F27), CutCornerShape(topEnd = 3.dp)),
+                        .border(0.5.dp, if (checked) NukeGreen.copy(alpha = 0.6f) else Color(0xFF1F2F27), CutCornerShape(topEnd = 2.dp)),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         icon,
                         contentDescription = null,
                         tint = iconTint,
-                        modifier = Modifier.size(11.dp),
+                        modifier = Modifier.size(10.dp),
                     )
                 }
 
                 Text(
-                    text = if (checked) activeText else inactiveText,
-                    color = if (checked) NukeGreen else Color(0xFF6B8074),
-                    fontSize = 6.3.sp,
+                    text = if (isVipGated) "🔒 VIP" else if (checked) activeText else inactiveText,
+                    color = if (isVipGated) Color(0xFFF59E0B) else if (checked) NukeGreen else Color(0xFF7A8F82),
+                    fontSize = 6.6.sp,
                     fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
+                    softWrap = false,
                 )
             }
 
-            Column {
+            Column(modifier = Modifier.fillMaxWidth()) {
                 Text(
                     text = label,
-                    color = if (checked) Color.White else Color(0xFF9EABA4),
-                    fontSize = 7.2.sp,
+                    color = if (checked) Color.White else Color(0xFFD0DDD6),
+                    fontSize = 8.sp,
                     fontWeight = FontWeight.Black,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
-                    letterSpacing = 0.2.sp,
+                    letterSpacing = 0.1.sp,
+                    softWrap = false,
                 )
-                Text(
-                    text = if (checked) "TACTICAL • ON" else "READY",
-                    color = if (checked) NukeGreen.copy(alpha = 0.85f) else Color(0xFF526159),
-                    fontSize = 5.8.sp,
-                    fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
-                    fontWeight = FontWeight.Bold,
-                    maxLines = 1,
-                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Box(
+                        modifier = Modifier
+                            .size(3.5.dp)
+                            .clip(CircleShape)
+                            .background(if (checked) NukeGreen else Color(0xFF4A5C52))
+                    )
+                    Spacer(Modifier.width(3.dp))
+                    Text(
+                        text = if (checked) "ACTIVE" else "STANDBY",
+                        color = if (checked) NukeGreen else Color(0xFF7A8F82),
+                        fontSize = 6.2.sp,
+                        fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        softWrap = false,
+                    )
+                }
             }
         }
     }
 }
 
-// ── Square Proportional Mini Card ──
+// ── Square Proportional Mini Card (Minimalist & Compact) ──
 @Composable
 private fun SquareMiniCard(
     icon: ImageVector,
@@ -1765,7 +1835,7 @@ private fun SquareMiniCard(
 ) {
     val isActive = checked && supported
     val effectiveAccent = if (isWarning && isActive) NukeAmber else accent
-    val cardShape = RoundedCornerShape(8.dp)
+    val cardShape = RoundedCornerShape(6.dp)
     val bg by animateColorAsState(
         if (isActive) (if (isWarning) Color(0xFF241A0E) else Color(0xFF0F261E)) else Color(0xFF0F2018),
         tween(100), "sqBg",
@@ -1776,12 +1846,12 @@ private fun SquareMiniCard(
     )
     Box(
         modifier = modifier.nukeCardEntrance().nukePressFeedback()
-            .aspectRatio(1.08f)
+            .aspectRatio(1.06f)
             .clip(cardShape)
             .background(bg)
-            .border(1.dp, border, cardShape)
+            .border(0.8.dp, border, cardShape)
             .clickable(enabled = supported, onClick = onToggle)
-            .padding(horizontal = 4.dp, vertical = 4.dp),
+            .padding(horizontal = 3.dp, vertical = 3.dp),
         contentAlignment = Alignment.Center,
     ) {
         if (isActive) {
@@ -1789,7 +1859,7 @@ private fun SquareMiniCard(
                 Modifier
                     .align(Alignment.TopEnd)
                     .padding(2.dp)
-                    .size(4.dp)
+                    .size(3.5.dp)
                     .clip(CircleShape)
                     .background(effectiveAccent)
             )
@@ -1801,22 +1871,22 @@ private fun SquareMiniCard(
             verticalArrangement = Arrangement.SpaceBetween,
         ) {
             Box(
-                Modifier.size(22.dp).clip(CircleShape)
+                Modifier.size(19.dp).clip(CircleShape)
                     .background(if (isActive) (if (isWarning) Color(0xFF382614) else Color(0xFF163C2E)) else Color(0xFF131D27)),
                 contentAlignment = Alignment.Center,
             ) {
                 Icon(
                     icon, null,
                     tint = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF7A93A6),
-                    modifier = Modifier.size(13.dp),
+                    modifier = Modifier.size(11.dp),
                 )
             }
             Text(
                 title,
                 color = if (!supported) Color(0xFF33463E) else if (isActive) Color.White else Color(0xFF9BB0A6),
-                fontSize = 6.8.sp,
+                fontSize = 6.3.sp,
                 fontWeight = FontWeight.Black,
-                letterSpacing = 0.3.sp,
+                letterSpacing = 0.15.sp,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 textAlign = TextAlign.Center,
@@ -1826,7 +1896,7 @@ private fun SquareMiniCard(
                     .clip(RoundedCornerShape(3.dp))
                     .background(if (isActive) (if (isWarning) Color(0xFF452D12) else Color(0xFF194A37)) else Color(0xFF121B24))
                     .border(0.5.dp, if (isActive) effectiveAccent.copy(alpha = 0.6f) else Color(0xFF1E2B38), RoundedCornerShape(3.dp))
-                    .padding(horizontal = 4.dp, vertical = 1.dp),
+                    .padding(horizontal = 3.dp, vertical = 0.8.dp),
                 contentAlignment = Alignment.Center,
             ) {
                 val labelText = when {
@@ -1838,9 +1908,9 @@ private fun SquareMiniCard(
                 Text(
                     labelText,
                     color = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF64748B),
-                    fontSize = if (isFloatingWindow) 5.8.sp else 6.sp,
+                    fontSize = if (isFloatingWindow) 5.3.sp else 5.6.sp,
                     fontWeight = FontWeight.Black,
-                    letterSpacing = 0.2.sp,
+                    letterSpacing = 0.15.sp,
                 )
             }
         }
@@ -1985,6 +2055,235 @@ private fun DensityStepperCard(
                             textAlign = androidx.compose.ui.text.style.TextAlign.Center
                         )
                     }
+                }
+            }
+        }
+    }
+}
+
+// ── Sleek Minimalist Floating Bubble Seekbar ─────────────────
+@Composable
+private fun FpsTargetBubbleView(
+    currentHz: Int,
+    onDismiss: () -> Unit,
+    onApply: (Int) -> Unit,
+) {
+    val context = LocalContext.current
+    val maxHz = remember { NukeUniversalFpsLock.getMaxHardwareRefreshRate(context) }
+    val validOptions = remember { NukeUniversalFpsLock.getValidTargetOptions(context) }
+    
+    // Selectable steps for slider & actions: 0 (Auto) + valid options
+    val selectableSteps = remember { listOf(0) + validOptions }
+
+    // Initial selection
+    var selectedHz by rememberSaveable { 
+        mutableStateOf(if (currentHz in selectableSteps) currentHz else (selectableSteps.lastOrNull() ?: 0)) 
+    }
+
+    val currentStepIndex = selectableSteps.indexOf(selectedHz).let { if (it >= 0) it else 0 }
+    var sliderVal by remember { mutableStateOf(currentStepIndex.toFloat()) }
+
+    LaunchedEffect(selectedHz) {
+        val idx = selectableSteps.indexOf(selectedHz)
+        if (idx >= 0 && idx.toFloat() != sliderVal) {
+            sliderVal = idx.toFloat()
+        }
+    }
+
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .clickable(
+                interactionSource = remember { MutableInteractionSource() },
+                indication = null,
+                onClick = onDismiss
+            ),
+        contentAlignment = Alignment.Center
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 8.dp)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null,
+                    onClick = {}
+                )
+                .clip(RoundedCornerShape(16.dp))
+                .background(Color(0xF6071410))
+                .border(1.2.dp, NukeCyan.copy(alpha = 0.85f), RoundedCornerShape(16.dp))
+                .padding(horizontal = 10.dp, vertical = 8.dp)
+        ) {
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                // ── Bubble Header ──
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            modifier = Modifier
+                                .size(20.dp)
+                                .clip(CircleShape)
+                                .background(NukeCyan.copy(alpha = 0.18f))
+                                .border(0.8.dp, NukeCyan.copy(alpha = 0.7f), CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Outlined.Speed, null, tint = NukeCyan, modifier = Modifier.size(11.dp))
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            "REFRESH TARGET",
+                            color = Color.White,
+                            fontSize = 8.2.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.4.sp
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(if (selectedHz == 0) NukeAmber.copy(alpha = 0.18f) else NukeCyan.copy(alpha = 0.20f))
+                                .border(0.6.dp, if (selectedHz == 0) NukeAmber.copy(alpha = 0.6f) else NukeCyan.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                                .padding(horizontal = 5.dp, vertical = 1.dp)
+                        ) {
+                            Text(
+                                if (selectedHz == 0) "AUTO" else "${selectedHz} FPS",
+                                color = if (selectedHz == 0) NukeAmber else NukeCyan,
+                                fontSize = 6.8.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
+                    // Minimalist 'X' Close Button
+                    Box(
+                        modifier = Modifier
+                            .size(18.dp)
+                            .clip(CircleShape)
+                            .background(Color(0xFF14241D))
+                            .border(0.6.dp, Color(0xFF284436), CircleShape)
+                            .clickable(onClick = onDismiss),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(Icons.Outlined.Close, null, tint = Color(0xFFA0B8AC), modifier = Modifier.size(10.dp))
+                    }
+                }
+
+                // ── Minimalist Seekbar (Slider) — Instant Apply On Release ──
+                Column(Modifier.fillMaxWidth()) {
+                    Slider(
+                        value = sliderVal,
+                        onValueChange = { newVal ->
+                            sliderVal = newVal
+                            val idx = newVal.roundToInt().coerceIn(0, selectableSteps.size - 1)
+                            selectedHz = selectableSteps[idx]
+                        },
+                        onValueChangeFinished = {
+                            val idx = sliderVal.roundToInt().coerceIn(0, selectableSteps.size - 1)
+                            sliderVal = idx.toFloat()
+                            val targetHz = selectableSteps[idx]
+                            selectedHz = targetHz
+                            onApply(targetHz)
+                        },
+                        valueRange = 0f..(selectableSteps.size - 1).coerceAtLeast(1).toFloat(),
+                        steps = if (selectableSteps.size > 2) selectableSteps.size - 2 else 0,
+                        modifier = Modifier.fillMaxWidth().height(20.dp),
+                        colors = SliderDefaults.colors(
+                            thumbColor = NukeCyan,
+                            activeTrackColor = NukeCyan,
+                            inactiveTrackColor = Color(0xFF183227),
+                            activeTickColor = Color.White,
+                            inactiveTickColor = Color(0xFF2B4C3E)
+                        )
+                    )
+
+                    // Step ticks under slider
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        selectableSteps.forEachIndexed { index, stepHz ->
+                            val isSelected = index == sliderVal.roundToInt()
+                            Text(
+                                text = if (stepHz == 0) "AUTO" else "${stepHz}Hz",
+                                color = if (isSelected) NukeCyan else Color(0xFF678074),
+                                fontSize = 6.sp,
+                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Normal
+                            )
+                        }
+                    }
+                }
+
+                // ── Quick-Switch Preset Chips (Strictly Single-Line, NO 'CAP' text, Instant Apply) ──
+                val candidateList = remember(maxHz) {
+                    val base = listOf(0, 60, 90, 120, 144)
+                    base.filter { it == 0 || it <= maxHz }.map { targetHz ->
+                        targetHz to (if (targetHz == 0) "AUTO" else "${targetHz} FPS")
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                ) {
+                    candidateList.forEach { (targetHz, label) ->
+                        val isSelected = selectedHz == targetHz
+
+                        val chipBg = if (isSelected) NukeCyan.copy(alpha = 0.22f) else Color(0xFF0F201A)
+                        val chipBorder = if (isSelected) NukeCyan else Color(0xFF1D382C)
+                        val chipText = if (isSelected) NukeCyan else Color(0xFFBFD2C8)
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(chipBg)
+                                .border(0.7.dp, chipBorder, RoundedCornerShape(8.dp))
+                                .clickable {
+                                    selectedHz = targetHz
+                                    val idx = selectableSteps.indexOf(targetHz)
+                                    if (idx >= 0) sliderVal = idx.toFloat()
+                                    onApply(targetHz)
+                                }
+                                .padding(vertical = 4.dp, horizontal = 2.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = label,
+                                color = chipText,
+                                fontSize = 6.8.sp,
+                                fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+
+                // ── Compact Transparency Note (Single Line) ──
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xFF0D1A15))
+                        .border(0.5.dp, Color(0xFF1D372B), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 3.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(Icons.Outlined.Security, null, tint = NukeAmber, modifier = Modifier.size(8.dp))
+                    Spacer(Modifier.width(4.dp))
+                    Text(
+                        "Panel ${maxHz}Hz Max • Display Sync (does not bypass game FPS limits)",
+                        color = Color(0xFF90A89C),
+                        fontSize = 5.2.sp,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
+                    )
                 }
             }
         }
@@ -2600,7 +2899,7 @@ private fun CommandHeader(
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .height(if (dense) 32.dp else 34.dp)
+            .height(48.dp)
             .pointerInput(callbacks) {
                 detectDragGestures { change, dragAmount ->
                     change.consume()

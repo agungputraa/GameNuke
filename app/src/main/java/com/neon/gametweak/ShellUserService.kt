@@ -25,6 +25,32 @@ class ShellUserService() : IShellService.Stub() {
 
     private val tag = "NukeShellUserService"
 
+    init {
+        cleanupZombieInstances()
+    }
+
+    private fun cleanupZombieInstances() {
+        runCatching {
+            val myPid = android.os.Process.myPid()
+            val p = ProcessBuilder("/system/bin/sh", "-c", "pgrep -f 'com.neon.gametweak:shell-iadb' || ps -ef | grep 'com.neon.gametweak:shell-iadb' | awk '{print \$2}'")
+                .redirectErrorStream(true)
+                .start()
+            val lines = p.inputStream.bufferedReader().readLines()
+            p.waitFor(1000, TimeUnit.MILLISECONDS)
+            for (line in lines) {
+                val pid = line.trim().toIntOrNull() ?: continue
+                if (pid > 0 && pid != myPid) {
+                    Log.i(tag, "Terminating zombie shell-iadb PID $pid (myPid=$myPid)")
+                    runCatching {
+                        Runtime.getRuntime().exec(arrayOf("/system/bin/kill", "-9", pid.toString())).waitFor(500, TimeUnit.MILLISECONDS)
+                    }
+                }
+            }
+        }.onFailure {
+            Log.w(tag, "cleanupZombieInstances failed: ${it.message}")
+        }
+    }
+
     /** Called by Shizuku/iAdb to destroy this service. MUST call exitProcess. */
     override fun destroy() {
         Log.i(tag, "destroy() called — stopping touch service, reverting pointer speed, and exiting shell process")
@@ -43,9 +69,97 @@ class ShellUserService() : IShellService.Stub() {
     /** Returns true — if this method is reachable, the service is alive. */
     override fun ping(): Boolean = true
 
+    override fun deployTouchLibrary(libBytes: ByteArray?): Boolean {
+        if (libBytes == null || libBytes.isEmpty()) return false
+        return runCatching {
+            val dest = java.io.File("/data/local/tmp/libwandev.so")
+            val tmp = java.io.File("/data/local/tmp/libwandev.so.tmp")
+            if (tmp.exists()) tmp.delete()
+            tmp.writeBytes(libBytes)
+            tmp.setReadable(true, false)
+            tmp.setExecutable(true, false)
+            if (dest.exists()) dest.delete()
+            if (!tmp.renameTo(dest)) {
+                tmp.copyTo(dest, overwrite = true)
+                tmp.delete()
+            }
+            dest.setReadable(true, false)
+            dest.setExecutable(true, false)
+            Runtime.getRuntime().exec(arrayOf("/system/bin/chmod", "755", "/data/local/tmp/libwandev.so")).waitFor()
+            val success = dest.exists() && dest.length() >= 20_000L
+            Log.i(tag, "deployTouchLibrary wrote ${dest.length()} bytes, success=$success")
+            success
+        }.onFailure {
+            Log.e(tag, "deployTouchLibrary error: ${it.message}", it)
+        }.getOrDefault(false)
+    }
+
     override fun touchStart(libPath: String?): Int {
-        Log.i(tag, "touchStart called via privileged Binder with libPath: $libPath")
-        return nuke.wandev.touch.NukeTouchService.start(libPath)
+        val destFile = java.io.File("/data/local/tmp/libwandev.so")
+        // If /data/local/tmp/libwandev.so is missing but caller provided a readable path, copy it into /data/local/tmp
+        if ((!destFile.exists() || destFile.length() < 20_000L) && !libPath.isNullOrBlank()) {
+            val srcFile = java.io.File(libPath)
+            if (srcFile.exists() && srcFile.canRead() && srcFile.length() >= 20_000L) {
+                runCatching {
+                    srcFile.copyTo(destFile, overwrite = true)
+                    destFile.setReadable(true, false)
+                    destFile.setExecutable(true, false)
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/chmod", "755", "/data/local/tmp/libwandev.so")).waitFor()
+                    Log.i(tag, "Copied libwandev.so from $libPath to /data/local/tmp/ (${destFile.length()} bytes)")
+                }
+            }
+        }
+
+        // Self-extraction 1: Shell toybox unzip directly from installed base.apk
+        if (!destFile.exists() || destFile.length() < 20_000L) {
+            runCatching {
+                val p = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", "APK=\$(pm path com.neon.gametweak 2>/dev/null | head -n1 | cut -d: -f2 | tr -d '\\r'); if [ -n \"\$APK\" ]; then unzip -p \"\$APK\" assets/libwandev.so > /data/local/tmp/libwandev.so.tmp 2>/dev/null || unzip -p \"\$APK\" lib/arm64-v8a/libwandev.so > /data/local/tmp/libwandev.so.tmp 2>/dev/null; [ -s /data/local/tmp/libwandev.so.tmp ] && mv /data/local/tmp/libwandev.so.tmp /data/local/tmp/libwandev.so && chmod 755 /data/local/tmp/libwandev.so; fi"))
+                p.waitFor()
+            }
+        }
+
+        // Self-extraction 2: Pure Java from running CLASSPATH APK if destFile is still missing
+        if (!destFile.exists() || destFile.length() < 20_000L) {
+            val cp = System.getProperty("java.class.path") ?: ""
+            for (part in cp.split(java.io.File.pathSeparator)) {
+                val f = java.io.File(part)
+                if (f.exists() && f.name.endsWith(".apk", ignoreCase = true)) {
+                    runCatching {
+                        java.util.zip.ZipFile(f).use { zip ->
+                            val entry = zip.getEntry("lib/arm64-v8a/libwandev.so")
+                                ?: zip.getEntry("assets/libwandev.so")
+                                ?: zip.entries().asSequence().firstOrNull { it.name.endsWith("libwandev.so") }
+                            if (entry != null) {
+                                zip.getInputStream(entry).use { input ->
+                                    val tmp = java.io.File("/data/local/tmp/libwandev.so.tmp")
+                                    tmp.outputStream().use { out -> input.copyTo(out) }
+                                    if (destFile.exists()) destFile.delete()
+                                    tmp.renameTo(destFile)
+                                    destFile.setReadable(true, false)
+                                    destFile.setExecutable(true, false)
+                                    Runtime.getRuntime().exec(arrayOf("/system/bin/chmod", "755", "/data/local/tmp/libwandev.so")).waitFor()
+                                    Log.i(tag, "Self-extracted libwandev.so from classpath: ${destFile.length()} bytes")
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        val targetLib = if (destFile.exists() && destFile.length() >= 20_000L) {
+            "/data/local/tmp/libwandev.so"
+        } else if (!libPath.isNullOrBlank()) {
+            libPath
+        } else {
+            "/data/local/tmp/libwandev.so"
+        }
+
+        Log.i(tag, "touchStart called via privileged Binder with targetLib: $targetLib")
+        if (nuke.wandev.touch.NukeTouchService.isRunning()) {
+            nuke.wandev.touch.NukeTouchService.stop()
+        }
+        return nuke.wandev.touch.NukeTouchService.start(targetLib)
     }
 
     override fun touchStop() {
@@ -64,9 +178,10 @@ class ShellUserService() : IShellService.Stub() {
         curve: Int,
         smooth: Boolean,
         minCutoff: Float,
-        beta: Float
+        beta: Float,
+        dragShot: Boolean
     ) {
-        nuke.wandev.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta)
+        nuke.wandev.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)
     }
 
     override fun touchSetGrab(grab: Boolean) {
@@ -106,8 +221,8 @@ class ShellUserService() : IShellService.Stub() {
                         y = p[3].toFloatOrNull() ?: 0f,
                         radiusPx = p[4].toFloatOrNull() ?: 60f,
                         mode = p[5].toIntOrNull() ?: 0,
-                        repeatCount = p[6].toIntOrNull() ?: 5,
-                        intervalMs = p[7].toLongOrNull() ?: 25L,
+                        repeatCount = p[6].toIntOrNull() ?: 0,
+                        intervalMs = p[7].toLongOrNull() ?: 20L,
                         holdDurationMs = p[8].toLongOrNull() ?: 100L,
                         targetX = if (p.size > 9) p[9].toFloatOrNull() ?: 0f else 0f,
                         targetY = if (p.size > 10) p[10].toFloatOrNull() ?: 0f else 0f,
@@ -119,10 +234,21 @@ class ShellUserService() : IShellService.Stub() {
                         tapDurationMs = if (p.size > 16) p[16].toLongOrNull() ?: 15L else 15L,
                         enabled = if (p.size > 17) p[17].toBoolean() else true,
                         label = if (p.size > 18) p[18] else "",
-                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L
+                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L,
+                        linkedPinIds = if (p.size > 20 && p[20].isNotBlank() && p[20] != "none") p[20].split("|") else emptyList(),
+                        multiPinDelayMs = if (p.size > 21) p[21].toLongOrNull() ?: 0L else 0L
                     )
                 } else null
             }
+        }
+        // Ensure the hardware touch router is running before arming the pins.
+        // If NukeTouchService died or was never started, auto-start it now so
+        // the kernel evdev grab is active and pins fire correctly.
+        if (list.isNotEmpty() && !nuke.wandev.touch.NukeTouchService.isRunning()) {
+            Log.i(tag, "setMacroPins: NukeTouchService not running — auto-starting before arming ${list.size} pin(s)")
+            val libPath = "/data/local/tmp/libwandev.so"
+            runCatching { nuke.wandev.touch.NukeTouchService.start(libPath) }
+                .onFailure { Log.w(tag, "setMacroPins: auto-start failed: ${it.message}") }
         }
         nuke.wandev.touch.NukeTouchService.setMacroPins(list)
     }

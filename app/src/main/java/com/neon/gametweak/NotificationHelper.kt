@@ -25,9 +25,21 @@ class NotificationHelper(private val context: Context) {
         }
     }
 
+    fun cancel() {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
+        runCatching { manager.cancel(NOTIF_ID) }
+    }
+
     fun updateNotification(title: String, text: String, isOngoing: Boolean, showInputAction: Boolean, pairingTarget: String?) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return
         if (title.isEmpty() && text.isEmpty()) {
+            runCatching { manager.cancel(NOTIF_ID) }
+            return
+        }
+
+        // Suppress notification completely if device is already connected via iAdb or Shizuku
+        val activeBackend = NukeConnectionManager.activeBackend()
+        if (activeBackend == NukeConnectionManager.Backend.IADB || activeBackend == NukeConnectionManager.Backend.SHIZUKU) {
             runCatching { manager.cancel(NOTIF_ID) }
             return
         }
@@ -37,8 +49,10 @@ class NotificationHelper(private val context: Context) {
             PendingIntent.FLAG_UPDATE_CURRENT or if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) PendingIntent.FLAG_IMMUTABLE else 0
         )
 
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.logo_nuke) }.getOrNull()
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setContentTitle(title)
             .setContentText(text)
             .setOngoing(isOngoing)
@@ -56,7 +70,7 @@ class NotificationHelper(private val context: Context) {
             val actionPendingIntent = PendingIntent.getBroadcast(context, 0, pairIntent, actionFlags)
 
             val remoteInput = RemoteInput.Builder(EXTRA_REPLY).setLabel(("Enter 6-Digit Code")).build()
-            val action = NotificationCompat.Action.Builder(R.drawable.ic_game_booster_notification, ("ENTER CODE"), actionPendingIntent)
+            val action = NotificationCompat.Action.Builder(R.drawable.logo_nuke, ("ENTER CODE"), actionPendingIntent)
                 .addRemoteInput(remoteInput).build()
 
             builder.addAction(action)

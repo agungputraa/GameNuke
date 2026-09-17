@@ -115,35 +115,33 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
     )
 
     fun compactSystem(): NukeCommandResult = adb.executeCommand(
-        "am compact system",
+        "sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true",
         "/",
-        15_000L,
-        32_768,
+        6_000L,
+        8_192,
     )
 
     /**
-     * Reclaims background RAM by purging cached zombie tasks, trimming caches, and terminating
-     * non-critical social and e-commerce background consumers.
+     * Reclaims background RAM by purging cached zombie tasks and non-critical
+     * social/shopping bloatware. NEVER kills YouTube, active games, recorders, or system services.
      */
     fun killSafeBackground(): NukeCommandResult = adb.executeCommand(
         """
-            pm trim-caches 999G 2>/dev/null
-            am compact system 2>/dev/null
+            pkill -9 -f "process-tracker" 2>/dev/null
+            pkill -9 -f "emdlogger" 2>/dev/null
+            pkill -9 -f "lbs_dbg" 2>/dev/null
+            rm -rf /data/local/tmp/.studio 2>/dev/null
             am force-stop com.facebook.katana 2>/dev/null
             am force-stop com.facebook.orca 2>/dev/null
             am force-stop com.instagram.android 2>/dev/null
-            am force-stop com.spotify.music 2>/dev/null
-            am force-stop com.mi.appfinder 2>/dev/null
-            am force-stop com.xiaomi.mipicks 2>/dev/null
             am force-stop com.lazada.android 2>/dev/null
             am force-stop com.shopee.id 2>/dev/null
-            am force-stop com.google.android.apps.photos 2>/dev/null
             am force-stop com.microsoft.appmanager 2>/dev/null
             sync 2>/dev/null
         """.trimIndent(),
         "/",
-        8_000L,
-        16_384
+        6_000L,
+        8_192
     )
 
     fun readCpuProcessSnapshot(): NukeCommandResult = adb.executeCommand(

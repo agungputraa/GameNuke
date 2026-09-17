@@ -65,10 +65,8 @@ object NukeAiSentinel {
         "com.google.android.gms",
         "com.google.android.gsf",
         "com.google.process.gapps",
-        "com.android.vending",
         "com.android.systemui",
         "com.android.phone",
-        "com.android.settings",
         "com.google.android.inputmethod.latin",
         "com.android.inputmethod.latin",
         "com.miui.home",
@@ -81,8 +79,21 @@ object NukeAiSentinel {
     // ─── Protected Media & Music Streaming Apps ─────────────────────────────
 
     private val PROTECTED_MEDIA_PLAYERS = setOf(
-        "com.spotify.music",
+        "com.google.android.youtube",
         "com.google.android.apps.youtube.music",
+        "app.revanced.android.youtube",
+        "org.schabi.newpipe",
+        "com.vanced.android.youtube",
+        "com.netflix.mediaclient",
+        "com.disney.disneyplus",
+        "com.amazon.avod.thirdpartyclient",
+        "tv.twitch.android.app",
+        "com.zhiliaoapp.musically",
+        "com.ss.android.ugc.trill",
+        "org.videolan.vlc",
+        "com.mxtech.videoplayer.ad",
+        "com.mxtech.videoplayer.pro",
+        "com.spotify.music",
         "com.apple.android.music",
         "com.soundcloud.android",
         "deezer.android.app",
@@ -95,7 +106,6 @@ object NukeAiSentinel {
         "com.audiomack",
         "com.pandora.android",
         "tunein.player",
-        "org.videolan.vlc",
         "com.maxmpz.audioplayer",
         "in.krosbits.musicolet",
         "com.foobar2000.foobar2000",
@@ -139,16 +149,30 @@ object NukeAiSentinel {
         "com.samsung.android.rubin.app",
         "com.samsung.android.bixby.agent",
         "com.samsung.android.app.spage",
+        "com.samsung.android.ipsgeofence",
         "com.transsion.palmswitch",
         "com.transsion.carlcare",
+        "com.transsion.neopower",
+        "com.transsion.xshare",
         "com.heytap.mcs",
         "com.heytap.market",
-        "com.vivo.upslide"
+        "com.vivo.upslide",
+        "com.vivo.daemonService",
+        "com.huawei.powergenie",
+        "com.huawei.android.hwaps",
+        "com.hihonor.powergenie",
+        "com.motorola.ccc.checkin",
+        "com.asus.gamecenter",
+        "cn.nubia.gamelauncher"
     )
 
     // ─── Candidates for Gentle Background Resource Check ────────────────────
 
     private val COMMON_BACKGROUND_HOGS = listOf(
+        "com.android.chrome",
+        "com.android.vending",
+        "com.google.android.googlequicksearchbox",
+        "com.google.android.apps.messaging",
         "mypoin.indomaret.android",
         "com.facebook.katana",
         "com.facebook.orca",
@@ -258,7 +282,7 @@ object NukeAiSentinel {
 
         monitorJob = scope.launch {
             Log.d(TAG, "Smart AI Sentinel autonomous supervisor initialized")
-            _lastActionText.value = "AI Sentinel • Active stability guardian"
+            _lastActionText.value = "AI Sentinel • Monitoring"
 
             while (isActive) {
                 try {
@@ -332,7 +356,7 @@ object NukeAiSentinel {
                         else -> 60_000L
                     }
                     delay(interval)
-                } catch (e: Exception) {
+                } catch (e: Throwable) {
                     Log.w(TAG, "Error in AI Sentinel loop: ${e.message}")
                     delay(30_000L)
                 }
@@ -413,9 +437,9 @@ object NukeAiSentinel {
         val safeGamePkg = gamePkg.takeIf(::isPackageName).orEmpty()
         val availBeforeMb = memBefore.availMem / (1024 * 1024)
         _lastActionText.value = if (isCoolingTrigger) {
-            "Smart Cooling • Optimizing thermal headroom (${String.format(Locale.US, "%.1f", currentTemp)}°C)…"
+            "Thermal monitor • Managing background load (${String.format(Locale.US, "%.1f", currentTemp)}°C)…"
         } else {
-            "AI Sentinel • Stabilizing background memory…"
+            "AI Sentinel • Reviewing background memory…"
         }
 
         if (NukeAdManager.isShowingFullScreen) {
@@ -447,9 +471,11 @@ object NukeAiSentinel {
                     script.append('\n')
                 }
 
-                // 2. Gentle memory compaction and cache trim (safe, non-destructive)
-                script.append("pm trim-caches 256M 2>/dev/null\n")
-                script.append("am compact system 2>/dev/null\n")
+                // 0. Eliminate orphan tracker spinloops and profiler daemons
+                script.append("pkill -9 -f 'process-tracker' 2>/dev/null; rm -rf /data/local/tmp/.studio 2>/dev/null\n")
+
+                // 2. Safe kernel drop caches (non-destructive, never kills services or triggers LMK)
+                script.append("sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true\n")
 
                 // 3. Intelligently trim non-essential OEM telemetry trackers in background
                 val telemetryTargets = SYSTEM_TELEMETRY_TRACKERS
@@ -478,8 +504,8 @@ object NukeAiSentinel {
                     val pkg = rawName.substringBefore(':')
                     if (!isPackageName(pkg) || isProtectedPackage(pkg, protectedPackages)) return@forEach
                     val knownHog = COMMON_BACKGROUND_HOGS.any { it.substringBefore(':') == pkg }
-                    // Only target genuine background CPU hogs (>= 15% CPU, or known wake-hogs >= 8%)
-                    if (cpu >= 15f || (knownHog && cpu >= 8f)) {
+                    // Target genuine background CPU hogs (>= 12% CPU, or known wake-hogs >= 5%)
+                    if (cpu >= 12f || (knownHog && cpu >= 5f)) {
                         cpuHogs[pkg] = maxOf(cpuHogs[pkg] ?: 0f, cpu)
                     }
                 }
@@ -491,17 +517,18 @@ object NukeAiSentinel {
                     val rssKb = parts[0].toLongOrNull() ?: return@forEach
                     val pkg = parts[1].substringBefore(':').substringBefore(' ').trim()
                     if (!isPackageName(pkg) || isProtectedPackage(pkg, protectedPackages)) return@forEach
-                    // Only target genuine RAM hogs (>= 450MB RSS in background)
-                    if (rssKb >= 450_000L) {
+                    // Target genuine RAM hogs (>= 320MB RSS in background, e.g. Chrome, YouTube)
+                    if (rssKb >= 320_000L) {
                         ramHogs[pkg] = maxOf(ramHogs[pkg] ?: 0L, rssKb)
                     }
                 }
 
-                // Never force-stop user apps; gently trim and kill background instances
+                // Never force-stop user apps during gentle sweep; trim memory and kill cached background instances
                 val rogueHogs = (cpuHogs.keys + ramHogs.keys)
                     .filterNot { isProtectedPackage(it, protectedPackages) }
+                    .filterNot { NukeProcessPurgeGuardian.isProtected(context, it) }
                     .distinct()
-                    .take(6)
+                    .take(8)
 
                 rogueHogs.forEach { pkg ->
                     script.append("cmd activity send-trim-memory $pkg RUNNING_LOW 2>/dev/null\n")
@@ -509,14 +536,18 @@ object NukeAiSentinel {
                     actionCount++
                 }
 
-                // 5. Thermal Emergency Cooling Shield (only when temp >= 43.0°C)
-                if (isCoolingTrigger && currentTemp >= 43.0f) {
-                    script.append("sync 2>/dev/null\n")
-                    script.append("[ -w /proc/sys/vm/drop_caches ] && echo 3 > /proc/sys/vm/drop_caches 2>/dev/null\n")
+                // 5. Thermal Emergency Cooling Shield (when cooling triggered or temp >= 41.5°C)
+                if (isCoolingTrigger || currentTemp >= 41.5f) {
+                    script.append("sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true\n")
                 }
 
                 if (script.isNotBlank()) {
                     executePrivileged(adb, script.toString(), 6_000L, 16_384)
+                }
+
+                if (isCoolingTrigger || currentTemp >= 41.0f) {
+                    val zKilled = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
+                    actionCount += zKilled
                 }
             } else {
                 // Non-privileged Android fallback: safe ActivityManager background killing
@@ -551,18 +582,18 @@ object NukeAiSentinel {
 
             _lastActionText.value = when {
                 isCoolingTrigger && actionCount > 0 ->
-                    "Smart Cooling • Optimized $actionCount background tasks • RAM +${freedMb}MB$tempBadge ($timeStr)"
+                    "Thermal monitor • Adjusted $actionCount background task(s) • reclaimed ${freedMb}MB$tempBadge ($timeStr)"
                 actionCount > 0 ->
-                    "AI Sentinel • Stabilized $actionCount tasks • RAM +${freedMb}MB$tempBadge ($timeStr)"
+                    "AI Sentinel • Adjusted $actionCount background task(s) • reclaimed ${freedMb}MB$tempBadge ($timeStr)"
                 else ->
-                    "AI Sentinel • System balanced & stable$tempBadge ($timeStr)"
+                    "AI Sentinel • System status stable$tempBadge ($timeStr)"
             }
 
             Log.d(TAG, "Smart sweep completed: actions=$actionCount freedMb=$freedMb temp=${currentTemp}°C")
             return Pair(actionCount, freedMb)
         } catch (error: Exception) {
             Log.e(TAG, "Failed during autonomous sweep", error)
-            _lastActionText.value = "AI Sentinel • Active stability guardian"
+            _lastActionText.value = "AI Sentinel • Monitoring"
             return Pair(0, 0L)
         } finally {
             _isSweeping.value = false
@@ -594,6 +625,10 @@ object NukeAiSentinel {
         protected += myPkg
         if (gamePkg.isNotBlank()) protected += gamePkg
         if (focusedPkg.isNotBlank()) protected += focusedPkg
+        val activeGame = NukeRuntimeState.state.value.activePackage
+        val lastGame = NukeRuntimeState.lastKnownGamePackage
+        if (!activeGame.isNullOrBlank()) protected += activeGame
+        if (!lastGame.isNullOrBlank()) protected += lastGame
 
         // Protect essential daemon and privilege tools
         protected += setOf(
@@ -608,15 +643,16 @@ object NukeAiSentinel {
         // Always protect all popular communication and voice chat apps
         protected.addAll(PROTECTED_COMMUNICATION_APPS)
 
-        // 1. Audio / Music Playback Protection:
-        // If music is actively playing, protect all media players
-        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-        val isMusicPlaying = runCatching { audioManager?.isMusicActive == true }.getOrDefault(false)
-        if (isMusicPlaying) {
-            protected.addAll(PROTECTED_MEDIA_PLAYERS)
-        }
+        // 1. YouTube, Video Players, Streaming & Audio Playback Protection (100% IMMUNE)
+        protected.addAll(PROTECTED_MEDIA_PLAYERS)
 
-        // 2. Active Call & VoIP Protection:
+        // 2. Screen Recorders & Live Streamers Protection
+        protected.addAll(NukeScreenRecordGuardian.PROTECTED_PACKAGES)
+        protected.addAll(NukeScreenRecordGuardian.getActiveMediaProjectionPackages(context))
+        protected.addAll(NukeScreenRecordGuardian.getActiveAudioRecordingPackages(context))
+
+        // 3. Active Call & VoIP Protection:
+        val audioManager = context.getSystemService(Context.AUDIO_SERVICE) as? AudioManager
         val isVoiceCallActive = runCatching {
             audioManager?.mode in listOf(
                 AudioManager.MODE_IN_CALL,
@@ -632,7 +668,7 @@ object NukeAiSentinel {
             protected.addAll(PROTECTED_COMMUNICATION_APPS)
         }
 
-        // 3. Default Launcher & Home App
+        // 4. Default Launcher & Home App
         runCatching {
             val homeIntent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_HOME)
             context.packageManager.resolveActivity(
@@ -641,13 +677,13 @@ object NukeAiSentinel {
             )?.activityInfo?.packageName
         }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
 
-        // 4. Default Keyboard (IME)
+        // 5. Default Keyboard (IME)
         runCatching {
             Settings.Secure.getString(context.contentResolver, Settings.Secure.DEFAULT_INPUT_METHOD)
                 ?.substringBefore('/')
         }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
 
-        // 5. Default Phone Dialer
+        // 6. Default Phone Dialer
         runCatching {
             telecomManager?.defaultDialerPackage
         }.getOrNull()?.takeIf(::isPackageName)?.let(protected::add)
@@ -658,14 +694,25 @@ object NukeAiSentinel {
     private fun isProtectedPackage(pkg: String, protected: Set<String>): Boolean {
         if (protected.any { pkg == it || pkg.startsWith("$it:") }) return true
         if (NukeScreenRecordGuardian.isProtected(pkg)) return true
+        val ctx = NukeApplication.instance
+        if (ctx != null) {
+            if (NukeProcessPurgeGuardian.isProtected(ctx, pkg)) return true
+            val detector = ActiveGameDetector(ctx, AdbManager.getInstance(ctx))
+            if (detector.isLikelyGame(pkg) || detector.classifyGame(pkg) != null) return true
+        }
         val activeGame = NukeRuntimeState.state.value.activePackage
-        if (!activeGame.isNullOrBlank() && pkg.equals(activeGame, ignoreCase = true)) return true
-        if (pkg.equals("com.neon.gametweak", ignoreCase = true)) return true
+        val lastGame = NukeRuntimeState.lastKnownGamePackage
+        if (!activeGame.isNullOrBlank() && (pkg.equals(activeGame, ignoreCase = true) || pkg.startsWith("$activeGame:", ignoreCase = true))) return true
+        if (!lastGame.isNullOrBlank() && (pkg.equals(lastGame, ignoreCase = true) || pkg.startsWith("$lastGame:", ignoreCase = true))) return true
+        if (pkg.equals("com.neon.gametweak", ignoreCase = true) || pkg.contains("gametweak") || pkg.contains("wandev") || pkg.contains("axeron") || pkg.contains("nuke")) return true
 
         return pkg.startsWith("android.") ||
             pkg.startsWith("com.android.systemui") ||
             pkg.startsWith("com.google.android.gms") ||
             pkg.startsWith("vendor.") ||
+            pkg.startsWith("media.") ||
+            pkg.contains("codec", ignoreCase = true) ||
+            pkg.contains("soter", ignoreCase = true) ||
             pkg.contains("launcher", ignoreCase = true) ||
             pkg.contains("inputmethod", ignoreCase = true) ||
             pkg.contains("keyboard", ignoreCase = true) ||

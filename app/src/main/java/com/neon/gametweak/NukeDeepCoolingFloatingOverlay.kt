@@ -98,7 +98,8 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                 panelW,
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 windowType,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                         WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
@@ -405,7 +406,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                 CoolingMode.CRYO -> {
                     // Set thermal mitigation properties & drop background load
                     NukeConnectionManager.executeCommand("""
-                        echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
+                        echo 1 > /proc/sys/vm/drop_caches 2>/dev/null
                         setprop debug.thermal.throttle 1 2>/dev/null
                     """.trimIndent(), 2_000L)
                 }
@@ -446,8 +447,8 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
 
         scope.launch(Dispatchers.IO) {
             // 1. Kernel memory cache purge
-            val dropCacheCmd = "echo 3 > /proc/sys/vm/drop_caches"
-            val compactCmd = "echo 1 > /proc/sys/vm/compact_memory"
+            val dropCacheCmd = "echo 1 > /proc/sys/vm/drop_caches 2>/dev/null"
+            val compactCmd = "echo 1 > /proc/sys/vm/compact_memory 2>/dev/null"
             NukeConnectionManager.executeCommand("$dropCacheCmd\n$compactCmd", 2_500L)
 
             // 2. Trigger AI Sentinel deep sweep

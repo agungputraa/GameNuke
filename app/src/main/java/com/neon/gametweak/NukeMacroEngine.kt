@@ -2,7 +2,9 @@ package com.neon.gametweak
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -32,18 +34,27 @@ object NukeMacroEngine {
 
     private const val TAG = "NukeMacroEngine"
 
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
+    private val _runState = MutableStateFlow<MacroRunState>(MacroRunState.Idle)
+    private val macroExceptionHandler = CoroutineExceptionHandler { _, error ->
+        Log.e(TAG, "Unhandled macro worker error: ${error.message}", error)
+        _runState.value = MacroRunState.Error("Macro worker stopped safely")
+    }
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO + macroExceptionHandler)
 
     /** Test-fire jobs (one-shot, from UI) */
     private val testJobs = ConcurrentHashMap<String, Job>()
 
     /** Global hold loops (continuous, while user finger is held on pin) */
     private val holdJobs = ConcurrentHashMap<String, Job>()
-
-    private val _runState = MutableStateFlow<MacroRunState>(MacroRunState.Idle)
     val runState: StateFlow<MacroRunState> = _runState.asStateFlow()
 
-    val isRunning: Boolean get() = _runState.value !is MacroRunState.Idle
+    val isRunning: Boolean get() = holdJobs.isNotEmpty() || testJobs.isNotEmpty()
+
+    private fun requireInjection(action: () -> Boolean) {
+        if (runCatching { action() }.getOrDefault(false)) return
+        if (NukeConnectionManager.ensureTouchBackend(900L) && runCatching { action() }.getOrDefault(false)) return
+        throw IllegalStateException("Touch injection unavailable")
+    }
 
     // ──────────────────────────────────────────────────────────────────────────
     // GLOBAL HOLD API — called by daemon pin detection
@@ -53,70 +64,106 @@ object NukeMacroEngine {
      * Start macro execution for [pin] — called when daemon detects finger DOWN on pin area.
      * Runs until [releasePin] is called (finger UP).
      */
-    fun holdPin(pin: MacroPinConfig, screenW: Int, screenH: Int) {
+    fun holdPin(pin: MacroPinConfig, screenW: Int, screenH: Int, triggerLinked: Boolean = true) {
         holdJobs[pin.id]?.cancel()
         _runState.value = MacroRunState.Triggering(pin.index, pin.mode, pin.label)
+
+        if (triggerLinked && pin.linkedPinIds.isNotEmpty()) {
+            val linkedPins = memoryPinsCache?.filter { it.enabled && pin.linkedPinIds.contains(it.id) }.orEmpty()
+            for (linked in linkedPins) {
+                holdPin(linked, screenW, screenH, triggerLinked = false)
+            }
+        }
 
         val px = (pin.xRatio * screenW).coerceIn(0f, screenW - 1f)
         val py = (pin.yRatio * screenH).coerceIn(0f, screenH - 1f)
 
-        val job = scope.launch {
-            if (pin.startDelayMs > 0) delay(pin.startDelayMs.coerceIn(0L, 3_000L))
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
+                if (!NukeConnectionManager.ensureTouchBackend(1_500L)) {
+                    _runState.value = MacroRunState.Error("Touch backend unavailable")
+                    return@launch
+                }
+                if (pin.startDelayMs > 0) delay(pin.startDelayMs.coerceIn(0L, 3_000L))
                 when (pin.mode) {
                     MacroTriggerMode.REPEAT_TAP -> {
                         val interval = pin.intervalMs.coerceIn(5L, 500L)
                         val tapDur = pin.tapDurationMs.coerceIn(5L, 120L)
                         while (currentCoroutineContext().isActive) {
-                            NukeConnectionManager.injectTap(px, py, tapDur)
+                            requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
                             delay(interval)
                         }
                     }
                     MacroTriggerMode.HOLD -> {
                         // Hold down for user-defined duration or until released
-                        NukeConnectionManager.injectHold(px, py, pin.holdDurationMs.coerceIn(50L, 30_000L))
+                        requireInjection { NukeConnectionManager.injectHold(px, py, pin.holdDurationMs.coerceIn(50L, 30_000L)) }
                     }
                     MacroTriggerMode.TAP -> {
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 120L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 120L)) }
                     }
                     MacroTriggerMode.DOUBLE_TAP -> {
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L)) }
                         delay(pin.intervalMs.coerceIn(30L, 300L))
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L)) }
                     }
                     MacroTriggerMode.SWIPE -> {
-                        val tx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
-                        val ty = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
-                        NukeConnectionManager.injectSwipe(px, py, tx, ty, pin.swipeDurationMs.coerceIn(20L, 2_000L))
+                        val rawTx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
+                        val rawTy = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
+                        val isSame = (pin.targetXRatio == pin.xRatio && pin.targetYRatio == pin.yRatio)
+                        val tx = if (isSame) rawTx else rawTx
+                        val ty = if (isSame) (rawTy - (screenH * 0.15f)).coerceIn(0f, screenH - 1f) else rawTy
+                        requireInjection { NukeConnectionManager.injectSwipe(px, py, tx, ty, pin.swipeDurationMs.coerceIn(20L, 2_000L)) }
                     }
                     MacroTriggerMode.LOOP -> {
                         val interval = pin.intervalMs.coerceIn(50L, 10_000L)
                         val tapDur = pin.tapDurationMs.coerceIn(5L, 120L)
                         while (currentCoroutineContext().isActive) {
-                            NukeConnectionManager.injectTap(px, py, tapDur)
+                            requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
                             delay(interval)
                         }
                     }
                     MacroTriggerMode.MIRROR -> {
                         val tx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
                         val ty = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
-                        NukeConnectionManager.injectTap(tx, ty, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(tx, ty, pin.tapDurationMs.coerceIn(8L, 80L)) }
+                    }
+                    MacroTriggerMode.COMBO -> {
+                        val rawTx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
+                        val rawTy = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
+                        val isSame = (pin.targetXRatio == pin.xRatio && pin.targetYRatio == pin.yRatio)
+                        val tx = if (isSame) (px + (screenW * 0.12f)).coerceIn(0f, screenW - 1f) else rawTx
+                        val ty = if (isSame) (py + (screenH * 0.08f)).coerceIn(0f, screenH - 1f) else rawTy
+                        val tapDur = pin.tapDurationMs.coerceIn(8L, 80L)
+                        val comboDelay = pin.intervalMs.coerceIn(10L, 300L)
+                        while (currentCoroutineContext().isActive) {
+                            requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
+                            delay(comboDelay)
+                            requireInjection { NukeConnectionManager.injectTap(tx, ty, tapDur) }
+                            delay(comboDelay * 2)
+                        }
                     }
                 }
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     Log.e(TAG, "holdPin error pin#${pin.index}: ${e.message}")
+                    _runState.value = MacroRunState.Error(e.message ?: "Macro execution failed")
                 }
             } finally {
-                holdJobs.remove(pin.id)
+                currentCoroutineContext()[Job]?.let { self -> holdJobs.remove(pin.id, self) }
                 updateIdleState()
             }
         }
         holdJobs[pin.id] = job
+        job.start()
     }
 
     /** Stop macro for [pinId] — called when daemon detects finger UP on pin area. */
     fun releasePin(pinId: String) {
+        val masterPin = memoryPinsCache?.find { it.id == pinId }
+        masterPin?.linkedPinIds?.forEach { linkedId ->
+            holdJobs[linkedId]?.cancel()
+            holdJobs.remove(linkedId)
+        }
         holdJobs[pinId]?.cancel()
         holdJobs.remove(pinId)
         updateIdleState()
@@ -176,13 +223,27 @@ object NukeMacroEngine {
 
     /**
      * Fire [pin] once for test/preview or key-triggered action.
+     * Supports simultaneous or staggered multi-pin linked triggers.
      * Uses NukeConnectionManager injection path.
      */
-    fun triggerPin(pin: MacroPinConfig, screenW: Int, screenH: Int) {
+    fun triggerPin(pin: MacroPinConfig, screenW: Int, screenH: Int, triggerLinked: Boolean = true) {
         if (!NukeConnectionManager.isConnected()) {
             Log.w(TAG, "No backend connected — test fire skipped")
-            _runState.value = MacroRunState.Error("No backend connected")
+            _runState.value = MacroRunState.Error("No privileged backend connected")
             return
+        }
+
+        if (triggerLinked && pin.linkedPinIds.isNotEmpty()) {
+            val linkedPins = memoryPinsCache?.filter { it.enabled && pin.linkedPinIds.contains(it.id) }.orEmpty()
+            if (linkedPins.isNotEmpty()) {
+                scope.launch {
+                    val delayMs = pin.multiPinDelayMs.coerceIn(0L, 500L)
+                    for (linked in linkedPins) {
+                        if (delayMs > 0) delay(delayMs)
+                        triggerPin(linked, screenW, screenH, triggerLinked = false)
+                    }
+                }
+            }
         }
 
         testJobs[pin.id]?.cancel()
@@ -191,8 +252,12 @@ object NukeMacroEngine {
         val px = (pin.xRatio * screenW).coerceIn(0f, screenW - 1f)
         val py = (pin.yRatio * screenH).coerceIn(0f, screenH - 1f)
 
-        val job = scope.launch {
+        val job = scope.launch(start = CoroutineStart.LAZY) {
             try {
+                if (!NukeConnectionManager.ensureTouchBackend(1_500L)) {
+                    _runState.value = MacroRunState.Error("Touch backend unavailable")
+                    return@launch
+                }
                 if (pin.startDelayMs > 0) delay(pin.startDelayMs.coerceIn(0L, 3_000L))
                 when (pin.mode) {
                     MacroTriggerMode.REPEAT_TAP -> {
@@ -201,25 +266,28 @@ object NukeMacroEngine {
                         val tapDur = pin.tapDurationMs.coerceIn(5L, 120L)
                         repeat(count) { i ->
                             if (!currentCoroutineContext().isActive) return@repeat
-                            NukeConnectionManager.injectTap(px, py, tapDur)
+                            requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
                             if (i < count - 1) delay(interval)
                         }
                     }
                     MacroTriggerMode.TAP -> {
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 120L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 120L)) }
                     }
                     MacroTriggerMode.HOLD -> {
-                        NukeConnectionManager.injectHold(px, py, pin.holdDurationMs.coerceIn(50L, 3_000L))
+                        requireInjection { NukeConnectionManager.injectHold(px, py, pin.holdDurationMs.coerceIn(50L, 3_000L)) }
                     }
                     MacroTriggerMode.DOUBLE_TAP -> {
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L)) }
                         delay(pin.intervalMs.coerceIn(30L, 300L))
-                        NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(px, py, pin.tapDurationMs.coerceIn(8L, 80L)) }
                     }
                     MacroTriggerMode.SWIPE -> {
-                        val tx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
-                        val ty = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
-                        NukeConnectionManager.injectSwipe(px, py, tx, ty, pin.swipeDurationMs.coerceIn(20L, 2_000L))
+                        val rawTx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
+                        val rawTy = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
+                        val isSame = (pin.targetXRatio == pin.xRatio && pin.targetYRatio == pin.yRatio)
+                        val tx = if (isSame) rawTx else rawTx
+                        val ty = if (isSame) (rawTy - (screenH * 0.15f)).coerceIn(0f, screenH - 1f) else rawTy
+                        requireInjection { NukeConnectionManager.injectSwipe(px, py, tx, ty, pin.swipeDurationMs.coerceIn(20L, 2_000L)) }
                     }
                     MacroTriggerMode.LOOP -> {
                         val count = if (pin.repeatCount <= 0) 3 else pin.repeatCount.coerceIn(1, 50)
@@ -227,29 +295,45 @@ object NukeMacroEngine {
                         val tapDur = pin.tapDurationMs.coerceIn(5L, 120L)
                         repeat(count) { i ->
                             if (!currentCoroutineContext().isActive) return@repeat
-                            NukeConnectionManager.injectTap(px, py, tapDur)
+                            requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
                             if (i < count - 1) delay(interval)
                         }
                     }
                     MacroTriggerMode.MIRROR -> {
                         val tx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
                         val ty = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
-                        NukeConnectionManager.injectTap(tx, ty, pin.tapDurationMs.coerceIn(8L, 80L))
+                        requireInjection { NukeConnectionManager.injectTap(tx, ty, pin.tapDurationMs.coerceIn(8L, 80L)) }
+                    }
+                    MacroTriggerMode.COMBO -> {
+                        val rawTx = (pin.targetXRatio * screenW).coerceIn(0f, screenW - 1f)
+                        val rawTy = (pin.targetYRatio * screenH).coerceIn(0f, screenH - 1f)
+                        val isSame = (pin.targetXRatio == pin.xRatio && pin.targetYRatio == pin.yRatio)
+                        val tx = if (isSame) (px + (screenW * 0.12f)).coerceIn(0f, screenW - 1f) else rawTx
+                        val ty = if (isSame) (py + (screenH * 0.08f)).coerceIn(0f, screenH - 1f) else rawTy
+                        val tapDur = pin.tapDurationMs.coerceIn(8L, 80L)
+                        val comboDelay = pin.intervalMs.coerceIn(10L, 300L)
+                        requireInjection { NukeConnectionManager.injectTap(px, py, tapDur) }
+                        delay(comboDelay)
+                        requireInjection { NukeConnectionManager.injectTap(tx, ty, tapDur) }
                     }
                 }
             } catch (e: Exception) {
                 if (e !is kotlinx.coroutines.CancellationException) {
                     Log.e(TAG, "triggerPin error pin#${pin.index}: ${e.message}")
+                    _runState.value = MacroRunState.Error(e.message ?: "Macro execution failed")
                 }
             } finally {
-                testJobs.remove(pin.id)
+                currentCoroutineContext()[Job]?.let { self -> testJobs.remove(pin.id, self) }
                 updateIdleState()
             }
         }
         testJobs[pin.id] = job
+        job.start()
     }
 
     fun stopAll() {
+        holdJobs.values.forEach { it.cancel() }
+        holdJobs.clear()
         testJobs.values.forEach { it.cancel() }
         testJobs.clear()
         _runState.value = MacroRunState.Idle
@@ -258,7 +342,7 @@ object NukeMacroEngine {
     fun stopMacro() = stopAll()
 
     private fun updateIdleState() {
-        if (holdJobs.isEmpty() && testJobs.isEmpty()) {
+        if (holdJobs.isEmpty() && testJobs.isEmpty() && _runState.value !is MacroRunState.Error) {
             _runState.value = MacroRunState.Idle
         }
     }

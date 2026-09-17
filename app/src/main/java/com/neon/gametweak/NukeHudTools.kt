@@ -111,17 +111,30 @@ class NukeHudTools(private val context: Context, private val scope: CoroutineSco
         monitoring.value = true
         pingJob = scope.launch {
             try {
+                val targets = listOf(
+                    InetSocketAddress("8.8.8.8", 53),
+                    InetSocketAddress("1.1.1.1", 53),
+                    InetSocketAddress("208.67.222.222", 53)
+                )
                 while (isActive) {
-                    measured.value = withContext(Dispatchers.IO) {
-                        runCatching {
-                            Socket().use { socket ->
-                                val started = SystemClock.elapsedRealtime()
-                                socket.connect(InetSocketAddress("1.1.1.1", 443), 1_000)
-                                (SystemClock.elapsedRealtime() - started).coerceAtLeast(1L)
-                            }
-                        }.getOrNull()
+                    val result = withContext(Dispatchers.IO) {
+                        var ping: Long? = null
+                        for (target in targets) {
+                            ping = runCatching {
+                                Socket().use { socket ->
+                                    val started = SystemClock.elapsedRealtime()
+                                    socket.connect(target, 2_500)
+                                    (SystemClock.elapsedRealtime() - started).coerceAtLeast(1L)
+                                }
+                            }.getOrNull()
+                            if (ping != null && ping > 0) break
+                        }
+                        ping
                     }
-                    delay(4_000)
+                    if (result != null) {
+                        measured.value = result
+                    }
+                    delay(2_000)
                 }
             } finally {
                 measured.value = null

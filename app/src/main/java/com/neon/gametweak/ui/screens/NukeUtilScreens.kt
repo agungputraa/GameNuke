@@ -69,6 +69,7 @@ import com.neon.gametweak.NukeConnectionManager
 import com.neon.gametweak.NukeIadbBridge
 import com.neon.gametweak.NukeShizukuBridge
 import com.neon.gametweak.NukeDaemonClient
+import com.neon.gametweak.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -163,9 +164,9 @@ fun CleanerScreen(adbManager: AdbManager) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(("NUKE OPTIMIZER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.2.sp)
+                        Text(tr("NUKE OPTIMIZER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.2.sp)
                         Text(
-                            if (adbConnected) ("KONTROL PRIVILEGED ONLINE") else ("KONTROL STANDAR // SAMBUNGKAN ENGINE UNTUK AKSI MENDALAM"),
+                            if (adbConnected) tr("PRIVILEGED CONTROL ONLINE") else tr("STANDARD CONTROL // CONNECT PRIVILEGED ENGINE FOR ADVANCED ACTIONS"),
                             color = if (adbConnected) Color(0xFF10B981) else Color(0xFFFFB830),
                             fontSize = 8.5.sp,
                             fontFamily = FontFamily.Monospace,
@@ -176,20 +177,20 @@ fun CleanerScreen(adbManager: AdbManager) {
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
-                    ("Pembersihan cerdas mencakup cache aplikasi, pemulihan memori RAM, dan perapian penyimpanan."),
+                    tr("Smart cleanup covers app cache, memory reclamation, and storage housekeeping."),
                     color = Color(0xFF9BB0A6), fontSize = 10.sp, lineHeight = 14.sp,
                 )
                 if (lastGainMb > 0L) {
                     Spacer(Modifier.height(8.dp))
-                    Text("${("PEMULIHAN TERAKHIR")}  +${lastGainMb}MB", color = Color(0xFF10B981), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+                    Text("${tr("LAST RECLAIM")}  +${lastGainMb}MB", color = Color(0xFF10B981), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
                 }
             }
         }
 
         item {
             OptimizerActionCard(
-                title = ("APP CACHE"),
-                detail = ("Bersihkan file sementara Game Nuke"),
+                title = tr("APP CACHE"),
+                detail = tr("Clear temporary Game Nuke cache files"),
                 value = "${"%.1f".format(ownCacheBytes / (1024.0 * 1024.0))} MB",
                 icon = Icons.Rounded.DeleteSweep,
                 accent = Color(0xFF35F2FF),
@@ -216,8 +217,8 @@ fun CleanerScreen(adbManager: AdbManager) {
 
         item {
             OptimizerActionCard(
-                title = ("DEEP RECLAIM"),
-                detail = if (adbConnected) ("Pemulihan memori RAM aman dengan kompresi kernel") else ("Sambungkan engine privileged untuk pemulihan mendalam"),
+                title = tr("DEEP RECLAIM"),
+                detail = if (adbConnected) tr("Memory reclamation with supported kernel compaction") else tr("Connect the privileged engine for advanced memory reclamation"),
                 value = if (adbConnected) ("READY") else ("BASIC MODE"),
                 icon = Icons.Rounded.Memory,
                 accent = Color(0xFF10B981),
@@ -266,7 +267,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                         val gain = ((after.first - before.first).coerceAtLeast(0L) / (1024L * 1024L)).coerceAtLeast(freedMb)
                         withContext(Dispatchers.Main) {
                             lastGainMb = gain
-                            operation = if (gain > 0) "OPTIMIZATION VERIFIED (+${gain}MB RAM)" else "OPTIMIZATION COMPLETE ($killed TRIMMED)"
+                            operation = if (gain > 0) "OPTIMIZATION COMPLETE (+${gain}MB AVAILABLE)" else "OPTIMIZATION COMPLETE ($killed PROCESSED)"
                             isWorking = false
                             val msg = if (gain > 0) "Optimized background tasks! Reclaimed ${gain}MB RAM." else "Optimized $killed idle background tasks."
                             NukeToast.success(context, msg, long = true)
@@ -1987,6 +1988,8 @@ fun GameProfileScreen(adbManager: AdbManager) {
                 }
             }
 
+            var showVipDialog by remember { mutableStateOf(false) }
+
             NukeBoosterRewardDialog(
                 gameName = targetGame.name,
                 onDismiss = {
@@ -2004,8 +2007,22 @@ fun GameProfileScreen(adbManager: AdbManager) {
                     } else {
                         proceedDirectly()
                     }
+                },
+                onUpgradeToVip = {
+                    showVipDialog = true
                 }
             )
+
+            if (showVipDialog) {
+                com.neon.gametweak.ui.components.NukeVipSubscriptionDialog(
+                    onDismiss = { showVipDialog = false },
+                    onSubscribed = {
+                        showVipDialog = false
+                        pendingGameToLaunch = null
+                        proceedDirectly()
+                    }
+                )
+            }
         }
 
         if (showAdBlockDialog && adBlockStatus.isDetected) {
@@ -2023,6 +2040,7 @@ fun NukeBoosterRewardDialog(
     gameName: String,
     onDismiss: () -> Unit,
     onWatchAdAndBoost: () -> Unit,
+    onUpgradeToVip: () -> Unit,
 ) {
     androidx.compose.ui.window.Dialog(
         onDismissRequest = onDismiss,
@@ -2079,7 +2097,7 @@ fun NukeBoosterRewardDialog(
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    ("Watch 1 short sponsor video to unlock an ad-free gaming session and access all features."),
+                    ("Watch 1 short sponsor video or upgrade to VIP to unlock an ad-free gaming session and access all features."),
                     color = Color(0xFF9BB0A6),
                     fontSize = 9.5.sp,
                     textAlign = TextAlign.Center,
@@ -2095,6 +2113,18 @@ fun NukeBoosterRewardDialog(
                         Icon(Icons.Rounded.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
                         Text(("WATCH & START"), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                    }
+                }
+                Spacer(Modifier.height(8.dp))
+                Button(
+                    onClick = onUpgradeToVip,
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.Black),
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = (Modifier.fillMaxWidth().height(44.dp)).nukePressFeedback()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Icon(Icons.Rounded.Star, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(("UPGRADE TO VIP (NO ADS)"), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))

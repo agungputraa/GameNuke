@@ -88,8 +88,10 @@ object NukeAntivirusNotifier {
         val topThreat = threats.firstOrNull()?.title ?: "Suspicious Application"
         val count = threats.size
 
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(appContext.resources, R.drawable.logo_nuke) }.getOrNull()
         val notif = NotificationCompat.Builder(appContext, CHANNEL_ALERT_ID)
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setContentTitle("⚠️ App Security: Risk Detected")
             .setContentText("$count package(s) flagged with high-risk permissions. Tap to review.")
             .setStyle(

@@ -813,7 +813,7 @@ class LocalWebServer private constructor(private val context: Context) {
 
                 "/api/boost" -> {
                     val result = if (isOnline) {
-                        adb.executeCommand("am compact system", "/", 10_000L)
+                        adb.executeCommand("sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true", "/", 6_000L)
                     } else null
                     sendJsonResponse(out, """{"success":true,"action":"boost_completed","privileged":${result?.isSuccess == true}}""")
                 }
@@ -821,7 +821,7 @@ class LocalWebServer private constructor(private val context: Context) {
                 "/api/cleaner/trim" -> {
                     val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
                     val memBefore = ActivityManager.MemoryInfo().also { runCatching { am?.getMemoryInfo(it) } }
-                    val result = if (isOnline) adb.executeCommand("am compact system", "/", 10_000L) else null
+                    val result = if (isOnline) adb.executeCommand("sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true", "/", 6_000L) else null
                     val memAfter = ActivityManager.MemoryInfo().also { runCatching { am?.getMemoryInfo(it) } }
                     sendJsonResponse(out, """
                         {

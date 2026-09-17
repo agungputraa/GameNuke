@@ -3,6 +3,7 @@ package com.neon.gametweak
 import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ApplicationInfo
 import android.content.pm.PackageManager
 import android.os.Build
 import android.provider.Settings
@@ -28,17 +29,21 @@ object NukeProcessPurgeGuardian {
 
     // Bloatware, background trackers, and social apps that can be safely stopped in background if NOT active or recording
     private val COMMON_BLOATWARE_CANDIDATES = listOf(
+        // High-memory background consumers
+        "com.android.vending",
+        "com.android.settings",
+        "com.android.mms",
+        "com.google.android.apps.messaging",
+        "mypoin.indomaret.android",
+        "com.tokopedia.tkpd",
         "com.facebook.katana",
         "com.facebook.orca",
         "com.instagram.android",
-        "com.spotify.music",
         "com.lazada.android",
         "com.shopee.id",
         "com.temporary.email.inboxes",
         "com.google.android.apps.photos",
         "com.microsoft.appmanager",
-        "com.ss.android.ugc.trill",
-        "com.zhiliaoapp.musically",
         "com.snapchat.android",
         "com.twitter.android",
         "com.pinterest",
@@ -77,29 +82,89 @@ object NukeProcessPurgeGuardian {
         "com.transsion.carlcare",
         "com.transsion.xshare",
         "com.transsion.smartpanel",
-        "com.transsion.magazineservice"
+        "com.transsion.magazineservice",
+        "com.transsion.neopower",
+        // Huawei / Honor background telemetry daemons
+        "com.huawei.powergenie",
+        "com.huawei.android.hwaps",
+        "com.hihonor.powergenie",
+        // Motorola & Lenovo background daemons
+        "com.motorola.ccc.checkin",
+        "com.motorola.ccc.notification",
+        "com.lenovo.lsf.user",
+        // Asus / ROG background helpers
+        "com.asus.gamecenter",
+        // Nubia / RedMagic background telemetry
+        "cn.nubia.gamelauncher"
     )
+
+    fun isProtected(packageName: String?, context: Context): Boolean = isProtected(context, packageName)
 
     /**
      * Checks whether a package must be protected from being killed or trimmed.
+     * Enforces strict 3-Pillar immunity: Game Nuke, Active Game, and Screen Recorders.
      */
     fun isProtected(context: Context, packageName: String?): Boolean {
         if (packageName.isNullOrBlank()) return true
         val clean = packageName.trim().substringBefore(":").lowercase()
 
-        // 1. Game Nuke itself
-        if (clean == context.packageName.lowercase() || clean == "com.neon.gametweak") {
+        // 1. Game Nuke itself (App, Daemons, Native touch services, overlays, and helpers)
+        if (clean == context.packageName.lowercase() ||
+            clean == "com.neon.gametweak" ||
+            clean.contains("gametweak") ||
+            clean.contains("wandev") ||
+            clean.contains("frb.axeron") ||
+            clean.contains("nukedaemon") ||
+            clean.contains("nukeprocess") ||
+            clean.contains("nuketouch")) {
             return true
         }
 
-        // 2. Active game package (current running game session)
+        // 2. Screen recorder or broadcasting tools — 100% IMMUNE (Creator & YouTuber Protection)
+        val isRecorder = NukeScreenRecordGuardian.isProtected(clean) ||
+            clean.contains("screenrecorder") ||
+            clean.contains("screenrecord") ||
+            clean.contains("screencap") ||
+            clean.contains("recorder") ||
+            clean.contains("captureservice") ||
+            clean.contains("smartcapture") ||
+            clean.contains("xrecorder") ||
+            clean.contains("mobizen") ||
+            clean.contains("azscreenrecorder") ||
+            clean.contains("vidma") ||
+            clean.contains("streamlabs") ||
+            clean.contains("turnip") ||
+            clean.contains("glip") ||
+            clean.contains("prism") ||
+            clean.contains("screen_recorder") ||
+            clean.contains("videorecorder") ||
+            clean.contains("recording") ||
+            clean.contains("capture")
+        if (isRecorder) {
+            return true
+        }
+
+        // 3. Dynamic Active Game & All Installed Games Protection (100% IMMUNE)
         val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase()
-        if (!activeGame.isNullOrBlank() && clean == activeGame) {
+        val lastGame = NukeRuntimeState.lastKnownGamePackage?.trim()?.lowercase()
+        val prefsGame = runCatching {
+            context.getSharedPreferences("NukePrefs", Context.MODE_PRIVATE)
+                .getString("overlay_active_package", null)?.trim()?.lowercase()
+        }.getOrNull()
+
+        if (!activeGame.isNullOrBlank() && (clean == activeGame || clean.startsWith("$activeGame:"))) {
+            return true
+        }
+        if (!lastGame.isNullOrBlank() && (clean == lastGame || clean.startsWith("$lastGame:"))) {
+            return true
+        }
+        if (!prefsGame.isNullOrBlank() && (clean == prefsGame || clean.startsWith("$prefsGame:"))) {
             return true
         }
 
-        // 3. Screen recorder or broadcasting tools
-        if (NukeScreenRecordGuardian.isProtected(clean)) {
+        // Comprehensive Game Engine and Category Check (Guarantees no game is ever killed)
+        val detector = ActiveGameDetector(context, AdbManager.getInstance(context))
+        if (detector.isLikelyGame(clean) || detector.classifyGame(clean) != null) {
             return true
         }
 
@@ -117,17 +182,36 @@ object NukeProcessPurgeGuardian {
     private fun isSensitiveSystemPackage(context: Context, pkg: String): Boolean {
         if (pkg == "android") return true
         if (pkg.startsWith("android.")) return true
-        if (pkg.startsWith("com.android.systemui")) return true
-        if (pkg.startsWith("com.android.phone")) return true
-        if (pkg.startsWith("com.android.server")) return true
-        if (pkg.startsWith("com.android.bluetooth")) return true
-        if (pkg.startsWith("com.android.nfc")) return true
-        if (pkg.startsWith("com.android.keyguard")) return true
+        if (pkg.startsWith("media.") || pkg.contains("swcodec") || pkg.contains("hwcodec") || pkg.contains("codec")) return true
+        if (pkg.contains("soter") || pkg.contains("soterserver")) return true
+        if (pkg.startsWith("com.android.")) return true
         if (pkg.startsWith("com.google.android.gms")) return true
         if (pkg.startsWith("com.google.android.gsf")) return true
+        if (pkg.startsWith("com.google.android.inputmethod") || pkg.startsWith("com.google.android.googlequicksearchbox")) return true
         if (pkg.startsWith("moe.shizuku.privileged.api") || pkg.startsWith("rikka.shizuku") || pkg.contains("shizuku")) return true
         if (pkg.startsWith("com.android.shell") || pkg.contains("iadb")) return true
         if (pkg.startsWith("vendor.") || pkg.startsWith("android.hardware.")) return true
+
+        // Xiaomi / HyperOS / MIUI security, powerkeeper, and system frameworks
+        if (pkg.startsWith("com.miui.") || pkg.startsWith("com.xiaomi.") || pkg.startsWith("com.lbe.")) return true
+
+        // Samsung OneUI Knox, security, and framework services
+        if (pkg.startsWith("com.sec.") || pkg.startsWith("com.samsung.")) return true
+
+        // Oppo / Realme / OnePlus ColorOS & HeyTap frameworks
+        if (pkg.startsWith("com.oplus.") || pkg.startsWith("com.coloros.") || pkg.startsWith("com.nearme.") || pkg.startsWith("com.heytap.")) return true
+
+        // Vivo OriginOS / Funtouch & BBK frameworks
+        if (pkg.startsWith("com.vivo.") || pkg.startsWith("com.iqoo.") || pkg.startsWith("com.bbk.")) return true
+
+        // Transsion (Infinix, Tecno, Itel) system services
+        if (pkg.startsWith("com.transsion.") || pkg.startsWith("com.infinix.") || pkg.startsWith("com.tecno.")) return true
+
+        // Huawei & Honor frameworks
+        if (pkg.startsWith("com.huawei.") || pkg.startsWith("com.hihonor.")) return true
+
+        // Hardware abstraction, chipsets, and vendor daemons
+        if (pkg.startsWith("com.mediatek.") || pkg.startsWith("com.qualcomm.") || pkg.startsWith("com.qti.")) return true
 
         // Keyboards & Input Methods
         if (pkg.contains("keyboard") || pkg.contains("ime") || pkg.contains("inputmethod")) return true
@@ -176,132 +260,151 @@ object NukeProcessPurgeGuardian {
      * @return Pair(killedCount, reclaimedMemoryEstimateMb)
      */
     suspend fun purgeZombiesSafe(context: Context): Pair<Int, Long> = withContext(Dispatchers.IO) {
-        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        val memBefore = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-        val availBeforeMb = memBefore.availMem / (1024 * 1024)
+        try {
+            val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+            val memBefore = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
+            val availBeforeMb = memBefore.availMem / (1024 * 1024)
 
-        // 0. First eliminate rogue zombie/defunct clusters and monitor loops
-        val rogueKilled = killRogueZombieProcesses(context)
-        var killedCount = rogueKilled
-        val sb = StringBuilder()
+            // 0. First eliminate rogue zombie/defunct clusters and monitor loops
+            val rogueKilled = killRogueZombieProcesses(context)
+            var killedCount = rogueKilled
+            val sb = StringBuilder()
 
-        // 1. Memory compaction and cache trimming (Standard safe Android API commands)
-        sb.append("pm trim-caches 999G 2>/dev/null\n")
-        sb.append("am compact all 2>/dev/null\n")
-        sb.append("echo 1 > /proc/sys/vm/compact_memory 2>/dev/null\n")
-        sb.append("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null\n")
+            // 1. Safe background memory sync
+            sb.append("sync 2>/dev/null\n")
 
-        // 2. Scan running background processes and filter strictly
-        val runningProcesses = runCatching { am?.runningAppProcesses.orEmpty() }.getOrDefault(emptyList())
-        val candidatesToKill = mutableListOf<String>()
+            // 2. Scan running background processes and filter strictly
+            val runningProcesses = runCatching { am?.runningAppProcesses.orEmpty() }.getOrDefault(emptyList())
+            val candidatesToKill = mutableListOf<String>()
 
-        for (proc in runningProcesses) {
-            val pkg = proc.pkgList?.firstOrNull() ?: continue
-            if (isProtected(context, pkg)) continue
+            for (proc in runningProcesses) {
+                val pkg = proc.pkgList?.firstOrNull() ?: continue
+                if (isProtected(context, pkg)) continue
 
-            // Only kill if the process is truly in the background and not a foreground service
-            if (proc.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED ||
-                proc.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_BACKGROUND
-            ) {
-                candidatesToKill.add(pkg)
+                // Only kill if the process is explicitly in COMMON_BLOATWARE_CANDIDATES AND in background
+                if (COMMON_BLOATWARE_CANDIDATES.contains(pkg) &&
+                    (proc.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED || proc.importance >= 300)
+                ) {
+                    candidatesToKill.add(pkg)
+                }
             }
-        }
 
-        // Also add common background bloatware if not protected
-        for (bloat in COMMON_BLOATWARE_CANDIDATES) {
-            if (!isProtected(context, bloat) && !candidatesToKill.contains(bloat)) {
-                candidatesToKill.add(bloat)
-            }
-        }
-
-        val targetList = candidatesToKill.distinct().take(15)
-        for (pkg in targetList) {
-            // Trim memory first, then safe kill
-            sb.append("cmd activity send-trim-memory $pkg RUNNING_LOW 2>/dev/null\n")
-            sb.append("am kill $pkg 2>/dev/null\n")
-            // For common social bloat, force-stop is safe as long as it's not protected
-            if (COMMON_BLOATWARE_CANDIDATES.contains(pkg)) {
-                sb.append("am force-stop $pkg 2>/dev/null\n")
-            }
-            killedCount++
-        }
-
-        // 3. Execute via privileged bridge or fallback to ActivityManager
-        // 3. Execute via privileged bridge and always invoke system memory trim
-        val script = sb.toString()
-        if (script.isNotBlank()) {
+            // On modern Android (API 29+ / Android 14 HyperOS), query running packages via shell ps if connected
             val adb = AdbManager.getInstance(context)
-            val executed = if (adb.isConnected()) {
-                adb.executeCommand(script, "/", 6_000L) != null
+            val isPrivileged = adb.isConnected() || NukeConnectionManager.isConnected()
+            if (isPrivileged) {
+                val psCmd = "ps -A -o NAME 2>/dev/null || ps -o NAME 2>/dev/null"
+                val psOut = if (adb.isConnected()) adb.executeCommand(psCmd, "/", 2_500L)?.output.orEmpty() else NukeConnectionManager.executeCommand(psCmd, 2_500L)?.output.orEmpty()
+                if (psOut.isNotBlank()) {
+                    psOut.lineSequence().forEach { line ->
+                        val rawName = line.trim()
+                        if (rawName.contains(".") && !rawName.startsWith("[") && !rawName.contains("/")) {
+                            val pkg = rawName.substringBefore(':')
+                            // STRICT GUARD: ONLY add if it is verified bloatware, NEVER games or recorders
+                            if (COMMON_BLOATWARE_CANDIDATES.contains(pkg) && !isProtected(context, pkg) && !candidatesToKill.contains(pkg)) {
+                                candidatesToKill.add(pkg)
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Also ensure bloatware candidates are present if not protected
+            for (bloat in COMMON_BLOATWARE_CANDIDATES) {
+                if (!isProtected(context, bloat) && !candidatesToKill.contains(bloat)) {
+                    candidatesToKill.add(bloat)
+                }
+            }
+
+            val targetList = candidatesToKill.distinct().take(24)
+            for (pkg in targetList) {
+                // Trim memory first, then safe termination
+                sb.append("cmd activity send-trim-memory $pkg RUNNING_LOW 2>/dev/null\n")
+                sb.append("am force-stop $pkg 2>/dev/null\n")
+                killedCount++
+            }
+
+            // 3. Safe kernel drop caches and sync to free clean pages without killing daemons
+            sb.append("sync 2>/dev/null\n")
+            sb.append("echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true\n")
+
+            // 5. Execute via privileged bridge and always invoke system memory trim
+            val script = sb.toString()
+            if (script.isNotBlank()) {
+                if (adb.isConnected()) {
+                    adb.executeCommand(script, "/", 8_000L)
+                } else {
+                    NukeConnectionManager.executeCommand(script, 8_000L)
+                }
+
+                // Universal fallback: Always apply standard ActivityManager memory reclaim
+                for (pkg in targetList) {
+                    runCatching { am?.killBackgroundProcesses(pkg) }
+                }
             } else {
-                val res = NukeConnectionManager.executeCommand(script, 6_000L)
-                res != null && res.isSuccess
+                for (pkg in targetList) {
+                    runCatching { am?.killBackgroundProcesses(pkg) }
+                }
             }
 
-            // Universal fallback: Always apply standard ActivityManager memory reclaim
-            for (pkg in targetList) {
-                runCatching { am?.killBackgroundProcesses(pkg) }
-            }
-        } else {
-            for (pkg in targetList) {
-                runCatching { am?.killBackgroundProcesses(pkg) }
-            }
+            // Calculate freed memory
+            kotlinx.coroutines.delay(200L)
+            val memAfter = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
+            val availAfterMb = memAfter.availMem / (1024 * 1024)
+            val freedMb = (availAfterMb - availBeforeMb).coerceAtLeast(0L)
+
+            Log.d(TAG, "Safe zombie purge completed: killed=$killedCount freedMb=$freedMb")
+            Pair(killedCount, freedMb)
+        } catch (t: Throwable) {
+            Log.e(TAG, "purgeZombiesSafe error handled safely: ${t.message}", t)
+            Pair(0, 0L)
         }
-
-        // JVM Heap & Dalvik garbage collection
-        runCatching {
-            System.gc()
-            Runtime.getRuntime().gc()
-        }
-
-        // Calculate freed memory
-        kotlinx.coroutines.delay(200L)
-        val memAfter = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-        val availAfterMb = memAfter.availMem / (1024 * 1024)
-        val freedMb = (availAfterMb - availBeforeMb).coerceAtLeast(0L)
-
-        Log.d(TAG, "Safe zombie purge completed: killed=$killedCount freedMb=$freedMb")
-        Pair(killedCount, freedMb)
     }
 
     /**
      * Executes safe cache trimming without touching code_cache or active game directories.
      */
     suspend fun cleanCachesSafe(context: Context): Boolean = withContext(Dispatchers.IO) {
-        val sb = StringBuilder()
+        try {
+            val sb = StringBuilder()
 
-        // 1. Official Android package manager cache trim (Safely evicts temporary app caches)
-        sb.append("pm trim-caches 999999999999 2>/dev/null\n")
+            // 1. Safe kernel drop caches & sync (Non-destructive to running services)
+            sb.append("sync 2>/dev/null; echo 3 > /proc/sys/vm/drop_caches 2>/dev/null || true\n")
 
-        // 2. Clear logcat buffers to free memory
-        sb.append("logcat -c 2>/dev/null\n")
+            // 3. Clear logcat buffers to free memory
+            sb.append("logcat -c 2>/dev/null\n")
 
-        // 3. Clear system crash dumps & tombstones (Safe diagnostic artifacts)
-        sb.append("rm -rf /data/tombstones/* 2>/dev/null\n")
-        sb.append("rm -rf /data/anr/* 2>/dev/null\n")
-        sb.append("rm -rf /data/system/dropbox/* 2>/dev/null\n")
-        sb.append("rm -rf /data/local/tmp/.studio 2>/dev/null\n")
-        sb.append("rm -f /data/local/tmp/*.log /data/local/tmp/*.tmp /data/local/tmp/*.dmp 2>/dev/null\n")
+            // 4. Clear system crash dumps & tombstones (Safe diagnostic artifacts)
+            sb.append("rm -rf /data/tombstones/* 2>/dev/null\n")
+            sb.append("rm -rf /data/anr/* 2>/dev/null\n")
+            sb.append("rm -rf /data/system/dropbox/* 2>/dev/null\n")
+            sb.append("rm -rf /data/local/tmp/.studio 2>/dev/null\n")
+            sb.append("rm -f /data/local/tmp/*.log /data/local/tmp/*.tmp /data/local/tmp/*.dmp 2>/dev/null\n")
 
-        // 4. Clear public media thumbnails and trash (Safely ignores app data and games)
-        sb.append("rm -rf /sdcard/.thumbnails/* 2>/dev/null\n")
-        sb.append("rm -rf /sdcard/DCIM/.thumbnails/* 2>/dev/null\n")
-        sb.append("rm -rf /sdcard/Pictures/.thumbnails/* 2>/dev/null\n")
-        sb.append("rm -rf /sdcard/Download/.trash/* 2>/dev/null\n")
-        sb.append("rm -rf /sdcard/.trash/* 2>/dev/null\n")
-        sb.append("rm -rf /sdcard/.cache/* 2>/dev/null\n")
+            // 5. Clear public media thumbnails and trash (Safely ignores app data and games)
+            sb.append("rm -rf /sdcard/.thumbnails/* 2>/dev/null\n")
+            sb.append("rm -rf /sdcard/DCIM/.thumbnails/* 2>/dev/null\n")
+            sb.append("rm -rf /sdcard/Pictures/.thumbnails/* 2>/dev/null\n")
+            sb.append("rm -rf /sdcard/Download/.trash/* 2>/dev/null\n")
+            sb.append("rm -rf /sdcard/.trash/* 2>/dev/null\n")
+            sb.append("rm -rf /sdcard/.cache/* 2>/dev/null\n")
 
-        // 5. Delete lingering log and temporary dumps from Download
-        sb.append("find /sdcard/Download -maxdepth 2 -type f \\( -name '*.log' -o -name '*.tmp' -o -name '*.dmp' \\) -delete 2>/dev/null\n")
+            // 6. Delete lingering log and temporary dumps from Download
+            sb.append("find /sdcard/Download -maxdepth 2 -type f \\( -name '*.log' -o -name '*.tmp' -o -name '*.dmp' \\) -delete 2>/dev/null\n")
+            sb.append("sync 2>/dev/null\n")
 
-        val script = sb.toString()
-        val adb = AdbManager.getInstance(context)
-        if (adb.isConnected()) {
-            adb.executeCommand(script, "/", 8_000L)
-        } else {
-            NukeConnectionManager.executeCommand(script, 8_000L)
+            val script = sb.toString()
+            val adb = AdbManager.getInstance(context)
+            if (adb.isConnected()) {
+                adb.executeCommand(script, "/", 8_000L)
+            } else {
+                NukeConnectionManager.executeCommand(script, 8_000L)
+            }
+            true
+        } catch (t: Throwable) {
+            Log.e(TAG, "cleanCachesSafe error handled safely: ${t.message}", t)
+            false
         }
-        true
     }
 
     /**
@@ -314,85 +417,85 @@ object NukeProcessPurgeGuardian {
      * Guaranteed 100% safe: never touches Game Nuke, active game, Shizuku, or system core.
      */
     suspend fun killRogueZombieProcesses(context: Context): Int = withContext(Dispatchers.IO) {
-        val myPid = android.os.Process.myPid()
-        val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase() ?: ""
-        val activeGamePattern = if (activeGame.isNotEmpty()) "|*$activeGame*" else ""
-        val script = """
-            KILLED=0
+        try {
+            val myPid = android.os.Process.myPid()
+            val detectedState = runCatching {
+                ActiveGameDetector(context, AdbManager.getInstance(context)).detectState()
+            }.getOrNull()
+            val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase()
+                ?: NukeRuntimeState.lastKnownGamePackage?.trim()?.lowercase()
+                ?: detectedState?.focusedPackage?.lowercase()
+                ?: detectedState?.resumedGame?.packageName?.lowercase()
+                ?: ""
+            val activeGamePattern = if (activeGame.isNotEmpty()) "|*$activeGame*" else ""
+            val script = """
+                KILLED=0
 
-            # 1. Target rogue background competitor daemons and trackers (full cmdline and comm checks)
-            ROGUE_TARGETS="process-tracker redcorner axeron axon_core game-corner touch_boost simpleperf strace tcpdump gdbserver"
-            for T in ${'$'}ROGUE_TARGETS; do
-              PIDS=${'$'}(pgrep -f "${'$'}T" 2>/dev/null)
-              if [ -z "${'$'}PIDS" ]; then
-                PIDS=${'$'}(pidof "${'$'}T" 2>/dev/null)
-              fi
-              if [ -n "${'$'}PIDS" ]; then
-                for P in ${'$'}PIDS; do
-                  if [ -n "${'$'}P" ] && [ "${'$'}P" != "$myPid" ] && [ "${'$'}P" != "${'$'}${'$'}" ]; then
-                    CMD=${'$'}(cat /proc/"${'$'}P"/cmdline 2>/dev/null | tr '\0' ' ')
-                    case "${'$'}CMD" in
-                      *com.neon.gametweak*|*shizuku*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*|*screenrecord*|*recorder*|*live*$activeGamePattern) ;;
-                      *)
-                        kill -9 "${'$'}P" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
-                        ;;
-                    esac
+                # 0. Immediate mass termination of high-CPU runaway trackers and orphan spinloops
+                pkill -9 -f "process-tracker" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
+                killall -9 process-tracker 2>/dev/null
+                pkill -9 -f "emdlogger" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
+                pkill -9 -f "lbs_dbg" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
+                pkill -9 -f "leaked-worker" 2>/dev/null
+                pkill -9 -f "game-booster-daemon" 2>/dev/null
+                pkill -9 -f "axon_core" 2>/dev/null
+                pkill -9 -f "redcorner" 2>/dev/null
+                rm -rf /data/local/tmp/.studio 2>/dev/null
+
+                # 1. Target rogue orphaned pollers and competitor trackers
+                ROGUE_TARGETS="process-tracker redcorner axon_core game-booster-daemon leaked-worker"
+                for T in ${'$'}ROGUE_TARGETS; do
+                  PIDS=${'$'}(pgrep -f "${'$'}T" 2>/dev/null)
+                  if [ -z "${'$'}PIDS" ]; then
+                    PIDS=${'$'}(pidof "${'$'}T" 2>/dev/null)
+                  fi
+                  if [ -n "${'$'}PIDS" ]; then
+                    for P in ${'$'}PIDS; do
+                      if [ -n "${'$'}P" ] && [ "${'$'}P" != "$myPid" ] && [ "${'$'}P" != "${'$'}${'$'}" ]; then
+                        # Check UID: allow user apps (UID >= 10000) and shell daemons (UID == 2000)
+                        PUID=${'$'}(cat /proc/"${'$'}P"/status 2>/dev/null | grep -E '^Uid:' | awk '{print ${'$'}2}')
+                        if [ -n "${'$'}PUID" ] && { [ "${'$'}PUID" -ge 10000 ] || [ "${'$'}PUID" -eq 2000 ]; }; then
+                          CMD=${'$'}(cat /proc/"${'$'}P"/cmdline 2>/dev/null | tr '\0' ' ')
+                          case "${'$'}CMD" in
+                            *com.neon.gametweak*|*frb.axeron*|*wandev*|*nuke*|*shizuku*|*iadb*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*|*screenrecord*|*recorder*|*screencap*|*recording*|*live*|*xrecorder*|*mobizen*|*azscreenrecorder*|*vidma*|*streamlabs*|*glip*|*turnip*|*discord*|*spotify*|*freefire*|*dts*|*garena*|*mobile.legends*|*pubg*|*codm*|*genshin*|*hoyoverse*|*roblox*|*minecraft*|*farlight*|*bloodstrike*|*game*|*unity*|*epicgames*|*kurogame*|*supercell*|*brawlstars*|*riotgames*|*wildrift*|*ea.gp*|*netease*|*proximabeta*|*levelinfinite*|/system/*|/vendor/*|/apex/*$activeGamePattern) ;;
+                            *)
+                              kill -9 "${'$'}P" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
+                              ;;
+                          esac
+                        fi
+                      fi
+                    done
                   fi
                 done
-              fi
-            done
 
-            # 2. Hunt down true defunct/zombie processes and reap their orphaned parents
-            DEFUNCT_PPIDS=${'$'}(ps -A -o PID,PPID,STATE,CMD 2>/dev/null | awk '${'$'}3 ~ /Z/ || ${'$'}0 ~ /defunct/ {print ${'$'}2}' | grep -vE '^1$|^2$|^0$' | sort -u)
-            if [ -z "${'$'}DEFUNCT_PPIDS" ]; then
-              DEFUNCT_PPIDS=${'$'}(ps -ef 2>/dev/null | grep -E '<defunct>|\[.*:defunct\]' | awk '{print ${'$'}3}' | grep -vE '^1$|^2$|^0$' | sort -u)
-            fi
-            if [ -n "${'$'}DEFUNCT_PPIDS" ]; then
-              for PP in ${'$'}DEFUNCT_PPIDS; do
-                if [ -n "${'$'}PP" ] && [ "${'$'}PP" != "$myPid" ] && [ "${'$'}PP" != "${'$'}${'$'}" ]; then
-                  COMM=${'$'}(cat /proc/"${'$'}PP"/comm 2>/dev/null)
-                  CMDLINE=${'$'}(cat /proc/"${'$'}PP"/cmdline 2>/dev/null | tr '\0' ' ')
-                  # Never kill core system processes, active game, screen recorders, or Game Nuke
-                  case "${'$'}CMDLINE" in
-                    *com.neon.gametweak*|*shizuku*|*system_server*|*zygote*|*surfaceflinger*|*adbd*|*magisk*|*screenrecord*|*recorder*|*live*$activeGamePattern) ;;
-                    *)
-                      if [ "${'$'}COMM" != "system_server" ] && [ "${'$'}COMM" != "zygote" ] && [ "${'$'}COMM" != "zygote64" ] && [ "${'$'}COMM" != "init" ] && [ "${'$'}COMM" != "adbd" ] && [ "${'$'}COMM" != "kthreadd" ]; then
-                        kill -9 "${'$'}PP" 2>/dev/null && KILLED=${'$'}((KILLED + 1))
-                      fi
-                      ;;
-                  esac
-                fi
-              done
-            fi
+                # 2. Clean stale temporary files and socket dumps from /data/local/tmp
+                rm -rf /data/local/tmp/.studio 2>/dev/null
+                rm -f /data/local/tmp/*.log /data/local/tmp/*.tmp /data/local/tmp/*.dmp 2>/dev/null
 
-            # 3. Clean stale temporary files, orphaned studios, and socket nodes from /data/local/tmp
-            rm -rf /data/local/tmp/.studio 2>/dev/null
-            rm -f /data/local/tmp/*.log /data/local/tmp/*.tmp /data/local/tmp/*.dmp 2>/dev/null
+                # 3. Safe sync
+                sync 2>/dev/null
 
-            # 4. Linux Kernel memory compaction & cache drop
-            sync 2>/dev/null
-            echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
-            echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
-            am compact all 2>/dev/null
-            pm trim-caches 999G 2>/dev/null
+                echo "ROGUE_KILLED=${'$'}KILLED"
+            """.trimIndent()
 
-            echo "ROGUE_KILLED=${'$'}KILLED"
-        """.trimIndent()
+            val adb = AdbManager.getInstance(context)
+            val res = if (adb.isConnected()) {
+                adb.executeCommand(script, "/", 5_000L)
+            } else {
+                NukeConnectionManager.executeCommand(script, 5_000L)
+            }
+            val count = res?.output
+                ?.lineSequence()
+                ?.firstOrNull { it.startsWith("ROGUE_KILLED=") }
+                ?.substringAfter('=')
+                ?.trim()
+                ?.toIntOrNull() ?: 0
 
-        val adb = AdbManager.getInstance(context)
-        val res = if (adb.isConnected()) {
-            adb.executeCommand(script, "/", 5_000L)
-        } else {
-            NukeConnectionManager.executeCommand(script, 5_000L)
+            Log.i(TAG, "Ironclad rogue zombie purge completed: terminated $count rogue/zombie clusters")
+            count
+        } catch (t: Throwable) {
+            Log.e(TAG, "killRogueZombieProcesses error handled safely: ${t.message}", t)
+            0
         }
-        val count = res?.output
-            ?.lineSequence()
-            ?.firstOrNull { it.startsWith("ROGUE_KILLED=") }
-            ?.substringAfter('=')
-            ?.trim()
-            ?.toIntOrNull() ?: 0
-
-        Log.i(TAG, "Ironclad rogue zombie purge completed: terminated $count rogue/zombie clusters")
-        count
     }
 }

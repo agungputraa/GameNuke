@@ -3,10 +3,7 @@ package com.neon.gametweak
 import android.content.Context
 import android.content.SharedPreferences
 import android.content.res.ColorStateList
-import android.graphics.Canvas
 import android.graphics.Color
-import android.graphics.Paint
-import android.graphics.Path
 import android.graphics.PixelFormat
 import android.graphics.Typeface
 import android.graphics.drawable.GradientDrawable
@@ -27,30 +24,24 @@ import android.widget.ScrollView
 import android.widget.SeekBar
 import android.widget.Switch
 import android.widget.TextView
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
 
 /**
  * NukeMagicTouchPanelOverlay — Floating Touch Listener Sensitivity Studio.
  *
- * Built strictly from scratch focusing 100% on touchscreen tuning:
- *  - Touch Listener Master Switch (Kernel-level libtouch.so interception via privileged Binder/daemon)
- *  - Independent X & Y Axis Sensitivity Multipliers (1.00x to 3.50x)
- *  - Sensitivity Detection Area (Right Half, Full Screen, Left Half)
- *  - Speed Response Curves (Accelerate, Linear, Decelerate)
- *  - 1€ OneEuro Micro-Jitter Smoothing (Cutoff & Beta fine-tuning)
- *  - Relative Aim Mode (Edge gliding)
- *  - System Pointer Speed (-7 to +7) & Touch Calibration (slop, pressure, pointer_speed)
- *  - Drag Shot DPI Elevated Density (+0, +40, +80, +120)
- *  - Interactive Live Touchpad Canvas (Real-time tracking, delta X/Y readout, multiplier feedback)
+ * Streamlined, high-precision touchscreen control panel:
+ *  - Master Switch (Kernel-level libtouch.so interception via privileged Binder/daemon)
+ *  - Sensitivitas Sumbu X (1.00x Normal to 3.00x)
+ *  - Sensitivitas Sumbu Y (1.00x Normal to 3.00x with 1.00x/1.00x Reset)
+ *  - Sensitivitas Detection Zone (Full Screen, Sisi Kanan Aim/Skill, Sisi Kiri)
+ *  - Speed Response Curve (Linear 1:1 Natural, Accelerate, Decelerate)
+ *  - Macro Studio Quick Access & Multi-Touch Routing Status
+ *
+ * Guaranteed 100% natural, pixel-perfect touch fidelity (ideal for Mobile Legends / Fanny cables).
  */
 class NukeMagicTouchPanelOverlay private constructor(private val context: Context) {
 
     private val wm = context.getSystemService(Context.WINDOW_SERVICE) as WindowManager
     private val mainHandler = Handler(Looper.getMainLooper())
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val d = context.resources.displayMetrics.density
     private val prefs: SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
@@ -66,27 +57,15 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var yValBadge: TextView? = null
     private var xSeekBar: SeekBar? = null
     private var ySeekBar: SeekBar? = null
-    private var pointerValBadge: TextView? = null
-    private var pointerSeekBar: SeekBar? = null
-    private var jitterSwitch: Switch? = null
-    private var relativeAimSwitch: Switch? = null
-    private var dpiStatusTv: TextView? = null
-    private var dpiChipViews = mutableListOf<TextView>()
     private var areaChipViews = mutableListOf<TextView>()
     private var curveChipViews = mutableListOf<TextView>()
+    private var macroStatusTv: TextView? = null
 
-    // Live state values
-    private var sensX: Float = 1.80f
-    private var sensY: Float = 2.20f
-    private var sensArea: Int = NukeTouchTuningEngine.AREA_RIGHT
-    private var curveMode: Int = NukeTouchTuningEngine.CURVE_ACCELERATE
-    private var jitterSmoothing: Boolean = true
-    private var jitterCutoff: Float = 1.0f
-    private var jitterBeta: Float = 0.007f
-    private var relativeAim: Boolean = true
-    private var pointerSpeed: Int = 0
-    private var physicalDpi: Int = 0
-    private var currentDpiOffset: Int = 0
+    // Live state values (Defaults to clean 1.00x 1:1 stock natural touch)
+    private var sensX: Float = 1.00f
+    private var sensY: Float = 1.00f
+    private var sensArea: Int = NukeTouchTuningEngine.AREA_ALL
+    private var curveMode: Int = NukeTouchTuningEngine.CURVE_LINEAR
 
     val isShowing: Boolean get() = rootView != null
 
@@ -108,27 +87,30 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     init {
         loadPersistedState()
+        runCatching {
+            context.registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
+                override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+                    mainHandler.post { onOrientationChanged() }
+                }
+                override fun onLowMemory() {}
+                override fun onTrimMemory(level: Int) {}
+            })
+        }
     }
 
     private fun loadPersistedState() {
-        sensX = prefs.getFloat("touch_sens_x", NukeTouchTuningEngine.xMultiplier).coerceIn(1.0f, 3.5f)
-        sensY = prefs.getFloat("touch_sens_y", NukeTouchTuningEngine.yMultiplier).coerceIn(1.0f, 3.5f)
-        sensArea = prefs.getInt("touch_sens_area", NukeTouchTuningEngine.sensArea)
-        curveMode = prefs.getInt("touch_curve_mode", NukeTouchTuningEngine.curveMode)
-        jitterSmoothing = prefs.getBoolean("touch_jitter_smooth", NukeTouchTuningEngine.euroEnabled)
-        jitterCutoff = prefs.getFloat("touch_jitter_cutoff", NukeTouchTuningEngine.euroMinCutoff)
-        jitterBeta = prefs.getFloat("touch_jitter_beta", NukeTouchTuningEngine.euroBeta)
-        relativeAim = prefs.getBoolean("touch_relative_aim", true)
-        pointerSpeed = prefs.getInt("touch_pointer_speed", 0)
+        sensX = prefs.getFloat("touch_sens_x", 1.00f).coerceIn(1.0f, 3.5f)
+        sensY = prefs.getFloat("touch_sens_y", 1.00f).coerceIn(1.0f, 3.5f)
+        sensArea = prefs.getInt("touch_sens_area", NukeTouchTuningEngine.AREA_ALL)
+        curveMode = prefs.getInt("touch_curve_mode", NukeTouchTuningEngine.CURVE_LINEAR)
 
-        // Sync to engine runtime
+        // Sync to engine runtime (1:1 stock fast-path defaults)
         NukeTouchTuningEngine.xMultiplier = sensX
         NukeTouchTuningEngine.yMultiplier = sensY
         NukeTouchTuningEngine.sensArea = sensArea
         NukeTouchTuningEngine.curveMode = curveMode
-        NukeTouchTuningEngine.euroEnabled = jitterSmoothing
-        NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
-        NukeTouchTuningEngine.euroBeta = jitterBeta
+        NukeTouchTuningEngine.euroEnabled = false
+        NukeTouchTuningEngine.dragShotCurve = false
     }
 
     private fun persistState() {
@@ -137,26 +119,24 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             .putFloat("touch_sens_y", sensY)
             .putInt("touch_sens_area", sensArea)
             .putInt("touch_curve_mode", curveMode)
-            .putBoolean("touch_jitter_smooth", jitterSmoothing)
-            .putFloat("touch_jitter_cutoff", jitterCutoff)
-            .putFloat("touch_jitter_beta", jitterBeta)
-            .putBoolean("touch_relative_aim", relativeAim)
-            .putInt("touch_pointer_speed", pointerSpeed)
             .apply()
 
         NukeTouchTuningEngine.xMultiplier = sensX
         NukeTouchTuningEngine.yMultiplier = sensY
         NukeTouchTuningEngine.sensArea = sensArea
         NukeTouchTuningEngine.curveMode = curveMode
-        NukeTouchTuningEngine.euroEnabled = jitterSmoothing
-        NukeTouchTuningEngine.euroMinCutoff = jitterCutoff
-        NukeTouchTuningEngine.euroBeta = jitterBeta
-        // Always push the current values to the running daemon so sensitivity
-        // takes effect immediately — this is the critical path that was missing.
+        NukeTouchTuningEngine.euroEnabled = false
+        NukeTouchTuningEngine.dragShotCurve = false
+
+        // Push live values to running daemon/service immediately
         NukeTouchTuningEngine.syncToDaemon(context)
     }
 
     fun show() {
+        if (!NukeSubscriptionManager.isVipActive(context)) {
+            NukeToast.error(context, "Game Nuke VIP required to unlock Touch Listener", true)
+            return
+        }
         if (rootView != null) return
         if (!Settings.canDrawOverlays(context)) {
             NukeToast.error(context, "Display over other apps permission required for Touch Listener")
@@ -165,8 +145,20 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         try {
             val panel = buildTouchListenerUi()
-            val initialWidth = (340 * d).toInt().coerceAtMost(context.resources.displayMetrics.widthPixels - (16 * d).toInt())
-            val initialHeight = (520 * d).toInt().coerceAtMost((context.resources.displayMetrics.heightPixels * 0.82f).toInt())
+            val dm = context.resources.displayMetrics
+            val isPortrait = dm.heightPixels > dm.widthPixels
+            val initialWidth = if (isPortrait) {
+                minOf((340 * d).toInt(), dm.widthPixels - (20 * d).toInt())
+            } else {
+                minOf((380 * d).toInt(), (dm.widthPixels * 0.52f).toInt())
+            }
+            val initialHeight = if (isPortrait) {
+                minOf((560 * d).toInt(), (dm.heightPixels * 0.82f).toInt())
+            } else {
+                minOf((440 * d).toInt(), (dm.heightPixels * 0.90f).toInt())
+            }
+            val initialX = maxOf((8 * d).toInt(), (dm.widthPixels - initialWidth) / 2)
+            val initialY = if (isPortrait) (70 * d).toInt() else (20 * d).toInt()
 
             val params = WindowManager.LayoutParams(
                 initialWidth,
@@ -175,13 +167,17 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 else
                     @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                x = (context.resources.displayMetrics.widthPixels - initialWidth) / 2
-                y = (100 * d).toInt()
+                x = initialX
+                y = initialY
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
             }
 
             rootParams = params
@@ -208,27 +204,61 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
     }
 
+    fun onOrientationChanged() {
+        mainHandler.post {
+            val view = rootView ?: return@post
+            val lp = rootParams ?: return@post
+            val dm = context.resources.displayMetrics
+            val isPortrait = dm.heightPixels > dm.widthPixels
+            lp.width = if (isPortrait) {
+                minOf((340 * d).toInt(), dm.widthPixels - (20 * d).toInt())
+            } else {
+                minOf((380 * d).toInt(), (dm.widthPixels * 0.52f).toInt())
+            }
+            lp.height = if (isPortrait) {
+                minOf((560 * d).toInt(), (dm.heightPixels * 0.82f).toInt())
+            } else {
+                minOf((440 * d).toInt(), (dm.heightPixels * 0.90f).toInt())
+            }
+            lp.x = maxOf((8 * d).toInt(), (dm.widthPixels - lp.width) / 2)
+            lp.y = if (isPortrait) (70 * d).toInt() else (20 * d).toInt()
+            runCatching { wm.updateViewLayout(view, lp) }
+        }
+    }
+
     private fun updateStatusUi() {
         mainHandler.post {
             val isCoreActive = NukeTouchTuningEngine.isDaemonTouchActive
             if (isCoreActive) {
                 statusBadge?.text = "● ACTIVE"
                 statusBadge?.setTextColor(Color.parseColor("#10B981"))
-                statusSubtext?.text = "Kernel Touch Listener Active — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                statusSubtext?.text = "Touch Listener Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
                 statusSubtext?.setTextColor(Color.parseColor("#10B981"))
                 masterSwitch?.isChecked = true
             } else {
                 statusBadge?.text = "○ STANDBY"
                 statusBadge?.setTextColor(Color.parseColor("#64748B"))
-                statusSubtext?.text = "Standby — Tap the switch to activate"
+                statusSubtext?.text = "Standby — Tap toggle switch to activate"
                 statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
                 masterSwitch?.isChecked = false
+            }
+
+            // Update Macro status
+            val isMacroOpen = runCatching {
+                NukeMacroStudioOverlay.getInstance(context).isShowing
+            }.getOrDefault(false)
+            if (isMacroOpen) {
+                macroStatusTv?.text = "● Macro Studio Active on Screen"
+                macroStatusTv?.setTextColor(Color.parseColor("#10B981"))
+            } else {
+                macroStatusTv?.text = "○ Macro Studio Ready to Use"
+                macroStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
             }
         }
     }
 
     // ─────────────────────────────────────────────────────────────────────────
-    // UI BUILDER (Built from 0 — Touch Screen Components Only)
+    // UI BUILDER
     // ─────────────────────────────────────────────────────────────────────────
 
     private fun buildTouchListenerUi(): View {
@@ -264,20 +294,18 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             orientation = LinearLayout.VERTICAL
         }
 
-        // Section Cards (All Touchscreen Exclusive)
+        // Section Cards (Strictly required components)
         body.addView(buildMasterSwitchCard())
         body.addView(spacer(8))
-        body.addView(buildSensitivitySlidersCard())
+        body.addView(buildSensitivityXCard())
+        body.addView(spacer(8))
+        body.addView(buildSensitivityYCard())
         body.addView(spacer(8))
         body.addView(buildDetectionAreaCard())
         body.addView(spacer(8))
         body.addView(buildResponseCurveCard())
         body.addView(spacer(8))
-        body.addView(buildJitterFilterCard())
-        body.addView(spacer(8))
-        body.addView(buildSystemTouchCalibrationCard())
-        body.addView(spacer(8))
-        body.addView(buildInteractiveTouchpadCard())
+        body.addView(buildMacroStudioCard())
 
         scrollView.addView(body)
         container.addView(scrollView)
@@ -293,7 +321,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setPadding(0, 0, 0, (8 * d).toInt())
         }
 
-        // Drag handle bar
         val titleCol = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
@@ -330,7 +357,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         titleCol.addView(titleRow)
 
         titleCol.addView(TextView(context).apply {
-            text = "Hardware In-Game Touch Multiplier Studio"
+            text = "Ultra-Precision Touch & Hardware Aim Engine"
             textSize = 8.5f
             setTextColor(Color.parseColor("#64748B"))
         })
@@ -404,9 +431,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         statusSubtext = TextView(context).apply {
             text = if (NukeTouchTuningEngine.isDaemonTouchActive)
-                "Kernel Touch Listener Active — X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                "Touch Listener Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
             else
-                "Standby — Tap the switch to activate"
+                "Standby — Tap toggle switch to activate"
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
         }
@@ -421,7 +448,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setOnCheckedChangeListener { _, isChecked ->
                 prefs.edit().putBoolean("touch_listener_active", isChecked).apply()
                 if (isChecked) {
-                    statusSubtext?.text = "⌛ Connecting to Kernel Touch Listener..."
+                    statusSubtext?.text = "⌛ Connecting to Touch Listener..."
                     statusSubtext?.setTextColor(Color.parseColor("#F59E0B"))
                     statusBadge?.text = "● STARTING..."
                     statusBadge?.setTextColor(Color.parseColor("#F59E0B"))
@@ -431,14 +458,14 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                             if (ok) {
                                 statusBadge?.text = "● ACTIVE"
                                 statusBadge?.setTextColor(Color.parseColor("#10B981"))
-                                statusSubtext?.text = "✓ Touch Listener Active — In-game sensitivity working live"
+                                statusSubtext?.text = "✓ Touch Listener Active — Native 1:1 hardware aim engaged"
                                 statusSubtext?.setTextColor(Color.parseColor("#10B981"))
                                 masterSwitch?.isChecked = true
                                 prefs.edit().putBoolean("touch_listener_active", true).apply()
                             } else {
                                 statusBadge?.text = "⚠ STANDBY"
                                 statusBadge?.setTextColor(Color.parseColor("#EF4444"))
-                                statusSubtext?.text = "Failed to start Touch Listener. Connect Shizuku / ADB first."
+                                statusSubtext?.text = "Failed to start Touch Listener. Connect Shizuku or ADB first."
                                 statusSubtext?.setTextColor(Color.parseColor("#EF4444"))
                                 masterSwitch?.isChecked = false
                                 prefs.edit().putBoolean("touch_listener_active", false).apply()
@@ -448,7 +475,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 } else {
                     statusBadge?.text = "○ STANDBY"
                     statusBadge?.setTextColor(Color.parseColor("#64748B"))
-                    statusSubtext?.text = "Touch Listener deactivated (Stock screen input restored)"
+                    statusSubtext?.text = "Touch Listener disabled (System default input active)"
                     statusSubtext?.setTextColor(Color.parseColor("#94A3B8"))
                     NukeTouchTuningEngine.stopDaemonTouchAsync()
                     NukeTouchTuningEngine.resetToSystemDefaults(context)
@@ -461,24 +488,15 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         return card
     }
 
-    private fun buildSensitivitySlidersCard(): View {
+    private fun buildSensitivityXCard(): View {
         val card = cardLayout()
 
-        card.addView(TextView(context).apply {
-            text = "IN-GAME SENSITIVITY MULTIPLIERS"
-            textSize = 9f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#38BDF8"))
-        })
-
-        // --- X-AXIS MULTIPLIER ---
-        card.addView(spacer(6))
-        val xHeaderRow = LinearLayout(context).apply {
+        val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        xHeaderRow.addView(TextView(context).apply {
-            text = "X-Axis (Horizontal / Aim)"
+        headerRow.addView(TextView(context).apply {
+            text = "X-Axis Sensitivity (Horizontal)"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -486,64 +504,122 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         })
 
         xValBadge = TextView(context).apply {
-            text = "${"%.2f".format(sensX)}x"
-            textSize = 11f
+            text = if (sensX == 1.0f) "1.00x (Native 1:1)" else "${"%.2f".format(sensX)}x"
+            textSize = 10.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(if (sensX == 1.0f) Color.parseColor("#10B981") else Color.parseColor("#38BDF8"))
             setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#1500FF88"))
+                setColor(if (sensX == 1.0f) Color.parseColor("#1500FF88") else Color.parseColor("#1538BDF8"))
                 cornerRadius = 6 * d
             }
         }
-        xHeaderRow.addView(xValBadge)
-        card.addView(xHeaderRow)
+        headerRow.addView(xValBadge)
+        card.addView(headerRow)
 
-        // SeekBar X: 1.00x to 3.50x (progress 0..50 => step 0.05 => 1.00 + progress * 0.05)
-        // Red Corner MagicTouchSettingsFeature: fIntBitsToFloat mapping: value/100 * (max-min) + min
+        card.addView(TextView(context).apply {
+            text = "Horizontal swipe speed multiplier. 1.00x is native display hardware accuracy (100% stable)."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        })
+
+        // Slider row with [-] and [+] fine-tuning
+        val sliderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val minusBtn = TextView(context).apply {
+            text = "−"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding((10 * d).toInt(), (4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 6 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+            setOnClickListener {
+                sensX = (sensX - 0.02f).coerceIn(1.0f, 3.0f)
+                updateXBadge()
+                xSeekBar?.progress = (((sensX - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
+                persistState()
+            }
+        }
+        sliderRow.addView(minusBtn)
+
         xSeekBar = SeekBar(context).apply {
-            max = 50
-            progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+            max = 100
+            progress = (((sensX - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
             progressTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
             thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = (4 * d).toInt()
+                marginEnd = (4 * d).toInt()
+            }
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        sensX = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
-                        xValBadge?.text = "${"%.2f".format(sensX)}x"
-                        // Update engine value immediately so the live touchpad
-                        // canvas in the interactive card reflects the change in real-time.
+                        sensX = (1.0f + (prog * 0.02f)).coerceIn(1.0f, 3.0f)
+                        updateXBadge()
                         NukeTouchTuningEngine.xMultiplier = sensX
+                        NukeTouchTuningEngine.syncToDaemon(context)
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
                 override fun onStopTrackingTouch(sb: SeekBar?) {
-                    // Persist and sync to daemon only on finger-lift, not on every
-                    // pixel drag — this matches Red Corner's debounced touch callback.
                     persistState()
                 }
             })
         }
-        card.addView(xSeekBar)
+        sliderRow.addView(xSeekBar)
 
-        // X Presets
-        val xPresets = listOf(1.0f, 1.4f, 1.8f, 2.2f, 2.8f, 3.2f)
-        card.addView(buildPresetChips(xPresets, sensX) { target ->
-            sensX = target
-            xValBadge?.text = "${"%.2f".format(sensX)}x"
-            xSeekBar?.progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
-            persistState()
-        })
+        val plusBtn = TextView(context).apply {
+            text = "+"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding((10 * d).toInt(), (4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 6 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+            setOnClickListener {
+                sensX = (sensX + 0.02f).coerceIn(1.0f, 3.0f)
+                updateXBadge()
+                xSeekBar?.progress = (((sensX - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
+                persistState()
+            }
+        }
+        sliderRow.addView(plusBtn)
 
-        card.addView(spacer(10))
+        card.addView(sliderRow)
+        return card
+    }
 
-        // --- Y-AXIS MULTIPLIER ---
-        val yHeaderRow = LinearLayout(context).apply {
+    private fun updateXBadge() {
+        xValBadge?.text = if (sensX == 1.0f) "1.00x (Normal 1:1)" else "${"%.2f".format(sensX)}x"
+        xValBadge?.setTextColor(if (sensX == 1.0f) Color.parseColor("#10B981") else Color.parseColor("#38BDF8"))
+        xValBadge?.background = GradientDrawable().apply {
+            setColor(if (sensX == 1.0f) Color.parseColor("#1500FF88") else Color.parseColor("#1538BDF8"))
+            cornerRadius = 6 * d
+        }
+    }
+
+    private fun buildSensitivityYCard(): View {
+        val card = cardLayout()
+
+        val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        yHeaderRow.addView(TextView(context).apply {
-            text = "Y-Axis (Vertical / Drag Shot)"
+        headerRow.addView(TextView(context).apply {
+            text = "Y-Axis Sensitivity (Vertical)"
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#E2E8F0"))
@@ -551,75 +627,129 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         })
 
         yValBadge = TextView(context).apply {
-            text = "${"%.2f".format(sensY)}x"
-            textSize = 11f
+            text = if (sensY == 1.0f) "1.00x (Native 1:1)" else "${"%.2f".format(sensY)}x"
+            textSize = 10.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#38BDF8"))
+            setTextColor(if (sensY == 1.0f) Color.parseColor("#10B981") else Color.parseColor("#38BDF8"))
             setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#1538BDF8"))
+                setColor(if (sensY == 1.0f) Color.parseColor("#1500FF88") else Color.parseColor("#1538BDF8"))
                 cornerRadius = 6 * d
             }
         }
-        yHeaderRow.addView(yValBadge)
-        card.addView(yHeaderRow)
+        headerRow.addView(yValBadge)
+        card.addView(headerRow)
 
-        // SeekBar Y: 1.00x to 3.50x
-        // Red Corner MagicTouchSettingsFeature: yMultiplier follows same formula as X.
+        card.addView(TextView(context).apply {
+            text = "Vertical swipe speed multiplier. 1.00x is native display response (aspect ratio compensated)."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        })
+
+        // Slider row with [-] and [+] fine-tuning
+        val sliderRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+
+        val minusBtn = TextView(context).apply {
+            text = "−"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding((10 * d).toInt(), (4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 6 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+            setOnClickListener {
+                sensY = (sensY - 0.02f).coerceIn(1.0f, 3.0f)
+                updateYBadge()
+                ySeekBar?.progress = (((sensY - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
+                persistState()
+            }
+        }
+        sliderRow.addView(minusBtn)
+
         ySeekBar = SeekBar(context).apply {
-            max = 50
-            progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+            max = 100
+            progress = (((sensY - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
             progressTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
             thumbTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginStart = (4 * d).toInt()
+                marginEnd = (4 * d).toInt()
+            }
             setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
                     if (fromUser) {
-                        sensY = (1.0f + (prog * 0.05f)).coerceIn(1.0f, 3.5f)
-                        yValBadge?.text = "${"%.2f".format(sensY)}x"
-                        // Update engine value immediately (same Red Corner pattern as X).
+                        sensY = (1.0f + (prog * 0.02f)).coerceIn(1.0f, 3.0f)
+                        updateYBadge()
                         NukeTouchTuningEngine.yMultiplier = sensY
+                        NukeTouchTuningEngine.syncToDaemon(context)
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
                 override fun onStopTrackingTouch(sb: SeekBar?) {
-                    // Persist and sync on finger-lift only.
                     persistState()
                 }
             })
         }
-        card.addView(ySeekBar)
+        sliderRow.addView(ySeekBar)
 
-        // Y Presets
-        val yPresets = listOf(1.0f, 1.6f, 2.0f, 2.4f, 2.8f, 3.5f)
-        card.addView(buildPresetChips(yPresets, sensY) { target ->
-            sensY = target
-            yValBadge?.text = "${"%.2f".format(sensY)}x"
-            ySeekBar?.progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
-            persistState()
-        })
-
-        // Reset Row (matches Red Corner's "Reset to Default" button in MagicTouchSettingsFeature)
-        card.addView(spacer(8))
-        val resetBtn = TextView(context).apply {
-            text = "↺  Reset to Default (1.80x / 2.20x)"
-            textSize = 9.5f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#64748B"))
-            gravity = android.view.Gravity.CENTER
-            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
-            background = android.graphics.drawable.GradientDrawable().apply {
-                setColor(Color.parseColor("#0F172A"))
-                cornerRadius = 8 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+        val plusBtn = TextView(context).apply {
+            text = "+"
+            textSize = 14f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding((10 * d).toInt(), (4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 6 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#334155"))
             }
             setOnClickListener {
-                sensX = 1.80f
-                sensY = 2.20f
-                xValBadge?.text = "${"%.2f".format(sensX)}x"
-                yValBadge?.text = "${"%.2f".format(sensY)}x"
-                xSeekBar?.progress = (((sensX - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
-                ySeekBar?.progress = (((sensY - 1.0f) / 0.05f).toInt()).coerceIn(0, 50)
+                sensY = (sensY + 0.02f).coerceIn(1.0f, 3.0f)
+                updateYBadge()
+                ySeekBar?.progress = (((sensY - 1.0f) / 0.02f).toInt()).coerceIn(0, 100)
                 persistState()
+            }
+        }
+        sliderRow.addView(plusBtn)
+
+        card.addView(sliderRow)
+
+        // Reset to Stock Normal Button
+        card.addView(spacer(8))
+        val resetBtn = TextView(context).apply {
+            text = "↺  Reset Screen to Native (1.00x / 1.00x Linear)"
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#10B981"))
+            gravity = Gravity.CENTER
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#0F291E"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
+            }
+            setOnClickListener {
+                sensX = 1.00f
+                sensY = 1.00f
+                sensArea = NukeTouchTuningEngine.AREA_ALL
+                curveMode = NukeTouchTuningEngine.CURVE_LINEAR
+                updateXBadge()
+                updateYBadge()
+                xSeekBar?.progress = 0
+                ySeekBar?.progress = 0
+                updateAreaChips()
+                updateCurveChips()
+                persistState()
+                NukeToast.success(context, "Screen normalized 100% (Native 1:1 precision active)")
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -628,6 +758,15 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         card.addView(resetBtn)
 
         return card
+    }
+
+    private fun updateYBadge() {
+        yValBadge?.text = if (sensY == 1.0f) "1.00x (Native 1:1)" else "${"%.2f".format(sensY)}x"
+        yValBadge?.setTextColor(if (sensY == 1.0f) Color.parseColor("#10B981") else Color.parseColor("#38BDF8"))
+        yValBadge?.background = GradientDrawable().apply {
+            setColor(if (sensY == 1.0f) Color.parseColor("#1500FF88") else Color.parseColor("#1538BDF8"))
+            cornerRadius = 6 * d
+        }
     }
 
     private fun buildDetectionAreaCard(): View {
@@ -640,7 +779,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#38BDF8"))
         })
         card.addView(TextView(context).apply {
-            text = "Select screen area where multiplier is active. Right half recommended so left analog joystick remains unaffected."
+            text = "Select active screen zone for sensitivity scaling:\n• Right Side (Aim/Skill): Recommended for MOBA/FPS — Left joystick remains 100% native.\n• Entire Screen: Universal sensitivity across all display regions."
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
@@ -651,19 +790,19 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         val options = listOf(
-            Triple(NukeTouchTuningEngine.AREA_RIGHT, "Right Half", "Aim / Fire (Recommended)"),
-            Triple(NukeTouchTuningEngine.AREA_ALL, "Full Screen", "All Display"),
-            Triple(NukeTouchTuningEngine.AREA_LEFT, "Left Half", "Movement / Joystick")
+            Triple(NukeTouchTuningEngine.AREA_ALL, "Entire Screen", "Full Screen"),
+            Triple(NukeTouchTuningEngine.AREA_RIGHT, "Right Side (Aim)", "Skill & Aim"),
+            Triple(NukeTouchTuningEngine.AREA_LEFT, "Left Side", "Joystick")
         )
 
         areaChipViews.clear()
         options.forEach { (code, title, _) ->
             val chip = TextView(context).apply {
                 text = title
-                textSize = 9.5f
+                textSize = 9f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
-                setPadding((10 * d).toInt(), (6 * d).toInt(), (10 * d).toInt(), (6 * d).toInt())
+                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
                 layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
                     marginEnd = (4 * d).toInt()
                 }
@@ -684,8 +823,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     private fun updateAreaChips() {
         val options = listOf(
-            NukeTouchTuningEngine.AREA_RIGHT,
             NukeTouchTuningEngine.AREA_ALL,
+            NukeTouchTuningEngine.AREA_RIGHT,
             NukeTouchTuningEngine.AREA_LEFT
         )
         areaChipViews.forEachIndexed { i, chip ->
@@ -710,7 +849,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setTextColor(Color.parseColor("#38BDF8"))
         })
         card.addView(TextView(context).apply {
-            text = "Accelerate: Smooth micro-aim for precise scoping, high responsiveness for flick drag shots."
+            text = "Swipe speed response dynamics:\n• Linear (1:1): Natural response with zero deviation. Highly recommended for esports precision.\n• Accelerate: Fast swipes receive progressive acceleration boost.\n• Decelerate: Dampened high-speed flicks to prevent aim overshoot."
             textSize = 8.5f
             setTextColor(Color.parseColor("#94A3B8"))
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
@@ -721,8 +860,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         val curves = listOf(
-            Pair(NukeTouchTuningEngine.CURVE_ACCELERATE, "Accelerate"),
             Pair(NukeTouchTuningEngine.CURVE_LINEAR, "Linear (1:1)"),
+            Pair(NukeTouchTuningEngine.CURVE_ACCELERATE, "Accelerate"),
             Pair(NukeTouchTuningEngine.CURVE_DECELERATE, "Decelerate")
         )
 
@@ -730,7 +869,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         curves.forEach { (code, title) ->
             val chip = TextView(context).apply {
                 text = title
-                textSize = 9.5f
+                textSize = 9f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
@@ -754,8 +893,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     private fun updateCurveChips() {
         val curves = listOf(
-            NukeTouchTuningEngine.CURVE_ACCELERATE,
             NukeTouchTuningEngine.CURVE_LINEAR,
+            NukeTouchTuningEngine.CURVE_ACCELERATE,
             NukeTouchTuningEngine.CURVE_DECELERATE
         )
         curveChipViews.forEachIndexed { i, chip ->
@@ -770,352 +909,97 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
     }
 
-    private fun buildJitterFilterCard(): View {
+    private fun buildMacroStudioCard(): View {
         val card = cardLayout()
 
-        val row = LinearLayout(context).apply {
+        val headerRow = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        val col = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        col.addView(TextView(context).apply {
-            text = "Anti-Jitter Smoothing (1€ Filter)"
-            textSize = 10.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#F8FAFC"))
-        })
-        col.addView(TextView(context).apply {
-            text = "Eliminates finger micro-tremors during high-precision long-range aiming"
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#94A3B8"))
-        })
-        row.addView(col)
-
-        jitterSwitch = Switch(context).apply {
-            isChecked = jitterSmoothing
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
-            trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
-            setOnCheckedChangeListener { _, isChecked ->
-                jitterSmoothing = isChecked
-                persistState()
-            }
-        }
-        row.addView(jitterSwitch)
-        card.addView(row)
-
-        card.addView(spacer(6))
-        val aimRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        val aimCol = LinearLayout(context).apply {
-            orientation = LinearLayout.VERTICAL
-            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
-        }
-        aimCol.addView(TextView(context).apply {
-            text = "Relative Aim Mode (Edge Gliding)"
-            textSize = 10.5f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#F8FAFC"))
-        })
-        aimCol.addView(TextView(context).apply {
-            text = "Enables continuous camera panning beyond physical screen borders"
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#94A3B8"))
-        })
-        aimRow.addView(aimCol)
-
-        relativeAimSwitch = Switch(context).apply {
-            isChecked = relativeAim
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#38BDF8"))
-            trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
-            setOnCheckedChangeListener { _, isChecked ->
-                relativeAim = isChecked
-                persistState()
-            }
-        }
-        aimRow.addView(relativeAimSwitch)
-        card.addView(aimRow)
-
-        return card
-    }
-
-    private fun buildSystemTouchCalibrationCard(): View {
-        val card = cardLayout()
-
-        card.addView(TextView(context).apply {
-            text = "ANDROID SYSTEM TOUCH CALIBRATION"
-            textSize = 9f
+        headerRow.addView(TextView(context).apply {
+            text = "MACRO STUDIO"
+            textSize = 9.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#38BDF8"))
-        })
-
-        // Pointer speed
-        card.addView(spacer(6))
-        val ptrRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            gravity = Gravity.CENTER_VERTICAL
-        }
-        ptrRow.addView(TextView(context).apply {
-            text = "System Pointer Speed (-7 to +7)"
-            textSize = 10f
-            typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#E2E8F0"))
+            setTextColor(Color.parseColor("#C084FC"))
             layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
         })
-        pointerValBadge = TextView(context).apply {
-            text = if (pointerSpeed >= 0) "+$pointerSpeed" else "$pointerSpeed"
-            textSize = 10.5f
+
+        macroStatusTv = TextView(context).apply {
+            text = "● Ready"
+            textSize = 9f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setTextColor(Color.parseColor("#10B981"))
         }
-        ptrRow.addView(pointerValBadge)
-        card.addView(ptrRow)
+        headerRow.addView(macroStatusTv)
+        card.addView(headerRow)
 
-        pointerSeekBar = SeekBar(context).apply {
-            max = 14
-            progress = pointerSpeed + 7
-            progressTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
-            setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-                override fun onProgressChanged(sb: SeekBar?, prog: Int, fromUser: Boolean) {
-                    if (fromUser) {
-                        pointerSpeed = prog - 7
-                        pointerValBadge?.text = if (pointerSpeed >= 0) "+$pointerSpeed" else "$pointerSpeed"
-                        persistState()
-                        scope.launch {
-                            NukeConnectionManager.executeCommand("settings put system pointer_speed $pointerSpeed")
-                        }
-                    }
-                }
-                override fun onStartTrackingTouch(sb: SeekBar?) {}
-                override fun onStopTrackingTouch(sb: SeekBar?) {}
-            })
-        }
-        card.addView(pointerSeekBar)
-
-        // Drag shot DPI boost
-        card.addView(spacer(6))
         card.addView(TextView(context).apply {
-            text = "Drag Shot DPI Density Boost"
+            text = "On-screen touch button automation (Spam Tap, Hold, Combo, Swipe). Independent multi-touch routing guarantees gaming controls remain 100% responsive."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding(0, (2 * d).toInt(), 0, (8 * d).toInt())
+        })
+
+        val btnRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+        }
+
+        // Primary Launch Macro Studio Button
+        val launchBtn = TextView(context).apply {
+            text = "🎯 Open Macro Studio Overlay"
             textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
-            setTextColor(Color.parseColor("#E2E8F0"))
-        })
-
-        dpiStatusTv = TextView(context).apply {
-            text = "Boosts virtual screen density for crisper, more responsive Free Fire drag shots."
-            textSize = 8.5f
-            setTextColor(Color.parseColor("#94A3B8"))
-        }
-        card.addView(dpiStatusTv)
-
-        val dpiRow = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-            setPadding(0, (4 * d).toInt(), 0, 0)
-        }
-        val dpiOffsets = listOf(0, 40, 80, 120)
-        dpiChipViews.clear()
-        dpiOffsets.forEach { offset ->
-            val chip = TextView(context).apply {
-                text = if (offset == 0) "Default" else "+$offset DPI"
-                textSize = 9.5f
-                typeface = Typeface.DEFAULT_BOLD
-                gravity = Gravity.CENTER
-                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = (4 * d).toInt()
-                }
-                setOnClickListener {
-                    applyDpiBoost(offset)
-                }
-            }
-            dpiChipViews.add(chip)
-            dpiRow.addView(chip)
-        }
-        card.addView(dpiRow)
-        updateDpiChips()
-
-        return card
-    }
-
-    private fun updateDpiChips() {
-        val dpiOffsets = listOf(0, 40, 80, 120)
-        dpiChipViews.forEachIndexed { i, chip ->
-            val off = dpiOffsets.getOrNull(i) ?: 0
-            val selected = (off == currentDpiOffset)
-            chip.setTextColor(if (selected) Color.parseColor("#080E18") else Color.parseColor("#E2E8F0"))
-            chip.background = GradientDrawable().apply {
-                setColor(if (selected) Color.parseColor("#38BDF8") else Color.parseColor("#1E293B"))
-                cornerRadius = 8 * d
-                if (!selected) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
-            }
-        }
-    }
-
-    private fun applyDpiBoost(offset: Int) {
-        currentDpiOffset = offset
-        updateDpiChips()
-        scope.launch {
-            if (!NukeConnectionManager.isConnected()) {
-                mainHandler.post {
-                    dpiStatusTv?.text = "⚠ ADB/Shizuku not connected to modify DPI."
-                    dpiStatusTv?.setTextColor(Color.parseColor("#F59E0B"))
-                }
-                return@launch
-            }
-            if (offset == 0) {
-                val ok = NukeTouchTuningEngine.resetDragShotDpi()
-                mainHandler.post {
-                    dpiStatusTv?.text = if (ok) "✓ DPI reset to screen default" else "Failed to reset DPI"
-                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
-                }
-            } else {
-                if (physicalDpi == 0) physicalDpi = NukeTouchTuningEngine.getPhysicalDensity()
-                val targetDpi = (physicalDpi + offset).coerceIn(320, 640)
-                val ok = NukeTouchTuningEngine.applyDragShotDpi(targetDpi)
-                mainHandler.post {
-                    dpiStatusTv?.text = if (ok) "✓ DPI active: ${physicalDpi} → $targetDpi (+$offset DPI) — Drag shot ready" else "Failed to set DPI"
-                    dpiStatusTv?.setTextColor(if (ok) Color.parseColor("#10B981") else Color.parseColor("#EF4444"))
-                }
-            }
-        }
-    }
-
-    private fun buildInteractiveTouchpadCard(): View {
-        val card = cardLayout()
-
-        card.addView(TextView(context).apply {
-            text = "LIVE TOUCHPAD TEST AREA"
-            textSize = 9f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(Color.parseColor("#38BDF8"))
-        })
-
-        val readoutTv = TextView(context).apply {
-            text = "Swipe below to test X & Y responsiveness"
-            textSize = 8.5f
-            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.NORMAL)
-            setTextColor(Color.parseColor("#94A3B8"))
-            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
-        }
-        card.addView(readoutTv)
-
-        // Custom live interactive canvas for touch test
-        val canvasView = object : View(context) {
-            private val gridPaint = Paint().apply {
-                color = Color.parseColor("#1538BDF8")
-                strokeWidth = 1f * d
-                style = Paint.Style.STROKE
-            }
-            private val trailPaint = Paint().apply {
-                color = Color.parseColor("#10B981")
-                strokeWidth = 3f * d
-                style = Paint.Style.STROKE
-                strokeCap = Paint.Cap.ROUND
-                isAntiAlias = true
-            }
-            private val crosshairPaint = Paint().apply {
-                color = Color.parseColor("#38BDF8")
-                strokeWidth = 1.5f * d
-                style = Paint.Style.STROKE
-                isAntiAlias = true
-            }
-            private val pointPaint = Paint().apply {
-                color = Color.parseColor("#10B981")
-                style = Paint.Style.FILL
-                isAntiAlias = true
-            }
-
-            private var currentX = -1f
-            private var currentY = -1f
-            private var lastX = -1f
-            private var lastY = -1f
-            private val path = Path()
-
-            override fun onDraw(canvas: Canvas) {
-                super.onDraw(canvas)
-                val w = width.toFloat()
-                val h = height.toFloat()
-
-                // Background grid lines
-                val cols = 6
-                for (i in 1 until cols) {
-                    val x = w * (i.toFloat() / cols)
-                    canvas.drawLine(x, 0f, x, h, gridPaint)
-                }
-                val rows = 3
-                for (i in 1 until rows) {
-                    val y = h * (i.toFloat() / rows)
-                    canvas.drawLine(0f, y, w, y, gridPaint)
-                }
-
-                // Touch Trail
-                canvas.drawPath(path, trailPaint)
-
-                // Current Touch Crosshair
-                if (currentX >= 0 && currentY >= 0) {
-                    canvas.drawLine(currentX - (15 * d), currentY, currentX + (15 * d), currentY, crosshairPaint)
-                    canvas.drawLine(currentX, currentY - (15 * d), currentX, currentY + (15 * d), crosshairPaint)
-                    canvas.drawCircle(currentX, currentY, 5 * d, pointPaint)
-                }
-            }
-
-            override fun onTouchEvent(event: MotionEvent): Boolean {
-                when (event.action) {
-                    MotionEvent.ACTION_DOWN -> {
-                        lastX = event.x
-                        lastY = event.y
-                        currentX = event.x
-                        currentY = event.y
-                        path.reset()
-                        path.moveTo(event.x, event.y)
-                        readoutTv.text = "Down: (X=${event.x.toInt()}, Y=${event.y.toInt()}) [Gain: X=${"%.2f".format(sensX)}x, Y=${"%.2f".format(sensY)}x]"
-                        readoutTv.setTextColor(Color.parseColor("#10B981"))
-                        invalidate()
-                        return true
-                    }
-                    MotionEvent.ACTION_MOVE -> {
-                        val dx = event.x - lastX
-                        val dy = event.y - lastY
-                        val appliedDx = dx * sensX
-                        val appliedDy = dy * sensY
-                        lastX = event.x
-                        lastY = event.y
-                        currentX = event.x
-                        currentY = event.y
-                        path.lineTo(event.x, event.y)
-                        readoutTv.text = "ΔX: ${if (appliedDx >= 0) "+" else ""}${"%.1f".format(appliedDx)}  ΔY: ${if (appliedDy >= 0) "+" else ""}${"%.1f".format(appliedDy)} (Multiplier: ${"%.2f".format(sensX)}x / ${"%.2f".format(sensY)}x)"
-                        readoutTv.setTextColor(Color.parseColor("#38BDF8"))
-                        invalidate()
-                        return true
-                    }
-                    MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
-                        readoutTv.text = "Released — Ready for next touch test"
-                        readoutTv.setTextColor(Color.parseColor("#94A3B8"))
-                        currentX = -1f
-                        currentY = -1f
-                        invalidate()
-                        return true
-                    }
-                }
-                return super.onTouchEvent(event)
-            }
-        }.apply {
-            layoutParams = LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT,
-                (90 * d).toInt()
-            )
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#080E18"))
+            setPadding((12 * d).toInt(), (8 * d).toInt(), (12 * d).toInt(), (8 * d).toInt())
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#0F172A"))
+                setColor(Color.parseColor("#A855F7"))
                 cornerRadius = 8 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+            }
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
+                marginEnd = (4 * d).toInt()
+            }
+            setOnClickListener {
+                try {
+                    val macro = NukeMacroStudioOverlay.getInstance(context)
+                    macro.show()
+                    updateStatusUi()
+                    NukeToast.success(context, "Macro Studio Overlay opened")
+                } catch (t: Throwable) {
+                    NukeToast.error(context, "Failed to open Macro Studio: ${t.message}")
+                }
             }
         }
-        card.addView(canvasView)
+        btnRow.addView(launchBtn)
+
+        // Close / Hide Macro Studio Button
+        val hideBtn = TextView(context).apply {
+            text = "✕ Close"
+            textSize = 10f
+            typeface = Typeface.DEFAULT_BOLD
+            gravity = Gravity.CENTER
+            setTextColor(Color.parseColor("#94A3B8"))
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#1E293B"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), Color.parseColor("#334155"))
+            }
+            layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
+            setOnClickListener {
+                try {
+                    val macro = NukeMacroStudioOverlay.getInstance(context)
+                    macro.hide()
+                    updateStatusUi()
+                    NukeToast.success(context, "Macro Studio hidden")
+                } catch (t: Throwable) {
+                    Log.w(TAG, "Failed to hide macro studio: ${t.message}")
+                }
+            }
+        }
+        btnRow.addView(hideBtn)
+
+        card.addView(btnRow)
 
         return card
     }
@@ -1140,44 +1024,5 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         return View(context).apply {
             layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, (dp * d).toInt())
         }
-    }
-
-    private fun buildPresetChips(
-        presets: List<Float>,
-        current: Float,
-        onSelect: (Float) -> Unit
-    ): View {
-        val hscroll = HorizontalScrollView(context).apply {
-            isHorizontalScrollBarEnabled = false
-            overScrollMode = View.OVER_SCROLL_NEVER
-        }
-        val row = LinearLayout(context).apply {
-            orientation = LinearLayout.HORIZONTAL
-        }
-        presets.forEach { target ->
-            val isMatch = (kotlin.math.abs(target - current) < 0.05f)
-            val chip = TextView(context).apply {
-                text = "${target}x"
-                textSize = 9f
-                typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-                gravity = Gravity.CENTER
-                setPadding((8 * d).toInt(), (4 * d).toInt(), (8 * d).toInt(), (4 * d).toInt())
-                setTextColor(if (isMatch) Color.parseColor("#080E18") else Color.parseColor("#94A3B8"))
-                background = GradientDrawable().apply {
-                    setColor(if (isMatch) Color.parseColor("#10B981") else Color.parseColor("#1E293B"))
-                    cornerRadius = 6 * d
-                    if (!isMatch) setStroke((1 * d).toInt(), Color.parseColor("#334155"))
-                }
-                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
-                    marginEnd = (4 * d).toInt()
-                }
-                setOnClickListener {
-                    onSelect(target)
-                }
-            }
-            row.addView(chip)
-        }
-        hscroll.addView(row)
-        return hscroll
     }
 }

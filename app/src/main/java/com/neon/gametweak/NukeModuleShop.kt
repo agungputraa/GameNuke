@@ -254,7 +254,7 @@ internal class NukeModuleShopRepository(
                 add(
                     NukeShopModule(
                         id = id,
-                        name = item.optString("Nama Module", id).trim().take(72).ifBlank { id },
+                        name = item.optString("name", item.optString("Nama Module", id)).trim().take(72).ifBlank { id },
                         description = item.optString("des", "").trim().take(240),
                         category = item.optString("category", "Other").trim().take(40).ifBlank { "Other" },
                         developer = item.optString("dev", "Unknown").trim().take(40),

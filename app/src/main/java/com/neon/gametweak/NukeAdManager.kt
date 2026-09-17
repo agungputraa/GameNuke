@@ -48,10 +48,10 @@ object NukeAdManager {
 
     // ── Timing constants (Optimized for High Revenue & Active Monetization) ───
     private const val APP_OPEN_TIMEOUT_MS              = 4L * 60L * 60L * 1_000L  // 4h
-    private const val MIN_BETWEEN_FULLSCREEN_MS        = 75L * 1_000L             // 75 seconds between interstitials
-    private const val MIN_BETWEEN_APP_OPEN_MS          = 3L * 60L * 1_000L        // 3 minutes between app-open ads
-    private const val MIN_SESSION_AGE_FOR_INTERSTITIAL = 15L * 1_000L             // 15 seconds after app startup
-    private const val GAMEPLAY_GRACE_MS                = 30L * 1_000L             // 30 seconds after game session ends
+    private const val MIN_BETWEEN_FULLSCREEN_MS        = 45L * 1_000L             // 45 seconds between interstitials (Safe & Cuan)
+    private const val MIN_BETWEEN_APP_OPEN_MS          = 120L * 1_000L            // 2 minutes between app-open ads
+    private const val MIN_SESSION_AGE_FOR_INTERSTITIAL = 5L * 1_000L              // 5 seconds after app startup
+    private const val GAMEPLAY_GRACE_MS                = 5L * 1_000L              // 5 seconds after game session ends
     private const val NAVIGATION_CLICK_INTERVAL        = 2                        // Every 2 navigation clicks
     private const val MIN_FOREGROUNDS_BEFORE_APP_OPEN  = 1                        // Shows on 1st background resume
 
@@ -128,6 +128,7 @@ object NukeAdManager {
     }
 
     private fun appOpenEligible(activity: Activity): Boolean {
+        if (NukeSubscriptionManager.isVipActive(activity)) return false
         val p = prefs(activity)
         val count = p.getInt(KEY_FOREGROUND_COUNT, 0)
         val next = if (count >= Int.MAX_VALUE - 1) Int.MAX_VALUE - 1 else count + 1
@@ -174,6 +175,7 @@ object NukeAdManager {
     }
 
     fun preload(context: Context) {
+        if (NukeSubscriptionManager.isVipActive(context)) return
         val appContext = context.applicationContext
         onMain {
             if (!initialized) { initialize(appContext); return@onMain }
@@ -188,6 +190,7 @@ object NukeAdManager {
     // ──────────────────────────────────────────────────────────────────────────
 
     private fun loadInterstitialInternal(context: Context) {
+        if (NukeSubscriptionManager.isVipActive(context)) return
         if (!initialized || interstitialLoading || interstitialAd != null) return
         interstitialLoading = true
         val appCtx = context.applicationContext
@@ -223,6 +226,10 @@ object NukeAdManager {
 
     fun showInterstitial(activity: Activity, force: Boolean = false, onAdClosed: (() -> Unit)? = null) {
         val gate = OneShot(onAdClosed)
+        if (NukeSubscriptionManager.isVipActive(activity)) {
+            gate.run()
+            return
+        }
         onMain { showInterstitialInternal(activity, force, gate) }
     }
 
@@ -294,6 +301,7 @@ object NukeAdManager {
     }
 
     private fun loadAppOpenInternal(context: Context) {
+        if (NukeSubscriptionManager.isVipActive(context)) return
         if (!initialized || appOpenLoading || appOpenAvailable()) return
         appOpenLoading = true
         val appCtx = context.applicationContext
@@ -331,6 +339,7 @@ object NukeAdManager {
     fun showAppOpen(activity: Activity) = onMain { showAppOpenInternal(activity) }
 
     private fun showAppOpenInternal(activity: Activity) {
+        if (NukeSubscriptionManager.isVipActive(activity)) return
         if (!isActivityUsable(activity) || isShowingFullScreen || !mainAppReady || !fullScreenAllowed(activity)) return
         if (!appOpenEligible(activity)) return
         if (System.currentTimeMillis() - lastFullscreenMs(activity) < MIN_BETWEEN_FULLSCREEN_MS) return
@@ -354,6 +363,7 @@ object NukeAdManager {
     // ──────────────────────────────────────────────────────────────────────────
 
     private fun loadRewardedInternal(context: Context) {
+        if (NukeSubscriptionManager.isVipActive(context)) return
         if (!initialized || rewardedLoading || rewardedAd != null) return
         rewardedLoading = true
         val appCtx = context.applicationContext
@@ -393,6 +403,7 @@ object NukeAdManager {
     private const val BOOSTER_VIP_DURATION_MS    = 5L * 60L * 1_000L // 5 mins VIP pass for high rewarded frequency
 
     fun isBoosterVipActive(context: Context): Boolean {
+        if (NukeSubscriptionManager.isVipActive(context)) return true
         val expires = prefs(context).getLong(KEY_BOOSTER_VIP_EXPIRES_MS, 0L)
         return System.currentTimeMillis() < expires
     }
@@ -494,6 +505,11 @@ object NukeAdManager {
      * [onClosed] always fires after the ad is dismissed.
      */
     fun showRewarded(activity: Activity, onRewarded: () -> Unit = {}, onClosed: () -> Unit = {}) {
+        if (NukeSubscriptionManager.isVipActive(activity)) {
+            onRewarded()
+            onClosed()
+            return
+        }
         onMain {
             if (!isActivityUsable(activity) || isShowingFullScreen || !mainAppReady) { onClosed(); return@onMain }
             val ad = rewardedAd
@@ -547,7 +563,7 @@ object NukeAdManager {
         container: FrameLayout,
         onLoaded: ((Boolean) -> Unit)? = null
     ): VungleBannerView? {
-        if (!initialized) return null
+        if (!initialized || NukeSubscriptionManager.isVipActive(context)) return null
         return runCatching {
             val bannerView = VungleBannerView(context, BANNER_ID, VungleAdSize.BANNER)
             bannerView.adListener = object : BannerAdListener {

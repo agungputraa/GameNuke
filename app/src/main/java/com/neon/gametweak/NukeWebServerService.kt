@@ -130,8 +130,10 @@ class NukeWebServerService : Service() {
                 .addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(resources, R.drawable.logo_nuke) }.getOrNull()
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setContentTitle("Game Nuke API active")
             .setContentText("Local REST API is running in the background")
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

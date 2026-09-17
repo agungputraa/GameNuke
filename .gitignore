@@ -10,8 +10,10 @@ build/
 .externalNativeBuild
 .cxx
 *.apk
-!GameNuke-Premium-v2.7.0.apk
-!GameNuke-v2.8.0-Quasar.apk
+*.zip
+scratch/
+__pycache__/
+*.pyc
 release-apk/
 release-aab/
 
@@ -31,3 +33,5 @@ tools/*dump.txt
 tools/*dexdump.txt
 tools/apktool.jar
 DumpReference/
+
+implementation_plan.md

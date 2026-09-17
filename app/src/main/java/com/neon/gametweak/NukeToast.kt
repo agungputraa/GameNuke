@@ -11,6 +11,8 @@ object NukeToast {
         SUCCESS("SUCCESS • "),
         ERROR("ERROR • "),
         UNSUPPORTED("UNSUPPORTED • "),
+        WARNING("WARNING • "),
+        INFO("INFO • "),
     }
 
     fun success(context: Context, message: String, long: Boolean = false) =
@@ -21,6 +23,12 @@ object NukeToast {
 
     fun unsupported(context: Context, message: String, long: Boolean = false) =
         show(context, Outcome.UNSUPPORTED, message, long)
+
+    fun warning(context: Context, message: String, long: Boolean = false) =
+        show(context, Outcome.WARNING, message, long)
+
+    fun info(context: Context, message: String, long: Boolean = false) =
+        show(context, Outcome.INFO, message, long)
 
     fun fromResult(context: Context, success: Boolean, message: String, long: Boolean = false) =
         show(context, if (success) Outcome.SUCCESS else Outcome.ERROR, message, long)

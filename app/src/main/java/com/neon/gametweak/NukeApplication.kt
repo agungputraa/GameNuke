@@ -32,6 +32,8 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
         installCrashBreadcrumbGuard()
         NukeRemoteConfigRepository.initialize(this)
         NukeDaemonClient.init(this)
+        NukeTranslationManager.init(this)
+        NukeBoosterFeatureController.init(this)
 
         // Language restore is cheap and avoids a visible text flip after the first frame.
         val prefs = getSharedPreferences("NukePrefs", MODE_PRIVATE)
@@ -51,6 +53,11 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
         // Pre-warm ADB RSA key material in background to avoid main-thread I/O block on first connect.
         kotlin.concurrent.thread(name = "Nuke-KeyWarmup", isDaemon = true) {
             runCatching { AdbManager.getInstance(applicationContext).warmUpKeyMaterial() }
+        }
+
+        // Proactively deploy kernel touch driver (libwandev.so) to /data/local/tmp
+        kotlin.concurrent.thread(name = "Nuke-TouchDeploy", isDaemon = true) {
+            runCatching { nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(applicationContext) }
         }
 
         // Initialize Autonomous AI Game Sentinel
@@ -103,26 +110,15 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
     }
 
     /**
-     * Records a tiny local breadcrumb before delegating to Android's original fatal handler.
-     * We deliberately do not swallow uncaught exceptions: a corrupted process must terminate.
-     * Runtime operations are expected to contain recoverable failures at their source.
+     * Records a compact local breadcrumb before delegating to Android's original fatal handler.
+     * Uncaught exceptions are never swallowed here: continuing a corrupted UI/main thread can
+     * leave overlays or input state stuck. Recoverable platform/OEM errors are handled at call sites.
      */
     private fun installCrashBreadcrumbGuard() {
         val previous = Thread.getDefaultUncaughtExceptionHandler()
         Thread.setDefaultUncaughtExceptionHandler { thread, error ->
-            // Prevent silent force-close from third-party Ad SDK BadTokenException or Chromium WebView internal crashes
-            val isRecoverableAdCrash = error is android.view.WindowManager.BadTokenException ||
-                    error.javaClass.name.contains("BadTokenException") ||
-                    error.stackTrace.any { 
-                        it.className.contains("vungle", ignoreCase = true) ||
-                        it.className.contains("chromium", ignoreCase = true) ||
-                        it.className.contains("ViewRootImpl", ignoreCase = true)
-                    }
-
-            if (isRecoverableAdCrash) {
-                android.util.Log.e("GameNukeCrashGuard", "Shielded app from third-party ad/window crash on thread ${thread.name}", error)
-                return@setDefaultUncaughtExceptionHandler
-            }
+            val errorClassName = error.javaClass.name
+            val errorMsg = error.message.orEmpty()
 
             runCatching {
                 val file = java.io.File(filesDir, "last_fatal.txt")
@@ -130,8 +126,10 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
                     buildString {
                         appendLine("time=${System.currentTimeMillis()}")
                         appendLine("thread=${thread.name}")
-                        appendLine("type=${error.javaClass.name}")
-                        appendLine("message=${error.message.orEmpty().take(500)}")
+                        appendLine("type=$errorClassName")
+                        appendLine("message=${errorMsg.take(500)}")
+                        appendLine("stackTrace=")
+                        error.stackTrace.take(15).forEach { appendLine("  at $it") }
                     },
                 )
             }

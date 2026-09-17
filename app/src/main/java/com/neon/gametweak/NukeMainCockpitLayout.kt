@@ -42,6 +42,7 @@ class NukeMainCockpitLayout @JvmOverloads constructor(
     private val cyan = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Cyan }
     private val blue = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Blue }
     private val violet = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Violet }
+    private val energyFinPaints = arrayOf(green, green, cyan, blue, violet)
 
     init {
         setWillNotDraw(false)
@@ -52,6 +53,10 @@ class NukeMainCockpitLayout @JvmOverloads constructor(
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
         super.onSizeChanged(w, h, oldw, oldh)
         rebuild(w.toFloat(), h.toFloat())
+        if (w <= 1 || h <= 1) {
+            paint.shader = null
+            return
+        }
         paint.shader = LinearGradient(
             0f, 0f, 0f, h.toFloat(),
             intArrayOf(
@@ -151,12 +156,11 @@ class NukeMainCockpitLayout @JvmOverloads constructor(
         canvas.drawPath(inner, fine)
 
         // Side energy fins. Green remains dominant while cyan/blue/violet are small telemetry cues.
-        val p = arrayOf(green, green, cyan, blue, violet)
         val y0 = height * .39f
         val segH = height * .031f
         val xL = 10f * d
         val xR = width - 15f * d
-        p.forEachIndexed { i, color ->
+        energyFinPaints.forEachIndexed { i, color ->
             val y = y0 + i * (segH + 2.6f * d)
             canvas.save(); canvas.rotate(-9f, xL, y)
             canvas.drawRoundRect(xL, y, xL + 5.2f * d, y + segH, 1.2f * d, 1.2f * d, color)

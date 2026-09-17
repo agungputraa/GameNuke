@@ -179,7 +179,7 @@
 -keep interface com.vungle.** { *; }
 -dontwarn com.vungle.**
 
-# --- Native Touch Subsystem (Must match libwandev.so / libtouch.so JNI signatures exactly) ---
+# --- Native Touch Subsystem (libwandev.so / Game Nuke Touch Driver) ---
 -keep class nuke.wandev.touch.** { *; }
 -keepclassmembers class nuke.wandev.touch.** { *; }
 -dontwarn nuke.wandev.touch.**

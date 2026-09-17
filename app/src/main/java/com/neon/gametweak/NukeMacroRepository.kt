@@ -167,8 +167,13 @@ object NukeMacroRepository {
      */
     fun pushProfileToDaemon(ctx: Context, profile: MacroProfile) {
         val density = ctx.resources.displayMetrics.density
+        // Only TOUCH_SCREEN pins go to the kernel touch router — volume key pins are dispatched
+        // separately by NukeMacroEngine and must NOT absorb physical touches at their coordinates.
         val csv = if (profile.useMapping) {
-            pinsDaemonCsv(profile.pins.filter { it.enabled }, density)
+            pinsDaemonCsv(
+                profile.pins.filter { it.enabled && it.triggerSource == MacroTriggerSource.TOUCH_SCREEN },
+                density
+            )
         } else {
             ""
         }
@@ -180,6 +185,9 @@ object NukeMacroRepository {
     fun pinsDaemonCsv(pins: List<MacroPinConfig>, density: Float = 3f): String {
         return pins.joinToString(";") { pin ->
             val rPx = (pin.radiusDp * density).coerceAtLeast(24f)
+            val isTargetMode = pin.mode == MacroTriggerMode.SWIPE || pin.mode == MacroTriggerMode.MIRROR || pin.mode == MacroTriggerMode.COMBO
+            val effTargetX = if (isTargetMode) pin.targetXRatio else pin.xRatio
+            val effTargetY = if (isTargetMode) pin.targetYRatio else pin.yRatio
             pin.id + "," +
                 pin.index + "," +
                 pin.xRatio + "," +
@@ -189,8 +197,8 @@ object NukeMacroRepository {
                 pin.repeatCount + "," +
                 pin.intervalMs + "," +
                 pin.holdDurationMs + "," +
-                pin.targetXRatio + "," +
-                pin.targetYRatio + "," +
+                effTargetX + "," +
+                effTargetY + "," +
                 pin.invertX + "," +
                 pin.invertY + "," +
                 pin.sensX + "," +
@@ -199,7 +207,9 @@ object NukeMacroRepository {
                 pin.tapDurationMs + "," +
                 pin.enabled + "," +
                 pin.sanitizedLabel() + "," +
-                pin.swipeDurationMs
+                pin.swipeDurationMs + "," +
+                (if (pin.linkedPinIds.isEmpty()) "none" else pin.linkedPinIds.joinToString("|")) + "," +
+                pin.multiPinDelayMs
         }
     }
 
@@ -265,6 +275,10 @@ object NukeMacroRepository {
         put("radiusDp", radiusDp.toDouble())
         put("color", color)
         put("isLocked", isLocked)
+        val linkedArr = JSONArray()
+        linkedPinIds.forEach { linkedArr.put(it) }
+        put("linkedPinIds", linkedArr)
+        put("multiPinDelayMs", multiPinDelayMs)
     }
 
     private fun JSONObject.toPinConfig(): MacroPinConfig {
@@ -272,6 +286,16 @@ object NukeMacroRepository {
         val mode = runCatching { MacroTriggerMode.valueOf(modeStr) }.getOrDefault(MacroTriggerMode.REPEAT_TAP)
         val triggerSourceStr = optString("triggerSource", MacroTriggerSource.TOUCH_SCREEN.name)
         val triggerSource = runCatching { MacroTriggerSource.valueOf(triggerSourceStr) }.getOrDefault(MacroTriggerSource.TOUCH_SCREEN)
+        val linkedList = mutableListOf<String>()
+        val linkedArr = optJSONArray("linkedPinIds")
+        if (linkedArr != null) {
+            for (i in 0 until linkedArr.length()) {
+                val item = linkedArr.optString(i, "")
+                if (item.isNotBlank()) linkedList.add(item)
+            }
+        }
+        val multiPinDelay = optLong("multiPinDelayMs", 0L)
+
         return MacroPinConfig(
             id = optString("id", java.util.UUID.randomUUID().toString()),
             index = optInt("index", 1),
@@ -282,9 +306,9 @@ object NukeMacroRepository {
             yRatio = optDouble("yRatio", 0.5).toFloat().coerceIn(0.0f, 1.0f),
             mode = mode,
             startDelayMs = optLong("startDelayMs", 0L),
-            repeatCount = optInt("repeatCount", 5),
-            intervalMs = optLong("intervalMs", 25L),
-            tapDurationMs = optLong("tapDurationMs", 15L),
+            repeatCount = optInt("repeatCount", 0),
+            intervalMs = optLong("intervalMs", 20L),
+            tapDurationMs = optLong("tapDurationMs", 16L),
             holdDurationMs = optLong("holdDurationMs", 300L),
             swipeDurationMs = optLong("swipeDurationMs", 120L),
             targetXRatio = optDouble("targetXRatio", 0.65).toFloat().coerceIn(0.0f, 1.0f),
@@ -295,7 +319,9 @@ object NukeMacroRepository {
             sensY = optDouble("sensY", 1.0).toFloat().coerceIn(0.1f, 5.0f),
             radiusDp = optDouble("radiusDp", 36.0).toFloat(),
             color = optInt("color", 0xFF00E5FF.toInt()),
-            isLocked = optBoolean("isLocked", false)
+            isLocked = optBoolean("isLocked", false),
+            linkedPinIds = linkedList,
+            multiPinDelayMs = multiPinDelay
         )
     }
 

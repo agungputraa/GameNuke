@@ -33,8 +33,9 @@ object NukeDaemonClient {
 
     fun getToken(context: Context? = null): String {
         if (authToken.isNotEmpty()) return authToken
-        if (context != null) {
-            init(context)
+        val ctx = context ?: NukeApplication.instance
+        if (ctx != null) {
+            init(ctx)
             return authToken
         }
         return ""
@@ -102,9 +103,11 @@ object NukeDaemonClient {
         smooth: Boolean = true,
         minCutoff: Float = 1.0f,
         beta: Float = 0.007f,
-        dragShot: Boolean = true
+        dragShot: Boolean = false
     ): Boolean {
         val cmd = "TOUCH_CONFIG|$sx|$sy|$area|$curve|$smooth|$minCutoff|$beta|$dragShot"
+        val streamResp = requestStream(cmd)
+        if (streamResp == "TOUCH_CONFIGURED") return true
         val resp = runCatching { request(cmd, 3000) }.getOrNull()
         return resp == "TOUCH_CONFIGURED"
     }
@@ -119,22 +122,99 @@ object NukeDaemonClient {
         return resp == "TOUCH_STATUS|true"
     }
 
+    // Dedicated persistent socket for sub-millisecond touch macro streams (Gloo Wall spam / Rapid Fire)
+    @Volatile private var persistentSocket: Socket? = null
+    @Volatile private var persistentReader: BufferedReader? = null
+    @Volatile private var persistentWriter: java.io.BufferedWriter? = null
+    private val persistentLock = Any()
+
+    private fun getOrCreatePersistentConnection(timeoutMs: Int = 2000): Pair<BufferedReader, java.io.BufferedWriter>? {
+        synchronized(persistentLock) {
+            val sock = persistentSocket
+            val r = persistentReader
+            val w = persistentWriter
+            if (sock != null && !sock.isClosed && sock.isConnected && r != null && w != null) {
+                return Pair(r, w)
+            }
+            closePersistentConnection()
+            return runCatching {
+                val newSock = Socket().apply {
+                    tcpNoDelay = true
+                    soTimeout = 4000
+                    connect(InetSocketAddress("127.0.0.1", TCP_PORT), timeoutMs.coerceIn(200, 2000))
+                }
+                val newR = BufferedReader(InputStreamReader(newSock.getInputStream(), Charsets.UTF_8))
+                val newW = newSock.getOutputStream().bufferedWriter(Charsets.UTF_8)
+                persistentSocket = newSock
+                persistentReader = newR
+                persistentWriter = newW
+                Pair(newR, newW)
+            }.getOrNull()
+        }
+    }
+
+    fun closePersistentConnection() {
+        synchronized(persistentLock) {
+            runCatching { persistentWriter?.flush() }
+            runCatching { persistentReader?.close() }
+            runCatching { persistentSocket?.close() }
+            persistentWriter = null
+            persistentReader = null
+            persistentSocket = null
+        }
+    }
+
+    private fun requestStream(line: String): String? {
+        synchronized(persistentLock) {
+            for (attempt in 0..1) {
+                val conn = getOrCreatePersistentConnection() ?: return null
+                try {
+                    val tok = getToken()
+                    val payload = if (tok.isNotEmpty()) "TOKEN|$tok|$line" else line
+                    conn.second.write(payload)
+                    conn.second.write("\n")
+                    conn.second.flush()
+                    val resp = conn.first.readLine()
+                    if (resp == "DENIED") {
+                        closePersistentConnection()
+                        throw java.io.IOException("Daemon TCP rejected authentication")
+                    }
+                    if (!resp.isNullOrBlank()) {
+                        return resp
+                    }
+                } catch (_: Exception) {
+                    closePersistentConnection()
+                    if (attempt == 1) return null
+                }
+            }
+            return null
+        }
+    }
+
     fun touchTap(x: Float, y: Float, durationMs: Long = 15L): Boolean {
+        val streamResp = requestStream("TOUCH_TAP|$x|$y|$durationMs")
+        if (streamResp == "OK") return true
         val resp = runCatching { request("TOUCH_TAP|$x|$y|$durationMs", 1500) }.getOrNull()
         return resp == "OK"
     }
 
     fun touchHold(x: Float, y: Float, durationMs: Long): Boolean {
+        val streamResp = requestStream("TOUCH_HOLD|$x|$y|$durationMs")
+        if (streamResp == "OK") return true
         val resp = runCatching { request("TOUCH_HOLD|$x|$y|$durationMs", (durationMs + 1000).toInt()) }.getOrNull()
         return resp == "OK"
     }
 
     fun touchSwipe(x1: Float, y1: Float, x2: Float, y2: Float, durationMs: Long = 120L): Boolean {
+        val streamResp = requestStream("TOUCH_SWIPE|$x1|$y1|$x2|$y2|$durationMs")
+        if (streamResp == "OK") return true
         val resp = runCatching { request("TOUCH_SWIPE|$x1|$y1|$x2|$y2|$durationMs", (durationMs + 1000).toInt()) }.getOrNull()
         return resp == "OK"
     }
 
     fun setMacroPins(pinsConfig: String): Boolean {
+        val streamResp = requestStream("TOUCH_SET_PINS|$pinsConfig")
+        if (streamResp == "OK") return true
         val resp = runCatching { request("TOUCH_SET_PINS|$pinsConfig", 2500) }.getOrNull()
         return resp == "OK"
     }
@@ -145,7 +225,7 @@ object NukeDaemonClient {
             socket.tcpNoDelay = true
             socket.soTimeout = timeoutMs.coerceAtLeast(150)
             socket.connect(InetSocketAddress("127.0.0.1", TCP_PORT), timeoutMs.coerceIn(200, 2000))
-            val tok = authToken
+            val tok = getToken()
             val payload = if (tok.isNotEmpty()) "TOKEN|$tok|$line" else line
             val writer = socket.getOutputStream().bufferedWriter(Charsets.UTF_8)
             writer.write(payload)

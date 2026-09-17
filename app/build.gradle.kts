@@ -35,8 +35,8 @@ android {
         applicationId = "com.neon.gametweak"
         minSdk = 30
         targetSdk = 36
-        versionCode = 22
-        versionName = "2.9.0-Void"
+        versionCode = 27
+        versionName = "3.2.1-Spectra"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         ndk {
@@ -190,6 +190,9 @@ dependencies {
 
     // ── WorkManager — reliable background task scheduling (live chat polling) ─
     implementation("androidx.work:work-runtime-ktx:2.9.1")
+
+    // ── ZXing QR Code Engine (Instant offline QRIS rendering) ────────────────
+    implementation("com.google.zxing:core:3.5.3")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")

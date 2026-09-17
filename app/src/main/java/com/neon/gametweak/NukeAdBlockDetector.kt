@@ -94,6 +94,9 @@ object NukeAdBlockDetector {
      * Guaranteed NO false positives: does NOT flag disabled/opportunistic DNS even if residual text remains in DB.
      */
     fun checkStatus(context: Context, adbManager: AdbManager? = null): AdBlockStatus {
+        if (NukeSubscriptionManager.isVipActive(context)) {
+            return AdBlockStatus(isDetected = false, reason = "VIP Active")
+        }
         return runCatching {
             var mode = runCatching {
                 Settings.Global.getString(context.contentResolver, "private_dns_mode")
@@ -155,7 +158,7 @@ object NukeAdBlockDetector {
                         isDetected = true,
                         detectedDnsSpecifier = if (isHostnameActive && specifier.isNotBlank()) specifier else "AdBlock / Hosts",
                         dnsMode = mode.ifBlank { "active" },
-                        reason = "AdBlocker Aktif (Domain Iklan Diblokir)",
+                        reason = "Ad blocking detected (ad network domain unavailable)",
                     )
                 }
             }

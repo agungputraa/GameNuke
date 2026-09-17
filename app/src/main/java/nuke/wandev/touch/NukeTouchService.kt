@@ -1,5 +1,6 @@
 package nuke.wandev.touch
 
+import android.os.Process
 import android.util.Log
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
@@ -54,7 +55,7 @@ object NukeTouchService {
         Thread(r, "nuke-macro-worker").apply { isDaemon = true }
     }
 
-    fun start(libPath: String? = null): Int {
+    fun start(libPath: String? = null, allowGrab: Boolean = false): Int {
         if (listening) return 1
         val touch = TouchListener.INSTANCE
         if (!touch.isLoaded) {
@@ -96,7 +97,7 @@ object NukeTouchService {
                 eventReceivedSinceGrab = true
                 grabSafetyTimer?.cancel(true)
                 grabSafetyTimer = null
-                Log.i(TAG, "Touch hardware event verified — safety net disarmed, grab permanently active")
+                Log.i(TAG, "Touch hardware event verified — safety net disarmed")
             }
             if (rawEvent.action == TouchEvent.ACTION_FRAME) {
                 injector.onFrame()
@@ -121,31 +122,65 @@ object NukeTouchService {
 
             if (curPins.isNotEmpty()) {
                 val act = rawEvent.action
-                if (act == TouchEvent.ACTION_DOWN) {
-                    val dw = rawEvent.displayWidth.toFloat()
-                    val dh = rawEvent.displayHeight.toFloat()
-                    val hitPin = curPins.firstOrNull { pin ->
+                val dw = rawEvent.displayWidth.toFloat()
+                val dh = rawEvent.displayHeight.toFloat()
+                val dwNorm = if (dw > 0f) dw else 1080f
+                val dhNorm = if (dh > 0f) dh else 2400f
+
+                fun findHitPin(): NukeTouchInjector.MacroPinTarget? {
+                    return curPins.firstOrNull { pin ->
                         val pinPxX = if (pin.x <= 1.0f && dw > 0f) pin.x * dw else pin.x
                         val pinPxY = if (pin.y <= 1.0f && dh > 0f) pin.y * dh else pin.y
                         val pinPxR = if (pin.radiusPx <= 1.0f && dw > 0f) pin.radiusPx * dw else pin.radiusPx
+                        val effectiveRadius = maxOf(pinPxR * 1.35f, pinPxR + 30f)
                         val dx = rawEvent.dispXf - pinPxX
                         val dy = rawEvent.dispYf - pinPxY
-                        (dx * dx + dy * dy) <= (pinPxR * pinPxR)
+                        (dx * dx + dy * dy) <= (effectiveRadius * effectiveRadius)
                     }
+                }
+
+                fun resolveTarget(hitPin: NukeTouchInjector.MacroPinTarget): Pair<Float, Float> {
+                    val tx = if (hitPin.targetX > 0f) {
+                        if (hitPin.targetX <= 1.0f) hitPin.targetX * dwNorm else hitPin.targetX
+                    } else {
+                        if (hitPin.x <= 1.0f) hitPin.x * dwNorm else hitPin.x
+                    }
+                    val ty = if (hitPin.targetY > 0f) {
+                        if (hitPin.targetY <= 1.0f) hitPin.targetY * dhNorm else hitPin.targetY
+                    } else {
+                        if (hitPin.y <= 1.0f) hitPin.y * dhNorm else hitPin.y
+                    }
+                    return Pair(tx, ty)
+                }
+
+                if (act == TouchEvent.ACTION_DOWN) {
+                    val hitPin = findHitPin()
                     if (hitPin != null) {
-                        val dwNorm = if (dw > 0f) dw else 1080f
-                        val dhNorm = if (dh > 0f) dh else 2400f
-                        val targetX = if (hitPin.x <= 1.0f) hitPin.x * dwNorm else hitPin.x
-                        val targetY = if (hitPin.y <= 1.0f) hitPin.y * dhNorm else hitPin.y
+                        val (targetX, targetY) = resolveTarget(hitPin)
                         startMacroSession(hwKey, hitPin, targetX, targetY)
+
+                        // ── Multi-Pin Trigger (One-tap triggers all linked pins) ──
+                        if (hitPin.linkedPinIds.isNotEmpty()) {
+                            val linkedPins = curPins.filter { it.enabled && hitPin.linkedPinIds.contains(it.id) }
+                            val delayMs = hitPin.multiPinDelayMs.coerceIn(0L, 500L)
+                            linkedPins.forEachIndexed { i, linked ->
+                                val (lx, ly) = resolveTarget(linked)
+                                val linkedHwKey = hwKey + ((i + 1L) shl 32)
+                                if (delayMs > 0L && i > 0) {
+                                    macroExecutor.schedule({
+                                        startMacroSession(linkedHwKey, linked, lx, ly)
+                                    }, delayMs * i, TimeUnit.MILLISECONDS)
+                                } else {
+                                    startMacroSession(linkedHwKey, linked, lx, ly)
+                                }
+                            }
+                        }
                         return@setSink
                     }
                 } else if (act == TouchEvent.ACTION_MOVE) {
                     val session = activeSessions[hwKey]
                     if (session != null) {
                         if (session.pin.mode == 3) {
-                            val dw = if (rawEvent.displayWidth > 0) rawEvent.displayWidth.toFloat() else 1080f
-                            val dh = if (rawEvent.displayHeight > 0) rawEvent.displayHeight.toFloat() else 2400f
                             val pinX = if (session.pin.x <= 1.0f) session.pin.x * dw else session.pin.x
                             val pinY = if (session.pin.y <= 1.0f) session.pin.y * dh else session.pin.y
                             val relX = rawEvent.dispXf - pinX
@@ -157,6 +192,14 @@ object NukeTouchService {
                             injector.pointerMove(session.synthKey, (baseTargetX + finalDx).coerceIn(0f, dw), (baseTargetY + finalDy).coerceIn(0f, dh))
                         }
                         return@setSink // Absorb movement of macro finger
+                    } else {
+                        // Resilient fallback: finger moved/settled onto macro pin
+                        val hitPin = findHitPin()
+                        if (hitPin != null) {
+                            val (targetX, targetY) = resolveTarget(hitPin)
+                            startMacroSession(hwKey, hitPin, targetX, targetY)
+                            return@setSink
+                        }
                     }
                 } else if (act == TouchEvent.ACTION_UP) {
                     if (activeSessions.containsKey(hwKey)) {
@@ -167,7 +210,9 @@ object NukeTouchService {
             }
 
             // Normal gaming touch or camera aim swipe -> passes directly to injector with full X/Y sensitivity
-            injector.onSample(rawEvent)
+            if (grabActive) {
+                injector.onSample(rawEvent)
+            }
         }
 
         val res = touch.nativeStart()
@@ -175,26 +220,30 @@ object NukeTouchService {
             listening = true
             eventReceivedSinceGrab = false
 
-            // CRITICAL SAFETY GUARD:
-            // Enable hardware grab if injector is verified
-            if (injector.isInjectionReady()) {
-                touch.nativeSetGrab(true)
-                grabActive = true
-                Log.i(TAG, "Touch listener started and grab enabled for $res device(s)")
+            // CRITICAL SCREEN FREEZE PREVENTION:
+            // Never enable hardware grab by default! Only allow when explicitly requested AND verified
+            // by a real pre-flight injection capability test (prevents freeze on Xiaomi/HyperOS, Samsung, etc.)
+            val canInject = injector.testInjectionCapability()
+            if (allowGrab && canInject) {
+                val grabOk = runCatching { touch.nativeSetGrab(true); true }.getOrDefault(false)
+                grabActive = grabOk
+                Log.i(TAG, "Touch listener started and kernel grab active ($grabOk) for $res device(s)")
 
-                grabSafetyTimer?.cancel(true)
-                grabSafetyTimer = safetyExecutor.schedule({
-                    if (listening && grabActive && !eventReceivedSinceGrab) {
-                        Log.w(TAG, "SAFETY NET: no events after ${GRAB_GRACE_MS}ms — releasing grab")
-                        touch.nativeSetGrab(false)
-                        grabActive = false
-                        injector.reset()
-                    }
-                }, GRAB_GRACE_MS, TimeUnit.MILLISECONDS)
+                if (grabActive) {
+                    grabSafetyTimer?.cancel(true)
+                    grabSafetyTimer = safetyExecutor.schedule({
+                        if (listening && grabActive && !eventReceivedSinceGrab) {
+                            Log.w(TAG, "SAFETY NET: no events after ${GRAB_GRACE_MS}ms — releasing grab")
+                            touch.nativeSetGrab(false)
+                            grabActive = false
+                            injector.reset()
+                        }
+                    }, GRAB_GRACE_MS, TimeUnit.MILLISECONDS)
+                }
             } else {
                 touch.nativeSetGrab(false)
                 grabActive = false
-                Log.w(TAG, "Injector not ready — running in monitor mode without grab (failsafe)")
+                Log.i(TAG, "Touch listener active in safe monitor mode (grabActive=false, screen free)")
             }
         } else {
             Log.e(TAG, "nativeStart returned failure: $res")
@@ -204,85 +253,85 @@ object NukeTouchService {
 
     private fun startMacroSession(hwKey: Long, pin: NukeTouchInjector.MacroPinTarget, targetX: Float, targetY: Float) {
         val synthKey = (-281474976710656L) or (hwKey and 0x0000_FFFF_FFFF_FFFFL)
+        val oldSession = activeSessions.remove(hwKey)
+        oldSession?.let {
+            it.isAlive.set(false)
+            it.scheduledFuture?.cancel(true)
+            injector.pointerUp(it.synthKey)
+        }
+
         val session = MacroSession(hwKey, synthKey, pin, targetX, targetY)
         activeSessions[hwKey] = session
 
         when (pin.mode) {
-            0 -> { // RAPID SPAM / BURST (REPEAT_TAP)
-                val holdMs = pin.tapDurationMs.coerceAtLeast(1L)
-                val intervalMs = pin.intervalMs.coerceIn(2L, 500L)
+            0 -> { // RAPID SPAM / BURST (REPEAT_TAP) — Continuous while held on screen
+                val holdMs = pin.tapDurationMs.coerceIn(10L, 200L)
+                val intervalMs = pin.intervalMs.coerceIn(10L, 200L)
                 val repeatLimit = if (pin.repeatCount <= 0) Int.MAX_VALUE else pin.repeatCount
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
 
-                fun executeCycle(count: Int) {
-                    if (!session.isAlive.get()) return
-                    if (count >= repeatLimit) {
-                        stopMacroSession(hwKey)
-                        return
-                    }
-
-                    // 1. Pointer Down
-                    injector.pointerDown(synthKey, targetX, targetY)
-
-                    // 2. Schedule Pointer Up
-                    session.scheduledFuture = macroExecutor.schedule({
+                session.scheduledFuture = macroExecutor.schedule({
+                    try {
+                        Process.setThreadPriority(Process.THREAD_PRIORITY_URGENT_DISPLAY)
+                    } catch (_: Throwable) {}
+                    var count = 0
+                    try {
+                        while (session.isAlive.get() && count < repeatLimit) {
+                            var downEmitted = false
+                            try {
+                                injector.pointerDown(synthKey, targetX, targetY)
+                                downEmitted = true
+                                Thread.sleep(holdMs)
+                            } finally {
+                                if (downEmitted) {
+                                    injector.pointerUp(synthKey)
+                                }
+                            }
+                            count++
+                            if (!session.isAlive.get() || count >= repeatLimit) break
+                            try {
+                                Thread.sleep(intervalMs)
+                            } catch (_: InterruptedException) {
+                                break
+                            }
+                        }
+                    } catch (_: InterruptedException) {
+                        // cancellation
+                    } finally {
                         injector.pointerUp(synthKey)
-                        if (session.isAlive.get() && count + 1 < repeatLimit) {
-                            // 3. Schedule next Pointer Down
-                            session.scheduledFuture = macroExecutor.schedule({
-                                executeCycle(count + 1)
-                            }, intervalMs, TimeUnit.MILLISECONDS)
-                        } else if (count + 1 >= repeatLimit) {
+                        if (session.isAlive.get() && count >= repeatLimit) {
                             stopMacroSession(hwKey)
                         }
-                    }, holdMs, TimeUnit.MILLISECONDS)
-                }
-
-                if (startDelay > 0) {
-                    session.scheduledFuture = macroExecutor.schedule({
-                        executeCycle(0)
-                    }, startDelay, TimeUnit.MILLISECONDS)
-                } else {
-                    executeCycle(0)
-                }
+                    }
+                }, startDelay, TimeUnit.MILLISECONDS)
             }
             1 -> { // SINGLE TAP
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                val tapDur = pin.tapDurationMs.coerceAtLeast(1L)
-                fun doTap() {
-                    if (!session.isAlive.get()) return
-                    injector.pointerDown(synthKey, targetX, targetY)
-                    session.scheduledFuture = macroExecutor.schedule({
+                val tapDur = pin.tapDurationMs.coerceIn(10L, 200L)
+                session.scheduledFuture = macroExecutor.schedule({
+                    if (!session.isAlive.get()) return@schedule
+                    try {
+                        injector.pointerDown(synthKey, targetX, targetY)
+                        try { Thread.sleep(tapDur) } catch (_: InterruptedException) {}
+                    } finally {
                         injector.pointerUp(synthKey)
                         stopMacroSession(hwKey)
-                    }, tapDur, TimeUnit.MILLISECONDS)
-                }
-                if (startDelay > 0) {
-                    session.scheduledFuture = macroExecutor.schedule({
-                        doTap()
-                    }, startDelay, TimeUnit.MILLISECONDS)
-                } else {
-                    doTap()
-                }
+                    }
+                }, startDelay, TimeUnit.MILLISECONDS)
             }
             2 -> { // SUSTAINED HOLD
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                fun doHold() {
-                    if (!session.isAlive.get()) return
-                    injector.pointerDown(synthKey, targetX, targetY)
-                    if (pin.holdDurationMs > 0) {
-                        session.scheduledFuture = macroExecutor.schedule({
-                            injector.pointerUp(synthKey)
-                        }, pin.holdDurationMs, TimeUnit.MILLISECONDS)
+                val holdDur = pin.holdDurationMs.coerceIn(50L, 30_000L)
+                session.scheduledFuture = macroExecutor.schedule({
+                    if (!session.isAlive.get()) return@schedule
+                    try {
+                        injector.pointerDown(synthKey, targetX, targetY)
+                        try { Thread.sleep(holdDur) } catch (_: InterruptedException) {}
+                    } finally {
+                        injector.pointerUp(synthKey)
+                        stopMacroSession(hwKey)
                     }
-                }
-                if (startDelay > 0) {
-                    session.scheduledFuture = macroExecutor.schedule({
-                        doHold()
-                    }, startDelay, TimeUnit.MILLISECONDS)
-                } else {
-                    doHold()
-                }
+                }, startDelay, TimeUnit.MILLISECONDS)
             }
             3 -> { // MIRROR MODE (Red Corner uu4.java benchmark)
                 val dw = displayTransform.snapshot.width.toFloat().let { if (it > 0f) it else 1080f }
@@ -296,85 +345,77 @@ object NukeTouchService {
                 val dh = displayTransform.snapshot.height.toFloat().let { if (it > 0f) it else 2400f }
                 val startX = targetX.coerceIn(0f, dw)
                 val startY = targetY.coerceIn(0f, dh)
-                val endX = (if (pin.targetX <= 1.0f && pin.targetX > 0f) pin.targetX * dw else if (pin.targetX > 0f) pin.targetX else startX)
-                    .coerceIn(0f, dw)
-                val endY = (if (pin.targetY <= 1.0f && pin.targetY > 0f) pin.targetY * dh else if (pin.targetY > 0f) pin.targetY else startY)
-                    .coerceIn(0f, dh)
+                val endX = (if (pin.targetX <= 1.0f && pin.targetX > 0f) pin.targetX * dw else if (pin.targetX > 0f) pin.targetX else startX).coerceIn(0f, dw)
+                val endY = (if (pin.targetY <= 1.0f && pin.targetY > 0f) pin.targetY * dh else if (pin.targetY > 0f) pin.targetY else startY).coerceIn(0f, dh)
                 val dur = pin.swipeDurationMs.coerceIn(20L, 2000L)
                 val steps = ((dur / 8L).toInt()).coerceIn(4, 64)
                 val stepMs = (dur / steps).coerceAtLeast(1L)
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                fun doSwipe() {
-                    if (!session.isAlive.get()) return
-                    injector.pointerDown(synthKey, startX, startY)
-                    var step = 0
-                    session.scheduledFuture = macroExecutor.scheduleAtFixedRate({
-                        if (!session.isAlive.get()) {
-                            session.scheduledFuture?.cancel(false)
-                            return@scheduleAtFixedRate
-                        }
-                        step++
-                        if (step >= steps) {
-                            try {
-                                injector.pointerMove(synthKey, endX, endY)
-                            } catch (_: Throwable) {}
-                            session.scheduledFuture?.cancel(false)
-                            macroExecutor.schedule({
-                                injector.pointerUp(synthKey)
-                                stopMacroSession(hwKey)
-                            }, stepMs, TimeUnit.MILLISECONDS)
-                        } else {
-                            val p = step.toFloat() / steps
+
+                session.scheduledFuture = macroExecutor.schedule({
+                    if (!session.isAlive.get()) return@schedule
+                    try {
+                        injector.pointerDown(synthKey, startX, startY)
+                        for (i in 1..steps) {
+                            if (!session.isAlive.get()) break
+                            val p = i.toFloat() / steps
                             val ix = startX + (endX - startX) * p
                             val iy = startY + (endY - startY) * p
                             try {
                                 injector.pointerMove(synthKey, ix, iy)
-                            } catch (_: Throwable) {}
+                                Thread.sleep(stepMs)
+                            } catch (_: InterruptedException) {
+                                break
+                            }
                         }
-                    }, stepMs, stepMs, TimeUnit.MILLISECONDS)
-                }
-                if (startDelay > 0) {
-                    session.scheduledFuture = macroExecutor.schedule({ doSwipe() }, startDelay, TimeUnit.MILLISECONDS)
-                } else {
-                    doSwipe()
-                }
+                    } finally {
+                        injector.pointerUp(synthKey)
+                        stopMacroSession(hwKey)
+                    }
+                }, startDelay, TimeUnit.MILLISECONDS)
             }
             5 -> { // DOUBLE TAP (Red Corner 더블 탭)
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                val tapDur = pin.tapDurationMs.coerceAtLeast(1L)
-                val gapMs = pin.intervalMs.coerceIn(15L, 800L)
-                fun tapOnce() {
-                    if (!session.isAlive.get()) return
-                    injector.pointerDown(synthKey, targetX, targetY)
-                    session.scheduledFuture = macroExecutor.schedule({
-                        injector.pointerUp(synthKey)
-                    }, tapDur, TimeUnit.MILLISECONDS)
-                }
-                fun doDouble() {
-                    tapOnce()
-                    session.scheduledFuture = macroExecutor.schedule({
+                val tapDur = pin.tapDurationMs.coerceIn(10L, 200L)
+                val gapMs = pin.intervalMs.coerceIn(15L, 500L)
+                session.scheduledFuture = macroExecutor.schedule({
+                    if (!session.isAlive.get()) return@schedule
+                    try {
                         injector.pointerDown(synthKey, targetX, targetY)
-                        session.scheduledFuture = macroExecutor.schedule({
-                            injector.pointerUp(synthKey)
-                            stopMacroSession(hwKey)
-                        }, tapDur, TimeUnit.MILLISECONDS)
-                    }, tapDur + gapMs, TimeUnit.MILLISECONDS)
-                }
-                if (startDelay > 0) {
-                    session.scheduledFuture = macroExecutor.schedule({ doDouble() }, startDelay, TimeUnit.MILLISECONDS)
-                } else {
-                    doDouble()
-                }
+                        try { Thread.sleep(tapDur) } catch (_: InterruptedException) {}
+                        injector.pointerUp(synthKey)
+                        try { Thread.sleep(gapMs) } catch (_: InterruptedException) {}
+                        if (session.isAlive.get()) {
+                            injector.pointerDown(synthKey, targetX, targetY)
+                            try { Thread.sleep(tapDur) } catch (_: InterruptedException) {}
+                        }
+                    } finally {
+                        injector.pointerUp(synthKey)
+                        stopMacroSession(hwKey)
+                    }
+                }, startDelay, TimeUnit.MILLISECONDS)
             }
         }
     }
 
     private fun stopMacroSession(hwKey: Long) {
-        val session = activeSessions.remove(hwKey) ?: return
-        session.isAlive.set(false)
-        session.scheduledFuture?.cancel(false)
-        session.scheduledFuture = null
-        injector.pointerUp(session.synthKey)
+        val session = activeSessions.remove(hwKey)
+        session?.let {
+            it.isAlive.set(false)
+            it.scheduledFuture?.cancel(true)
+            it.scheduledFuture = null
+            injector.pointerUp(it.synthKey)
+        }
+        // Also stop any linked sessions spawned from this hwKey
+        val baseHwKey = hwKey and 0x0000_FFFF_FFFFL
+        val linkedKeys = activeSessions.keys.filter { it != hwKey && (it and 0x0000_FFFF_FFFFL) == baseHwKey }
+        for (k in linkedKeys) {
+            val s = activeSessions.remove(k) ?: continue
+            s.isAlive.set(false)
+            s.scheduledFuture?.cancel(true)
+            s.scheduledFuture = null
+            injector.pointerUp(s.synthKey)
+        }
     }
 
     fun stop() {

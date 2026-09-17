@@ -1,5 +1,7 @@
 package nuke.wandev.touch
 
+import android.content.res.Configuration
+import android.content.res.Resources
 import android.graphics.Point
 import android.os.IBinder
 import android.util.Log
@@ -10,9 +12,12 @@ import kotlin.concurrent.thread
  * Monitors screen rotation and resolution, transforming normalized touch coordinates [0..1]
  * from libwandev.so (evdev hardware) into physical display screen pixels with 100% 1:1 Red Corner alignment.
  *
- * Handles:
+ * Universal Cross-OEM Architecture:
  * 1. Surface.ROTATION_0, 90, 180, 270 with exact evdev orientation matrices.
- * 2. Aspect ratio letterbox / offset calibration.
+ * 2. Dynamic multi-tier display resolution detection:
+ *    - Tier 1: ServiceManager hidden reflection (DisplayInfo / WindowManager)
+ *    - Tier 2: System Resources DisplayMetrics (Zero-permission universal Android runtime)
+ *    - Tier 3: Adaptive Configuration orientation fallback
  * 3. ThreadLocal allocation-free coordinate transformation for 0ms latency.
  */
 class DisplayTransform {
@@ -24,14 +29,23 @@ class DisplayTransform {
         const val ROTATION_90 = 1
         const val ROTATION_180 = 2
         const val ROTATION_270 = 3
+
+        private fun getSystemResolution(): Pair<Int, Int> {
+            return runCatching {
+                val dm = Resources.getSystem().displayMetrics
+                val w = dm.widthPixels
+                val h = dm.heightPixels
+                if (w > 0 && h > 0) Pair(w, h) else Pair(1080, 2400)
+            }.getOrDefault(Pair(1080, 2400))
+        }
     }
 
     data class Snapshot(
         val rotation: Int = 0,
-        val width: Int = 1220,
-        val height: Int = 2712,
-        val physW: Int = 1220,
-        val physH: Int = 2712
+        val width: Int = getSystemResolution().first,
+        val height: Int = getSystemResolution().second,
+        val physW: Int = getSystemResolution().first,
+        val physH: Int = getSystemResolution().second
     )
 
     @Volatile
@@ -160,12 +174,36 @@ class DisplayTransform {
             physH = h
         }
 
-        // Fallback defaults from existing snapshot or typical phone resolution
+        // 4. Universal Fallback: Query system display metrics (Zero-reflection, zero-permission, 100% reliable)
         if (w <= 0 || h <= 0) {
-            w = if (currentSnap.width > 0) minOf(currentSnap.width, currentSnap.height) else 1220
-            h = if (currentSnap.height > 0) maxOf(currentSnap.width, currentSnap.height) else 2712
-            physW = w
-            physH = h
+            runCatching {
+                val sys = Resources.getSystem().displayMetrics
+                if (sys.widthPixels > 0 && sys.heightPixels > 0) {
+                    w = sys.widthPixels
+                    h = sys.heightPixels
+                    if (physW <= 0 || physH <= 0) {
+                        physW = w
+                        physH = h
+                    }
+                }
+            }
+        }
+
+        // 5. Fallback defaults from existing snapshot or system baseline
+        if (w <= 0 || h <= 0) {
+            val (sysW, sysH) = getSystemResolution()
+            w = if (currentSnap.width > 0) currentSnap.width else sysW
+            h = if (currentSnap.height > 0) currentSnap.height else sysH
+            physW = if (currentSnap.physW > 0) currentSnap.physW else w
+            physH = if (currentSnap.physH > 0) currentSnap.physH else h
+        }
+
+        // Check fallback rotation from system configuration if still unverified
+        if (rot < 0) {
+            val isConfigLandscape = runCatching {
+                Resources.getSystem().configuration.orientation == Configuration.ORIENTATION_LANDSCAPE
+            }.getOrDefault(false)
+            rot = if (isConfigLandscape) ROTATION_90 else ROTATION_0
         }
 
         // Standardize: ensure w, h, physW, physH are portrait-base before applying rotation swap

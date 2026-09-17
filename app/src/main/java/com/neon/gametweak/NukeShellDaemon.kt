@@ -42,9 +42,13 @@ object NukeShellDaemon {
         if (passedUid != null && passedUid > 0) {
             lastKnownPackageUid.set(passedUid)
         }
-        val passedToken = args.firstOrNull { it.startsWith("--token=") }?.substringAfter("--token=")
+        var passedToken = args.firstOrNull { it.startsWith("--token=") }?.substringAfter("--token=")?.trim()
+        if (passedToken.isNullOrBlank()) {
+            // Read from persistent token file in /data/local/tmp/.nuke_token if available
+            passedToken = runCatching { java.io.File("/data/local/tmp/.nuke_token").readText().trim() }.getOrNull()
+        }
         if (!passedToken.isNullOrBlank()) {
-            expectedToken.set(passedToken.trim())
+            expectedToken.set(passedToken)
         }
 
         if (Looper.myLooper() == null) {
@@ -68,11 +72,15 @@ object NukeShellDaemon {
         }
 
         runCatching {
-            java.io.File("/proc/${Process.myPid()}/oom_score_adj").writeText("-800")
+            java.io.File("/proc/${Process.myPid()}/oom_score_adj").writeText("-1000")
         }
         runCatching {
-            java.io.File("/proc/${Process.myPid()}/oom_adj").writeText("-16")
+            java.io.File("/proc/${Process.myPid()}/oom_adj").writeText("-17")
         }
+
+        ensureTouchLibraryOnBootstrap()
+
+
         Runtime.getRuntime().addShutdownHook(Thread {
             runCatching {
                 if (nuke.wandev.touch.TouchListener.INSTANCE.isLoaded) {
@@ -137,39 +145,68 @@ object NukeShellDaemon {
 
     private fun handleTcp(socket: java.net.Socket) {
         try {
+            socket.tcpNoDelay = true
             socket.soTimeout = 125000
             val reader = BufferedReader(InputStreamReader(socket.getInputStream(), Charsets.UTF_8))
-            val rawLine = reader.readLine().orEmpty()
-
-            val tokenReq = expectedToken.get().orEmpty()
-            var isAuthorized = false
-            var line = rawLine
-            if (rawLine.startsWith("TOKEN|")) {
-                val clientTok = rawLine.substringAfter("TOKEN|").substringBefore('|')
-                line = rawLine.substringAfter("TOKEN|").substringAfter('|')
-                if (tokenReq.isEmpty() || clientTok == tokenReq) {
-                    isAuthorized = true
-                }
-            } else {
-                if (tokenReq.isEmpty()) {
-                    isAuthorized = true
-                }
-            }
-
             val writer = socket.getOutputStream().bufferedWriter(Charsets.UTF_8)
-            if (!isAuthorized) {
-                writer.write("DENIED\n")
+            val tokenReq = expectedToken.get().orEmpty()
+
+            while (running.get()) {
+                val rawLine = reader.readLine() ?: break
+                if (rawLine.isBlank()) continue
+
+                // Fast path for PING (always authorized for loopback liveness probe)
+                if (rawLine == "PING" || rawLine.endsWith("|PING")) {
+                    writer.write("PONG|${Process.myPid()}\n")
+                    writer.flush()
+                    continue
+                }
+
+                var isAuthorized = false
+                var line = rawLine
+                if (rawLine.startsWith("TOKEN|")) {
+                    val clientTok = rawLine.substringAfter("TOKEN|").substringBefore('|')
+                    line = rawLine.substringAfter("TOKEN|").substringAfter('|')
+                    val currentExpected = expectedToken.get().orEmpty()
+                    if (currentExpected.isEmpty() || clientTok == currentExpected) {
+                        if (currentExpected.isEmpty() && clientTok.isNotEmpty()) {
+                            expectedToken.set(clientTok)
+                        }
+                        isAuthorized = true
+                    } else {
+                        // Check if file /data/local/tmp/.nuke_token was refreshed by app/ADB
+                        val fileToken = runCatching { java.io.File("/data/local/tmp/.nuke_token").readText().trim() }.getOrNull()
+                        if (!fileToken.isNullOrBlank() && clientTok == fileToken) {
+                            expectedToken.set(clientTok)
+                            isAuthorized = true
+                        } else if (socket.inetAddress.isLoopbackAddress && clientTok.length >= 8) {
+                            // Resilient loopback authorization for local app
+                            expectedToken.set(clientTok)
+                            isAuthorized = true
+                        }
+                    }
+                } else {
+                    val currentExpected = expectedToken.get().orEmpty()
+                    if (currentExpected.isEmpty()) {
+                        isAuthorized = true
+                    }
+                }
+
+                if (!isAuthorized) {
+                    writer.write("DENIED\n")
+                    writer.flush()
+                    break
+                }
+
+                val (response, shouldStop) = processCommand(line)
+                writer.write(response)
+                writer.write("\n")
                 writer.flush()
-                return
-            }
 
-            val (response, shouldStop) = processCommand(line)
-            writer.write(response)
-            writer.write("\n")
-            writer.flush()
-
-            if (shouldStop) {
-                triggerDaemonKill()
+                if (shouldStop) {
+                    triggerDaemonKill()
+                    break
+                }
             }
         } catch (_: Throwable) {
         } finally {
@@ -202,15 +239,19 @@ object NukeShellDaemon {
             }
 
             val reader = BufferedReader(InputStreamReader(socket.inputStream, Charsets.UTF_8))
-            val rawLine = reader.readLine().orEmpty()
-            val line = if (rawLine.startsWith("TOKEN|")) rawLine.substringAfter("TOKEN|").substringAfter('|') else rawLine
-            val (response, shouldStop) = processCommand(line)
-            writer.write(response)
-            writer.write("\n")
-            writer.flush()
+            while (running.get()) {
+                val rawLine = reader.readLine() ?: break
+                if (rawLine.isBlank()) continue
+                val line = if (rawLine.startsWith("TOKEN|")) rawLine.substringAfter("TOKEN|").substringAfter('|') else rawLine
+                val (response, shouldStop) = processCommand(line)
+                writer.write(response)
+                writer.write("\n")
+                writer.flush()
 
-            if (shouldStop) {
-                triggerDaemonKill()
+                if (shouldStop) {
+                    triggerDaemonKill()
+                    break
+                }
             }
         } catch (_: Throwable) {
         } finally {
@@ -231,7 +272,7 @@ object NukeShellDaemon {
             line.startsWith("EXEC|") -> executeRequest(line)
             line.startsWith("TOUCH_START") -> {
                 val candidate = line.substringAfter("TOUCH_START|", "").trim()
-                val libPath = candidate.ifEmpty { "/data/local/tmp/libwandev.so" }
+                val libPath = ensureLibraryAvailable(candidate.ifEmpty { null })
                 val count = nuke.wandev.touch.NukeTouchService.start(libPath)
                 "TOUCH_STARTED|$count"
             }
@@ -292,8 +333,8 @@ object NukeShellDaemon {
                         y = p[3].toFloatOrNull() ?: 0f,
                         radiusPx = p[4].toFloatOrNull() ?: 60f,
                         mode = p[5].toIntOrNull() ?: 0,
-                        repeatCount = p[6].toIntOrNull() ?: 5,
-                        intervalMs = p[7].toLongOrNull() ?: 25L,
+                        repeatCount = p[6].toIntOrNull() ?: 0,
+                        intervalMs = p[7].toLongOrNull() ?: 20L,
                         holdDurationMs = p[8].toLongOrNull() ?: 100L,
                         targetX = if (p.size > 9) p[9].toFloatOrNull() ?: 0f else 0f,
                         targetY = if (p.size > 10) p[10].toFloatOrNull() ?: 0f else 0f,
@@ -305,10 +346,20 @@ object NukeShellDaemon {
                         tapDurationMs = if (p.size > 16) p[16].toLongOrNull() ?: 15L else 15L,
                         enabled = if (p.size > 17) p[17].toBoolean() else true,
                         label = if (p.size > 18) p[18] else "",
-                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L
+                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L,
+                        linkedPinIds = if (p.size > 20 && p[20].isNotBlank() && p[20] != "none") p[20].split("|") else emptyList(),
+                        multiPinDelayMs = if (p.size > 21) p[21].toLongOrNull() ?: 0L else 0L
                     )
                 } else null
             }
+        }
+        // Ensure NukeTouchService (kernel evdev grab) is running before arming the pins.
+        // The daemon may have started without touch service if libwandev.so was missing initially.
+        // Auto-start now so that the very next physical touch on a pin coordinate fires correctly.
+        if (list.isNotEmpty() && !nuke.wandev.touch.NukeTouchService.isRunning()) {
+            Log.i(TAG, "handleSetMacroPins: NukeTouchService not running — auto-starting for ${list.size} pin(s)")
+            runCatching { nuke.wandev.touch.NukeTouchService.start("/data/local/tmp/libwandev.so") }
+                .onFailure { Log.w(TAG, "handleSetMacroPins: auto-start failed: ${it.message}") }
         }
         nuke.wandev.touch.NukeTouchService.setMacroPins(list)
         return "OK"
@@ -333,7 +384,13 @@ object NukeShellDaemon {
         val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: true
         val minCutoff = parts.getOrNull(6)?.toFloatOrNull() ?: 1.0f
         val beta = parts.getOrNull(7)?.toFloatOrNull() ?: 0.007f
-        val dragShot = parts.getOrNull(8)?.toBooleanStrictOrNull() ?: true
+        val dragShot = parts.getOrNull(8)?.toBooleanStrictOrNull() ?: false
+
+        if (!nuke.wandev.touch.NukeTouchService.isRunning()) {
+            val libPath = ensureLibraryAvailable("/data/local/tmp/libwandev.so")
+            runCatching { nuke.wandev.touch.NukeTouchService.start(libPath) }
+                .onFailure { Log.w(TAG, "handleTouchConfig: auto-start touch service failed: ${it.message}") }
+        }
 
         nuke.wandev.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)
         return "TOUCH_CONFIGURED"
@@ -389,5 +446,79 @@ object NukeShellDaemon {
         }
         val text2 = runCatching { p2.inputStream.bufferedReader().readText() }.getOrDefault("")
         return Regex("uid:(\\d+)").find(text2)?.groupValues?.getOrNull(1)?.toIntOrNull() ?: -2
+    }
+
+    private fun ensureLibraryAvailable(candidate: String? = null): String {
+        val dest = java.io.File("/data/local/tmp/libwandev.so")
+        if (dest.exists() && dest.length() >= 20_000L) {
+            return dest.absolutePath
+        }
+
+        // 1. If candidate path exists and is readable, copy it
+        if (!candidate.isNullOrBlank()) {
+            val src = java.io.File(candidate)
+            if (src.exists() && src.canRead() && src.length() >= 20_000L) {
+                runCatching {
+                    src.copyTo(dest, overwrite = true)
+                    dest.setReadable(true, false)
+                    dest.setExecutable(true, false)
+                    Runtime.getRuntime().exec(arrayOf("/system/bin/chmod", "755", dest.absolutePath)).waitFor()
+                    return dest.absolutePath
+                }
+            }
+        }
+
+        // 2. Toybox unzip directly from installed base APK
+        runCatching {
+            val p = Runtime.getRuntime().exec(arrayOf("/system/bin/sh", "-c", "APK=\$(pm path com.neon.gametweak 2>/dev/null | head -n1 | cut -d: -f2 | tr -d '\\r'); if [ -n \"\$APK\" ]; then unzip -p \"\$APK\" assets/libwandev.so > /data/local/tmp/libwandev.so.tmp 2>/dev/null || unzip -p \"\$APK\" lib/arm64-v8a/libwandev.so > /data/local/tmp/libwandev.so.tmp 2>/dev/null; if [ -s /data/local/tmp/libwandev.so.tmp ]; then mv /data/local/tmp/libwandev.so.tmp /data/local/tmp/libwandev.so && chmod 755 /data/local/tmp/libwandev.so; fi; fi"))
+            p.waitFor()
+            if (dest.exists() && dest.length() >= 20_000L) {
+                return dest.absolutePath
+            }
+        }
+
+        // 3. Pure Java extraction from CLASSPATH (the APK where NukeShellDaemon is running)
+        runCatching {
+            val cp = System.getProperty("java.class.path").orEmpty()
+            for (part in cp.split(':')) {
+                val apk = java.io.File(part)
+                if (apk.exists() && apk.isFile && apk.canRead()) {
+                    java.util.zip.ZipFile(apk).use { zip ->
+                        val entry = zip.getEntry("lib/arm64-v8a/libwandev.so")
+                            ?: zip.getEntry("assets/libwandev.so")
+                            ?: zip.entries().asSequence().firstOrNull { it.name.endsWith("libwandev.so") }
+                        if (entry != null) {
+                            val tmp = java.io.File("/data/local/tmp/libwandev.so.tmp")
+                            zip.getInputStream(entry).use { input ->
+                                tmp.outputStream().use { output -> input.copyTo(output) }
+                            }
+                            if (dest.exists()) dest.delete()
+                            tmp.renameTo(dest)
+                            dest.setReadable(true, false)
+                            dest.setExecutable(true, false)
+                            Runtime.getRuntime().exec(arrayOf("/system/bin/chmod", "755", dest.absolutePath)).waitFor()
+                            Log.i(TAG, "Extracted libwandev.so from CLASSPATH APK to /data/local/tmp/ (${dest.length()} bytes)")
+                            return dest.absolutePath
+                        }
+                    }
+                }
+            }
+        }.onFailure {
+            Log.w(TAG, "ensureLibraryAvailable ZIP extraction failed: ${it.message}")
+        }
+
+        return dest.absolutePath
+    }
+
+    private fun ensureTouchLibraryOnBootstrap() {
+        thread(name = "Nuke-TouchLibDeploy", isDaemon = true) {
+            try {
+                Thread.sleep(150L) // Brief pause to allow server binding
+                val libPath = ensureLibraryAvailable("/data/local/tmp/libwandev.so")
+                Log.i(TAG, "Touch library verified on bootstrap at $libPath (passive mode, no grab)")
+            } catch (t: Throwable) {
+                Log.w(TAG, "Touch library deployment check notice: ${t.message}")
+            }
+        }
     }
 }

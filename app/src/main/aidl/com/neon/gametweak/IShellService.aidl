@@ -30,7 +30,7 @@ interface IShellService {
     boolean isTouchRunning() = 6;
 
     /** Update touch sensitivity and curve configuration. */
-    void touchConfigure(float sx, float sy, int area, int curve, boolean smooth, float minCutoff, float beta) = 7;
+    void touchConfigure(float sx, float sy, int area, int curve, boolean smooth, float minCutoff, float beta, boolean dragShot) = 7;
 
     /** Directly control hardware touch grab. */
     void touchSetGrab(boolean grab) = 8;
@@ -49,4 +49,8 @@ interface IShellService {
 
     /** Directly inject swipe / drag gesture for Macro Studio (SWIPE macro + test-fire). */
     boolean injectSwipe(float x1, float y1, float x2, float y2, long durationMs) = 13;
+
+    /** Deploys native libwandev.so binary directly into /data/local/tmp/ with 0755 permissions. */
+    boolean deployTouchLibrary(in byte[] libBytes) = 14;
 }
+

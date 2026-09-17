@@ -62,7 +62,14 @@ class NukeGameVpnService : VpnService() {
         val isRunningFlow = _isRunning.asStateFlow()
         fun isRunning(ctx: Context): Boolean = _isRunning.value
 
+        @Volatile
+        private var instance: NukeGameVpnService? = null
+
         fun start(ctx: Context) {
+            if (!NukeSubscriptionManager.isVipActive(ctx)) {
+                NukeToast.error(ctx, "Game Nuke VIP required to unlock VPN Tunnel", true)
+                return
+            }
             val intent = Intent(ctx, NukeGameVpnService::class.java).apply {
                 action = ACTION_START
             }
@@ -74,29 +81,53 @@ class NukeGameVpnService : VpnService() {
         }
 
         fun stop(ctx: Context) {
+            _isRunning.value = false
+            // 1. Direct synchronous teardown on running service instance
+            instance?.teardown()
+            // 2. Intent-based fallback
             val intent = Intent(ctx, NukeGameVpnService::class.java).apply {
                 action = ACTION_STOP
             }
-            ctx.startService(intent)
+            runCatching { ctx.startService(intent) }
+            runCatching { ctx.stopService(Intent(ctx, NukeGameVpnService::class.java)) }
         }
     }
 
     private var vpnInterface: ParcelFileDescriptor? = null
+    private var nativeFdInt: Int = -1
     private var tunnel: Tunnel? = null
     private val vpnScope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val isStopping = AtomicBoolean(false)
 
     // ── Lifecycle ────────────────────────────────────────────────────────────
 
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
+
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        instance = this
         when (intent?.action) {
+            ACTION_START -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock VPN Tunnel", true)
+                    teardown()
+                    return START_NOT_STICKY
+                }
+                setup()
+            }
             ACTION_STOP -> {
                 teardown()
                 return START_NOT_STICKY
             }
-            else -> setup()
+            else -> {
+                // When restarted by system with null intent or unknown action, DO NOT start VPN!
+                teardown()
+                return START_NOT_STICKY
+            }
         }
-        return START_STICKY
+        return START_NOT_STICKY
     }
 
     override fun onRevoke() {
@@ -107,6 +138,9 @@ class NukeGameVpnService : VpnService() {
     override fun onDestroy() {
         super.onDestroy()
         teardown()
+        if (instance == this) {
+            instance = null
+        }
     }
 
     // ── Setup ────────────────────────────────────────────────────────────────
@@ -151,6 +185,7 @@ class NukeGameVpnService : VpnService() {
 
             // Detach file descriptor so Android Bionic libc fdsan does not panic on closure by Go runtime
             val nativeFd = runCatching { pfd.detachFd() }.getOrElse { pfd.fd }
+            nativeFdInt = nativeFd
 
             // Start native gomobile / tun2socks / lwIP tunnel engine via libgojni.so
             val nativeTunnel = Anehprodns.start(
@@ -299,26 +334,41 @@ class NukeGameVpnService : VpnService() {
         val activePfd = vpnInterface
         vpnInterface = null
 
-        // Execute Go tunnel stop in Dispatchers.IO with timeout to avoid freezing Main Thread (ANR)
-        vpnScope.launch(Dispatchers.IO) {
+        val fdToClose = nativeFdInt
+        nativeFdInt = -1
+
+        // 1. Immediately close TUN descriptors at OS level so kernel destroys tun0
+        // and unblocks Go's read loop instantly!
+        try {
+            activePfd?.close()
+        } catch (e: Throwable) {
+            Log.w(TAG, "activePfd close: ${e.message}")
+        }
+
+        if (fdToClose >= 0) {
             try {
-                withTimeoutOrNull(2500L) {
-                    try {
-                        activeTunnel?.stop()
-                    } catch (e: Throwable) {
-                        Log.w(TAG, "Native Go tunnel stop warning: ${e.message}")
-                    }
-                }
-            } finally {
-                try {
-                    activePfd?.close()
-                } catch (e: Throwable) {
-                    Log.w(TAG, "VPN pfd close warning: ${e.message}")
-                }
-                isStopping.set(false)
+                ParcelFileDescriptor.adoptFd(fdToClose).close()
+            } catch (e: Throwable) {
+                Log.w(TAG, "nativeFd close: ${e.message}")
             }
         }
 
+        // 2. Stop Go tunnel asynchronously with short timeout
+        if (activeTunnel != null) {
+            vpnScope.launch(Dispatchers.IO) {
+                try {
+                    withTimeoutOrNull(1200L) {
+                        runCatching { activeTunnel.stop() }
+                    }
+                } finally {
+                    isStopping.set(false)
+                }
+            }
+        } else {
+            isStopping.set(false)
+        }
+
+        // 3. Remove notification immediately
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 stopForeground(STOP_FOREGROUND_REMOVE)
@@ -326,10 +376,28 @@ class NukeGameVpnService : VpnService() {
                 @Suppress("DEPRECATION")
                 stopForeground(true)
             }
+            val nm = getSystemService(NotificationManager::class.java)
+            nm?.cancel(NOTIF_ID)
         } catch (e: Throwable) {
             Log.w(TAG, "stopForeground error: ${e.message}")
         }
+
+        // 4. Reset underlying networks
+        try {
+            setUnderlyingNetworks(null)
+        } catch (_: Throwable) {}
+
+        // 5. Clean socket tuning / reset DNS
+        vpnScope.launch(Dispatchers.IO) {
+            runCatching {
+                NukeConnectionManager.executeCommand("ndc resolver clearnetdns >/dev/null 2>&1", timeoutMs = 1500L)
+            }
+        }
+
         stopSelf()
+        if (instance == this) {
+            instance = null
+        }
         Log.i(TAG, "Net Engine tunnel STOPPED gracefully")
     }
 
@@ -355,10 +423,12 @@ class NukeGameVpnService : VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(resources, R.drawable.logo_nuke) }.getOrNull()
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setContentTitle("HyperSync Net Engine")
             .setContentText("Game Acceleration Active • Ultra-Low Latency Path")
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setOngoing(true)
             .setPriority(NotificationCompat.PRIORITY_LOW)
             .addAction(0, "Stop", stopPi)

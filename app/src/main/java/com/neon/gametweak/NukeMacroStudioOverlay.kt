@@ -49,6 +49,7 @@ import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.Delete
+import androidx.compose.material.icons.rounded.Gamepad
 import androidx.compose.material.icons.rounded.Lock
 import androidx.compose.material.icons.rounded.LockOpen
 import androidx.compose.material.icons.rounded.Pause
@@ -123,10 +124,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     private var activeProfileIndex by mutableIntStateOf(0)
     private val activePins = mutableStateListOf<MacroPinConfig>()
 
-    var isEditMode by mutableStateOf(true)
+    var isEditMode by mutableStateOf(false)
         private set
 
-    var isArmed by mutableStateOf(false)
+    var isArmed by mutableStateOf(true)
         private set
 
     var isMinimized by mutableStateOf(false)
@@ -153,6 +154,18 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             .edit()
             .putFloat("KEY_MACRO_OPACITY", clamped)
             .apply()
+    }
+
+    init {
+        runCatching {
+            context.registerComponentCallbacks(object : android.content.ComponentCallbacks2 {
+                override fun onConfigurationChanged(newConfig: android.content.res.Configuration) {
+                    mainHandler.post { onOrientationChanged() }
+                }
+                override fun onLowMemory() {}
+                override fun onTrimMemory(level: Int) {}
+            })
+        }
     }
 
     // Floating box coordinates (px)
@@ -226,8 +239,12 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     }
 
     fun show() {
+        if (!NukeSubscriptionManager.isVipActive(context)) {
+            NukeToast.error(context, "Game Nuke VIP required to unlock Macro Studio", true)
+            return
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
-            NukeToast.error(context, "Overlay permission required for Macro Studio")
+            NukeToast.error(context, "Overlay permission required")
             return
         }
 
@@ -235,20 +252,25 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         isPanelHidden = false
         isPanelOpen = true
         isMinimized = false
-        isEditMode = true
-        isArmed = false
+        isEditMode = false
+        isArmed = true
         selectedPinId = null
 
         ensureDaemonTouch()
         NukeVolumeKeyTriggerManager.start(context)
         attachWindows()
         panelView?.visibility = View.VISIBLE
-        updateCanvasTouchability(touchable = true)
+        updateCanvasTouchability(touchable = false)
+        persistAndSync()
         notifyPanelLayoutChanged()
-        Log.i(TAG, "Macro Studio shown (Edit mode)")
+        Log.i(TAG, "Macro Studio shown (Play mode, Armed, Pass-through active)")
     }
 
     fun openPanel() {
+        if (!NukeSubscriptionManager.isVipActive(context)) {
+            NukeToast.error(context, "Game Nuke VIP required to unlock Macro Studio", true)
+            return
+        }
         isPanelHidden = false
         isPanelOpen = true
         isMinimized = false
@@ -258,7 +280,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             panelView?.visibility = View.VISIBLE
             updateCanvasTouchability(touchable = isEditMode)
             notifyPanelLayoutChanged()
-            NukeToast.success(context, "Macro Studio Opened")
+            NukeToast.success(context, "Macro Studio active")
         }
     }
 
@@ -282,7 +304,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             updateCanvasTouchability(touchable = false)
             panelView?.visibility = View.GONE
             notifyPanelLayoutChanged()
-            NukeToast.success(context, "Macro Studio Hidden • Pins active (Reopen via Booster)")
+            NukeToast.success(context, "Studio minimized • Pins active")
             Log.i(TAG, "Panel hidden, pins active on screen")
         } else {
             deactivateMacro()
@@ -294,13 +316,22 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     fun minimizePanel() {
         isPanelHidden = false
         isMinimized = true
+        isEditMode = false
+        isArmed = true
+        selectedPinId = null
+        updateCanvasTouchability(touchable = false)
+        persistAndSync()
+        ensureDaemonTouch()
         panelView?.visibility = View.VISIBLE
         notifyPanelLayoutChanged()
+        NukeToast.success(context, "Macro armed")
     }
 
     fun expandPanel() {
         isPanelHidden = false
         isMinimized = false
+        isEditMode = true
+        updateCanvasTouchability(touchable = true)
         panelView?.visibility = View.VISIBLE
         notifyPanelLayoutChanged()
     }
@@ -313,7 +344,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             isArmed = false
         }
         detachWindows()
-        NukeToast.success(context, "Macro deactivated • Pins removed")
+        NukeToast.success(context, "Macro stopped")
         Log.i(TAG, "Macro fully deactivated")
     }
 
@@ -325,7 +356,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             isEditMode = true
             NukeConnectionManager.syncMacroPins("")
             updateCanvasTouchability(touchable = true)
-            NukeToast.success(context, "Macro standby • Edit mode active")
+            NukeToast.success(context, "Macro standby")
         } else {
             isArmed = true
             isEditMode = false
@@ -334,7 +365,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             ensureDaemonTouch()
             NukeVolumeKeyTriggerManager.start(context)
             updateCanvasTouchability(touchable = false)
-            NukeToast.success(context, "Macro armed • Hardware multi-touch active")
+            NukeToast.success(context, "Macro armed")
         }
     }
 
@@ -361,17 +392,28 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             }
             canvasView = cView
 
+            val initialFlags = if (isEditMode) {
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+            } else {
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+            }
             val cLp = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
                 WindowManager.LayoutParams.MATCH_PARENT,
                 windowType,
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                initialFlags,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
-                layoutInDisplayCutoutMode =
-                    WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                    layoutInDisplayCutoutMode =
+                        WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+                }
             }
             canvasParams = cLp
             runCatching { wm.addView(cView, cLp) }
@@ -389,8 +431,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             }
             panelView = pView
 
-            val density = context.resources.displayMetrics.density
-            panelX = (20 * density).toInt()
+            val dm = context.resources.displayMetrics
+            val density = dm.density
+            val defaultWidth = (268 * density).toInt()
+            panelX = (20 * density).toInt().coerceIn((8 * density).toInt(), maxOf((8 * density).toInt(), dm.widthPixels - defaultWidth - (12 * density).toInt()))
             panelY = (75 * density).toInt()
 
             val pLp = WindowManager.LayoutParams(
@@ -398,7 +442,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 WindowManager.LayoutParams.WRAP_CONTENT,
                 windowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -431,10 +476,12 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         val lp = canvasParams ?: return
         lp.flags = if (touchable) {
             (lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()) or
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
         } else {
             lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
-                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
         }
         runCatching { wm.updateViewLayout(v, lp) }
     }
@@ -450,15 +497,99 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         }
     }
 
+    fun clampPanelPosition() {
+        val v = panelView ?: return
+        val lp = panelParams ?: return
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        val panelW = v.width.takeIf { it > 0 } ?: (268 * density).toInt()
+        val panelH = v.height.takeIf { it > 0 } ?: (340 * density).toInt()
+        val maxX = maxOf((8 * density).toInt(), dm.widthPixels - panelW - (8 * density).toInt())
+        val maxY = maxOf((24 * density).toInt(), dm.heightPixels - panelH - (16 * density).toInt())
+        panelX = panelX.coerceIn((8 * density).toInt(), maxX)
+        panelY = panelY.coerceIn((24 * density).toInt(), maxY)
+        lp.x = panelX
+        lp.y = panelY
+        runCatching { wm.updateViewLayout(v, lp) }
+    }
+
     private fun updatePanelPosition(dx: Float, dy: Float) {
         val v = panelView ?: return
         val lp = panelParams ?: return
         val dm = context.resources.displayMetrics
-        panelX = (panelX + dx).roundToInt().coerceIn(0, dm.widthPixels - 36)
-        panelY = (panelY + dy).roundToInt().coerceIn(0, dm.heightPixels - 36)
+        val density = dm.density
+        val panelW = v.width.takeIf { it > 0 } ?: (268 * density).toInt()
+        val panelH = v.height.takeIf { it > 0 } ?: (340 * density).toInt()
+        val maxX = maxOf((8 * density).toInt(), dm.widthPixels - panelW - (8 * density).toInt())
+        val maxY = maxOf((24 * density).toInt(), dm.heightPixels - panelH - (16 * density).toInt())
+        panelX = (panelX + dx).roundToInt().coerceIn((8 * density).toInt(), maxX)
+        panelY = (panelY + dy).roundToInt().coerceIn((24 * density).toInt(), maxY)
         lp.x = panelX
         lp.y = panelY
         runCatching { wm.updateViewLayout(v, lp) }
+    }
+
+    fun onOrientationChanged() {
+        mainHandler.post {
+            clampPanelPosition()
+        }
+    }
+
+    fun reCenterStudio() {
+        val dm = context.resources.displayMetrics
+        val density = dm.density
+        val panelW = (panelView?.width ?: (268 * density).toInt())
+        panelX = maxOf((8 * density).toInt(), (dm.widthPixels - panelW) / 2)
+        panelY = (75 * density).toInt()
+        panelParams?.let { lp ->
+            lp.x = panelX
+            lp.y = panelY
+            panelView?.let { v -> runCatching { wm.updateViewLayout(v, lp) } }
+        }
+        isPanelHidden = false
+        isPanelOpen = true
+        isMinimized = false
+        panelView?.visibility = View.VISIBLE
+        notifyPanelLayoutChanged()
+    }
+
+    fun clearAllPins() {
+        activePins.clear()
+        selectedPinId = null
+        persistAndSync()
+        NukeToast.success(context, "Pins cleared")
+    }
+
+    fun addNewPin() {
+        val newPin = MacroPinConfig(
+            index = (activePins.maxOfOrNull { it.index } ?: 0) + 1,
+            xRatio = 0.5f,
+            yRatio = 0.5f,
+            radiusDp = 36f,
+            mode = MacroTriggerMode.TAP,
+            triggerSource = MacroTriggerSource.TOUCH_SCREEN,
+            repeatCount = 0,
+            intervalMs = 35L,
+            tapDurationMs = 25L,
+            color = PIN_PALETTE[activePins.size % PIN_PALETTE.size]
+        )
+        activePins.add(newPin)
+        selectedPinId = newPin.id
+        persistAndSync()
+    }
+
+    fun close() = deactivateMacro()
+
+    fun toggleEditMode() {
+        isEditMode = !isEditMode
+        if (!isEditMode) {
+            selectedPinId = null
+            updateCanvasTouchability(touchable = false)
+            NukeToast.success(context, "Test mode active")
+        } else {
+            updateCanvasTouchability(touchable = true)
+            NukeToast.success(context, "Edit mode active")
+        }
     }
 
     // ═════════════════════════════════════════════════════════════════════════
@@ -481,7 +612,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         p.pins.addAll(activePins)
         NukeMacroRepository.updateProfile(context, p)
         NukeMacroEngine.syncActivePins(activePins)
-        if (isArmed) {
+        if (isArmed && p.useMapping) {
             NukeMacroRepository.pushProfileToDaemon(context, p)
         }
     }
@@ -533,8 +664,9 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                         val isSel = selectedPinId == pin.id
                         val pinColor = Color(pin.color)
 
-                        // Drag Vector line for SWIPE mode in Edit mode
-                        if (isEditMode && isSel && pin.mode == MacroTriggerMode.SWIPE) {
+                        // Destination Vector line & handle for SWIPE, COMBO, and MIRROR in Edit mode
+                        val showTargetHandle = isEditMode && isSel && (pin.mode == MacroTriggerMode.SWIPE || pin.mode == MacroTriggerMode.COMBO || pin.mode == MacroTriggerMode.MIRROR)
+                        if (showTargetHandle) {
                             val tx = pin.targetXRatio * screenW
                             val ty = pin.targetYRatio * screenH
                             Canvas(Modifier.fillMaxSize()) {
@@ -558,7 +690,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                                     }
                                     .size(32.dp)
                                     .semantics {
-                                        contentDescription = "Pin ${pin.index} Drag Destination"
+                                        contentDescription = "Pin ${pin.index} Destination Target"
                                         role = Role.Button
                                     }
                                     .pointerInput(pin.id + "_target") {
@@ -578,8 +710,19 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                                                 persistAndSync()
                                             }
                                         )
-                                    }
-                            )
+                                    },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (pin.mode == MacroTriggerMode.COMBO) {
+                                    Text(
+                                        "2",
+                                        color = pinColor,
+                                        fontSize = 11.sp,
+                                        fontWeight = FontWeight.Black,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
                         }
 
                         // Main Reticle
@@ -637,10 +780,120 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                                                 }
                                             )
                                         }
-                                    } else Modifier
+                                    } else {
+                                        Modifier.pointerInput(pin.id + "_test_fire") {
+                                            detectTapGestures(
+                                                onTap = {
+                                                    val dm = context.resources.displayMetrics
+                                                    NukeMacroEngine.triggerPin(pin, dm.widthPixels, dm.heightPixels, triggerLinked = true)
+                                                }
+                                            )
+                                        }
+                                    }
                                 )
                         ) {
                             PinReticle(pin, isSel, isEditMode)
+                        }
+                    }
+
+                    // Floating Canvas Helper Bar (Always accessible when Studio is open)
+                    if (isPanelOpen && !isMinimized && !isPanelHidden) {
+                        Box(
+                            Modifier
+                                .fillMaxWidth()
+                                .padding(top = 8.dp, start = 12.dp, end = 12.dp),
+                            contentAlignment = Alignment.TopCenter
+                        ) {
+                            Row(
+                                Modifier
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .background(COLOR_OBSIDIAN.copy(alpha = 0.92f))
+                                    .border(1.dp, COLOR_BORDER, RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 6.dp, vertical = 3.dp),
+                                horizontalArrangement = Arrangement.spacedBy(5.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                // Mode Toggle (EDIT <-> PLAY/TEST)
+                                Row(
+                                    Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(if (isEditMode) COLOR_AMBER.copy(alpha = 0.22f) else COLOR_SUCCESS.copy(alpha = 0.22f))
+                                        .border(1.dp, if (isEditMode) COLOR_AMBER.copy(alpha = 0.7f) else COLOR_SUCCESS.copy(alpha = 0.7f), RoundedCornerShape(10.dp))
+                                        .clickable { toggleEditMode() }
+                                        .padding(horizontal = 7.dp, vertical = 3.5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(
+                                        if (isEditMode) Icons.Rounded.Tune else Icons.Rounded.Gamepad,
+                                        contentDescription = null,
+                                        tint = if (isEditMode) COLOR_AMBER else COLOR_SUCCESS,
+                                        modifier = Modifier.size(11.dp)
+                                    )
+                                    Text(
+                                        if (isEditMode) "MODE: EDIT" else "MODE: PLAY",
+                                        color = if (isEditMode) COLOR_AMBER else COLOR_SUCCESS,
+                                        fontSize = 7.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                                // Re-center Studio
+                                Row(
+                                    Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(COLOR_CARD)
+                                        .clickable { reCenterStudio() }
+                                        .padding(horizontal = 7.dp, vertical = 3.5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Tune, contentDescription = null, tint = COLOR_ACCENT, modifier = Modifier.size(11.dp))
+                                    Text("STUDIO", color = COLOR_TEXT_PRI, fontSize = 7.5.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                }
+
+                                // Add Pin
+                                Row(
+                                    Modifier
+                                        .clip(RoundedCornerShape(10.dp))
+                                        .background(COLOR_CARD)
+                                        .clickable { addNewPin() }
+                                        .padding(horizontal = 7.dp, vertical = 3.5.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                ) {
+                                    Icon(Icons.Rounded.Add, contentDescription = null, tint = COLOR_SUCCESS, modifier = Modifier.size(11.dp))
+                                    Text("+ PIN", color = COLOR_SUCCESS, fontSize = 7.5.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                }
+
+                                if (activePins.isNotEmpty()) {
+                                    // Clear All Pins
+                                    Row(
+                                        Modifier
+                                            .clip(RoundedCornerShape(10.dp))
+                                            .background(COLOR_CARD)
+                                            .clickable { clearAllPins() }
+                                            .padding(horizontal = 7.dp, vertical = 3.5.dp),
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(3.dp)
+                                    ) {
+                                        Icon(Icons.Rounded.Delete, contentDescription = null, tint = COLOR_DANGER, modifier = Modifier.size(11.dp))
+                                        Text("CLEAR", color = COLOR_DANGER, fontSize = 7.5.sp, fontWeight = FontWeight.Bold, fontFamily = FontFamily.Monospace)
+                                    }
+                                }
+
+                                // Close Studio
+                                Box(
+                                    Modifier
+                                        .size(18.dp)
+                                        .clip(CircleShape)
+                                        .background(COLOR_CARD)
+                                        .clickable { close() },
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Rounded.Close, contentDescription = "Close", tint = COLOR_TEXT_SEC, modifier = Modifier.size(11.dp))
+                                }
+                            }
                         }
                     }
                 }
@@ -687,13 +940,15 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                         .background(COLOR_OBSIDIAN.copy(0.75f))
                         .padding(horizontal = 3.dp, vertical = 0.5.dp)
                 ) {
+                    val reticleTag = when {
+                        pin.linkedPinIds.isNotEmpty() -> "${pin.index}•MULTI"
+                        pin.triggerSource != MacroTriggerSource.TOUCH_SCREEN -> "${pin.index}•${pin.triggerSource.shortTag()}"
+                        else -> "${pin.index}•${pin.mode.reticleTag()}"
+                    }
                     Text(
-                        if (pin.triggerSource != MacroTriggerSource.TOUCH_SCREEN)
-                            "${pin.index}•${pin.triggerSource.shortTag()}"
-                        else
-                            "${pin.index}•${pin.mode.reticleTag()}",
-                        color = Color(pin.color).copy(if (isEdit) 1f else 0.95f),
-                        fontSize = 7.5.sp,
+                        reticleTag,
+                        color = if (pin.linkedPinIds.isNotEmpty()) COLOR_ACCENT else Color(pin.color).copy(if (isEdit) 1f else 0.95f),
+                        fontSize = 7.2.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace
                     )
@@ -808,11 +1063,15 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     private fun ExpandedStudioPanel() {
         val dm = context.resources.displayMetrics
         val density = dm.density
-        val maxAvailableHeight = ((dm.heightPixels / density) * 0.82f).dp.coerceIn(230.dp, 360.dp)
+        val screenWdp = (dm.widthPixels / density).dp
+        val screenHdp = (dm.heightPixels / density).dp
+        val isPortrait = dm.heightPixels > dm.widthPixels
+        val studioWidth = if (isPortrait) minOf(268.dp, screenWdp - 24.dp) else 268.dp
+        val maxAvailableHeight = if (isPortrait) (screenHdp * 0.75f).coerceIn(280.dp, 580.dp) else (screenHdp * 0.85f).coerceIn(220.dp, 360.dp)
 
         Column(
             Modifier
-                .width(268.dp)
+                .width(studioWidth)
                 .heightIn(max = maxAvailableHeight)
                 .alpha(macroOpacity)
                 .shadow(16.dp, RoundedCornerShape(12.dp))
@@ -889,23 +1148,18 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
 
             Spacer(Modifier.weight(1f))
 
+            // Edit / Test Mode Toggle (Disambiguated from Arm play icon)
+            ActionIconButton(
+                if (isEditMode) Icons.Rounded.TouchApp else Icons.Rounded.Gamepad,
+                if (isEditMode) "Switch to Test Mode" else "Switch to Edit Mode",
+                if (isEditMode) COLOR_AMBER else COLOR_SUCCESS
+            ) {
+                toggleEditMode()
+            }
+
             // Add Pin [+]
             ActionIconButton(Icons.Rounded.Add, "Add Pin", COLOR_ACCENT) {
-                val newPin = MacroPinConfig(
-                    index = (activePins.maxOfOrNull { it.index } ?: 0) + 1,
-                    xRatio = 0.5f,
-                    yRatio = 0.5f,
-                    radiusDp = 36f,
-                    mode = MacroTriggerMode.REPEAT_TAP,
-                    triggerSource = MacroTriggerSource.TOUCH_SCREEN,
-                    repeatCount = 0,
-                    intervalMs = 20L,
-                    tapDurationMs = 12L,
-                    color = PIN_PALETTE[activePins.size % PIN_PALETTE.size]
-                )
-                activePins.add(newPin)
-                selectedPinId = newPin.id
-                persistAndSync()
+                addNewPin()
             }
 
             // Arm / Standby Toggle
@@ -946,7 +1200,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 )
 
                 Text(
-                    if (isDaemonActive) "HARDWARE DRIVER ACTIVE" else "INITIALIZING DRIVER...",
+                    if (isDaemonActive) "KERNEL DRIVER ACTIVE" else "INITIALIZING DRIVER...",
                     color = if (isDaemonActive) COLOR_SUCCESS else COLOR_AMBER,
                     fontSize = 7.5.sp,
                     fontWeight = FontWeight.Bold,
@@ -1064,12 +1318,12 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                             xRatio = 0.5f,
                             yRatio = 0.5f,
                             radiusDp = 36f,
-                            mode = MacroTriggerMode.REPEAT_TAP,
+                            mode = MacroTriggerMode.TAP,
                             triggerSource = MacroTriggerSource.TOUCH_SCREEN,
                             repeatCount = 0,
                             intervalMs = 20L,
-                            tapDurationMs = 12L,
-                            color = PIN_PALETTE[0]
+                            tapDurationMs = 16L,
+                            color = PIN_PALETTE[activePins.size % PIN_PALETTE.size]
                         )
                         activePins.add(newPin)
                         selectedPinId = newPin.id
@@ -1280,10 +1534,13 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                     horizontalArrangement = Arrangement.spacedBy(3.dp)
                 ) {
                     val modes = listOf(
+                        MacroTriggerMode.TAP to "1-TAP",
                         MacroTriggerMode.REPEAT_TAP to "SPAM",
-                        MacroTriggerMode.SWIPE to "AUTO DRAG",
+                        MacroTriggerMode.SWIPE to "DRAG",
                         MacroTriggerMode.HOLD to "HOLD",
-                        MacroTriggerMode.LOOP to "AUTO RETRY"
+                        MacroTriggerMode.DOUBLE_TAP to "2X",
+                        MacroTriggerMode.COMBO to "COMBO",
+                        MacroTriggerMode.LOOP to "RETRY"
                     )
                     modes.forEach { (m, label) ->
                         val isM = pin.mode == m
@@ -1294,7 +1551,25 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                                 .background(if (isM) COLOR_ACCENT.copy(0.20f) else COLOR_CARD)
                                 .border(0.8.dp, if (isM) COLOR_ACCENT else COLOR_BORDER, RoundedCornerShape(3.dp))
                                 .clickable {
-                                    updatePin { it.copy(mode = m) }
+                                    updatePin { current ->
+                                        var updated = current.copy(mode = m)
+                                        if (m == MacroTriggerMode.SWIPE) {
+                                            if (updated.targetXRatio == updated.xRatio && updated.targetYRatio == updated.yRatio) {
+                                                updated = updated.copy(
+                                                    targetXRatio = updated.xRatio,
+                                                    targetYRatio = (updated.yRatio - 0.15f).coerceIn(0.05f, 0.95f)
+                                                )
+                                            }
+                                        } else if (m == MacroTriggerMode.COMBO) {
+                                            if (updated.targetXRatio == updated.xRatio && updated.targetYRatio == updated.yRatio) {
+                                                updated = updated.copy(
+                                                    targetXRatio = (updated.xRatio + 0.12f).coerceIn(0.05f, 0.95f),
+                                                    targetYRatio = (updated.yRatio + 0.08f).coerceIn(0.05f, 0.95f)
+                                                )
+                                            }
+                                        }
+                                        updated
+                                    }
                                 }
                                 .padding(vertical = 3.dp),
                             contentAlignment = Alignment.Center
@@ -1302,7 +1577,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                             Text(
                                 label,
                                 color = if (isM) COLOR_ACCENT else COLOR_TEXT_SEC,
-                                fontSize = 6.8.sp,
+                                fontSize = 6.2.sp,
                                 fontWeight = FontWeight.Bold,
                                 fontFamily = FontFamily.Monospace,
                                 maxLines = 1
@@ -1313,6 +1588,19 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
 
                 // Mode Sliders
                 when (pin.mode) {
+                    MacroTriggerMode.TAP -> {
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..120f, pin.tapDurationMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
+                        }
+                        CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(startDelayMs = v.toLong()) }
+                        }
+                        Text(
+                            "Single clean tap. When linked, triggers all pinned targets together on one tap.",
+                            color = COLOR_TEXT_DIM, fontSize = 6.5.sp, fontFamily = FontFamily.Monospace
+                        )
+                    }
+
                     MacroTriggerMode.REPEAT_TAP -> {
                         CompactSlider(
                             "BURST COUNT",
@@ -1322,10 +1610,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                         ) { v ->
                             updatePin { p -> p.copy(repeatCount = v.toInt()) }
                         }
-                        CompactSlider("INTERVAL", "${pin.intervalMs}ms", 2f..120f, pin.intervalMs.toFloat()) { v ->
+                        CompactSlider("INTERVAL", "${pin.intervalMs}ms", 10f..200f, pin.intervalMs.toFloat()) { v ->
                             updatePin { p -> p.copy(intervalMs = v.toLong()) }
                         }
-                        CompactSlider("CONTACT TIME", "${pin.tapDurationMs}ms", 2f..40f, pin.tapDurationMs.toFloat()) { v ->
+                        CompactSlider("CONTACT TIME", "${pin.tapDurationMs}ms", 10f..100f, pin.tapDurationMs.toFloat()) { v ->
                             updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
                         }
                         CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
@@ -1341,7 +1629,35 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                             updatePin { p -> p.copy(startDelayMs = v.toLong()) }
                         }
                         Text(
-                            "Drag the dotted circle on screen to adjust drag vector",
+                            "Drag destination point on screen to set vector",
+                            color = COLOR_TEXT_DIM, fontSize = 6.5.sp, fontFamily = FontFamily.Monospace
+                        )
+                    }
+
+                    MacroTriggerMode.DOUBLE_TAP -> {
+                        CompactSlider("TAP INTERVAL", "${pin.intervalMs}ms", 15f..300f, pin.intervalMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(intervalMs = v.toLong()) }
+                        }
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..80f, pin.tapDurationMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
+                        }
+                        CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(startDelayMs = v.toLong()) }
+                        }
+                    }
+
+                    MacroTriggerMode.COMBO -> {
+                        CompactSlider("COMBO DELAY", "${pin.intervalMs}ms", 10f..300f, pin.intervalMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(intervalMs = v.toLong()) }
+                        }
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..80f, pin.tapDurationMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
+                        }
+                        CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
+                            updatePin { p -> p.copy(startDelayMs = v.toLong()) }
+                        }
+                        Text(
+                            "Triggers primary pin then secondary target point",
                             color = COLOR_TEXT_DIM, fontSize = 6.5.sp, fontFamily = FontFamily.Monospace
                         )
                     }
@@ -1428,6 +1744,84 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 // Hit Zone Radius
                 CompactSlider("HIT ZONE RADIUS", "${pin.radiusDp.toInt()}dp", 20f..56f, pin.radiusDp) { v ->
                     updatePin { p -> p.copy(radiusDp = v) }
+                }
+
+                // Multi-Pin Trigger Link Controls
+                val otherPins = activePins.filter { it.id != pinId }
+                if (otherPins.isNotEmpty()) {
+                    Column(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(COLOR_CARD)
+                            .padding(horizontal = 6.dp, vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        Row(
+                            Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                "MULTI-PIN LINK",
+                                color = COLOR_ACCENT,
+                                fontSize = 7.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                            Text(
+                                if (pin.linkedPinIds.isEmpty()) "Single Pin" else "${pin.linkedPinIds.size} Linked",
+                                color = if (pin.linkedPinIds.isEmpty()) COLOR_TEXT_DIM else COLOR_AMBER,
+                                fontSize = 6.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace
+                            )
+                        }
+
+                        Row(
+                            Modifier
+                                .fillMaxWidth()
+                                .horizontalScroll(rememberScrollState()),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            otherPins.forEach { other ->
+                                val isLinked = pin.linkedPinIds.contains(other.id)
+                                Box(
+                                    Modifier
+                                        .clip(RoundedCornerShape(3.dp))
+                                        .background(if (isLinked) Color(other.color).copy(0.22f) else COLOR_SURFACE)
+                                        .border(0.8.dp, if (isLinked) Color(other.color) else COLOR_BORDER, RoundedCornerShape(3.dp))
+                                        .clickable {
+                                            updatePin { p ->
+                                                val list = p.linkedPinIds.toMutableList()
+                                                if (list.contains(other.id)) list.remove(other.id) else list.add(other.id)
+                                                p.copy(linkedPinIds = list)
+                                            }
+                                        }
+                                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                                ) {
+                                    Text(
+                                        "PIN #${other.index} ${if (isLinked) "✓" else "+"}",
+                                        color = if (isLinked) Color(other.color) else COLOR_TEXT_SEC,
+                                        fontSize = 6.5.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        fontFamily = FontFamily.Monospace
+                                    )
+                                }
+                            }
+                        }
+
+                        if (pin.linkedPinIds.isNotEmpty()) {
+                            CompactSlider(
+                                "STAGGER DELAY",
+                                if (pin.multiPinDelayMs == 0L) "SIMULTANEOUS (0ms)" else "${pin.multiPinDelayMs}ms",
+                                0f..200f,
+                                pin.multiPinDelayMs.toFloat()
+                            ) { v ->
+                                updatePin { p -> p.copy(multiPinDelayMs = v.toLong()) }
+                            }
+                        }
+                    }
                 }
 
                 // Palette & Test Fire Row

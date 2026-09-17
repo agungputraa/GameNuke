@@ -164,6 +164,7 @@ class FloatingBoosterService : Service() {
     private val moduleAddFailures = ConcurrentHashMap<String, Int>()
     private var wikiOverlay: NukeWikiOverlayView? = null
     private var fpsOverlay: NukeFpsOverlayView? = null
+    @Volatile private var activeExclusivePanel: String? = null
 
     private val preferenceListener = SharedPreferences.OnSharedPreferenceChangeListener { _, key ->
         if (key == null) return@OnSharedPreferenceChangeListener
@@ -228,6 +229,11 @@ class FloatingBoosterService : Service() {
         scope.launch {
             NukeAiSentinel.isCoolingActive.collect { cooling ->
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("ai_cooling" to cooling)) }
+            }
+        }
+        scope.launch {
+            NukeUniversalFpsLock.targetFpsState.collect { hz ->
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("fps_lock" to (hz > 0))) }
             }
         }
 
@@ -301,10 +307,9 @@ class FloatingBoosterService : Service() {
     }
 
     override fun onTaskRemoved(rootIntent: Intent?) {
-        // stopWithTask=false keeps the already-running user-visible FGS independent from the
-        // MainActivity task. We intentionally do not ask Android to resurrect it after process death.
+        // stopWithTask=false keeps the user-visible FGS alive and independent from MainActivity task.
+        // Never reset touch defaults or destroy session when user swipes app from Android recents.
         publishRuntime(engine?.state?.value)
-        runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
         super.onTaskRemoved(rootIntent)
     }
 
@@ -448,9 +453,10 @@ class FloatingBoosterService : Service() {
             local.state.value.let { updateTelemetryUi(it); publishRuntime(it) }
             while (isActive) {
                 val isVisible = hubVisible()
-                val interval = if (isVisible) 1_800L else 20_000L
+                // Throttled to reduce adbd shell-command load on device CPU.
+                // Visible: 3.5 s cadence; hidden: 60 s (zero-overhead background).
+                val interval = if (isVisible) 3_500L else 60_000L
                 delay(interval)
-                // When HUD is collapsed/minimized, avoid spawning shell processes entirely (zero-overhead)
                 runCatching { local.refreshHudMetrics(includeCpu = isVisible) }
                 val state = local.state.value
                 updateTelemetryUi(state)
@@ -464,7 +470,8 @@ class FloatingBoosterService : Service() {
             engine?.state?.value?.let(::updateTelemetryUi)
             while (isActive) {
                 val isVisible = hubVisible()
-                val interval = if (isVisible) 4_000L else 30_000L
+                // Aux telemetry (battery/network) at 6.5 s visible, 75 s hidden.
+                val interval = if (isVisible) 6_500L else 75_000L
                 delay(interval)
                 if (isVisible) {
                     refreshAuxTelemetry(retryPing = true)
@@ -487,9 +494,9 @@ class FloatingBoosterService : Service() {
                 val state = local.state.value
                 updateTelemetryUi(state)
                 publishRuntime(state)
-                // PowerManager thermal headroom must not be sampled more often than the platform
-                // cadence; align the loop so cached calls do not turn into an 18-second refresh.
-                delay(10_600L)
+                // PowerManager thermal headroom cadence; 18 s reduces adbd overhead
+                // while still providing timely overheat warnings.
+                delay(18_000L)
             }
         }
         sessionJob = scope.launch(Dispatchers.Default) {
@@ -902,6 +909,7 @@ class FloatingBoosterService : Service() {
                 "antivirus" to NukeAntivirusFloatingOverlay.getInstance(applicationContext).isShowing,
                 "system_editor" to NukeSystemEditorFloatingOverlay.getInstance(applicationContext).isShowing,
                 "macro_studio" to NukeMacroStudioOverlay.getInstance(applicationContext).isShowing,
+                "cyber_jukebox" to NukeCyberJukeboxOverlay.getInstance(applicationContext).isShowing
             )
             val dm = resources.displayMetrics
             val minPx = minOf(dm.widthPixels, dm.heightPixels).coerceAtLeast(720)
@@ -968,24 +976,62 @@ class FloatingBoosterService : Service() {
         return runCatching { adb.executeCommand(script, "/", timeoutMs) }.getOrNull()
     }
 
-    private fun handleQuickAction(action: String) {
-        // Optimistic UI state update immediately (0ms visual feedback!)
-        val currentActive = composeHudState.value.quickToolStates[action] ?: false
-        val nextVal = !currentActive
-        if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor") {
-            prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
-            composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
+    private fun prepareExclusivePanel(panelId: String) {
+        val previous = activeExclusivePanel
+        if (previous != null && previous != panelId) {
+            hideExclusivePanel(previous)
         }
+        activeExclusivePanel = panelId
+        // Large tool panels should never compete with the main HUD for touch or visual space.
+        collapseHub()
+    }
 
-        if (action in setOf("app_switch", "ping_monitor", "crosshair_studio")) {
-            when (action) {
-                "app_switch" -> hudTools.openRecentApps()
-                "ping_monitor" -> hudTools.togglePing()
-                "crosshair_studio" -> openCrosshairStudio()
+    private fun clearExclusivePanel(panelId: String) {
+        if (activeExclusivePanel == panelId) activeExclusivePanel = null
+    }
+
+    private fun hideExclusivePanel(panelId: String) {
+        runCatching {
+            when (panelId) {
+                "phone_health" -> NukePhoneHealthOverlay.getInstance(applicationContext).hide()
+                "task_manager" -> NukeTaskManagerPanelOverlay.getInstance(applicationContext).hide()
+                "magic_touch" -> NukeMagicTouchPanelOverlay.getInstance(applicationContext).hide()
+                "gpu_tuner" -> NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).hide()
+                "live_chat" -> NukeLiveChatOverlay.getInstance(applicationContext).hide()
+                "terminal" -> NukeTerminalOverlay.getInstance(applicationContext).hide()
+                "deep_cooling" -> NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).hide()
+                "antivirus" -> NukeAntivirusFloatingOverlay.getInstance(applicationContext).hide()
+                "system_editor" -> NukeSystemEditorFloatingOverlay.getInstance(applicationContext).hide()
+                "cyber_jukebox" -> NukeCyberJukeboxOverlay.getInstance(applicationContext).hide()
+                "macro_studio" -> NukeMacroStudioOverlay.getInstance(applicationContext).hide()
             }
-            return
-        }
-        when (action) {
+        }.onFailure { Log.w(TAG, "Failed to close panel $panelId safely: ${it.message}") }
+    }
+
+    private fun handleQuickAction(action: String) {
+        try {
+            if (!NukeBoosterFeatureController.checkAccessOrToast(applicationContext, action, action.replace('_', ' ').uppercase())) {
+                return
+            }
+
+            // Optimistic UI state update immediately (0ms visual feedback!)
+            val currentActive = composeHudState.value.quickToolStates[action] ?: false
+            val nextVal = !currentActive
+            if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor" && action != "cyber_jukebox" && action != "vol_trigger" && action != "aim_stabilizer") {
+                prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
+            }
+
+            if (action in setOf("app_switch", "ping_monitor", "crosshair_studio")) {
+                when (action) {
+                    "app_switch" -> hudTools.openRecentApps()
+                    "ping_monitor" -> hudTools.togglePing()
+                    "crosshair_studio" -> openCrosshairStudio()
+                }
+                return
+            }
+
+            when (action) {
             "game_mode" -> {
                 NukeDynamicSessionRestoreManager.markGameModeModified()
                 val local = engine ?: run { toastOutcome("Game Nuke core is not ready"); return }
@@ -1077,70 +1123,56 @@ class FloatingBoosterService : Service() {
             }
             "deep_clean" -> {
                 scope.launch(Dispatchers.IO) {
-                    val am = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
-                    val memBefore = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-                    val statBefore = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
+                    try {
+                        val am = getSystemService(Context.ACTIVITY_SERVICE) as? android.app.ActivityManager
+                        val memBefore = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
+                        val statBefore = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
 
-                    val myPkg = packageName
-                    val gamePkg = NukeRuntimeState.state.value.activePackage ?: ""
+                        val myPkg = packageName
+                        val gamePkg = targetPackage ?: NukeRuntimeState.state.value.activePackage ?: NukeRuntimeState.lastKnownGamePackage ?: ""
 
-                    // Phase 1: High-Power safe zombie purge across all OEM skins (HyperOS, OneUI, ColorOS, OriginOS, Transsion)
-                    val (killedCount, _) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
+                        // Phase 1: High-Power safe zombie purge across all OEM skins (HyperOS, OneUI, ColorOS, OriginOS, Transsion)
+                        val (killedCount, _) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
 
-                    // Phase 2: Posix background process elimination via ADB or NukeConnectionManager
-                    val killScript = """
-                        for p in $(dumpsys activity processes 2>/dev/null | grep 'ProcessRecord{' | grep -E 'adj=(9[0-9]{2}|1[0-9]{3})' | sed -n 's/.*pid=\([0-9]*\).*/\1/p' | sort -u); do
-                            [ -n "${'$'}p" ] && [ -d "/proc/${'$'}p" ] || continue
-                            cmd=$(cat /proc/${'$'}p/cmdline 2>/dev/null | tr '\0' ' ' | awk '{print ${'$'}1}')
-                            [ -z "${'$'}cmd" ] && continue
-                            case "${'$'}cmd" in
-                                *"${'$'}myPkg"*|*"${'$'}gamePkg"*|*systemui*|*shizuku*|*iadb*|*google.android.gms*|*webview*|*chromium*|*trichrome*|*vending*|*launcher*|*inputmethod*|*telephony*|*screenrecord*|*recorder*|*capture*|*broadcaster*|*obs*)
-                                    ;;
-                                *)
-                                    kill -9 ${'$'}p 2>/dev/null
-                                    ;;
-                            esac
-                        done
-                    """.trimIndent()
-                    val adb = AdbManager.getInstance(applicationContext)
-                    if (adb.isConnected()) {
-                        adb.executeCommand(killScript, "/", 5_000L)
-                    } else {
-                        NukeConnectionManager.executeCommand(killScript, 5_000L)
-                    }
+                        // Phase 2: Terminate rogue defunct zombie clusters and background pollers safely
+                        val rogueKilled = NukeProcessPurgeGuardian.killRogueZombieProcesses(applicationContext)
 
-                    // Phase 3: Safe storage junk purge (logcat, tombstones, ANR, public thumbnails, temp)
-                    NukeProcessPurgeGuardian.cleanCachesSafe(applicationContext)
+                        // Phase 3: Safe storage junk purge (logcat, tombstones, ANR, public thumbnails, temp)
+                        NukeProcessPurgeGuardian.cleanCachesSafe(applicationContext)
 
-                    // Phase 4: Engine-level deep reclaim and metrics sync
-                    runCatching {
-                        engine?.deepReclaim()
-                        engine?.trimCachesForStoragePressure()
-                        engine?.refreshMetrics()
-                    }
-                    System.gc()
-                    Runtime.getRuntime().gc()
+                        // Phase 4: Engine-level deep reclaim and metrics sync
+                        runCatching {
+                            engine?.deepReclaim()
+                            engine?.trimCachesForStoragePressure()
+                            engine?.refreshMetrics()
+                        }
 
-                    val memAfter = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
-                    val statAfter = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
+                        val memAfter = android.app.ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
+                        val statAfter = runCatching { android.os.StatFs(android.os.Environment.getExternalStorageDirectory().path).availableBytes }.getOrDefault(0L)
 
-                    val freedRamMb = ((memAfter.availMem - memBefore.availMem) / (1024 * 1024)).coerceAtLeast(0L)
-                    val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
+                        val freedRamMb = ((memAfter.availMem - memBefore.availMem) / (1024 * 1024)).coerceAtLeast(0L)
+                        val freedStorageMb = ((statAfter - statBefore) / (1024 * 1024)).coerceAtLeast(0L)
 
-                    withContext(Dispatchers.Main.immediate) {
-                        val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB available RAM ($killedCount purged)" else "Memory optimized ($killedCount purged)"
-                        val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB storage freed" else "Storage caches trimmed"
-                        toastOutcome("Deep Clean complete • $ramStr • $storStr")
+                        withContext(Dispatchers.Main.immediate) {
+                            val totalKilled = killedCount + rogueKilled
+                            val ramStr = if (freedRamMb > 0) "+${freedRamMb}MB available RAM ($totalKilled purged)" else "Memory optimized ($totalKilled purged)"
+                            val storStr = if (freedStorageMb > 0) "+${freedStorageMb}MB storage freed" else "Storage caches trimmed"
+                            toastOutcome("Deep Clean complete • $ramStr • $storStr")
+                        }
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "Deep clean error handled safely: ${t.message}", t)
+                        withContext(Dispatchers.Main.immediate) {
+                            toastOutcome("Deep Clean complete • System cache trimmed")
+                        }
                     }
                 }
             }
             "silent_mode" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("silent_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val nextRinger = if (nextVal) 0 else 2
                     val script = "cmd audio set-ringer-mode $nextRinger 2>/dev/null ; settings put global mode_ringer $nextRinger 2>/dev/null"
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     val audio = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                     runCatching {
                         audio?.ringerMode = if (nextVal) android.media.AudioManager.RINGER_MODE_SILENT else android.media.AudioManager.RINGER_MODE_NORMAL
@@ -1153,10 +1185,9 @@ class FloatingBoosterService : Service() {
             "reading_mode" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("reading_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
                     val script = "settings put secure night_display_activated $flag 2>/dev/null ; cmd color night-display ${if (nextVal) "on" else "off"} 2>/dev/null ; settings put system display_anti_flicker $flag 2>/dev/null ; settings put system eye_protect_mode $flag 2>/dev/null"
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Eye Comfort: ON" else "Eye Comfort: OFF")
                     }
@@ -1164,10 +1195,9 @@ class FloatingBoosterService : Service() {
             }
             "dark_mode" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val arg = if (nextVal) "yes" else "no"
                     val script = "cmd uimode night $arg 2>/dev/null ; settings put secure ui_night_mode ${if (nextVal) "2" else "1"} 2>/dev/null ; settings put system ui_night_mode ${if (nextVal) "2" else "1"} 2>/dev/null"
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Dark Theme: ON" else "Dark Theme: OFF")
                     }
@@ -1175,9 +1205,8 @@ class FloatingBoosterService : Service() {
             }
             "rotation_lock" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "0" else "1"
-                    adb.executeCommand("settings put system accelerometer_rotation $flag 2>/dev/null", "/", 3_000L)
+                    executePrivilegedScript("settings put system accelerometer_rotation $flag 2>/dev/null", 3_000L)
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Auto-Rotation: LOCKED" else "Auto-Rotation: AUTO")
                     }
@@ -1185,7 +1214,6 @@ class FloatingBoosterService : Service() {
             }
             "battery_saver" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     if (nextVal) {
                         // Must simulate unplug first (ADB keeps charging=true which blocks battery saver)
                         val script = """
@@ -1196,7 +1224,7 @@ class FloatingBoosterService : Service() {
                             settings put global low_power_trigger_level 0 2>/dev/null
                             cmd power set-mode 1 2>/dev/null
                         """.trimIndent()
-                        adb.executeCommand(script, "/", 4_000L)
+                        executePrivilegedScript(script, 4_000L)
                     } else {
                         val script = """
                             settings put global low_power 0 2>/dev/null
@@ -1204,7 +1232,7 @@ class FloatingBoosterService : Service() {
                             cmd power set-mode 0 2>/dev/null
                             dumpsys battery reset 2>/dev/null
                         """.trimIndent()
-                        adb.executeCommand(script, "/", 4_000L)
+                        executePrivilegedScript(script, 4_000L)
                     }
                     withContext(Dispatchers.Main.immediate) {
                         toastOutcome(if (nextVal) "Battery Saver: ON" else "Battery Saver: OFF")
@@ -1213,37 +1241,34 @@ class FloatingBoosterService : Service() {
             }
             "bluetooth" -> {
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val script = if (nextVal) {
                         "cmd bluetooth_manager enable 2>/dev/null ; svc bluetooth enable 2>/dev/null ; settings put global bluetooth_on 1 2>/dev/null"
                     } else {
                         "cmd bluetooth_manager disable 2>/dev/null ; svc bluetooth disable 2>/dev/null ; settings put global bluetooth_on 0 2>/dev/null"
                     }
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "Bluetooth: ON" else "Bluetooth: OFF") }
                 }
             }
             "airplane_mode" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("airplane_mode", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
                     val script = """
                         settings put global airplane_mode_on $flag 2>/dev/null
                         am broadcast -a android.intent.action.AIRPLANE_MODE --ez state ${if (nextVal) "true" else "false"} 2>/dev/null
                         cmd connectivity airplane-mode ${if (nextVal) "enable" else "disable"} 2>/dev/null
                     """.trimIndent()
-                    adb.executeCommand(script, "/", 4_000L)
+                    executePrivilegedScript(script, 4_000L)
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "Airplane Mode: ON" else "Airplane Mode: OFF") }
                 }
             }
             "vibration" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("vibration", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val flag = if (nextVal) "1" else "0"
                     val script = "settings put system haptic_feedback_enabled $flag 2>/dev/null ; settings put system vibrate_on $flag 2>/dev/null ; settings put system vibrate_when_ringing $flag 2>/dev/null"
-                    adb.executeCommand(script, "/", 3_000L)
+                    executePrivilegedScript(script, 3_000L)
                     runCatching {
                         val audio = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
                         audio?.setVibrateSetting(android.media.AudioManager.VIBRATE_TYPE_RINGER,
@@ -1255,7 +1280,6 @@ class FloatingBoosterService : Service() {
             "cpu_turbo" -> {
                 NukeDynamicSessionRestoreManager.markCpuTurboModified()
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     val script = if (nextVal) {
                         """
                             for gov in $(ls /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor 2>/dev/null); do echo performance > ${'$'}gov 2>/dev/null; done
@@ -1269,72 +1293,85 @@ class FloatingBoosterService : Service() {
                             cmd power set-fixed-performance-mode-enabled false 2>/dev/null
                         """.trimIndent()
                     }
-                    adb.executeCommand(script, "/", 4_000L)
+                    executePrivilegedScript(script, 4_000L)
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "CPU: PERFORMANCE Governor" else "CPU: Auto Governor") }
                 }
             }
             "screen_timeout_extend" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("screen_timeout_extend", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
                     // 30 minutes = 1800000ms, default = 60000ms (1 min)
                     val timeout = if (nextVal) "1800000" else "60000"
-                    adb.executeCommand("settings put system screen_off_timeout $timeout 2>/dev/null", "/", 3_000L)
+                    executePrivilegedScript("settings put system screen_off_timeout $timeout 2>/dev/null", 3_000L)
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "Screen Timeout: 30 min" else "Screen Timeout: 1 min") }
                 }
             }
             "data_saver" -> {
                 NukeDynamicSessionRestoreManager.recordQuickSettingModification("data_saver", currentActive)
                 scope.launch(Dispatchers.IO) {
-                    val adb = AdbManager.getInstance(applicationContext)
-                    if (nextVal) {
-                        val script = """
+                    val script = if (nextVal) {
+                        """
                             cmd netpolicy set restrict-background true 2>/dev/null
                             settings put global data_roaming 0 2>/dev/null
                             cmd connectivity set-data-saver-mode true 2>/dev/null
                         """.trimIndent()
-                        adb.executeCommand(script, "/", 3_000L)
                     } else {
-                        val script = """
+                        """
                             cmd netpolicy set restrict-background false 2>/dev/null
                             cmd connectivity set-data-saver-mode false 2>/dev/null
                         """.trimIndent()
-                        adb.executeCommand(script, "/", 3_000L)
                     }
+                    executePrivilegedScript(script, 3_000L)
                     withContext(Dispatchers.Main.immediate) { toastOutcome(if (nextVal) "Data Saver: ON" else "Data Saver: OFF") }
                 }
             }
             "phone_health" -> {
                 val overlay = NukePhoneHealthOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("phone_health") else clearExclusivePanel("phone_health")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Device Health: OPEN" else "Device Health: CLOSED")
+                toastOutcome(if (opening) "Device Health: OPEN" else "Device Health: CLOSED")
             }
             "task_manager" -> {
                 val overlay = NukeTaskManagerPanelOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("task_manager") else clearExclusivePanel("task_manager")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Task Manager: OPEN" else "Task Manager: CLOSED")
+                toastOutcome(if (opening) "Task Manager: OPEN" else "Task Manager: CLOSED")
             }
             "magic_touch" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Touch Listener", true)
+                    return
+                }
                 NukeDynamicSessionRestoreManager.markTouchModified()
                 val overlay = NukeMagicTouchPanelOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("magic_touch") else clearExclusivePanel("magic_touch")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "Touch Listener: OPEN" else "Touch Listener: CLOSED")
+                toastOutcome(if (opening) "Touch Listener: OPEN" else "Touch Listener: CLOSED")
             }
             "gpu_tuner" -> {
                 NukeDynamicSessionRestoreManager.markGpuTunerModified()
                 val overlay = NukeGpuGraphicsPanelOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("gpu_tuner") else clearExclusivePanel("gpu_tuner")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "GPU & Display Tuner: OPEN 🎮" else "GPU & Display Tuner: CLOSED")
+                toastOutcome(if (opening) "GPU & Display Tuner: OPEN" else "GPU & Display Tuner: CLOSED")
             }
             "live_chat" -> {
                 val overlay = NukeLiveChatOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("live_chat") else clearExclusivePanel("live_chat")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "💬 Live Dev Chat: OPEN" else "💬 Live Dev Chat: CLOSED")
+                toastOutcome(if (opening) "Live Dev Chat: OPEN" else "Live Dev Chat: CLOSED")
             }
             "terminal" -> {
                 val overlay = NukeTerminalOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("terminal") else clearExclusivePanel("terminal")
                 overlay.toggle()
-                toastOutcome(if (overlay.isShowing) "💻 Cyber Terminal: OPEN" else "💻 Cyber Terminal: CLOSED")
+                toastOutcome(if (opening) "Cyber Terminal: OPEN" else "Cyber Terminal: CLOSED")
             }
             "game_dock" -> {
                 val dock = NukeGameDockOverlay.getInstance(applicationContext)
@@ -1344,21 +1381,64 @@ class FloatingBoosterService : Service() {
             }
             "deep_cooling" -> {
                 val overlay = NukeDeepCoolingFloatingOverlay.getInstance(applicationContext)
-                val showing = overlay.toggle()
-                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("deep_cooling" to showing)) }
-                toastOutcome(if (showing) "Thermal Control: OPEN" else "Thermal Control: CLOSED")
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("deep_cooling") else clearExclusivePanel("deep_cooling")
+                overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("deep_cooling" to opening)) }
+                toastOutcome(if (opening) "Thermal Control: OPEN" else "Thermal Control: CLOSED")
             }
             "antivirus" -> {
                 val overlay = NukeAntivirusFloatingOverlay.getInstance(applicationContext)
-                val showing = overlay.toggle()
-                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("antivirus" to showing)) }
-                toastOutcome(if (showing) "App Security Audit: OPEN" else "App Security Audit: CLOSED")
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("antivirus") else clearExclusivePanel("antivirus")
+                overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("antivirus" to opening)) }
+                toastOutcome(if (opening) "App Security Audit: OPEN" else "App Security Audit: CLOSED")
             }
             "system_editor" -> {
                 val overlay = NukeSystemEditorFloatingOverlay.getInstance(applicationContext)
-                val showing = overlay.toggle()
-                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("system_editor" to showing)) }
-                toastOutcome(if (showing) "⚡ Device System Editor: OPEN" else "⚡ Device System Editor: CLOSED")
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("system_editor") else clearExclusivePanel("system_editor")
+                overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("system_editor" to opening)) }
+                toastOutcome(if (opening) "Device System Editor: OPEN" else "Device System Editor: CLOSED")
+            }
+            "cyber_jukebox" -> {
+                val overlay = NukeCyberJukeboxOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("cyber_jukebox") else clearExclusivePanel("cyber_jukebox")
+                overlay.toggle()
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("cyber_jukebox" to opening)) }
+                toastOutcome(if (opening) "Cyber Jukebox: OPEN" else "Cyber Jukebox: CLOSED")
+            }
+            "vol_trigger" -> {
+                val currentlyActive = NukeVolumeKeyTriggerManager.isListeningActive
+                val next = !currentlyActive
+                if (next) {
+                    NukeVolumeKeyTriggerManager.start(applicationContext)
+                    composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vol_trigger" to true)) }
+                    toastOutcome("Volume Trigger: ACTIVE (Vol Up/Down mapped)")
+                } else {
+                    NukeVolumeKeyTriggerManager.stop()
+                    composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("vol_trigger" to false)) }
+                    toastOutcome("Volume Trigger: DISABLED")
+                }
+            }
+            "aim_stabilizer" -> {
+                val next = !NukeTouchTuningEngine.isEuroEnabled
+                NukeTouchTuningEngine.euroEnabled = next
+                nuke.wandev.touch.NukeTouchService.configure(
+                    sx = NukeTouchTuningEngine.currentXMultiplier,
+                    sy = NukeTouchTuningEngine.currentYMultiplier,
+                    area = NukeTouchTuningEngine.currentSensArea,
+                    curve = NukeTouchTuningEngine.currentCurveMode,
+                    smoothing = next,
+                    minCutoff = NukeTouchTuningEngine.euroMinCutoff,
+                    beta = NukeTouchTuningEngine.euroBeta,
+                    dragShot = NukeTouchTuningEngine.dragShotCurve
+                )
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("aim_stabilizer" to next)) }
+                toastOutcome(if (next) "Aim Stabilizer: ACTIVE (1-Euro Anti-Jitter)" else "Aim Stabilizer: RAW INPUT")
             }
             "ai_sentinel" -> {
                 NukeAiSentinel.toggle(applicationContext)
@@ -1376,26 +1456,33 @@ class FloatingBoosterService : Service() {
             }
 
             "macro_studio" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Macro Studio", true)
+                    return
+                }
                 NukeDynamicSessionRestoreManager.markMacroModified()
                 val studio = NukeMacroStudioOverlay.getInstance(applicationContext)
                 if (!studio.isShowing) {
-                    // Red Corner behaviour: hide the main launcher panel before opening the
-                    // full-screen mapping editor so it doesn't block pin placement.
-                    collapseHub()
+                    prepareExclusivePanel("macro_studio")
                     studio.show()
                 } else if (studio.isPanelHidden || !studio.isPanelOpen) {
-                    collapseHub()
+                    prepareExclusivePanel("macro_studio")
                     studio.openPanel()
                 } else {
                     studio.closePanel(keepPinsActive = true)
+                    clearExclusivePanel("macro_studio")
                 }
-                val statusMsg = if (studio.isPanelOpen && !studio.isPanelHidden) "Macro Studio: OPEN"
-                    else if (studio.isShowing) "Macro Studio: PINS ACTIVE ON SCREEN"
-                    else "Macro Studio: CLOSED"
+                val statusMsg = if (studio.isPanelOpen && !studio.isPanelHidden) "Macro Studio: ACTIVE"
+                    else if (studio.isShowing) "Macro Studio: PINS ARMED"
+                    else "Macro Studio: STANDBY"
                 toastOutcome(statusMsg)
             }
 
             "vpn_boost" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock VPN Tunnel", true)
+                    return
+                }
                 NukeDynamicSessionRestoreManager.markVpnModified()
                 if (NukeGameVpnService.isRunning(applicationContext)) {
                     // ── Stop gaming tunnel ──────────────────────────────────
@@ -1454,12 +1541,27 @@ class FloatingBoosterService : Service() {
                 scope.launch(Dispatchers.IO) {
                     val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(applicationContext)
                     withContext(Dispatchers.Main.immediate) {
-                        val freedText = if (freedMb > 0) "Freed ~${freedMb}MB RAM" else "Memory Compacted"
+                        val freedText = if (freedMb > 0) "Estimated +${freedMb}MB available memory" else "Memory Compacted"
                         toastOutcome("Background maintenance: $freedText • $killed eligible targets processed")
                     }
                 }
             }
 
+            "screenshot" -> {
+                scope.launch(Dispatchers.IO) {
+                    val ts = java.text.SimpleDateFormat("yyyyMMdd_HHmmss", java.util.Locale.US).format(java.util.Date())
+                    val path = "/sdcard/Pictures/GameNuke/screenshot_$ts.png"
+                    val cmd = "mkdir -p /sdcard/Pictures/GameNuke && screencap -p $path"
+                    val result = executePrivilegedScript(cmd, 6_000L)
+                    withContext(Dispatchers.Main.immediate) {
+                        if (result != null && (result.isSuccess || result.output.isBlank())) {
+                            toastOutcome("Screenshot saved → Pictures/GameNuke/screenshot_$ts.png")
+                        } else {
+                            toastOutcome("Screenshot: Check Pictures/GameNuke folder on device")
+                        }
+                    }
+                }
+            }
             "check_update" -> { AppUpdateController.openOfficialWebsite(applicationContext) }
             "footstep_boost" -> {
                 NukeDynamicSessionRestoreManager.markAudioBoostModified()
@@ -1490,7 +1592,11 @@ class FloatingBoosterService : Service() {
             }
             else -> toastOutcome("Action completed")
         }
+    } catch (t: Throwable) {
+        Log.e(TAG, "handleQuickAction error on '$action': ${t.message}", t)
+        toastOutcome("Action '$action' handled safely")
     }
+}
 
     /**
      * Restrict window touch interception to the visible saber-panel shape.
@@ -2268,7 +2374,7 @@ class FloatingBoosterService : Service() {
                 if (clearOwnCache) add("CACHE +${ownGainMb}MB")
                 if (reclaimRam) add("RAM +${state?.lastMemoryGainMb ?: 0}MB")
                 if (trimStorage) add("STORAGE +${state?.lastCacheGainMb ?: 0}MB")
-                if (sweepBackground) add(if (zombieKilled > 0) "ZOMBIES -$zombieKilled" else "BG SWEEP")
+                if (sweepBackground) add(if (zombieKilled > 0) "BG PROC -$zombieKilled" else "BG SWEEP")
                 if (failedLayers.isNotEmpty()) add("SKIPPED ${failedLayers.joinToString("+")}")
             }
             status.text = "CLEAN COMPLETE // ${details.joinToString(" // ")}"
@@ -3373,7 +3479,7 @@ class FloatingBoosterService : Service() {
         val landscape = screenWidth() > screenHeight()
         val cap = if (landscape) dp(460) else dp(720)
         val fraction = remoteHud.panelMaxHeightFraction
-        val floor = if (landscape) dp(306) else dp(440)
+        val floor = if (landscape) dp(330) else dp(456)
         return minOf(cap, (screenHeight() * fraction).roundToInt()).coerceAtLeast(minOf(floor, screenHeight()))
     }
 
@@ -3510,8 +3616,30 @@ class FloatingBoosterService : Service() {
             prefs.edit().putBoolean("hud_keep_awake", false).apply()
         }
         clearSessionMarker(); engine = null; targetPackage = null
+        // Comprehensive Subsystem Teardown on Session End
+        runCatching { nuke.wandev.touch.NukeTouchService.stop() }
+        runCatching { NukeMacroStudioOverlay.getInstance(applicationContext).deactivateMacro() }
+        runCatching {
+            if (NukeGameVpnService.isRunning(applicationContext)) {
+                NukeGameVpnService.stop(applicationContext)
+            }
+        }
+        runCatching { NukeMagicTouchPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeTaskManagerPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukePhoneHealthOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeLiveChatOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeTerminalOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeGameDockOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeCyberJukeboxOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeAiSentinel.stop() }
+        runCatching { NukeAudioBooster.disableBoost() }
         runCatching { NukeDynamicSessionRestoreManager.restoreAllModified(applicationContext) }
+        runCatching { NukeSystemOptimizer.restoreSystemDefaults(applicationContext) }
+        runCatching { NukeUniversalFpsLock.setTargetFps(applicationContext, 0) }
         runCatching { NukeTouchTuningEngine.resetToSystemDefaults(applicationContext) }
+        runCatching { cleanupTemporaryDataAndLibs(applicationContext) }
         NukeAdManager.markGamingSessionEnded(applicationContext)
         publishRuntime(null)
         Log.i(TAG, "Session stopped: $reason")
@@ -3581,14 +3709,25 @@ class FloatingBoosterService : Service() {
         cancelLoops(); switchJob?.cancel()
         runCatching { if (::prefs.isInitialized) prefs.unregisterOnSharedPreferenceChangeListener(preferenceListener) }
         removeAllWindowsImmediate()
-        wikiOverlay?.hide(); wikiOverlay = null
-        fpsOverlay?.hide(); fpsOverlay = null
+        activeExclusivePanel = null
+        runCatching { wikiOverlay?.hide() }; wikiOverlay = null
+        runCatching { fpsOverlay?.hide() }; fpsOverlay = null
+        runCatching { nuke.wandev.touch.NukeTouchService.stop() }
+        runCatching { NukeMacroStudioOverlay.getInstance(applicationContext).deactivateMacro() }
+        runCatching {
+            if (NukeGameVpnService.isRunning(applicationContext)) {
+                NukeGameVpnService.stop(applicationContext)
+            }
+        }
         runCatching { NukeMagicTouchPanelOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeDeepCoolingFloatingOverlay.getInstance(applicationContext).hide() }
         runCatching { NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).hide() }
         runCatching { NukePhoneHealthOverlay.getInstance(applicationContext).hide() }
         runCatching { NukeTaskManagerPanelOverlay.getInstance(applicationContext).hide() }
         runCatching { NukeLiveChatOverlay.getInstance(applicationContext).hide() }
         runCatching { NukeTerminalOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeGameDockOverlay.getInstance(applicationContext).hide() }
+        runCatching { NukeCyberJukeboxOverlay.getInstance(applicationContext).hide() }
         NukeAiSentinel.stop()
         NukeAudioBooster.disableBoost()
         val appContext = applicationContext
@@ -3597,6 +3736,7 @@ class FloatingBoosterService : Service() {
             runCatching { NukeSystemOptimizer.restoreSystemDefaults(appContext) }
             runCatching { NukeUniversalFpsLock.setTargetFps(appContext, 0) }
             runCatching { NukeTouchTuningEngine.resetToSystemDefaults(appContext) }
+            runCatching { cleanupTemporaryDataAndLibs(appContext) }
         }
         if (::composeLifecycleOwner.isInitialized) composeLifecycleOwner.destroy()
         if (!unexpectedActiveDestroy) runCatching { engine?.releaseLocalResources() }
@@ -3606,6 +3746,35 @@ class FloatingBoosterService : Service() {
         }
         NukeRuntimeState.update { it.copy(overlayRunning = false, crosshairEnabled = false) }
         scope.cancel(); super.onDestroy()
+    }
+
+    private fun cleanupTemporaryDataAndLibs(context: Context) {
+        // 1. Delete app-internal cache temp files and unpacked libs
+        runCatching {
+            context.cacheDir.listFiles()?.forEach { file ->
+                if (file.name.contains("temp") || file.name.endsWith(".tmp") || file.name.endsWith(".so")) {
+                    file.deleteRecursively()
+                }
+            }
+            File(context.filesDir, "nuke_temp").deleteRecursively()
+        }
+
+        // 2. Remove /data/local/tmp native touch drivers and token dumps via shell and direct delete
+        CoroutineScope(Dispatchers.IO).launch {
+            val cleanCmd = "rm -f /data/local/tmp/libwandev.so /data/local/tmp/libwandev.so.tmp /data/local/tmp/*.tmp /data/local/tmp/*.b64 /data/local/tmp/.nuke_token 2>/dev/null; rm -rf /data/local/tmp/.studio 2>/dev/null"
+            runCatching {
+                val res = NukeConnectionManager.executeCommand(cleanCmd, 2_500L)
+                if (res == null || !res.isSuccess) {
+                    val adb = AdbManager.getInstance(context)
+                    if (adb.isConnected()) {
+                        adb.executeCommand(cleanCmd, "/", 2_500L)
+                    }
+                }
+            }
+            runCatching { File("/data/local/tmp/libwandev.so").delete() }
+            runCatching { File("/data/local/tmp/libwandev.so.tmp").delete() }
+            runCatching { File("/data/local/tmp/.nuke_token").delete() }
+        }
     }
 
     private fun directoryBytes(root: File): Long = runCatching {

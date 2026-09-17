@@ -25,13 +25,12 @@ object OverlayPermissionController {
         Class.forName("android.os.SystemProperties").getMethod("get", String::class.java).invoke(null, name) as? String ?: ""
     }.getOrDefault("")
 
-    /** Checks whether the system enforces Low-RAM / Android Go or Android 13+ restricted settings. */
+    /** Checks whether the system enforces Low-RAM or Android Go edition. */
     fun isLowRamOrRestricted(context: Context): Boolean {
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-        val isLowRam = am?.isLowRamDevice == true ||
+        return am?.isLowRamDevice == true ||
             systemProperty("ro.config.low_ram") == "true" ||
             systemProperty("ro.build.version.go").isNotEmpty()
-        return isLowRam || Build.VERSION.SDK_INT >= 33
     }
 
     /**
@@ -99,26 +98,16 @@ object OverlayPermissionController {
             return true
         }
 
-        // 2. If device is Low-RAM / Android Go / Android 14-16 restricted, route to Enterprise Guidance Activity
-        if (isLowRamOrRestricted(context)) {
-            val bypassIntent = Intent(context, NukeOverlayBypassActivity::class.java).apply {
-                addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            }
-            if (runCatching { context.startActivity(bypassIntent); true }.getOrDefault(false)) {
-                return false
-            }
-        }
-
         val manufacturer = Build.MANUFACTURER.lowercase(java.util.Locale.ROOT)
         val isXiaomiFamily = manufacturer in setOf("xiaomi", "poco", "redmi") || systemProperty("ro.miui.ui.version.code").isNotEmpty()
 
-        // 3. Android Standard Overlay Permission (Direct package URI)
+        // 2. Android Standard Overlay Permission (Direct package URI)
         val directOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION, Uri.parse("package:${context.packageName}"))
 
-        // 4. Android Standard Overlay Permission (Generic list fallback)
+        // 3. Android Standard Overlay Permission (Generic list fallback)
         val genericOverlay = Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
 
-        // 5. OEM-specific permission editors
+        // 4. OEM-specific permission editors
         val vendor = when {
             isXiaomiFamily ->
                 Intent("miui.intent.action.APP_PERM_EDITOR").setClassName("com.miui.securitycenter", "com.miui.permcenter.permissions.PermissionsEditorActivity")
@@ -128,10 +117,16 @@ object OverlayPermissionController {
             systemProperty("ro.vivo.os.version").isNotEmpty() || manufacturer in setOf("vivo", "iqoo") ->
                 Intent().setClassName("com.vivo.permissionmanager", "com.vivo.permissionmanager.activity.SoftPermissionDetailActivity")
                     .putExtra("packagename", context.packageName)
+            manufacturer in setOf("transsion", "infinix", "tecno", "itel") ->
+                Intent().setClassName("com.transsion.phonemanager", "com.transsion.phonemanager.view.FloatingWindowSettingActivity")
+            manufacturer in setOf("huawei", "honor") ->
+                Intent().setClassName("com.huawei.systemmanager", "com.huawei.permissionmanager.ui.MainActivity")
+            manufacturer in setOf("samsung") ->
+                Intent().setClassName("com.samsung.android.lool", "com.samsung.android.sm.ui.battery.BatteryActivity")
             else -> null
         }
 
-        // 6. App details settings as universal fail-safe
+        // 5. App details settings as universal fail-safe
         val appDetails = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${context.packageName}"))
 
         val candidates = listOfNotNull(directOverlay, genericOverlay, vendor, appDetails)
@@ -140,12 +135,21 @@ object OverlayPermissionController {
                 val message = if (isXiaomiFamily) {
                     "Enable 'Display over other apps'. On HyperOS/MIUI, also allow 'Display pop-up windows while running in the background'."
                 } else {
-                    "Enable 'Display over other apps'. If disabled on Android 13+, open App Info -> 3 dots -> 'Allow restricted settings'."
+                    "Enable 'Display over other apps'."
                 }
                 NukeToast.unsupported(context, message, long = true)
                 return true
             }
         }
+
+        // 6. If device is Low-RAM / Android Go or all intents failed, route to Enterprise Guidance Activity
+        val bypassIntent = Intent(context, NukeOverlayBypassActivity::class.java).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        if (runCatching { context.startActivity(bypassIntent); true }.getOrDefault(false)) {
+            return false
+        }
+
         NukeToast.error(context, "Overlay settings could not be opened on this device.", long = true)
         return false
     }

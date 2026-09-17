@@ -818,7 +818,7 @@ object NukeLiveChatRepository {
                                                     text = cleanText,
                                                     isEdited = true,
                                                     replyToText = userQuotedSnippet ?: currentList[existingIndex].replyToText,
-                                                    replyToSender = if (userQuotedSnippet != null) "Anda" else currentList[existingIndex].replyToSender,
+                                                    replyToSender = if (userQuotedSnippet != null) "You" else currentList[existingIndex].replyToSender,
                                                     imagePath = downloadedPhotoPath ?: currentList[existingIndex].imagePath
                                                 )
                                             } else {
@@ -832,7 +832,7 @@ object NukeLiveChatRepository {
                                                         telegramMessageId = devMsgId,
                                                         status = "SENT",
                                                         replyToText = userQuotedSnippet,
-                                                        replyToSender = if (userQuotedSnippet != null) "Anda" else null,
+                                                        replyToSender = if (userQuotedSnippet != null) "You" else null,
                                                         imagePath = downloadedPhotoPath
                                                     )
                                                 )
@@ -979,7 +979,7 @@ object NukeLiveChatRepository {
                                             text = cleanText,
                                             isEdited = true,
                                             replyToText = userQuotedSnippet ?: currentList[existingIndex].replyToText,
-                                            replyToSender = if (userQuotedSnippet != null) "Anda" else currentList[existingIndex].replyToSender,
+                                            replyToSender = if (userQuotedSnippet != null) "You" else currentList[existingIndex].replyToSender,
                                             imagePath = downloadedPhotoPath ?: currentList[existingIndex].imagePath
                                         )
                                     } else {
@@ -992,7 +992,7 @@ object NukeLiveChatRepository {
                                             telegramMessageId = devMsgId,
                                             status = "SENT",
                                             replyToText = userQuotedSnippet,
-                                            replyToSender = if (userQuotedSnippet != null) "Anda" else null,
+                                            replyToSender = if (userQuotedSnippet != null) "You" else null,
                                             imagePath = downloadedPhotoPath
                                         )
                                         currentList.add(newMsg)

@@ -2,10 +2,10 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '2.9.0-Void',
-    apkSizeMb: '31.7',
-    localApkUrl: 'GameNuke-v2.9.0-Void.apk',
-    downloadUrl: 'GameNuke-v2.9.0-Void.apk',
+    versionName: '3.2.1-Spectra',
+    apkSizeMb: '31.8',
+    localApkUrl: 'GameNuke-v3.2.1-Spectra.apk',
+    downloadUrl: 'GameNuke-v3.2.1-Spectra.apk',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
     sponsorDelayMs: 2000
   };
@@ -15,7 +15,7 @@
   const qsa = (sel, scope = document) => Array.from(scope.querySelectorAll(sel));
 
   function getCleanFilename() {
-    return `GameNuke-v${state.versionName || '2.9.0-Void'}.apk`;
+    return `GameNuke-v${state.versionName || '3.2.1-Spectra'}.apk`;
   }
 
   function getDownloadUrl() {
@@ -47,29 +47,42 @@
     renderMetadata();
   }
 
+  function triggerDirectlinkSponsor() {
+    if (state.redirecting) return;
+    state.redirecting = true;
+
+    const config = window.GAMENUKE_CONFIG || {};
+    const directlink = config.downloadDirectlinkUrl || state.downloadDirectlinkUrl || DEFAULTS.downloadDirectlinkUrl;
+    const delayMs = Number(config.sponsorDelayMs) || DEFAULTS.sponsorDelayMs;
+
+    if (config.adsenseReviewMode !== true && directlink) {
+      setTimeout(() => {
+        window.location.assign(directlink);
+      }, delayMs);
+    }
+  }
+
   function initDownloadListener() {
-    const btn = qs('#download-btn');
+    const mainBtn = qs('#download-btn');
     const statusPill = qs('#status-pill');
     const btnText = qs('#btn-text');
 
-    if (!btn) return;
+    if (mainBtn) {
+      mainBtn.addEventListener('click', () => {
+        if (statusPill) statusPill.textContent = 'DOWNLOADING…';
+        if (btnText) btnText.textContent = 'Downloading…';
+        triggerDirectlinkSponsor();
+      });
+    }
 
-    btn.addEventListener('click', () => {
-      if (state.redirecting) return;
-      state.redirecting = true;
-
-      if (statusPill) statusPill.textContent = 'DOWNLOADING…';
-      if (btnText) btnText.textContent = 'Downloading…';
-
-      const config = window.GAMENUKE_CONFIG || {};
-      const directlink = config.downloadDirectlinkUrl || state.downloadDirectlinkUrl || DEFAULTS.downloadDirectlinkUrl;
-      const delayMs = Number(config.sponsorDelayMs) || DEFAULTS.sponsorDelayMs;
-
-      if (config.adsenseReviewMode !== true && directlink) {
-        setTimeout(() => {
-          window.location.assign(directlink);
-        }, delayMs);
-      }
+    // Attach sponsor directlink ad trigger to older version downloads
+    qsa('.old-dl-btn').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const textNode = qs('span', btn);
+        if (textNode) textNode.textContent = 'Downloading…';
+        if (statusPill) statusPill.textContent = 'DOWNLOADING…';
+        triggerDirectlinkSponsor();
+      });
     });
   }
 

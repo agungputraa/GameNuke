@@ -200,14 +200,25 @@ object NukeShizukuBridge {
             reader.isDaemon = true
             reader.start()
 
-            val finished = process.waitFor(timeoutMs, java.util.concurrent.TimeUnit.MILLISECONDS)
+            var exitCode = -1
+            var finished = false
+            val deadline = System.currentTimeMillis() + timeoutMs
+            while (System.currentTimeMillis() < deadline) {
+                try {
+                    exitCode = process.exitValue()
+                    finished = true
+                    break
+                } catch (_: IllegalThreadStateException) {
+                    try { Thread.sleep(25L) } catch (_: InterruptedException) { break }
+                }
+            }
             if (!finished) {
                 runCatching { process.destroy() }
                 reader.join(250)
                 return NukeCommandResult(exitCode = -1, output = output.toString().trimEnd(), timedOut = true)
             }
             reader.join(250)
-            NukeCommandResult(exitCode = process.exitValue(), output = output.toString().trimEnd(), timedOut = false)
+            NukeCommandResult(exitCode = exitCode, output = output.toString().trimEnd(), timedOut = false)
         }.onFailure {
             Log.w(TAG, "executeViaShizukuProcess failed: ${it.message}")
         }.getOrNull()
@@ -292,9 +303,7 @@ object NukeShizukuBridge {
                 userServiceBinder = binder
                 connecting.set(false)
                 connectionLatch.getAndSet(null)?.countDown()
-                kotlin.concurrent.thread(name = "Nuke-ShizukuAutoOverlay", isDaemon = true) {
-                    runCatching { OverlayPermissionController.tryAutoGrantViaBridge(context, silent = true) }
-                }
+                NukeConnectionManager.notifyBridgeReady(context)
             }
             override fun onServiceDisconnected(name: ComponentName?) {
                 Log.w(TAG, "Shizuku UserService disconnected")

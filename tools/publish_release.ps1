@@ -35,15 +35,15 @@ if (-not $Token -or -not $Owner -or -not $Repo) {
 
 # 2. Automatically parse version from app/build.gradle.kts
 $BuildGradle = Get-Content "$RootDir\app\build.gradle.kts" -Raw
-$VersionCode = 22
-$VersionName = "2.9.0-Void"
+$VersionCode = 23
+$VersionName = "3.0.0-Vortex"
 if ($BuildGradle -match 'versionCode\s*=\s*(\d+)') {
     $VersionCode = [int]$matches[1]
 }
 if ($BuildGradle -match 'versionName\s*=\s*"([^"]+)"') {
     $VersionName = $matches[1]
 }
-$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-prem", "")
+$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-Vortex", "").Replace("-Hypernova", "").Replace("-Zenith", "").Replace("-Orion", "").Replace("-Spectra", "").Replace("-prem", "")
 
 Write-Host "[1/6] Detected target version: v$VersionName (Code: $VersionCode)" -ForegroundColor Cyan
 
@@ -84,53 +84,32 @@ $ApkName = $ApkItem.Name
 Write-Host "   APK verified: $ApkName ($ApkSizeMb MB)" -ForegroundColor Green
 Write-Host "   SHA256: $ApkSha256" -ForegroundColor DarkGray
 
-# 4. Update gamenukeweb/version.json
 Write-Host "[2/6] Updating version metadata in gamenukeweb/version.json..." -ForegroundColor Yellow
 $VersionJsonPath = "$RootDir\gamenukeweb\version.json"
 if (Test-Path $VersionJsonPath) {
-    $vJson = Get-Content $VersionJsonPath -Raw | ConvertFrom-Json
-    $vJson.versionCode = $VersionCode
-    $vJson.versionName = $VersionName
-    $vJson.apkSizeMb = "$ApkSizeMb"
-    $vJson.sha256 = "$ApkSha256"
-    $vJson.publishedAt = (Get-Date -Format "yyyy-MM-dd")
-    $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
-    $vJson.localApkUrl = $TargetApkName
-    $vJson.githubReleaseUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
-    
-    $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
-    $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
-    $vJson.appName = "Game Nuke Void Edition"
-    $vJson.releaseNotes = @(
-        "Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for both overlay and reticle pins",
-        "Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification",
-        "Liftoff Monetize Optimization: Official VungleBannerView integration and clean passive screen rendering",
-        "Systemwide English Standardization: Complete enterprise-grade English localization across all dialogs and toasts",
-        "Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders",
-        "Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption"
-    )
-    
-    $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
-    Copy-Item -Path $VersionJsonPath -Destination "$RootDir\version.json" -Force
-    $webFilesToSync = @(
-        "index.html", "download.html", "CNAME", "app.js", "download.js", "site-config.js",
-        "particles.js", "style.css", "style-v5.css", "style-v6.css", "favicon.png",
-        "about.html", "contact.html", "guides.html", "privacy.html", "terms.html", "404.html",
-        "manifest.webmanifest", "robots.txt", "sitemap.xml", "llms.txt"
-    )
-    foreach ($wf in $webFilesToSync) {
-        $wfPath = "$RootDir\gamenukeweb\$wf"
-        if (Test-Path $wfPath) {
-            Copy-Item -Path $wfPath -Destination "$RootDir\$wf" -Force
-        }
-    }
-    if (Test-Path "$RootDir\gamenukeweb\assets") {
-        Copy-Item -Path "$RootDir\gamenukeweb\assets\*" -Destination "$RootDir\assets" -Recurse -Force
+    try {
+        $vJson = Get-Content $VersionJsonPath -Raw | ConvertFrom-Json
+        $vJson.versionCode = $VersionCode
+        $vJson.versionName = $VersionName
+        $vJson.apkSizeMb = "$ApkSizeMb"
+        $vJson.sha256 = "$ApkSha256"
+        $vJson.publishedAt = (Get-Date -Format "yyyy-MM-dd")
+        $vJson.downloadUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
+        $vJson.localApkUrl = $TargetApkName
+        $vJson.githubReleaseUrl = "https://github.com/$Owner/$Repo/releases/download/v$VersionName/$ApkName"
+        $vJson.directlinkAdUrl = "https://dulyhagglermounting.com/2082665"
+        $vJson.downloadDirectlinkUrl = "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
+        $vJson.appName = "Game Nuke $($VersionName.Split('-')[-1]) Edition"
+        $vJson | ConvertTo-Json -Depth 10 | Set-Content $VersionJsonPath
+        Write-Host "   version.json updated successfully" -ForegroundColor Green
+    } catch {
+        Write-Host "   Warning: Could not parse version.json - skipping metadata update. The file may have invalid JSON." -ForegroundColor Yellow
+        Write-Host "   Error: $($_.Exception.Message)" -ForegroundColor DarkYellow
     }
 }
 
-# 5. Deploy gamenukeweb to GitHub main and gh-pages branches (STRICT WEB ISOLATION)
-Write-Host "[3/6] Deploying Web Portal and GitHub Actions to GitHub (main and gh-pages)..." -ForegroundColor Yellow
+# 5. Deploy gamenukeweb to GitHub gh-pages branch (STRICT WEB ISOLATION)
+Write-Host "[3/6] Deploying Web Portal to GitHub gh-pages branch..." -ForegroundColor Yellow
 $WebDir = "$RootDir\gamenukeweb"
 Push-Location $WebDir
 try {
@@ -138,23 +117,22 @@ try {
         Remove-Item -Recurse -Force ".git" 
     }
     git init -q
-    git config user.name "Game Nuke Release Automation"
-    git config user.email "release@gamenuke.internal"
+    git config user.name "agungputraa"
+    git config user.email "agungputraa@users.noreply.github.com"
     
     if (-not (Test-Path ".nojekyll")) {
         New-Item -ItemType File -Name ".nojekyll" -Force | Out-Null
     }
 
     git add .
-    $commitMsg = "Game Nuke Void Edition Web and Release Portal v$VersionName (Tailwind, Alpine.js, Edge CDN, GitHub Actions)"
+    $commitMsg = "feat(release): Game Nuke Spectra Edition Web Portal v$VersionName"
     git commit -m $commitMsg -q
 
-    # Push to origin 'gh-pages' (Edge CDN serving) and 'main' (Web Release Portal)
-    Write-Host "   Deploying web portal to remote gh-pages and main branches..." -ForegroundColor Cyan
+    # Push to origin 'gh-pages' (Edge CDN serving)
+    Write-Host "   Deploying web portal to remote gh-pages branch..." -ForegroundColor Cyan
     git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:gh-pages --force -q 2>$null
-    git push "https://x-access-token:$Token@github.com/$Owner/$Repo.git" HEAD:main --force -q 2>$null
 
-    Write-Host "   Web distribution synchronized successfully to both main and gh-pages!" -ForegroundColor Green
+    Write-Host "   Web distribution synchronized successfully to gh-pages!" -ForegroundColor Green
 } finally {
     Pop-Location
 }
@@ -168,17 +146,18 @@ $Headers = @{
 
 $Tag = "v$VersionName"
 $lines = @(
-    "Game Nuke Void Edition v$VersionName",
+    "Game Nuke Spectra Edition v$VersionName",
     "",
-    "Official Standalone Release with Dual-Sync Edge CDN Updates.",
+    "Official Standalone Release with Server-to-Server Payment Verification, Ghost Order Auto-Cancellation, and Responsive 2x2 VIP Matrix.",
     "",
     "Highlights:",
-    "- Macro Studio Opacity Control: Interactive transparency tuning (20% - 100%) for overlay and reticle pins.",
-    "- Hardware Touch Driver Integration: Native libwandev.so bridge with GNU hash & Bloom filter verification.",
-    "- Liftoff Monetize Optimization: Official VungleBannerView integration and clean passive screen rendering.",
-    "- Systemwide English Standardization: Complete enterprise-grade English localization across all dialogs and toasts.",
-    "- Process Purge Guardian: Intelligent non-root memory trimming with whitelist protection for active games and recorders.",
-    "- Battery Optimization Guard: Realtime system readiness status and direct unrestricted power mode exemption.",
+    "- Payment Security Hardening: Server-to-server transaction inquiry verification against official Pakasir gateway API, completely preventing status spoofing.",
+    "- Anti-Ghost Order Mitigation: Single pending transaction limit per device, automatic reuse, and immediate cancellation via Pakasir API on dismissal.",
+    "- Responsive 2x2 VIP Dialog: Redesigned VIP matrix and payment selector into responsive 2x2 grid eliminating text wrapping.",
+    "- Complete Session Teardown & Temp Purge: Releasing native evdev touch driver (/data/local/tmp/libwandev.so), resetting refresh rate, touch parameters, macro loops, and VPN tunnel to default on booster stop or app kill.",
+    "- Zero-Latency Touch Engine: Eliminated touchscreen freeze by retiring aggressive kernel evdev grab during bridge bootstrap (Shizuku, iADB, Native ADB).",
+    "- Watchdog Ghost Touch Eliminator: Watchdog auto-release with guaranteed ACTION_UP lifecycle on all macro modes.",
+    "- Ironclad Game & Screen Recorder Immunity: Sentinel, Task Manager, Kill Zombie, Manage Load, and Deep Clean 100% guarantee no active game or recorder is ever stopped.",
     "",
     "Integrity:",
     "- File: $ApkName",
@@ -190,7 +169,7 @@ $ReleaseBody = $lines -join "`n"
 $ReleasePayload = @{
     tag_name         = $Tag
     target_commitish = "main"
-    name             = "Game Nuke Void Edition v$VersionName"
+    name             = "Game Nuke Spectra Edition v$VersionName"
     body             = $ReleaseBody
     draft            = $false
     prerelease       = $false
@@ -230,22 +209,21 @@ try {
     }
 } catch {}
 
-if (-not $AssetAlreadyUploaded) {
-    Write-Host "   Streaming APK binary to release asset..." -ForegroundColor Cyan
-    $UploadHeaders = @{
-        "Authorization" = "token $Token"
-        "Content-Type"  = "application/vnd.android.package-archive"
-    }
-
-    $ApkBytes = [System.IO.File]::ReadAllBytes($ApkPath)
-    $UploadResponse = Invoke-RestMethod -Uri $CleanUploadUrl -Headers $UploadHeaders -Method Post -Body $ApkBytes
-    Write-Host "   Binary uploaded: $($UploadResponse.browser_download_url)" -ForegroundColor Green
-}
+Write-Host "   Streaming APK binary to release asset via curl..." -ForegroundColor Cyan
+& curl.exe -sS -X POST `
+    -H "Authorization: token $Token" `
+    -H "Content-Type: application/vnd.android.package-archive" `
+    --data-binary "@$ApkPath" `
+    --retry 3 `
+    --connect-timeout 30 `
+    -m 300 `
+    "$CleanUploadUrl"
+Write-Host "   Binary uploaded successfully!" -ForegroundColor Green
 
 # 8. Final Status Report
 Write-Host "[6/6] Verifying Live Endpoints..." -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   SUCCESS! GAME NUKE VOID ECOSYSTEM IS ONLINE" -ForegroundColor Green
+Write-Host "   SUCCESS! GAME NUKE SPECTRA ECOSYSTEM IS ONLINE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "   Landing Page : https://$Owner.github.io/$Repo/" -ForegroundColor Cyan
 Write-Host "   Metadata API : https://$Owner.github.io/$Repo/version.json" -ForegroundColor Cyan

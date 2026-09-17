@@ -49,34 +49,77 @@ object NukeUniversalFpsLock {
     fun getTargetFps(context: Context): Int =
         prefs(context).getInt(KEY_TARGET_FPS, 0)
 
-    fun getSupportedRefreshRates(context: Context): List<Int> {
-        val rates = mutableSetOf(60)
+    fun getMaxHardwareRefreshRate(context: Context): Int {
+        var maxHz = 60
         runCatching {
             val dm = context.getSystemService(Context.DISPLAY_SERVICE) as? DisplayManager
             val display = dm?.getDisplay(Display.DEFAULT_DISPLAY)
             display?.supportedModes?.forEach { mode ->
                 val hz = Math.round(mode.refreshRate)
-                if (hz in 30..240) rates.add(hz)
+                if (hz > maxHz) maxHz = hz
             }
+            val curHz = Math.round(display?.refreshRate ?: 60f)
+            if (curHz > maxHz) maxHz = curHz
         }
-        return rates.sorted()
+        return maxHz
+    }
+
+    /**
+     * Checks if the device screen supports high refresh rate (90Hz or higher).
+     */
+    fun isHighRefreshRatePanel(context: Context): Boolean {
+        return getMaxHardwareRefreshRate(context) >= 90
+    }
+
+    /**
+     * Returns valid hardware FPS targets based on physical screen capabilities:
+     * - For 90Hz+ displays: 60 FPS is strictly EXCLUDED to prevent screen stutters/freezes.
+     * - Capped at the physical panel's maximum supported refresh rate (no fake uncap).
+     */
+    fun getValidTargetOptions(context: Context): List<Int> {
+        val maxHz = getMaxHardwareRefreshRate(context)
+        val allRates = listOf(60, 90, 120, 144)
+        return allRates.filter { it <= maxHz }.ifEmpty { listOf(60) }
+    }
+
+    fun getSupportedRefreshRates(context: Context): List<Int> {
+        return getValidTargetOptions(context)
     }
 
     suspend fun setTargetFps(context: Context, targetHz: Int): Boolean = withContext(Dispatchers.IO) {
-        prefs(context).edit().putInt(KEY_TARGET_FPS, targetHz).apply()
-        _targetFpsState.value = targetHz
+        val validOptions = getValidTargetOptions(context)
+        val sanitizedHz = if (targetHz <= 0) 0 else {
+            if (targetHz in validOptions) targetHz else {
+                validOptions.filter { it <= targetHz }.maxOrNull() ?: validOptions.firstOrNull() ?: 0
+            }
+        }
+        prefs(context).edit().putInt(KEY_TARGET_FPS, sanitizedHz).apply()
+        _targetFpsState.value = sanitizedHz
 
-        if (targetHz <= 0) {
+        runCatching {
+            val hzFloat = "$sanitizedHz.0"
+            if (Build.VERSION.SDK_INT < Build.VERSION_CODES.M || android.provider.Settings.System.canWrite(context)) {
+                if (sanitizedHz > 0) {
+                    android.provider.Settings.System.putString(context.contentResolver, "peak_refresh_rate", hzFloat)
+                    android.provider.Settings.System.putString(context.contentResolver, "min_refresh_rate", hzFloat)
+                    android.provider.Settings.System.putString(context.contentResolver, "user_refresh_rate", "$sanitizedHz")
+                } else {
+                    android.provider.Settings.System.putString(context.contentResolver, "user_refresh_rate", "0")
+                }
+            }
+        }
+
+        if (sanitizedHz <= 0) {
             restoreFpsLock(context)
         } else {
-            applyFpsLock(context, targetHz)
+            applyFpsLock(context, sanitizedHz)
         }
     }
 
     suspend fun cycleNextTarget(context: Context): Int = withContext(Dispatchers.IO) {
-        val supported = getSupportedRefreshRates(context)
-        // Options sequence: 0 (Auto), then supported rates (e.g. 60, 90, 120, 144)
-        val cycle = listOf(0) + supported
+        val valid = getValidTargetOptions(context)
+        // Options sequence: 0 (Auto/Dynamic), then valid hardware rates (e.g. 90, 120)
+        val cycle = listOf(0) + valid
         val current = getTargetFps(context)
         val nextIdx = (cycle.indexOf(current) + 1) % cycle.size
         val nextTarget = cycle[nextIdx]
@@ -102,13 +145,28 @@ object NukeUniversalFpsLock {
         }.getOrDefault(Pair(1080, 2400))
     }
 
-    private suspend fun applyFpsLock(context: Context, targetHz: Int): Boolean {
-        val adb = AdbManager.getInstance(context)
-        if (!adb.isConnected()) {
-            Log.w(TAG, "ADB not connected, cannot apply system FPS lock commands")
-            return false
+    private suspend fun executeFpsScript(context: Context, script: String): Boolean {
+        // 1. Try NukeConnectionManager (Covers Iadb, Shizuku, Daemon, ADB native)
+        val connResult = runCatching {
+            NukeConnectionManager.executeCommand(script, 6_000L)
+        }.getOrNull()
+        if (connResult != null && connResult.isSuccess) {
+            return true
         }
 
+        // 2. Direct ADB fallback
+        val adb = AdbManager.getInstance(context)
+        if (adb.isConnected()) {
+            val adbRes = runCatching { adb.executeCommandDirect(script, "/", 6_000L, 8_192) }.getOrNull()
+            if (adbRes != null && adbRes.isSuccess) {
+                return true
+            }
+        }
+
+        return connResult?.isSuccess ?: false
+    }
+
+    private suspend fun applyFpsLock(context: Context, targetHz: Int): Boolean {
         val (width, height) = getPhysicalDisplayMetrics(context)
         val mfr = Build.MANUFACTURER.lowercase()
         val hzFloat = "$targetHz.0"
@@ -178,11 +236,28 @@ object NukeUniversalFpsLock {
                 sb.appendLine("settings put system fps_mode 2 2>/dev/null")
                 sb.appendLine("settings put system refresh_rate $hzStr 2>/dev/null")
             }
-            mfr.contains("infinix") || mfr.contains("tecno") || mfr.contains("itel") -> {
+            mfr.contains("infinix") || mfr.contains("tecno") || mfr.contains("itel") || mfr.contains("transsion") -> {
                 // Transsion XOS / HiOS
                 sb.appendLine("settings put system tran_refresh_mode $hzStr 2>/dev/null")
                 sb.appendLine("settings put system tran_need_recovery_refresh_mode $hzStr 2>/dev/null")
                 sb.appendLine("settings put system last_tran_refresh_mode_in_refresh_setting $hzStr 2>/dev/null")
+            }
+            mfr.contains("motorola") || mfr.contains("lenovo") -> {
+                sb.appendLine("settings put system moto_refresh_rate $hzStr 2>/dev/null")
+                sb.appendLine("settings put system peak_refresh_rate $hzFloat 2>/dev/null")
+            }
+            mfr.contains("huawei") || mfr.contains("honor") -> {
+                sb.appendLine("settings put system hw_fps_mode $hzStr 2>/dev/null")
+                sb.appendLine("settings put system min_fps $hzStr 2>/dev/null")
+            }
+            mfr.contains("redmagic") || mfr.contains("nubia") || mfr.contains("zte") -> {
+                sb.appendLine("settings put system nubia_refresh_rate $hzStr 2>/dev/null")
+            }
+            mfr.contains("sony") -> {
+                sb.appendLine("settings put system somc.game_mode.fps $hzStr 2>/dev/null")
+            }
+            mfr.contains("meizu") -> {
+                sb.appendLine("settings put system flyme_refresh_rate $hzStr 2>/dev/null")
             }
         }
 
@@ -196,54 +271,66 @@ object NukeUniversalFpsLock {
         sb.appendLine("setprop persist.sys.fps $hzStr 2>/dev/null")
         sb.appendLine("service call SurfaceFlinger 1035 i32 1 2>/dev/null")
 
-        val res = adb.executeCommand(sb.toString(), "/", 6_000L, 8_192)
-        Log.i(TAG, "Applied Universal FPS Lock ($targetHz Hz, ${width}x$height): ${res.isSuccess}")
-        return res.isSuccess
+        val res = executeFpsScript(context, sb.toString())
+        Log.i(TAG, "Applied Universal FPS Lock ($targetHz Hz, ${width}x$height): $res")
+        return res
     }
 
     private suspend fun restoreFpsLock(context: Context): Boolean {
-        val adb = AdbManager.getInstance(context)
-        if (!adb.isConnected()) return false
+        return try {
+            val mfr = (Build.MANUFACTURER.orEmpty() + " " + Build.BRAND.orEmpty()).lowercase()
+            val sb = StringBuilder()
 
-        val mfr = Build.MANUFACTURER.lowercase()
-        val sb = StringBuilder()
+            // 1. Universal AOSP Restore
+            sb.appendLine("settings put system min_refresh_rate 60.0 2>/dev/null")
+            sb.appendLine("settings put system peak_refresh_rate 120.0 2>/dev/null")
+            sb.appendLine("settings put global min_refresh_rate 60.0 2>/dev/null")
+            sb.appendLine("settings put global peak_refresh_rate 120.0 2>/dev/null")
+            sb.appendLine("settings put system user_refresh_rate 0 2>/dev/null")
+            sb.appendLine("settings put secure user_refresh_rate 0 2>/dev/null")
 
-        // 1. Universal AOSP Restore
-        sb.appendLine("settings put system min_refresh_rate 60.0 2>/dev/null")
-        sb.appendLine("settings put system peak_refresh_rate 120.0 2>/dev/null")
-        sb.appendLine("settings put global min_refresh_rate 60.0 2>/dev/null")
-        sb.appendLine("settings put global peak_refresh_rate 120.0 2>/dev/null")
-        sb.appendLine("settings put system user_refresh_rate 0 2>/dev/null")
-        sb.appendLine("settings put secure user_refresh_rate 0 2>/dev/null")
+            // 2. OEM-Specific Restore
+            when {
+                mfr.contains("xiaomi") || mfr.contains("redmi") || mfr.contains("poco") -> {
+                    sb.appendLine("settings put secure miui_refresh_rate 0 2>/dev/null")
+                    sb.appendLine("settings put system miui_refresh_rate 0 2>/dev/null")
+                    sb.appendLine("settings delete system thermal_limit_refresh_rate 2>/dev/null")
+                    sb.appendLine("settings put system display.disable_dynamic_fps 0 2>/dev/null")
+                    sb.appendLine("settings put system disable_idle_fps false 2>/dev/null")
+                }
+                mfr.contains("samsung") -> {
+                    sb.appendLine("settings put secure refresh_rate_mode 1 2>/dev/null")
+                    sb.appendLine("settings put system refresh_rate_mode 1 2>/dev/null")
+                }
+                mfr.contains("oppo") || mfr.contains("realme") || mfr.contains("oneplus") -> {
+                    sb.appendLine("settings put system oplus_customize_refresh_rate 0 2>/dev/null")
+                    sb.appendLine("settings put system oneplus_screen_refresh_rate 0 2>/dev/null")
+                }
+                mfr.contains("vivo") || mfr.contains("iqoo") -> {
+                    sb.appendLine("settings put system smart_rate_switch 1 2>/dev/null")
+                }
+                mfr.contains("infinix") || mfr.contains("tecno") || mfr.contains("itel") || mfr.contains("transsion") -> {
+                    sb.appendLine("settings put system tran_refresh_mode 0 2>/dev/null")
+                }
+                mfr.contains("motorola") || mfr.contains("lenovo") -> {
+                    sb.appendLine("settings put system moto_refresh_rate 0 2>/dev/null")
+                }
+                mfr.contains("asus") || mfr.contains("rog") -> {
+                    sb.appendLine("settings put system fps_mode 0 2>/dev/null")
+                }
+            }
 
-        // 2. OEM-Specific Restore
-        when {
-            mfr.contains("xiaomi") || mfr.contains("redmi") || mfr.contains("poco") -> {
-                sb.appendLine("settings put secure miui_refresh_rate 0 2>/dev/null")
-                sb.appendLine("settings put system miui_refresh_rate 0 2>/dev/null")
-                sb.appendLine("settings delete system thermal_limit_refresh_rate 2>/dev/null")
-                sb.appendLine("settings put system display.disable_dynamic_fps 0 2>/dev/null")
-                sb.appendLine("settings put system disable_idle_fps false 2>/dev/null")
-            }
-            mfr.contains("samsung") -> {
-                sb.appendLine("settings put secure refresh_rate_mode 1 2>/dev/null")
-                sb.appendLine("settings put system refresh_rate_mode 1 2>/dev/null")
-            }
-            mfr.contains("oppo") || mfr.contains("realme") || mfr.contains("oneplus") -> {
-                sb.appendLine("settings put system oplus_customize_refresh_rate 0 2>/dev/null")
-                sb.appendLine("settings put system oneplus_screen_refresh_rate 0 2>/dev/null")
-            }
-            mfr.contains("vivo") || mfr.contains("iqoo") -> {
-                sb.appendLine("settings put system smart_rate_switch 1 2>/dev/null")
-            }
+            // 3. Clear Display Manager Override
+            sb.appendLine("cmd display clear-user-preferred-display-mode 2>/dev/null")
+            sb.appendLine("setprop debug.sf.fps \"\" 2>/dev/null")
+            sb.appendLine("setprop debug.sf.max_fps \"\" 2>/dev/null")
+
+            val res = executeFpsScript(context, sb.toString())
+            Log.i(TAG, "Restored Universal FPS Lock to System Default: $res")
+            res
+        } catch (t: Throwable) {
+            Log.e(TAG, "restoreFpsLock error: ${t.message}", t)
+            false
         }
-
-        // 3. Clear preferred display mode
-        sb.appendLine("cmd display clear-user-preferred-display-mode 0 2>/dev/null")
-        sb.appendLine("cmd display set-match-content-frame-rate-pref 2 2>/dev/null")
-
-        val res = adb.executeCommand(sb.toString(), "/", 6_000L, 8_192)
-        Log.i(TAG, "Restored Display Refresh Rate to Auto: ${res.isSuccess}")
-        return res.isSuccess
     }
 }

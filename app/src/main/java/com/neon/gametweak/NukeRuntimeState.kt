@@ -27,6 +27,9 @@ object NukeRuntimeState {
     private val _state = MutableStateFlow(Snapshot())
     val state: StateFlow<Snapshot> = _state.asStateFlow()
 
+    @Volatile
+    var lastKnownGamePackage: String? = null
+
     // Process-local guard covering the short splash -> service handoff. Stale legacy-display
     // recovery must not race a session that is in the process of becoming visible.
     private val launchHandoff = AtomicBoolean(false)

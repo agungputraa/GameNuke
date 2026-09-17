@@ -27,6 +27,7 @@ class NukeReactorCoreView @JvmOverloads constructor(
     private var pulse = .34f
     private var animator: ValueAnimator? = null
     private var status = Status.OFFLINE
+    private val orbitAngles = floatArrayOf(0f, 60f, 120f)
 
     fun setStatus(value: Status) {
         if (status == value) return
@@ -81,7 +82,7 @@ class NukeReactorCoreView @JvmOverloads constructor(
         edge.color = withAlpha(if (status == Status.ONLINE) NukeHudPalette.Cyan else accent, (120 + 100 * pulse).toInt())
         edge.strokeWidth = 1.05f * d
         val orbit = RectF(w * .19f, h * .37f, w * .81f, h * .63f)
-        listOf(0f, 60f, 120f).forEach { degrees ->
+        for (degrees in orbitAngles) {
             c.save()
             c.rotate(degrees, w * .5f, h * .5f)
             c.drawOval(orbit, edge)

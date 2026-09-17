@@ -1790,7 +1790,7 @@ private fun ExecutiveModuleExportDialog(
                 Spacer(Modifier.height(10.dp))
 
                 // Module Metadata Inputs
-                Text("NAMA PRESET / PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("PRESET / PLUGIN NAME:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = moduleName,
@@ -1828,7 +1828,7 @@ private fun ExecutiveModuleExportDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Text("DESKRIPSI PLUGIN:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text("PLUGIN DESCRIPTION:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = description,
@@ -2038,7 +2038,7 @@ private fun ExecutiveCreatorGuideDialog(
                     .clickable { onDismiss() }
                     .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {
-                Text("MENGERTI", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                Text("GOT IT", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
             }
         }
     )

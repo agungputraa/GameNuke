@@ -38,8 +38,8 @@ object GameCatalogRepository {
         "game", "games", "gaming", "pubg", "freefire", "free fire", "codm", "call of duty",
         "mobile legends", "mlbb", "moonton", "hoyoverse", "mihoyo", "genshin", "honkai",
         "wuthering", "kurogame", "riotgames", "wildrift", "supercell", "roblox", "minecraft",
-        "mojang", "asphalt", "carx", "netease", "netmarble", "nexon", "konami", "garena",
-        "tencent", "level infinite", "epicgames", "electronic arts", "ea.gp", "playrix",
+        "mojang", "asphalt", "carx", "netmarble", "nexon", "konami",
+        "level infinite", "epicgames", "electronic arts", "ea.gp", "playrix",
         "steam", "arena breakout", "delta force", "valorant", "pokemon", "netflix games",
         "square enix", "bandai", "namco", "sega", "ubisoft", "gravity", "com2us", "lilith",
         "azur", "yostar", "perfect world", "krafton", "zenless", "tower of fantasy", "racing"
@@ -151,12 +151,21 @@ object GameCatalogRepository {
     private fun isGame(info: ApplicationInfo, pkg: String, label: String): Boolean {
         if (Build.VERSION.SDK_INT >= 26 && info.category == ApplicationInfo.CATEGORY_GAME) return true
         if ((info.flags and ApplicationInfo.FLAG_IS_GAME) != 0) return true
+        val isSys = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+        val isUpdatedSys = (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+        if (isSys && !isUpdatedSys) return false
         val haystack = "$pkg $label".lowercase()
         return strongTokens.any(haystack::contains)
     }
 
     private fun shouldIgnore(pkg: String): Boolean {
+        val lower = pkg.lowercase()
         if (pkg in ignoredPackages) return true
+        if (lower.contains("soter") || lower.contains("soterserver") ||
+            lower.contains("swcodec") || lower.contains("hwcodec") || lower.contains("codec") ||
+            lower.startsWith("media.") || lower.startsWith("vendor.") || lower.startsWith("android.hardware.")) {
+            return true
+        }
         return pkg.startsWith("com.android.launcher") ||
             pkg.startsWith("com.sec.android.app.launcher") ||
             pkg.startsWith("com.miui.home") ||

@@ -91,7 +91,9 @@ class NukeTouchInjector {
         var accumX: Float,
         var accumY: Float,
         val filterX: OneEuroFilter = OneEuroFilter(),
-        val filterY: OneEuroFilter = OneEuroFilter()
+        val filterY: OneEuroFilter = OneEuroFilter(),
+        var lastUpdateTime: Long = SystemClock.uptimeMillis(),
+        val isSynthetic: Boolean = false
     )
 
     @Volatile var sensX: Float = 1.0f
@@ -111,8 +113,8 @@ class NukeTouchInjector {
         val y: Float,
         val radiusPx: Float,
         val mode: Int = 0, // 0 = SPAM/REPEAT_TAP, 1 = TAP, 2 = HOLD, 3 = MIRROR, 4 = SWIPE, 5 = DOUBLE_TAP
-        val repeatCount: Int = 5,
-        val intervalMs: Long = 25L,
+        val repeatCount: Int = 0,
+        val intervalMs: Long = 20L,
         val holdDurationMs: Long = 100L,
         val targetX: Float = 0f,
         val targetY: Float = 0f,
@@ -124,7 +126,9 @@ class NukeTouchInjector {
         val tapDurationMs: Long = 15L,
         val enabled: Boolean = true,
         val label: String = "",
-        val swipeDurationMs: Long = 120L
+        val swipeDurationMs: Long = 120L,
+        val linkedPinIds: List<String> = emptyList(),
+        val multiPinDelayMs: Long = 0L
     )
 
     @Volatile var macroPinTargets: List<MacroPinTarget> = emptyList()
@@ -153,6 +157,7 @@ class NukeTouchInjector {
 
     private var inputManager: Any? = null
     private var injectInputEventMethod: Method? = null
+    private var injectParamCount: Int = 2
     private var setDisplayIdMethod: Method? = null
 
     init {
@@ -168,10 +173,18 @@ class NukeTouchInjector {
         if (injectThread == null || !injectThread!!.isAlive) {
             injectThread = thread(name = "nuke-touch-inject", isDaemon = true) {
                 runCatching { Process.setThreadPriority(-8) }
+                var lastWatchdogCheck = SystemClock.uptimeMillis()
                 while (running) {
                     try {
-                        val event = injectQueue.take()
-                        injectNow(event)
+                        val event = injectQueue.poll(200, java.util.concurrent.TimeUnit.MILLISECONDS)
+                        if (event != null) {
+                            injectNow(event)
+                        }
+                        val now = SystemClock.uptimeMillis()
+                        if (now - lastWatchdogCheck > 400L) {
+                            lastWatchdogCheck = now
+                            sanitizeStuckPointers()
+                        }
                     } catch (_: InterruptedException) {
                         break
                     } catch (t: Throwable) {
@@ -179,7 +192,7 @@ class NukeTouchInjector {
                     }
                 }
             }
-            Log.i(TAG, "injectThread started successfully (daemon thread active)")
+            Log.i(TAG, "injectThread started successfully with ghost touch watchdog active")
         }
     }
 
@@ -195,16 +208,29 @@ class NukeTouchInjector {
 
                 val im = inputManager
                 if (im != null) {
+                    var candidateMethod: Method? = null
+                    var candidateParamCount = 2
+                    // Prioritize standard 2-argument injectInputEvent(InputEvent, int) across Android 11..16
                     for (m in im.javaClass.methods) {
                         if (m.name == "injectInputEvent") {
                             val params = m.parameterTypes
                             if (params.isNotEmpty() && params[0].name.contains("InputEvent")) {
-                                m.isAccessible = true
-                                injectInputEventMethod = m
-                                Log.i(TAG, "Resolved injectInputEvent: $m (${params.size} params)")
-                                break
+                                if (params.size == 2) {
+                                    candidateMethod = m
+                                    candidateParamCount = 2
+                                    break
+                                } else if (candidateMethod == null) {
+                                    candidateMethod = m
+                                    candidateParamCount = params.size
+                                }
                             }
                         }
+                    }
+                    if (candidateMethod != null) {
+                        candidateMethod.isAccessible = true
+                        injectInputEventMethod = candidateMethod
+                        injectParamCount = candidateParamCount
+                        Log.i(TAG, "Resolved injectInputEvent: $candidateMethod ($candidateParamCount params)")
                     }
                 }
             }
@@ -227,10 +253,9 @@ class NukeTouchInjector {
             val method = injectInputEventMethod ?: return false
             val dummy = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
             setDisplayIdMethod?.invoke(dummy, 0)
-            val params = method.parameterTypes
-            val res = if (params.size == 2) {
+            val res = if (injectParamCount == 2) {
                 method.invoke(im, dummy, INJECT_MODE_ASYNC)
-            } else if (params.size >= 3) {
+            } else if (injectParamCount >= 3) {
                 method.invoke(im, dummy, INJECT_MODE_ASYNC, 0)
             } else {
                 method.invoke(im, dummy)
@@ -248,10 +273,9 @@ class NukeTouchInjector {
             setDisplayIdMethod?.invoke(ev, 0)
             val im = inputManager ?: return false
             val method = injectInputEventMethod ?: return false
-            val params = method.parameterTypes
-            val res = if (params.size == 2) {
+            val res = if (injectParamCount == 2) {
                 method.invoke(im, ev, INJECT_MODE_ASYNC)
-            } else if (params.size >= 3) {
+            } else if (injectParamCount >= 3) {
                 method.invoke(im, ev, INJECT_MODE_ASYNC, 0)
             } else {
                 method.invoke(im, ev)
@@ -260,6 +284,7 @@ class NukeTouchInjector {
             res == true || res == null
         } catch (t: Throwable) {
             runCatching { ev.recycle() }
+            runCatching { NukeTouchService.emergencyReleaseGrab("injectSingleEvent error: ${t.message}") }
             false
         }
     }
@@ -309,13 +334,15 @@ class NukeTouchInjector {
     @Synchronized
     fun macroPointerDown(macroKey: Long, x: Float, y: Float): Boolean {
         if (!isInjectionReady()) return false
-        if (activePointers.containsKey(macroKey)) return true
+        if (activePointers.containsKey(macroKey)) {
+            macroPointerUp(macroKey)
+        }
         flushPendingMove()
         val id = allocId()
         if (id < 0) return false
 
         if (activePointers.isEmpty()) {
-            downTime = eventTime()
+            downTime = SystemClock.uptimeMillis()
         }
         val ptr = PointerState(
             id = id,
@@ -323,7 +350,9 @@ class NukeTouchInjector {
             rawX = x, rawY = y,
             pressure = 1.0f, size = 1.0f,
             inSensArea = false,
-            accumX = x, accumY = y
+            accumX = x, accumY = y,
+            lastUpdateTime = SystemClock.uptimeMillis(),
+            isSynthetic = true
         )
         activePointers[macroKey] = ptr
         val isFirst = (activePointers.size == 1)
@@ -361,6 +390,7 @@ class NukeTouchInjector {
         ptr.y = y
         ptr.accumX = x
         ptr.accumY = y
+        ptr.lastUpdateTime = SystemClock.uptimeMillis()
         moveDirty = true
     }
 
@@ -382,8 +412,12 @@ class NukeTouchInjector {
             val synthKey = 0x7FFF_FFFF_0000_0001L
             val ok = macroPointerDown(synthKey, x, y)
             if (!ok) return false
-            try { Thread.sleep(holdTime) } catch (_: InterruptedException) {}
-            return macroPointerUp(synthKey)
+            try {
+                try { Thread.sleep(holdTime) } catch (_: InterruptedException) {}
+            } finally {
+                macroPointerUp(synthKey)
+            }
+            return true
         } else {
             val now = SystemClock.uptimeMillis()
             val pProps = MotionEvent.PointerProperties().apply {
@@ -404,15 +438,18 @@ class NukeTouchInjector {
             val okDown = injectSingleEvent(downEv)
             if (!okDown) return false
 
-            try { Thread.sleep(holdTime) } catch (_: InterruptedException) {}
-
-            val upTime = SystemClock.uptimeMillis()
-            val upEv = MotionEvent.obtain(
-                now, upTime, MotionEvent.ACTION_UP, 1,
-                arrayOf(pProps), arrayOf(pCoords),
-                0, 0, 1.0f, 1.0f, 0, 0, 4098, 0
-            )
-            return injectSingleEvent(upEv)
+            try {
+                try { Thread.sleep(holdTime) } catch (_: InterruptedException) {}
+            } finally {
+                val upTime = SystemClock.uptimeMillis()
+                val upEv = MotionEvent.obtain(
+                    now, upTime, MotionEvent.ACTION_UP, 1,
+                    arrayOf(pProps), arrayOf(pCoords),
+                    0, 0, 1.0f, 1.0f, 0, 0, 4098, 0
+                )
+                injectSingleEvent(upEv)
+            }
+            return true
         }
     }
 
@@ -466,19 +503,18 @@ class NukeTouchInjector {
                     0, 0, 1.0f, 1.0f, 0, 0, 4098, 0
                 )
                 if (!injectSingleEvent(moveEv)) break
-                Thread.sleep(stepMs)
+                try { Thread.sleep(stepMs) } catch (_: InterruptedException) { break }
             }
-        } catch (_: InterruptedException) {
-            // release below
+        } finally {
+            val upTime = SystemClock.uptimeMillis()
+            val upEv = MotionEvent.obtain(
+                now, upTime, MotionEvent.ACTION_UP, 1,
+                arrayOf(pProps), arrayOf(coords),
+                0, 0, 1.0f, 1.0f, 0, 0, 4098, 0
+            )
+            injectSingleEvent(upEv)
         }
-
-        val upTime = SystemClock.uptimeMillis()
-        val upEv = MotionEvent.obtain(
-            now, upTime, MotionEvent.ACTION_UP, 1,
-            arrayOf(pProps), arrayOf(coords),
-            0, 0, 1.0f, 1.0f, 0, 0, 4098, 0
-        )
-        return injectSingleEvent(upEv)
+        return true
     }
 
     fun isInjectionReady(): Boolean {
@@ -512,16 +548,16 @@ class NukeTouchInjector {
         try {
             val im = inputManager ?: return
             val method = injectInputEventMethod ?: return
-            val params = method.parameterTypes
-            if (params.size == 2) {
+            if (injectParamCount == 2) {
                 method.invoke(im, event, INJECT_MODE_ASYNC)
-            } else if (params.size >= 3) {
+            } else if (injectParamCount >= 3) {
                 method.invoke(im, event, INJECT_MODE_ASYNC, 0)
             } else {
                 method.invoke(im, event)
             }
         } catch (t: Throwable) {
             Log.w(TAG, "injectNow error: ${t.message}")
+            runCatching { NukeTouchService.emergencyReleaseGrab("injectNow error: ${t.message}") }
         } finally {
             runCatching { event.recycle() }
         }
@@ -659,7 +695,10 @@ class NukeTouchInjector {
             resolvedAction = action or (actionIndex shl MotionEvent.ACTION_POINTER_INDEX_SHIFT)
         }
 
-        inject(downTime, eventTime(), resolvedAction, index, emitProps, emitCoords)
+        val now = SystemClock.uptimeMillis()
+        val evTime = if (action == MotionEvent.ACTION_MOVE) eventTime() else now
+        val dTime = if (downTime > 0L && downTime <= evTime) downTime else evTime
+        inject(dTime, evTime, resolvedAction, index, emitProps, emitCoords)
     }
 
     private fun flushPendingMove() {
@@ -758,7 +797,25 @@ class NukeTouchInjector {
     }
 
     @Synchronized
+    fun sanitizeStuckPointers() {
+        if (activePointers.isEmpty()) return
+        val now = SystemClock.uptimeMillis()
+        val stuckKeys = mutableListOf<Long>()
+        for ((key, ptr) in activePointers) {
+            val maxAge = if (ptr.isSynthetic) 600L else 1500L
+            if (now - ptr.lastUpdateTime > maxAge) {
+                stuckKeys.add(key)
+            }
+        }
+        for (key in stuckKeys) {
+            Log.w(TAG, "Ghost Touch Guard: auto-releasing stuck pointer key=$key")
+            macroPointerUp(key)
+        }
+    }
+
+    @Synchronized
     fun onFrame() {
+        sanitizeStuckPointers()
         flushPendingMove()
     }
 
@@ -782,6 +839,12 @@ class NukeTouchInjector {
             TouchEvent.ACTION_MOVE -> {
                 val ptr = activePointers[key]
                 if (ptr != null) {
+                    // Safe move-drain guarantee: if moveDirty was already pending from a previous sample
+                    // without an intervening ACTION_FRAME, flush the previous move immediately so aiming
+                    // NEVER freezes on OEM drivers that omit SYN_REPORT.
+                    if (moveDirty) {
+                        flushPendingMove()
+                    }
                     integrateMove(ptr, ev)
                 } else if (pendingPointers.contains(key) && inBounds(ev)) {
                     pendingPointers.remove(key)

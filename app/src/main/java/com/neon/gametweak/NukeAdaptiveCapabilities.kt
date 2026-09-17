@@ -40,21 +40,39 @@ internal object NukeAdaptiveCapabilities {
         "android15_frame_guard" to "shell.android15_frame_guard",
     )
 
-    fun resolve(context: Context, state: NukePerformanceEngine.State?): NukeCapabilitySnapshot {
-        val manufacturer = Build.MANUFACTURER.orEmpty().lowercase(Locale.US)
+    fun resolve(context: Context, state: NukePerformanceEngine.State?): NukeCapabilitySnapshot = runCatching {
+        val manufacturer = (Build.MANUFACTURER.orEmpty() + " " + Build.BRAND.orEmpty()).lowercase(Locale.US)
         val family = when {
-            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> "xiaomi-family"
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") || manufacturer.contains("blackshark") -> "xiaomi-family"
             manufacturer.contains("samsung") -> "samsung-family"
             manufacturer.contains("oppo") || manufacturer.contains("realme") || manufacturer.contains("oneplus") -> "oppo-family"
             manufacturer.contains("vivo") || manufacturer.contains("iqoo") -> "vivo-family"
+            manufacturer.contains("transsion") || manufacturer.contains("infinix") || manufacturer.contains("tecno") || manufacturer.contains("itel") -> "transsion-family"
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> "huawei-family"
+            manufacturer.contains("asus") || manufacturer.contains("rog") -> "asus-family"
+            manufacturer.contains("motorola") || manufacturer.contains("moto") || manufacturer.contains("lenovo") -> "motorola-family"
+            manufacturer.contains("google") || manufacturer.contains("pixel") -> "pixel-family"
+            manufacturer.contains("sony") -> "sony-family"
+            manufacturer.contains("zte") || manufacturer.contains("nubia") || manufacturer.contains("redmagic") -> "redmagic-family"
+            manufacturer.contains("nothing") -> "nothing-family"
+            manufacturer.contains("meizu") -> "meizu-family"
             else -> "android-standard"
         }
         val familyLabel = when (family) {
-            "xiaomi-family" -> "XIAOMI / HYPEROS"
+            "xiaomi-family" -> "XIAOMI / HYPEROS / JOYUI"
             "samsung-family" -> "SAMSUNG / ONE UI"
-            "oppo-family" -> "OPPO FAMILY"
-            "vivo-family" -> "VIVO FAMILY"
-            else -> "ANDROID"
+            "oppo-family" -> "OPPO / COLOROS / OXYGENOS"
+            "vivo-family" -> "VIVO / ORIGINOS / FUNTOUCH"
+            "transsion-family" -> "TRANSSION / XOS / HIOS"
+            "huawei-family" -> "HUAWEI / HONOR / MAGICOS"
+            "asus-family" -> "ASUS / ROG GAMING UI"
+            "motorola-family" -> "MOTOROLA / MY UX"
+            "pixel-family" -> "GOOGLE PIXEL / AOSP"
+            "sony-family" -> "SONY XPERIA"
+            "redmagic-family" -> "REDMAGIC / NUBIA GAMING"
+            "nothing-family" -> "NOTHING OS"
+            "meizu-family" -> "MEIZU / FLYME"
+            else -> "${Build.MANUFACTURER.uppercase(Locale.US).ifBlank { "ANDROID" }} • AOSP"
         }
 
         val available = linkedSetOf<String>()
@@ -64,14 +82,14 @@ internal object NukeAdaptiveCapabilities {
         }
 
         val packageManager = context.packageManager
-        val overlayGranted = Settings.canDrawOverlays(context)
-        val hasWifi = packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI)
+        val overlayGranted = runCatching { Settings.canDrawOverlays(context) }.getOrDefault(false)
+        val hasWifi = runCatching { packageManager.hasSystemFeature(PackageManager.FEATURE_WIFI) }.getOrDefault(true)
         expose("overlay", overlayGranted, "Display-over-other-apps permission is unavailable or not granted")
         expose("local.telemetry", state?.ramTotalMb?.let { it > 0L } == true, "Local RAM telemetry is unavailable")
         expose("local.display", state?.let { it.currentHz > 0 || it.maxHz > 0 } == true, "Display refresh data is unavailable")
         expose("local.wifi", hasWifi, "This device does not expose Wi-Fi hardware")
         expose("local.keep_awake", overlayGranted, "The overlay is not available")
-        expose("local.dnd", context.getSystemService(Context.NOTIFICATION_SERVICE) is NotificationManager, "Android notification service is unavailable")
+        expose("local.dnd", runCatching { context.getSystemService(Context.NOTIFICATION_SERVICE) is NotificationManager }.getOrDefault(false), "Android notification service is unavailable")
         expose("local.thermal", Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q, "Thermal API is unavailable")
         expose("local.battery", true, "")
         expose("local.storage", state?.storageTotalGb?.let { it > 0f } == true, "Storage telemetry is unavailable")
@@ -87,11 +105,19 @@ internal object NukeAdaptiveCapabilities {
             )
         }
 
-        return NukeCapabilitySnapshot(
+        NukeCapabilitySnapshot(
             available = available,
             unavailableReasons = reasons,
             deviceFamily = family,
             compatibilityLabel = "$familyLabel • RUNTIME ADAPTIVE",
+        )
+    }.getOrElse { error ->
+        android.util.Log.e("NukeAdaptiveCap", "Fallback capability snapshot due to error", error)
+        NukeCapabilitySnapshot(
+            available = setOf("local.battery"),
+            unavailableReasons = mapOf("error" to (error.message ?: "Unknown error")),
+            deviceFamily = "android-standard",
+            compatibilityLabel = "ANDROID • SAFE FALLBACK",
         )
     }
 }

@@ -134,8 +134,10 @@ object NukeLiveChatNotifier {
             else -> "New message from developer"
         }
 
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(appContext.resources, R.drawable.logo_nuke) }.getOrNull()
         val notification = NotificationCompat.Builder(appContext, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setContentTitle("Developer Support")
             .setContentText(bodyText)
             .setStyle(NotificationCompat.BigTextStyle().bigText(bodyText))

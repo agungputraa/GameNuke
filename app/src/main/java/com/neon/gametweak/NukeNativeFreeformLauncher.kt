@@ -286,18 +286,22 @@ object NukeNativeFreeformLauncher {
     /**
      * Checks if the device firmware natively reports freeform windowing support.
      */
-    fun isDeviceFreeformCapable(context: Context): Boolean {
+    fun isDeviceFreeformCapable(context: Context): Boolean = runCatching {
         val pm = context.packageManager
         val hasFeature = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             pm.hasSystemFeature(PackageManager.FEATURE_FREEFORM_WINDOW_MANAGEMENT)
         } else false
-        val isOemKnown = Build.MANUFACTURER.contains("xiaomi", ignoreCase = true) ||
-                Build.MANUFACTURER.contains("samsung", ignoreCase = true) ||
-                Build.MANUFACTURER.contains("oppo", ignoreCase = true) ||
-                Build.MANUFACTURER.contains("vivo", ignoreCase = true) ||
-                Build.MANUFACTURER.contains("oneplus", ignoreCase = true)
-        return hasFeature || (isOemKnown && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
-    }
+        val mfr = (Build.MANUFACTURER.orEmpty() + " " + Build.BRAND.orEmpty()).lowercase()
+        val isOemKnown = mfr.contains("xiaomi") || mfr.contains("redmi") || mfr.contains("poco") ||
+                mfr.contains("samsung") || mfr.contains("oppo") || mfr.contains("realme") ||
+                mfr.contains("vivo") || mfr.contains("iqoo") || mfr.contains("oneplus") ||
+                mfr.contains("transsion") || mfr.contains("infinix") || mfr.contains("tecno") ||
+                mfr.contains("huawei") || mfr.contains("honor") || mfr.contains("motorola") ||
+                mfr.contains("lenovo") || mfr.contains("asus") || mfr.contains("sony") ||
+                mfr.contains("google") || mfr.contains("redmagic") || mfr.contains("nothing") ||
+                mfr.contains("meizu")
+        hasFeature || (isOemKnown && Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
+    }.getOrDefault(Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q)
 
     /**
      * Enables system-level freeform support if privileged shell is active.

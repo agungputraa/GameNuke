@@ -54,6 +54,9 @@ enum class MacroTriggerMode {
     /** Quick double tap fired at the pin coordinate. */
     DOUBLE_TAP,
 
+    /** Sequential multi-action combo (e.g. Gloo Wall -> Crouch / Place). */
+    COMBO,
+
     /** Mirror a second finger to target. */
     MIRROR;
 
@@ -65,7 +68,8 @@ enum class MacroTriggerMode {
         MIRROR -> 3
         SWIPE -> 4
         DOUBLE_TAP -> 5
-        LOOP -> 0
+        COMBO -> 6
+        LOOP -> 7
     }
 
     /** Short visual tag shown inside the pin reticle. */
@@ -76,6 +80,7 @@ enum class MacroTriggerMode {
         HOLD -> "HOLD"
         LOOP -> "LOOP"
         DOUBLE_TAP -> "2X"
+        COMBO -> "CMB"
         MIRROR -> "MIR"
     }
 
@@ -87,6 +92,7 @@ enum class MacroTriggerMode {
         HOLD -> "TIMED HOLD"
         LOOP -> "AUTO RETRY"
         DOUBLE_TAP -> "DOUBLE TAP"
+        COMBO -> "COMBO SEQUENCE"
         MIRROR -> "MIRROR"
     }
 }
@@ -126,9 +132,9 @@ data class MacroPinConfig(
     /** Number of taps in REPEAT_TAP / LOOP mode; 0 means infinite-while-held. */
     var repeatCount: Int = 0,
     /** Interval between taps in ms. */
-    var intervalMs: Long = 20L,
+    var intervalMs: Long = 35L,
     /** Per-tap duration in ms. */
-    var tapDurationMs: Long = 12L,
+    var tapDurationMs: Long = 25L,
     /** Sustained hold duration in ms. */
     var holdDurationMs: Long = 300L,
     /** Drag duration in ms for SWIPE / AUTO_DRAG mode. */
@@ -150,7 +156,11 @@ data class MacroPinConfig(
     /** Visual accent colour (soft enterprise slate blue default). */
     var color: Int = 0xFF38BDF8.toInt(),
     /** Red Corner lock — locked pins cannot be repositioned. */
-    var isLocked: Boolean = false
+    var isLocked: Boolean = false,
+    /** Linked pins that fire together with this pin on 1 click/trigger. */
+    var linkedPinIds: MutableList<String> = mutableListOf(),
+    /** Stagger delay in ms between linked pins (0 = simultaneous multi-touch). */
+    var multiPinDelayMs: Long = 0L
 ) {
     fun copyPin(): MacroPinConfig = MacroPinConfig(
         id = id,
@@ -175,7 +185,9 @@ data class MacroPinConfig(
         sensY = sensY,
         radiusDp = radiusDp,
         color = color,
-        isLocked = isLocked
+        isLocked = isLocked,
+        linkedPinIds = linkedPinIds.toMutableList(),
+        multiPinDelayMs = multiPinDelayMs
     )
 
     /** Scrub any character that could break the daemon CSV contract. */

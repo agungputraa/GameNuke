@@ -601,10 +601,10 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
             }
 
             val chips = listOf(
-                "⚡ Rekomendasi Setting",
-                "❄️ Konsultasi Panas / Cooling",
-                "🎮 Atasi FPS Drop",
-                "✨ Request Fitur Baru"
+                "⚡ Recommended Settings",
+                "❄️ Thermal & Cooling",
+                "🎮 Troubleshoot FPS Drops",
+                "✨ Request a Feature"
             )
 
             chips.forEach { chipText ->
@@ -925,7 +925,7 @@ class NukeLiveChatOverlay private constructor(private val context: Context) {
 
             // Direct 1-tap run command button below code box
             val runBtn = TextView(context).apply {
-                text = "▶ Jalankan di Terminal"
+                text = "▶ Run in Terminal"
                 textSize = 9f
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.BLACK)

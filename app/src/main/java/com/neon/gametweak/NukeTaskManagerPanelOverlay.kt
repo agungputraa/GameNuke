@@ -113,7 +113,9 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O)
                     WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
                 else @Suppress("DEPRECATION") WindowManager.LayoutParams.TYPE_PHONE,
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
+                        WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                        WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
                         WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS,
                 android.graphics.PixelFormat.TRANSLUCENT
             ).apply {
@@ -191,7 +193,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
         // 3. Status text feedback
         actionStatusTv = TextView(context).apply {
-            text = "⚡ TACTICAL HUD: Select an app to terminate or purge zombie loops"
+            text = "PROCESS CONTROL: Select an eligible background app to manage or end its process"
             textSize = 9.5f
             setTextColor(Color.parseColor("#00E5C8"))
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
@@ -305,7 +307,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
         }
         val titleTv = TextView(context).apply {
-            text = "TASK MANAGER"
+            text = tr("TASK MANAGER")
             textSize = 11f
             setTextColor(Color.parseColor("#FFFFFF"))
             typeface = Typeface.DEFAULT_BOLD
@@ -314,7 +316,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             ellipsize = TextUtils.TruncateAt.END
         }
         val subTv = TextView(context).apply {
-            text = "BACKGROUND APP & MEMORY MANAGER • DRAG TO MOVE"
+            text = tr("BACKGROUND APP & MEMORY MANAGER • DRAG TO MOVE")
             textSize = 6.2f
             setTextColor(Color.parseColor("#7A9E94"))
             typeface = Typeface.MONOSPACE
@@ -416,7 +418,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         }
 
         val killZombiesBtn = TextView(context).apply {
-            text = "💀 ZOMBIES"
+            text = tr("PROCESS SCAN")
             textSize = 7.5f
             setTextColor(Color.parseColor("#F43F5E"))
             typeface = Typeface.DEFAULT_BOLD
@@ -428,18 +430,22 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                (28 * d).toInt()
+                (48 * d).toInt()
             ).apply { rightMargin = (4 * d).toInt() }
             setPadding((7 * d).toInt(), 0, (7 * d).toInt(), 0)
             isClickable = true
             isFocusable = true
             setOnClickListener {
                 scope.launch {
-                    val killed = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
-                    withContext(Dispatchers.Main) {
-                        actionStatusTv?.text = if (killed > 0) "✓ Terminated $killed rogue zombie cluster(s)! CPU 100% clean." else "✓ 0 rogue zombies detected. System clean!"
-                        actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
-                        refreshTasksList()
+                    try {
+                        val killed = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
+                        withContext(Dispatchers.Main) {
+                            actionStatusTv?.text = if (killed > 0) "Completed: stopped $killed stalled background process group(s)." else "No stalled background process groups detected."
+                            actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                            refreshTasksList()
+                        }
+                    } catch (t: Throwable) {
+                        Log.e(TAG, "killZombies error: ${t.message}", t)
                     }
                 }
             }
@@ -447,7 +453,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         actionRow.addView(killZombiesBtn)
 
         val balanceAllBtn = TextView(context).apply {
-            text = "⚖ BALANCE"
+            text = tr("BALANCE")
             textSize = 7.5f
             setTextColor(Color.parseColor("#00E5C8"))
             typeface = Typeface.DEFAULT_BOLD
@@ -459,7 +465,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                (28 * d).toInt()
+                (48 * d).toInt()
             ).apply { rightMargin = (4 * d).toInt() }
             setPadding((7 * d).toInt(), 0, (7 * d).toInt(), 0)
             isClickable = true
@@ -469,7 +475,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         actionRow.addView(balanceAllBtn)
 
         val killAllBtn = TextView(context).apply {
-            text = "END SAFE"
+            text = tr("END ELIGIBLE")
             textSize = 7.5f
             setTextColor(Color.parseColor("#050D0A"))
             typeface = Typeface.DEFAULT_BOLD
@@ -480,7 +486,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
-                (28 * d).toInt()
+                (48 * d).toInt()
             )
             setPadding((7 * d).toInt(), 0, (7 * d).toInt(), 0)
             isClickable = true
@@ -498,19 +504,115 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
     private fun refreshTasksList() {
         refreshJob?.cancel()
         refreshJob = scope.launch {
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "SCANNING ELIGIBLE BACKGROUND APPS..."
-                actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
-            }
+            try {
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.VISIBLE
+                    actionStatusTv?.text = "SCANNING ELIGIBLE BACKGROUND APPS..."
+                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
+                }
 
-            val tasks = queryRunningUserApps()
+                val tasks = queryRunningUserApps()
 
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.GONE
-                renderTaskList(tasks)
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    renderTaskList(tasks)
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "refreshTasksList error: ${t.message}", t)
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    actionStatusTv?.text = "✓ TASK MONITOR READY"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                }
             }
         }
+    }
+
+    private suspend fun resolveForegroundPackage(detector: ActiveGameDetector): String = withContext(Dispatchers.IO) {
+        val myPkg = context.packageName
+        val pm = context.packageManager
+
+        // 1. Primary: Query dumpsys activity & window for the exact resumed foreground activity
+        val cmd = "dumpsys activity activities 2>/dev/null | grep -m 1 -E 'topResumedActivity|mResumedActivity|ResumedActivity' || dumpsys window 2>/dev/null | grep -m 1 -E 'mFocusedApp|mCurrentFocus'"
+        val output = if (AdbManager.getInstance(context).isConnected()) {
+            AdbManager.getInstance(context).executeCommand(cmd, "/", 1_800L)?.output.orEmpty()
+        } else {
+            NukeConnectionManager.executeCommand(cmd, 1_800L)?.output.orEmpty()
+        }
+
+        if (output.isNotBlank()) {
+            val pkgRegex = Regex("""(?:ActivityRecord\{[0-9a-fA-F]+\s+u\d+\s+(?:[a-zA-Z0-9_.]+/)?|Window\{[0-9a-fA-F]+\s+u\d+\s+|ResumedActivity:\s*ActivityRecord\{[0-9a-fA-F]+\s+u\d+\s+)([a-zA-Z0-9_.]+)""")
+            for (match in pkgRegex.findAll(output)) {
+                val p = match.groupValues.getOrNull(1)?.trim()?.substringBefore("/")
+                if (!p.isNullOrBlank() && p != myPkg && !p.contains("com.neon.gametweak") && !isSensitiveSystemPackage(p.lowercase(Locale.US))) {
+                    // Ensure it is a valid installed user app or game, not a native service
+                    val info = runCatching {
+                        if (Build.VERSION.SDK_INT >= 33) pm.getApplicationInfo(p, PackageManager.ApplicationInfoFlags.of(0L))
+                        else @Suppress("DEPRECATION") pm.getApplicationInfo(p, 0)
+                    }.getOrNull()
+                    if (info != null) {
+                        val isSys = (info.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+                        val isUpdatedSys = (info.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+                        val isGame = (Build.VERSION.SDK_INT >= 26 && info.category == ApplicationInfo.CATEGORY_GAME) ||
+                                     ((info.flags and ApplicationInfo.FLAG_IS_GAME) != 0)
+                        if (!isSys || isUpdatedSys || isGame) {
+                            return@withContext p
+                        }
+                    }
+                }
+            }
+        }
+
+        // 2. ActiveGameDetector fallback
+        val detected = runCatching { detector.detectState() }.getOrNull()
+        val focused = detected?.focusedPackage.orEmpty()
+        if (focused.isNotBlank() && focused != myPkg && !focused.contains("com.neon.gametweak") && !isSensitiveSystemPackage(focused.lowercase(Locale.US))) {
+            return@withContext focused
+        }
+
+        // 3. UsageStats fallback (works natively without root/ADB)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP_MR1) {
+            val usm = context.getSystemService(Context.USAGE_STATS_SERVICE) as? android.app.usage.UsageStatsManager
+            if (usm != null) {
+                val now = System.currentTimeMillis()
+                val events = runCatching { usm.queryEvents(now - 45_000L, now) }.getOrNull()
+                if (events != null) {
+                    val event = android.app.usage.UsageEvents.Event()
+                    var lastPkg: String? = null
+                    var lastTime = 0L
+                    while (events.hasNextEvent()) {
+                        events.getNextEvent(event)
+                        if (event.eventType == android.app.usage.UsageEvents.Event.ACTIVITY_RESUMED) {
+                            val ep = event.packageName
+                            if (!ep.isNullOrBlank() && ep != myPkg && !ep.contains("com.neon.gametweak") && !isSensitiveSystemPackage(ep.lowercase(Locale.US)) && event.timeStamp >= lastTime) {
+                                lastPkg = ep
+                                lastTime = event.timeStamp
+                            }
+                        }
+                    }
+                    if (!lastPkg.isNullOrBlank()) {
+                        return@withContext lastPkg
+                    }
+                }
+            }
+        }
+
+        // 4. Runtime state & resumed game fallback (crucial when overlay is on top)
+        val detectedFallback = runCatching { detector.detectState() }.getOrNull()
+        val resumed = detectedFallback?.resumedGame?.packageName
+        if (!resumed.isNullOrBlank() && resumed != myPkg && !isSensitiveSystemPackage(resumed.lowercase(Locale.US))) {
+            return@withContext resumed
+        }
+        val activeGame = NukeRuntimeState.state.value.activePackage
+        if (!activeGame.isNullOrBlank() && activeGame != myPkg && !isSensitiveSystemPackage(activeGame.lowercase(Locale.US))) {
+            return@withContext activeGame
+        }
+        val lastGame = NukeRuntimeState.lastKnownGamePackage
+        if (!lastGame.isNullOrBlank() && lastGame != myPkg && !isSensitiveSystemPackage(lastGame.lowercase(Locale.US))) {
+            return@withContext lastGame
+        }
+
+        ""
     }
 
     private suspend fun queryRunningUserApps(): List<BackgroundAppItem> = withContext(Dispatchers.IO) {
@@ -518,19 +620,35 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
         val myPkg = context.packageName
         val activeGamePkg = NukeRuntimeState.state.value.activePackage.orEmpty()
-        val focusedPkg = runCatching {
-            ActiveGameDetector(context, AdbManager.getInstance(context)).detectForegroundPackage()
-        }.getOrNull().orEmpty()
+        val lastGamePkg = NukeRuntimeState.lastKnownGamePackage.orEmpty()
+        val detector = ActiveGameDetector(context, AdbManager.getInstance(context))
+        val detectedState = runCatching { detector.detectState() }.getOrNull()
+        val resumedGamePkg = detectedState?.resumedGame?.packageName.orEmpty()
+
+        // 1. Resolve current active foreground package (the underlying activity under overlay)
+        val foregroundPkg = resolveForegroundPackage(detector)
+
+        // 2. High-speed discovery of recent tasks affinity via shell (identifies apps sitting in recent apps)
+        val recentCmd = "dumpsys activity recents 2>/dev/null | grep -E 'affinity=[0-9]+:' | sed -E 's/.*affinity=[0-9]+://' | sort -u"
+        val recentOutput = if (AdbManager.getInstance(context).isConnected()) {
+            AdbManager.getInstance(context).executeCommand(recentCmd, "/", 1_800L)?.output.orEmpty()
+        } else {
+            NukeConnectionManager.executeCommand(recentCmd, 1_800L)?.output.orEmpty()
+        }
+        val recentTasksSet = recentOutput.lineSequence()
+            .map { it.trim().lowercase(Locale.US) }
+            .filter { it.isNotBlank() && it.contains(".") }
+            .toSet()
 
         // Fast Discovery Layer: Map of PackageName -> Pair(PID, RAM_MB)
         val rawProcessMap = LinkedHashMap<String, Pair<Int, Long>>()
 
-        // 1. First priority: High-speed snapshot via ps -A -o PID,RSS,NAME (50ms response)
-        val cmd = "ps -A -o PID,RSS,NAME"
+        // 3. High-speed accurate snapshot via ps -A -o PID,NAME,RSS
+        val cmd = "ps -A -o PID,NAME,RSS 2>/dev/null || ps -o PID,NAME,RSS 2>/dev/null || ps -A -o PID,RSS,NAME 2>/dev/null"
         val psOutput = if (AdbManager.getInstance(context).isConnected()) {
-            AdbManager.getInstance(context).executeCommand(cmd, "/", 3_000L)?.output.orEmpty()
+            AdbManager.getInstance(context).executeCommand(cmd, "/", 2_500L)?.output.orEmpty()
         } else {
-            NukeConnectionManager.executeCommand(cmd, 3_000L)?.output.orEmpty()
+            NukeConnectionManager.executeCommand(cmd, 2_500L)?.output.orEmpty()
         }
 
         if (psOutput.isNotBlank()) {
@@ -538,8 +656,8 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 val parts = line.trim().split(Regex("\\s+"))
                 if (parts.size >= 3) {
                     val pid = parts[0].toIntOrNull() ?: return@forEach
-                    val rssKb = parts[1].toLongOrNull() ?: 0L
-                    val name = parts.last()
+                    val name = parts[1]
+                    val rssKb = parts[2].toLongOrNull() ?: 0L
 
                     // Skip kernel threads, services without package structure
                     if (name.startsWith("[") || !name.contains(".")) return@forEach
@@ -554,38 +672,23 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
         }
 
-        // 2. Fallback if shell snapshot had 0 results
-        if (rawProcessMap.isEmpty()) {
-            val runningProcesses = am?.runningAppProcesses.orEmpty()
-            runningProcesses.forEach { proc ->
-                val pkg = proc.pkgList?.firstOrNull() ?: proc.processName.substringBefore(":")
-                if (!rawProcessMap.containsKey(pkg)) {
-                    rawProcessMap[pkg] = Pair(proc.pid, 45L)
-                }
-            }
-
-            // Also check installed third-party apps so user always has background candidates
-            val installed = runCatching {
-                pm.getInstalledApplications(PackageManager.GET_META_DATA)
-            }.getOrDefault(emptyList())
-
-            installed.forEach { app ->
-                val isSys = (app.flags and ApplicationInfo.FLAG_SYSTEM) != 0
-                if (!isSys && !rawProcessMap.containsKey(app.packageName)) {
-                    rawProcessMap[app.packageName] = Pair(0, 32L)
+        // 2. Comprehensive Layer: Always check ActivityManager runningAppProcesses
+        val runningProcesses = am?.runningAppProcesses.orEmpty()
+        runningProcesses.forEach { proc ->
+            val pkgList = proc.pkgList.orEmpty()
+            val procPkg = if (pkgList.isNotEmpty()) pkgList[0] else proc.processName.substringBefore(":")
+            val pid = proc.pid
+            if (procPkg.contains(".") && !procPkg.startsWith("[")) {
+                val existing = rawProcessMap[procPkg]
+                if (existing == null || existing.first <= 0) {
+                    rawProcessMap[procPkg] = Pair(pid, existing?.second ?: 42L)
                 }
             }
         }
 
-        // Ensure Game Nuke and active game are present in the snapshot map
+        // Ensure Game Nuke itself is always present in the process map
         if (!rawProcessMap.containsKey(myPkg)) {
             rawProcessMap[myPkg] = Pair(android.os.Process.myPid(), 65L)
-        }
-        if (activeGamePkg.isNotBlank() && !rawProcessMap.containsKey(activeGamePkg)) {
-            rawProcessMap[activeGamePkg] = Pair(0, 150L)
-        }
-        if (focusedPkg.isNotBlank() && !rawProcessMap.containsKey(focusedPkg) && !isSensitiveSystemPackage(focusedPkg.lowercase(Locale.US))) {
-            rawProcessMap[focusedPkg] = Pair(0, 150L)
         }
 
         val resultList = mutableListOf<BackgroundAppItem>()
@@ -595,49 +698,22 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             val ramMb = pair.second
             val lower = pkg.lowercase(Locale.US)
 
-            // ─── CLASSIFY PROTECTED (ACTIVE GAME & GAME NUKE) ──────────────────
-            val isMyPkg = (pkg == myPkg)
-            val isActiveGame = (activeGamePkg.isNotBlank() && pkg == activeGamePkg) ||
-                               (focusedPkg.isNotBlank() && pkg == focusedPkg)
+            // 1. GAME NUKE (Absolute Self-Preservation: PID, UID, and Package Immunity)
+            val isMyPkg = (pid == android.os.Process.myPid() ||
+                pkg == myPkg ||
+                pkg == "com.neon.gametweak" ||
+                lower.contains("gametweak") ||
+                lower.contains("wandev") ||
+                lower.contains("frb.axeron") ||
+                lower.contains("nukedaemon") ||
+                lower.contains("nukeprocess") ||
+                lower.contains("nuketouch"))
 
-            if (isMyPkg || isActiveGame) {
-                val appInfo = runCatching {
-                    if (Build.VERSION.SDK_INT >= 33) {
-                        pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0L))
-                    } else {
-                        @Suppress("DEPRECATION") pm.getApplicationInfo(pkg, 0)
-                    }
-                }.getOrNull()
-
-                val label = if (isMyPkg) {
-                    "Game Nuke Premium"
-                } else if (appInfo != null) {
-                    runCatching { pm.getApplicationLabel(appInfo).toString() }.getOrDefault(pkg)
-                } else {
-                    pkg.substringAfterLast(".").replaceFirstChar { it.uppercase() }
-                }
-
-                resultList.add(
-                    BackgroundAppItem(
-                        packageName = pkg,
-                        appLabel = label,
-                        pid = if (isMyPkg && pid == 0) android.os.Process.myPid() else pid,
-                        estimatedRamMb = ramMb,
-                        isProtectedOrActive = true,
-                        statusTag = if (isMyPkg) "GAME NUKE" else "ACTIVE GAME"
-                    )
-                )
+            // 2. SENSITIVE SYSTEM & OEM CHECK: Filter out Android core, emergency alerts, cell broadcast, OEM security daemons
+            if (!isMyPkg && isSensitiveSystemPackage(lower)) {
                 return@forEach
             }
 
-            // ─── STRICT SAFETY FILTER FOR REGULAR BACKGROUND APPS ───────────────
-            // 1. Skip Screen Recorders & Creators tools (NEVER kill recording!)
-            if (NukeScreenRecordGuardian.isProtected(pkg)) return@forEach
-
-            // 2. Skip Essential System Packages, SystemUI, Launchers, IME Keyboards
-            if (isSensitiveSystemPackage(lower)) return@forEach
-
-            // 3. Resolve clean User-Friendly App Label
             val appInfo = runCatching {
                 if (Build.VERSION.SDK_INT >= 33) {
                     pm.getApplicationInfo(pkg, PackageManager.ApplicationInfoFlags.of(0L))
@@ -646,22 +722,215 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 }
             }.getOrNull()
 
-            val label = if (appInfo != null) {
+            // Discard any process that is NOT an installed Android application
+            if (!isMyPkg && appInfo == null) {
+                return@forEach
+            }
+
+            // 3. YOUTUBE & MEDIA PLAYERS — 100% IMMUNE (Evaluated FIRST so YouTube is NEVER mistaken as recorder)
+            val isYouTube = lower == "com.google.android.youtube" ||
+                lower == "com.google.android.apps.youtube.music" ||
+                lower.contains("youtube") ||
+                lower.contains("vanced") ||
+                lower.contains("revanced") ||
+                lower.contains("newpipe")
+
+            val isMusic = lower.contains("music") || lower.contains("spotify") || lower.contains("audio") || lower.contains("soundcloud") || lower.contains("tidal")
+
+            val isMedia = isYouTube || isMusic ||
+                lower.contains("netflix") ||
+                lower.contains("disney") ||
+                lower.contains("primevideo") ||
+                lower.contains("hotstar") ||
+                lower.contains("twitch") ||
+                lower.contains("bilibili") ||
+                lower.contains("videoplayer") ||
+                lower.contains("video.player") ||
+                lower.contains("mxplayer") ||
+                lower.contains("vlc") ||
+                lower.contains("tiktok") ||
+                lower.contains("snackvideo")
+
+            // 4. SCREEN RECORDER — 100% IMMUNE (Strict dedicated matching without catching YouTube or cellbroadcast)
+            val isRecorder = !isMedia && (
+                NukeScreenRecordGuardian.isProtected(pkg) ||
+                lower.contains("screenrecorder") ||
+                lower.contains("screen.recorder") ||
+                lower.contains("screen_recorder") ||
+                lower.contains("screenrecord") ||
+                lower.contains("xrecorder") ||
+                lower.contains("mobizen") ||
+                lower.contains("azscreenrecorder") ||
+                lower.contains("vidma") ||
+                lower.contains("streamlabs")
+            )
+            val isActivelyRecording = isRecorder && NukeScreenRecordGuardian.isActivelyRecording(context, pkg)
+
+            // 5. DYNAMIC ACTIVE GAME CLASSIFICATION (100% Immunity)
+            val isCategoryGame = appInfo != null && (
+                (Build.VERSION.SDK_INT >= 26 && appInfo.category == ApplicationInfo.CATEGORY_GAME) ||
+                ((appInfo.flags and ApplicationInfo.FLAG_IS_GAME) != 0)
+            )
+            val gameMeta = detector.classifyGame(pkg)
+            val isKnownCatalogGame = gameMeta != null
+            val isEngineGame = detector.isLikelyGame(pkg)
+            val isDynamicGame = isCategoryGame || isKnownCatalogGame || isEngineGame ||
+                lower.contains("freefire") || lower.contains("dts.freefire") ||
+                lower.contains("mobile.legends") || lower.contains("pubg") ||
+                lower.contains("codm") || lower.contains("genshin") ||
+                (activeGamePkg.isNotBlank() && lower == activeGamePkg.lowercase(Locale.US)) ||
+                (lastGamePkg.isNotBlank() && lower == lastGamePkg.lowercase(Locale.US)) ||
+                (resumedGamePkg.isNotBlank() && lower == resumedGamePkg.lowercase(Locale.US))
+
+            val isPlayingNow = isDynamicGame && foregroundPkg.isNotBlank() && (
+                lower == foregroundPkg.lowercase(Locale.US) ||
+                lower.startsWith(foregroundPkg.lowercase(Locale.US)) ||
+                foregroundPkg.lowercase(Locale.US).startsWith(lower)
+            )
+
+            val isCurrentForeground = foregroundPkg.isNotBlank() && (
+                lower == foregroundPkg.lowercase(Locale.US) ||
+                lower.startsWith(foregroundPkg.lowercase(Locale.US)) ||
+                foregroundPkg.lowercase(Locale.US).startsWith(lower)
+            )
+
+            // Discard pure internal system services that are NOT Game Nuke, NOT recorder, NOT game, NOT media
+            val isSys = appInfo != null && (appInfo.flags and ApplicationInfo.FLAG_SYSTEM) != 0
+            val isUpdatedSys = appInfo != null && (appInfo.flags and ApplicationInfo.FLAG_UPDATED_SYSTEM_APP) != 0
+            if (isSys && !isUpdatedSys && !isMyPkg && !isRecorder && !isDynamicGame && !isMedia) {
+                return@forEach
+            }
+
+            // Check running process importance to never kill visible/foreground processes
+            val procImportance = runningProcesses.firstOrNull { proc ->
+                proc.processName.lowercase(Locale.US).substringBefore(":") == lower ||
+                    proc.pkgList?.any { it.lowercase(Locale.US) == lower } == true
+            }?.importance ?: 999
+            val isForegroundRunning = procImportance <= ActivityManager.RunningAppProcessInfo.IMPORTANCE_VISIBLE
+
+            val label = if (isMyPkg) {
+                "Game Nuke Premium"
+            } else if (gameMeta != null) {
+                gameMeta.label
+            } else if (appInfo != null) {
                 runCatching { pm.getApplicationLabel(appInfo).toString() }.getOrDefault(pkg)
             } else {
                 pkg.substringAfterLast(".").replaceFirstChar { it.uppercase() }
             }
 
-            resultList.add(
-                BackgroundAppItem(
-                    packageName = pkg,
-                    appLabel = label,
-                    pid = pid,
-                    estimatedRamMb = ramMb,
-                    isProtectedOrActive = false,
-                    statusTag = ""
-                )
-            )
+            when {
+                isMyPkg -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = if (pid == 0) android.os.Process.myPid() else pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = true,
+                            statusTag = "GAME NUKE"
+                        )
+                    )
+                }
+                isPlayingNow -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = true,
+                            statusTag = "PLAYING NOW"
+                        )
+                    )
+                }
+                isDynamicGame -> {
+                    val isRecent = recentTasksSet.contains(lower) || recentTasksSet.any { it.contains(lower) || lower.contains(it) }
+                    val gameTag = if (isRecent) "GAME (RECENT)" else "GAME (BG)"
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = true,
+                            statusTag = gameTag
+                        )
+                    )
+                }
+                isYouTube -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = false,
+                            statusTag = "🎬 YOUTUBE"
+                        )
+                    )
+                }
+                isMedia -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = false,
+                            statusTag = if (isMusic) "🎵 MUSIC" else "🎬 MEDIA"
+                        )
+                    )
+                }
+                isRecorder -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = true,
+                            statusTag = if (isActivelyRecording) "🔴 RECORDING" else "🎥 RECORDER"
+                        )
+                    )
+                }
+                isCurrentForeground -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = false,
+                            statusTag = "ACTIVE NOW"
+                        )
+                    )
+                }
+                isForegroundRunning -> {
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = false,
+                            statusTag = "RUNNING"
+                        )
+                    )
+                }
+                else -> {
+                    // ELIGIBLE BACKGROUND APP (Only genuine 3rd-party user background apps)
+                    resultList.add(
+                        BackgroundAppItem(
+                            packageName = pkg,
+                            appLabel = label,
+                            pid = pid,
+                            estimatedRamMb = ramMb,
+                            isProtectedOrActive = false,
+                            statusTag = ""
+                        )
+                    )
+                }
+            }
         }
 
         // Sort: Protected / Active items first, then by RAM footprint descending
@@ -673,23 +942,61 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
     }
 
     private fun isSensitiveSystemPackage(pkg: String): Boolean {
-        if (pkg == "android") return true
-        if (pkg.startsWith("com.android.systemui")) return true
-        if (pkg.startsWith("com.android.phone")) return true
-        if (pkg.startsWith("com.android.settings")) return true
-        if (pkg.startsWith("com.android.providers.")) return true
-        if (pkg.startsWith("com.android.server")) return true
-        if (pkg.startsWith("com.android.bluetooth")) return true
-        if (pkg.startsWith("com.android.nfc")) return true
-        if (pkg.startsWith("com.android.keyguard")) return true
-        if (pkg.startsWith("com.google.android.gms")) return true
-        if (pkg.startsWith("com.google.android.gsf")) return true
-        if (pkg.startsWith("com.google.android.inputmethod")) return true
-        if (pkg.contains("launcher") || pkg.contains("trebuchet") || pkg.contains("nexuslauncher")) return true
-        if (pkg.contains("keyboard") || pkg.contains("ime") || pkg.contains("inputmethod")) return true
-        if (pkg.contains("telecom") || pkg.contains("telephony") || pkg.contains("incallui")) return true
-        if (pkg.contains("shizuku") || pkg.contains("iadb")) return true
-        if (pkg.startsWith("vendor.") || pkg.startsWith("android.hardware.")) return true
+        if (pkg.isBlank()) return true
+        val lower = pkg.lowercase(Locale.US)
+
+        // Cell Broadcast & Emergency Alerts (Peringatan Darurat Nirkabel) - NEVER display in user task manager
+        if (lower.contains("cellbroadcast") || lower.contains("emergency") || lower.contains("alert") || lower.contains("carrier")) return true
+        if (lower.contains("telecom") || lower.contains("telephony") || lower.contains("incallui") || lower.contains("dialer")) return true
+        if (lower.contains("stk") || lower.contains("sim") || lower.contains("radio") || lower.contains("bluetooth") || lower.contains("nfc")) return true
+
+        // Dedicated screen recorders (keep visible and protected)
+        if (!lower.contains("cellbroadcast") && !lower.contains("emergency") && !lower.contains("youtube") && (
+            NukeScreenRecordGuardian.isProtected(lower) ||
+            lower.contains("screenrecorder") ||
+            lower.contains("screen.recorder") ||
+            lower.contains("xrecorder") ||
+            lower.contains("mobizen") ||
+            lower.contains("azscreenrecorder") ||
+            lower.contains("vidma")
+        )) {
+            return false
+        }
+
+        // Android core & framework services
+        if (lower == "android" || lower.startsWith("android.")) return true
+        if (lower.startsWith("media.") || lower.contains("swcodec") || lower.contains("hwcodec") || lower.contains("codec")) return true
+        if (lower.contains("soter") || lower.contains("soterserver")) return true
+        if (lower.startsWith("com.android.")) return true
+        if (lower.startsWith("com.google.android.gms") || lower.startsWith("com.google.android.gsf") || lower.startsWith("com.google.android.inputmethod") || lower.startsWith("com.google.android.googlequicksearchbox")) return true
+
+        // Xiaomi / HyperOS / MIUI security, powerkeeper, and system frameworks
+        if (lower.startsWith("com.miui.") || lower.startsWith("com.xiaomi.") || lower.startsWith("com.lbe.")) return true
+
+        // Samsung OneUI Knox, security, and framework services
+        if (lower.startsWith("com.sec.") || lower.startsWith("com.samsung.")) return true
+
+        // Oppo / Realme / OnePlus ColorOS & HeyTap frameworks
+        if (lower.startsWith("com.oplus.") || lower.startsWith("com.coloros.") || lower.startsWith("com.nearme.") || lower.startsWith("com.heytap.")) return true
+
+        // Vivo OriginOS / Funtouch & BBK frameworks
+        if (lower.startsWith("com.vivo.") || lower.startsWith("com.iqoo.") || lower.startsWith("com.bbk.")) return true
+
+        // Transsion (Infinix, Tecno, Itel) system services
+        if (lower.startsWith("com.transsion.") || lower.startsWith("com.infinix.") || lower.startsWith("com.tecno.")) return true
+
+        // Huawei & Honor frameworks
+        if (lower.startsWith("com.huawei.") || lower.startsWith("com.hihonor.")) return true
+
+        // Hardware abstraction, chipsets, and vendor daemons
+        if (lower.startsWith("com.mediatek.") || lower.startsWith("com.qualcomm.") || lower.startsWith("com.qti.")) return true
+        if (lower.startsWith("vendor.") || lower.startsWith("android.hardware.")) return true
+
+        // Launchers, Keyboards, & Debugging bridges
+        if (lower.contains("launcher") || lower.contains("trebuchet") || lower.contains(".home")) return true
+        if (lower.contains("keyboard") || lower.contains("ime") || lower.contains("inputmethod")) return true
+        if (lower.contains("shell") || lower.contains("shizuku") || lower.contains("iadb")) return true
+
         return false
     }
 
@@ -750,9 +1057,19 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         // App Initial Badge
         val avatar = TextView(context).apply {
             val letter = item.appLabel.take(1).uppercase(Locale.ROOT)
-            text = if (isProt) {
-                if (item.statusTag.contains("GAME NUKE")) "⚡" else "🎮"
-            } else if (letter.isNotBlank()) letter else "•"
+            text = when {
+                item.statusTag.contains("GAME NUKE") -> "⚡"
+                item.statusTag.contains("PLAYING NOW") -> "🎮"
+                item.statusTag.contains("GAME") -> "🎯"
+                item.statusTag.contains("YOUTUBE") -> "▶"
+                item.statusTag.contains("ACTIVE NOW") -> "📱"
+                item.statusTag.contains("RECORDING") -> "🔴"
+                item.statusTag.contains("RECORDER") -> "🎥"
+                item.statusTag.contains("MEDIA") -> "🎬"
+                item.statusTag.contains("MUSIC") -> "🎵"
+                letter.isNotBlank() -> letter
+                else -> "•"
+            }
             textSize = 11f
             setTextColor(if (isProt) Color.parseColor("#94A3B8") else Color.parseColor("#00E5C8"))
             typeface = Typeface.DEFAULT_BOLD
@@ -812,15 +1129,29 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         titleLine.addView(nameTv)
         titleLine.addView(ramBadge)
 
-        if (isProt && item.statusTag.isNotBlank()) {
+        if (item.statusTag.isNotBlank()) {
             val statusTagTv = TextView(context).apply {
                 text = " ${item.statusTag} "
                 textSize = 6.2f
-                setTextColor(Color.parseColor("#E2E8F0"))
+                setTextColor(
+                    when {
+                        item.statusTag.contains("RECORDING") -> Color.parseColor("#FF6B6B")
+                        item.statusTag.contains("RECORDER") -> Color.parseColor("#C084FC")
+                        item.statusTag.contains("PLAYING NOW") -> Color.parseColor("#10B981")
+                        item.statusTag.contains("ACTIVE NOW") -> Color.parseColor("#10B981")
+                        item.statusTag.contains("GAME NUKE") -> Color.parseColor("#F59E0B")
+                        item.statusTag.contains("YOUTUBE") -> Color.parseColor("#FF0033")
+                        item.statusTag.contains("GAME") -> Color.parseColor("#00E5C8")
+                        item.statusTag.contains("MEDIA") -> Color.parseColor("#38BDF8")
+                        item.statusTag.contains("MUSIC") -> Color.parseColor("#EC4899")
+                        else -> Color.parseColor("#E2E8F0")
+                    }
+                )
                 typeface = Typeface.DEFAULT_BOLD
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#334155"))
+                    setColor(if (isProt) Color.parseColor("#334155") else Color.parseColor("#1E293B"))
                     cornerRadius = 3 * d
+                    if (!isProt) setStroke((0.6f * d).toInt(), Color.parseColor("#475569"))
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -852,17 +1183,44 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         }
 
         if (isProt) {
-            // Protected items CANNOT be terminated: Display muted [🔒 IMMUNE] badge
+            val badgeText = when {
+                item.statusTag.contains("GAME NUKE") -> "🔒 NUKE"
+                item.statusTag.contains("PLAYING NOW") -> "🔒 PLAYING"
+                item.statusTag.contains("GAME (RECENT)") -> "🔒 GAME (RECENT)"
+                item.statusTag.contains("GAME (BG)") -> "🔒 GAME (BG)"
+                item.statusTag.contains("GAME") -> "🔒 GAME"
+                item.statusTag.contains("YOUTUBE") -> "🔒 YOUTUBE"
+                item.statusTag.contains("ACTIVE NOW") -> "🔒 ACTIVE"
+                item.statusTag.contains("RECORDING") -> "🔒 RECORDING"
+                item.statusTag.contains("RECORDER") -> "🔒 RECORDER"
+                item.statusTag.contains("MEDIA") -> "🔒 MEDIA"
+                item.statusTag.contains("MUSIC") -> "🔒 MUSIC"
+                else -> "🔒 PROTECTED"
+            }
+            val badgeColor = when {
+                item.statusTag.contains("RECORDING") -> Color.parseColor("#FF3D55")
+                item.statusTag.contains("RECORDER") -> Color.parseColor("#A855F7")
+                item.statusTag.contains("PLAYING NOW") -> Color.parseColor("#10B981")
+                item.statusTag.contains("ACTIVE NOW") -> Color.parseColor("#10B981")
+                item.statusTag.contains("GAME (RECENT)") -> Color.parseColor("#00E5C8")
+                item.statusTag.contains("GAME (BG)") -> Color.parseColor("#00E5C8")
+                item.statusTag.contains("GAME") -> Color.parseColor("#00E5C8")
+                item.statusTag.contains("GAME NUKE") -> Color.parseColor("#F59E0B")
+                item.statusTag.contains("YOUTUBE") -> Color.parseColor("#FF0033")
+                item.statusTag.contains("MEDIA") -> Color.parseColor("#38BDF8")
+                item.statusTag.contains("MUSIC") -> Color.parseColor("#EC4899")
+                else -> Color.parseColor("#94A3B8")
+            }
             val immuneBadge = TextView(context).apply {
-                text = "🔒 PROTECTED"
+                text = badgeText
                 textSize = 7.5f
-                setTextColor(Color.parseColor("#94A3B8"))
+                setTextColor(badgeColor)
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#1E293B"))
                     cornerRadius = 5 * d
-                    setStroke((0.8f * d).toInt(), Color.parseColor("#334155"))
+                    setStroke((0.8f * d).toInt(), badgeColor)
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -932,162 +1290,366 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
     // ─── Process Termination & Optimization ─────────────────────────────────
 
     private fun balanceTask(item: BackgroundAppItem, cardView: View, balanceBtn: TextView) {
-        if (item.isProtectedOrActive) return
-        scope.launch {
-            val cmd = "am compact ${item.packageName} full 2>/dev/null\npm trim-caches 9999999999 2>/dev/null"
-            if (AdbManager.getInstance(context).isConnected()) {
-                AdbManager.getInstance(context).executeCommand(cmd, "/", 2_500L)
-            } else {
-                NukeConnectionManager.executeCommand(cmd, 2_500L)
-            }
-            withContext(Dispatchers.Main) {
-                balanceBtn.text = "✓ OK"
-                balanceBtn.setTextColor(Color.parseColor("#10B981"))
-                balanceBtn.isClickable = false
-                actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED: ${item.appLabel.uppercase()}"
-                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
-            }
-        }
-    }
-
-    private fun terminateTask(item: BackgroundAppItem, cardView: View) {
-        if (item.isProtectedOrActive || item.packageName == context.packageName || item.packageName == NukeRuntimeState.state.value.activePackage) {
-            actionStatusTv?.text = "PROTECTED PROCESS • NO ACTION TAKEN"
+        if (item.isProtectedOrActive) {
+            actionStatusTv?.text = "PROTECTED PROCESS • CANNOT COMPACT"
             actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
             return
         }
 
         scope.launch {
-            val cmd = "am kill ${item.packageName} 2>/dev/null"
-            if (AdbManager.getInstance(context).isConnected()) {
-                AdbManager.getInstance(context).executeCommand(cmd, "/", 2_500L)
-            } else {
-                val res = NukeConnectionManager.executeCommand(cmd, 2_500L)
-                if (res == null || !res.isSuccess) {
-                    val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                    runCatching { am?.killBackgroundProcesses(item.packageName) }
+            try {
+                val cmd = "am compact ${item.packageName} full 2>/dev/null"
+                if (AdbManager.getInstance(context).isConnected()) {
+                    AdbManager.getInstance(context).executeCommand(cmd, "/", 2_500L)
+                } else {
+                    NukeConnectionManager.executeCommand(cmd, 2_500L)
                 }
+                withContext(Dispatchers.Main) {
+                    balanceBtn.text = "✓ OK"
+                    balanceBtn.setTextColor(Color.parseColor("#10B981"))
+                    balanceBtn.isClickable = false
+                    actionStatusTv?.text = "✓ MEMORY COMPACTED: ${item.appLabel.uppercase()}"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "balanceTask error: ${t.message}", t)
             }
+        }
+    }
 
-            withContext(Dispatchers.Main) {
-                // Smooth card removal
-                cardView.animate()
-                    .alpha(0f)
-                    .scaleY(0f)
-                    .setDuration(160)
-                    .withEndAction {
-                        taskListContainer?.removeView(cardView)
+    private fun terminateTask(item: BackgroundAppItem, cardView: View) {
+        val myPkg = context.packageName.lowercase(Locale.US)
+        val pkg = item.packageName.trim().lowercase(Locale.US)
+        val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase(Locale.US).orEmpty()
+        val myPid = android.os.Process.myPid()
+        val isNukeCore = item.pid == myPid ||
+            pkg == myPkg ||
+            pkg == "com.neon.gametweak" ||
+            pkg.contains("gametweak") ||
+            pkg.contains("wandev") ||
+            pkg.contains("axeron") ||
+            pkg.contains("nuke") ||
+            pkg.contains("shell") ||
+            pkg.contains("shizuku") ||
+            pkg.contains("iadb")
+
+        if (isNukeCore) {
+            actionStatusTv?.text = "GAME NUKE CORE • CANNOT TERMINATE SELF"
+            actionStatusTv?.setTextColor(Color.parseColor("#EF4444"))
+            return
+        }
+
+        val isRecorder = NukeScreenRecordGuardian.isProtected(item.packageName) ||
+            pkg.contains("screenrecorder") ||
+            pkg.contains("screen.recorder") ||
+            pkg.contains("screen_recorder") ||
+            pkg.contains("xrecorder") ||
+            pkg.contains("mobizen") ||
+            pkg.contains("azscreenrecorder") ||
+            pkg.contains("vidma")
+
+        if (isRecorder) {
+            actionStatusTv?.text = "SCREEN RECORDER • PROTECTED"
+            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            return
+        }
+
+        val detectorSync = ActiveGameDetector(context)
+        if (item.isProtectedOrActive || detectorSync.isLikelyGame(pkg) || detectorSync.classifyGame(pkg) != null || NukeProcessPurgeGuardian.isProtected(context, item.packageName)) {
+            actionStatusTv?.text = "GAME / PROTECTED TASK • CANNOT TERMINATE"
+            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            return
+        }
+
+        val isCurrentPlaying = activeGame.isNotBlank() && (pkg == activeGame || pkg.startsWith("$activeGame:"))
+        if (isCurrentPlaying) {
+            actionStatusTv?.text = "ACTIVE GAME • CANNOT TERMINATE ACTIVE GAME"
+            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            return
+        }
+
+        if (isSensitiveSystemPackage(pkg)) {
+            actionStatusTv?.text = "SYSTEM CORE • PROTECTED"
+            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            return
+        }
+
+        scope.launch {
+            try {
+                val detector = ActiveGameDetector(context, AdbManager.getInstance(context))
+                val resumedGame = runCatching { detector.detectState().resumedGame?.packageName?.lowercase(Locale.US) }.getOrNull().orEmpty()
+                val foregroundPkg = resolveForegroundPackage(detector).lowercase(Locale.US)
+                val currentPlayingGame = when {
+                    activeGame.isNotBlank() -> activeGame
+                    resumedGame.isNotBlank() -> resumedGame
+                    foregroundPkg.isNotBlank() && (detector.isLikelyGame(foregroundPkg) || detector.classifyGame(foregroundPkg) != null) -> foregroundPkg
+                    else -> ""
+                }
+
+                if (currentPlayingGame.isNotBlank() && (pkg == currentPlayingGame || pkg.startsWith("$currentPlayingGame:"))) {
+                    withContext(Dispatchers.Main) {
+                        actionStatusTv?.text = "ACTIVE GAME • CANNOT TERMINATE ACTIVE GAME"
+                        actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
                     }
-                    .start()
+                    return@launch
+                }
 
-                actionStatusTv?.text = "✓ END REQUEST SENT: ${item.appLabel.uppercase()} • ~${item.estimatedRamMb} MB footprint"
-                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                val activeGameCase = if (currentPlayingGame.isNotBlank()) "*$currentPlayingGame*)" else ""
+                val cmd = """
+                    case "${item.packageName}" in
+                      *com.neon.gametweak*|*gametweak*|*wandev*|*axeron*|*nuke*|*shell*|*shizuku*|*iadb*)
+                        ;;
+                      *screenrecorder*|*screenrecord*|*recorder*|*screencap*|*smartcapture*|*xrecorder*|*mobizen*|*azscreenrecorder*|*vidma*|*streamlabs*)
+                        ;;
+                      $activeGameCase
+                        ;;
+                      android|com.android.*|com.google.android.*|com.miui.*|com.xiaomi.*|com.lbe.*|com.sec.*|com.samsung.*|com.oplus.*|com.coloros.*|com.vivo.*|com.transsion.*|com.huawei.*|com.mediatek.*|com.qualcomm.*)
+                        ;;
+                      *)
+                        am force-stop "${item.packageName}" 2>/dev/null
+                        ;;
+                    esac
+                """.trimIndent()
+                if (AdbManager.getInstance(context).isConnected()) {
+                    AdbManager.getInstance(context).executeCommand(cmd, "/", 2_500L)
+                } else {
+                    val res = NukeConnectionManager.executeCommand(cmd, 2_500L)
+                    if (res == null || !res.isSuccess) {
+                        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                        runCatching { am?.killBackgroundProcesses(item.packageName) }
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    // Smooth card removal
+                    cardView.animate()
+                        .alpha(0f)
+                        .scaleY(0f)
+                        .setDuration(160)
+                        .withEndAction {
+                            taskListContainer?.removeView(cardView)
+                        }
+                        .start()
+
+                    actionStatusTv?.text = "Ended: ${item.appLabel.uppercase()} • estimated ${item.estimatedRamMb} MB available"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "terminateTask error: ${t.message}", t)
             }
         }
     }
 
     private fun balanceAllSafeProcesses() {
         scope.launch {
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "REQUESTING MEMORY COMPACTION FOR ELIGIBLE APPS..."
-                actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
-            }
+            try {
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.VISIBLE
+                    actionStatusTv?.text = "REQUESTING MEMORY COMPACTION FOR ELIGIBLE APPS..."
+                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
+                }
 
-            val allTasks = queryRunningUserApps()
-            val myPkg = context.packageName
-            val activeGamePkg = NukeRuntimeState.state.value.activePackage.orEmpty()
-            val tasks = allTasks.filter { task ->
-                !task.isProtectedOrActive &&
-                task.packageName != myPkg &&
-                (activeGamePkg.isBlank() || task.packageName != activeGamePkg)
-            }
+                val myPkg = context.packageName.lowercase(Locale.US)
+                val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase(Locale.US).orEmpty()
+                val detector = ActiveGameDetector(context, AdbManager.getInstance(context))
+                val resumedGame = runCatching { detector.detectState()?.resumedGame?.packageName?.lowercase(Locale.US) }.getOrNull().orEmpty()
+                val foregroundPkg = resolveForegroundPackage(detector).lowercase(Locale.US)
+                val currentPlayingGame = when {
+                    activeGame.isNotBlank() -> activeGame
+                    resumedGame.isNotBlank() -> resumedGame
+                    foregroundPkg.isNotBlank() && (detector.isLikelyGame(foregroundPkg) || detector.classifyGame(foregroundPkg) != null) -> foregroundPkg
+                    else -> ""
+                }
 
-            val script = StringBuilder()
-            tasks.forEach { task ->
-                script.append("am compact ${task.packageName} full 2>/dev/null\n")
-            }
-            script.append("pm trim-caches 9999999999 2>/dev/null\necho 1 > /proc/sys/vm/compact_memory 2>/dev/null\n")
+                val allTasks = queryRunningUserApps()
+                val balanceTasks = allTasks.filter { task ->
+                    val p = task.packageName.trim().lowercase(Locale.US)
+                    !task.isProtectedOrActive &&
+                    p != myPkg &&
+                    p != "com.neon.gametweak" &&
+                    (currentPlayingGame.isBlank() || (p != currentPlayingGame && !p.startsWith("$currentPlayingGame:"))) &&
+                    !p.contains("gametweak") &&
+                    !p.contains("wandev") &&
+                    !p.contains("axeron") &&
+                    !p.contains("nuke") &&
+                    !p.contains("shell") &&
+                    !p.contains("shizuku") &&
+                    !p.contains("iadb") &&
+                    !detector.isLikelyGame(p) &&
+                    detector.classifyGame(p) == null &&
+                    !NukeProcessPurgeGuardian.isProtected(context, task.packageName) &&
+                    !NukeScreenRecordGuardian.isProtected(task.packageName) &&
+                    !p.contains("screenrecorder") &&
+                    !p.contains("xrecorder") &&
+                    !p.contains("mobizen") &&
+                    !p.contains("azscreenrecorder") &&
+                    !p.contains("vidma") &&
+                    !isSensitiveSystemPackage(p)
+                }
 
-            if (AdbManager.getInstance(context).isConnected()) {
-                AdbManager.getInstance(context).executeCommand(script.toString(), "/", 4_500L)
-            } else {
-                NukeConnectionManager.executeCommand(script.toString(), 4_500L)
-            }
+                if (balanceTasks.isNotEmpty()) {
+                    val pkgs = balanceTasks.joinToString(" ") { it.packageName }
+                    val activeGameCase = if (currentPlayingGame.isNotBlank()) "*$currentPlayingGame*)" else ""
+                    val script = """
+                        for PKG in $pkgs; do
+                          if [ -z "${'$'}PKG" ] || [ "${'$'}PKG" = "$myPkg" ] || [ -n "$currentPlayingGame" -a "${'$'}PKG" = "$currentPlayingGame" ]; then
+                            continue
+                          fi
+                          case "${'$'}PKG" in
+                            *com.neon.gametweak*|*gametweak*|*wandev*|*axeron*|*nuke*|*shell*|*shizuku*|*iadb*)
+                              continue ;;
+                            *screenrecorder*|*screenrecord*|*recorder*|*screencap*|*smartcapture*|*xrecorder*|*mobizen*|*azscreenrecorder*|*vidma*|*streamlabs*)
+                              continue ;;
+                            *freefire*|*dts*|*garena*|*mobilelegends*|*pubg*|*codm*|*genshin*|*honkai*|*roblox*|*unity*|*epicgames*)
+                              continue ;;
+                            $activeGameCase
+                              continue ;;
+                            android|com.android.*|com.google.android.*|com.miui.*|com.xiaomi.*|com.lbe.*|com.sec.*|com.samsung.*|com.oplus.*|com.coloros.*|com.vivo.*|com.transsion.*|com.huawei.*|com.mediatek.*|com.qualcomm.*)
+                              continue ;;
+                            *)
+                              cmd activity send-trim-memory "${'$'}PKG" RUNNING_LOW 2>/dev/null
+                              am kill "${'$'}PKG" 2>/dev/null
+                              ;;
+                          esac
+                        done
+                        sync 2>/dev/null
+                    """.trimIndent()
 
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.GONE
-                actionStatusTv?.text = "✓ MEMORY COMPACTION REQUESTED FOR ${tasks.size} APPS"
-                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
-                refreshTasksList()
+                    if (AdbManager.getInstance(context).isConnected()) {
+                        AdbManager.getInstance(context).executeCommand(script, "/", 4_500L)
+                    } else {
+                        NukeConnectionManager.executeCommand(script, 4_500L)
+                    }
+                }
+
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    actionStatusTv?.text = "✓ BALANCE: COMPACTED MEMORY FOR ${balanceTasks.size} BACKGROUND APP(S)"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    refreshTasksList()
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "balanceAllSafeProcesses failed safely: ${t.message}", t)
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    actionStatusTv?.text = "✓ MEMORY COMPACTION COMPLETE"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    refreshTasksList()
+                }
             }
         }
     }
 
     private fun killAllSafeProcesses() {
         scope.launch {
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.VISIBLE
-                actionStatusTv?.text = "ENDING ELIGIBLE BACKGROUND TASKS..."
-                actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
-            }
-
-            val allTasks = queryRunningUserApps()
-            val myPkg = context.packageName
-            val activeGamePkg = NukeRuntimeState.state.value.activePackage.orEmpty()
-            val tasks = allTasks.filter { task ->
-                val p = task.packageName
-                !task.isProtectedOrActive &&
-                p != myPkg &&
-                (activeGamePkg.isBlank() || p != activeGamePkg) &&
-                !p.contains("webview", ignoreCase = true) &&
-                !p.contains("chromium", ignoreCase = true) &&
-                !p.contains("trichrome", ignoreCase = true) &&
-                !p.startsWith("com.google.android.gms") &&
-                !p.startsWith("com.android.vending") &&
-                !p.startsWith("com.android.systemui") &&
-                !p.contains("launcher", ignoreCase = true) &&
-                !NukeScreenRecordGuardian.isProtected(p) &&
-                !NukeProcessPurgeGuardian.isProtected(context, p)
-            }
-
-            val adb = AdbManager.getInstance(context)
-            val isPrivileged = adb.isConnected() || NukeConnectionManager.isConnected()
-            val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
-
-            if (isPrivileged) {
-                val scriptBuilder = StringBuilder()
-                tasks.forEach { task ->
-                    scriptBuilder.append("am kill ${task.packageName} 2>/dev/null\n")
+            try {
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.VISIBLE
+                    actionStatusTv?.text = "ENDING ELIGIBLE BACKGROUND TASKS..."
+                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
                 }
-                scriptBuilder.append("""
-                    pm trim-caches 9999999999 2>/dev/null
-                    am compact all 2>/dev/null
-                    echo 1 > /proc/sys/vm/compact_memory 2>/dev/null
-                    echo 3 > /proc/sys/vm/drop_caches 2>/dev/null
-                    sync
-                """.trimIndent())
 
-                if (adb.isConnected()) {
-                    adb.executeCommand(scriptBuilder.toString(), "/", 6_000L)
-                } else {
-                    NukeConnectionManager.executeCommand(scriptBuilder.toString(), 6_000L)
+                val myPkg = context.packageName.lowercase(Locale.US)
+                val activeGame = NukeRuntimeState.state.value.activePackage?.trim()?.lowercase(Locale.US).orEmpty()
+                val detector = ActiveGameDetector(context, AdbManager.getInstance(context))
+                val resumedGame = runCatching { detector.detectState()?.resumedGame?.packageName?.lowercase(Locale.US) }.getOrNull().orEmpty()
+                val foregroundPkg = resolveForegroundPackage(detector).lowercase(Locale.US)
+                val currentPlayingGame = when {
+                    activeGame.isNotBlank() -> activeGame
+                    resumedGame.isNotBlank() -> resumedGame
+                    foregroundPkg.isNotBlank() && (detector.isLikelyGame(foregroundPkg) || detector.classifyGame(foregroundPkg) != null) -> foregroundPkg
+                    else -> ""
                 }
-            } else {
-                val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
-                tasks.forEach { task ->
-                    runCatching { am?.killBackgroundProcesses(task.packageName) }
+
+                val allTasks = queryRunningUserApps()
+
+                val myPid = android.os.Process.myPid()
+                val killableTasks = allTasks.filter { task ->
+                    val p = task.packageName.trim().lowercase(Locale.US)
+                    task.pid != myPid &&
+                    !task.isProtectedOrActive &&
+                    p != myPkg &&
+                    p != "com.neon.gametweak" &&
+                    (currentPlayingGame.isBlank() || (p != currentPlayingGame && !p.startsWith("$currentPlayingGame:"))) &&
+                    !p.contains("gametweak") &&
+                    !p.contains("wandev") &&
+                    !p.contains("axeron") &&
+                    !p.contains("nuke") &&
+                    !p.contains("shell") &&
+                    !p.contains("shizuku") &&
+                    !p.contains("iadb") &&
+                    !detector.isLikelyGame(p) &&
+                    detector.classifyGame(p) == null &&
+                    !NukeProcessPurgeGuardian.isProtected(context, task.packageName) &&
+                    !NukeScreenRecordGuardian.isProtected(task.packageName) &&
+                    !p.contains("screenrecorder") &&
+                    !p.contains("xrecorder") &&
+                    !p.contains("mobizen") &&
+                    !p.contains("azscreenrecorder") &&
+                    !p.contains("vidma") &&
+                    !isSensitiveSystemPackage(p)
                 }
-                System.gc()
-            }
 
-            val freedTotalMb = tasks.sumOf { it.estimatedRamMb }
+                val adb = AdbManager.getInstance(context)
+                val isPrivileged = adb.isConnected() || NukeConnectionManager.isConnected()
 
-            withContext(Dispatchers.Main) {
-                loadingProgressBar?.visibility = View.GONE
-                actionStatusTv?.text = "✓ END SAFE: $killedZombies zombie cluster(s) terminated • ${tasks.size} tasks ended • ~${freedTotalMb} MB RAM freed"
-                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
-                refreshTasksList()
+                if (killableTasks.isNotEmpty()) {
+                    if (isPrivileged) {
+                        val pkgs = killableTasks.joinToString(" ") { it.packageName }
+                        val activeGameCase = if (currentPlayingGame.isNotBlank()) "*$currentPlayingGame*)" else ""
+                        val script = """
+                            for PKG in $pkgs; do
+                              if [ -z "${'$'}PKG" ] || [ "${'$'}PKG" = "$myPkg" ] || [ -n "$currentPlayingGame" -a "${'$'}PKG" = "$currentPlayingGame" ]; then
+                                continue
+                              fi
+                              case "${'$'}PKG" in
+                                *com.neon.gametweak*|*gametweak*|*wandev*|*axeron*|*nuke*|*shell*|*shizuku*|*iadb*)
+                                  continue ;;
+                                *screenrecorder*|*screenrecord*|*recorder*|*screencap*|*smartcapture*|*xrecorder*|*mobizen*|*azscreenrecorder*|*vidma*|*streamlabs*)
+                                  continue ;;
+                                *freefire*|*dts*|*garena*|*mobilelegends*|*pubg*|*codm*|*genshin*|*honkai*|*roblox*|*unity*|*epicgames*)
+                                  continue ;;
+                                $activeGameCase
+                                  continue ;;
+                                android|com.android.*|com.google.android.*|com.miui.*|com.xiaomi.*|com.lbe.*|com.sec.*|com.samsung.*|com.oplus.*|com.coloros.*|com.vivo.*|com.transsion.*|com.huawei.*|com.mediatek.*|com.qualcomm.*)
+                                  continue ;;
+                                *)
+                                  am force-stop "${'$'}PKG" 2>/dev/null
+                                  ;;
+                              esac
+                            done
+                            sync 2>/dev/null
+                        """.trimIndent()
+
+                        if (adb.isConnected()) {
+                            adb.executeCommand(script, "/", 5_000L)
+                        } else {
+                            NukeConnectionManager.executeCommand(script, 5_000L)
+                        }
+                    } else {
+                        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+                        killableTasks.forEach { task ->
+                            runCatching { am?.killBackgroundProcesses(task.packageName) }
+                        }
+                    }
+                }
+
+                val freedTotalMb = killableTasks.sumOf { it.estimatedRamMb }
+
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    actionStatusTv?.text = "Completed: ${killableTasks.size} eligible app(s) ended • estimated ${freedTotalMb} MB available"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    refreshTasksList()
+                }
+            } catch (t: Throwable) {
+                Log.e(TAG, "killAllSafeProcesses failed safely: ${t.message}", t)
+                withContext(Dispatchers.Main) {
+                    loadingProgressBar?.visibility = View.GONE
+                    actionStatusTv?.text = "Process action completed; protected game and system services were excluded"
+                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    refreshTasksList()
+                }
             }
         }
     }

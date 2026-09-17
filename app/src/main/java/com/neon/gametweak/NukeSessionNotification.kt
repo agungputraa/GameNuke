@@ -42,8 +42,10 @@ object NukeSessionNotification {
             Intent(context, FloatingBoosterService::class.java).setAction(FloatingBoosterService.ACTION_STOP_OVERLAY),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
+        val largeIconBmp = runCatching { android.graphics.BitmapFactory.decodeResource(context.resources, R.drawable.logo_nuke) }.getOrNull()
         return NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_game_booster_notification)
+            .setSmallIcon(R.drawable.logo_nuke)
+            .apply { if (largeIconBmp != null) setLargeIcon(largeIconBmp) }
             .setContentTitle("Game Nuke session active")
             .setContentText("HUD active for $gameLabel")
             .setCategory(NotificationCompat.CATEGORY_SERVICE)

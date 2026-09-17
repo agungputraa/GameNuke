@@ -67,20 +67,20 @@ object NukeTouchTuningEngine {
         val yMultiplier: Float = 1.0f,
         val area: Int = AREA_RIGHT,
         val curve: Int = CURVE_ACCELERATE,
-        val smoothingEnabled: Boolean = true,
-        val minCutoff: Float = 1.0f,
-        val beta: Float = 0.007f
+        val smoothingEnabled: Boolean = false,
+        val minCutoff: Float = 8.0f,
+        val beta: Float = 0.08f
     )
 
-    @Volatile var xMultiplier = 1f
-    @Volatile var yMultiplier = 1f
+    @Volatile var xMultiplier = 1.00f
+    @Volatile var yMultiplier = 1.00f
     @Volatile var stabilize = false
-    @Volatile var curveMode = CURVE_ACCELERATE
-    @Volatile var sensArea = AREA_RIGHT
-    @Volatile var euroEnabled = true
-    @Volatile var euroMinCutoff = 1.0f
-    @Volatile var euroBeta = 0.007f
-    @Volatile var dragShotCurve = true
+    @Volatile var curveMode = CURVE_LINEAR
+    @Volatile var sensArea = AREA_ALL
+    @Volatile var euroEnabled = false
+    @Volatile var euroMinCutoff = 8.0f
+    @Volatile var euroBeta = 0.08f
+    @Volatile var dragShotCurve = false
 
     val currentXMultiplier: Float get() = xMultiplier
     val currentYMultiplier: Float get() = yMultiplier
@@ -143,8 +143,8 @@ object NukeTouchTuningEngine {
         area: Int = AREA_RIGHT,
         euroSmoothing: Boolean = true
     ) {
-        xMultiplier = axisMultiplier(x.coerceIn(1, 100), maxMultiplier = 3.5f)
-        yMultiplier = axisMultiplier(y.coerceIn(1, 100), maxMultiplier = 4.5f)
+        xMultiplier = axisMultiplier(x.coerceIn(1, 100), maxMultiplier = 5.0f)
+        yMultiplier = axisMultiplier(y.coerceIn(1, 100), maxMultiplier = 6.0f)
         stabilize = antiJitter
         curveMode = curve
         sensArea = area
@@ -153,6 +153,8 @@ object NukeTouchTuningEngine {
         filterX.beta = euroBeta
         filterY.minCutoff = euroMinCutoff
         filterY.beta = euroBeta
+        // Push new values to the daemon process immediately so in-game sensitivity takes effect.
+        syncToDaemon()
     }
 
     /**
@@ -217,12 +219,9 @@ object NukeTouchTuningEngine {
             return dx to dy
         }
 
-        val biasedGain = calculateBiasedGain(dx, dy)
         val curve = calculateCurveFactor(dx, dy, screenWidth)
-        val totalGain = biasedGain * curve
-
-        var resX = dx * totalGain
-        var resY = dy * totalGain
+        var resX = dx * xMultiplier * curve
+        var resY = dy * yMultiplier * curve
 
         if (euroEnabled) {
             resX = filterX.filter(resX)
@@ -230,8 +229,8 @@ object NukeTouchTuningEngine {
         }
 
         if (stabilize) {
-            if (kotlin.math.abs(resX) < 1.5f) resX = 0f
-            if (kotlin.math.abs(resY) < 1.5f) resY = 0f
+            if (kotlin.math.abs(resX) < 1.0f) resX = 0f
+            if (kotlin.math.abs(resY) < 1.0f) resY = 0f
         }
 
         return resX to resY
@@ -300,9 +299,15 @@ object NukeTouchTuningEngine {
             settings put system display_touch_sensitivity 1 >/dev/null 2>&1
             settings put system touch_game_turbo 1 >/dev/null 2>&1
             settings put system game_turbo_touch_sensitivity $sensXValue >/dev/null 2>&1
+            settings put secure game_turbo_touch_sensitivity $sensXValue >/dev/null 2>&1
             settings put system game_turbo_touch_response $sensYValue >/dev/null 2>&1
+            settings put secure game_turbo_touch_response $sensYValue >/dev/null 2>&1
             settings put system touch_sensitivity $sensXValue >/dev/null 2>&1
+            settings put secure touch_sensitivity $sensXValue >/dev/null 2>&1
+            settings put system touch_response $sensYValue >/dev/null 2>&1
+            settings put secure touch_response $sensYValue >/dev/null 2>&1
             settings put secure game_touch_sensitivity $sensXValue >/dev/null 2>&1
+            settings put secure game_touch_response $sensYValue >/dev/null 2>&1
             settings put system view.scroll_friction 0.002 >/dev/null 2>&1
             settings put system edge_touch_prevention 0 >/dev/null 2>&1
             settings put system edge_mistouch_prevention 0 >/dev/null 2>&1
@@ -318,7 +323,7 @@ object NukeTouchTuningEngine {
             setprop debug.touch.latency_level 0 >/dev/null 2>&1
 
             FOUND_NODES=0
-            NODES="/sys/class/touch/touch_dev/game_mode /sys/class/touch/touch_dev/touch_thp_rx_compensation /sys/class/touch/touch_dev/touch_thp_tx_compensation /sys/class/touch/touch_dev/touch_thp_smooth /sys/class/touch/touch_dev/touch_thp_noisefilter /sys/class/touch/touch_dev/touch_active_mode /proc/touchpanel/game_switch_enable /proc/touchpanel/sensitivity /proc/touchpanel/high_sensitivity_enable /proc/touchpanel/oppo_tp_limit_enable /sys/class/sec/sec_touchscreen/game_mode /sys/class/sec/sec_touchscreen/touch_sensitivity /sys/class/sec/sec_touchscreen/high_sensitivity_mode /sys/touchscreen/touch_panel/game_mode /sys/touchscreen/touch_panel/touch_sensitivity /sys/class/asus_touch/game_mode /sys/class/asus_touch/touch_sensitivity /sys/touch_screen/touch_rate /sys/devices/virtual/touch/touch_dev/game_switch_enable /proc/touch_boost"
+            NODES="/sys/class/touch/touch_dev/game_mode /sys/class/touch/touch_dev/touch_thp_smooth /sys/class/touch/touch_dev/touch_thp_noisefilter /sys/class/touch/touch_dev/touch_active_mode /proc/touchpanel/game_switch_enable /proc/touchpanel/sensitivity /proc/touchpanel/high_sensitivity_enable /proc/touchpanel/oppo_tp_limit_enable /sys/class/sec/sec_touchscreen/game_mode /sys/class/sec/sec_touchscreen/touch_sensitivity /sys/class/sec/sec_touchscreen/high_sensitivity_mode /sys/touchscreen/touch_panel/game_mode /sys/touchscreen/touch_panel/touch_sensitivity /sys/class/asus_touch/game_mode /sys/class/asus_touch/touch_sensitivity /sys/touch_screen/touch_rate /sys/devices/virtual/touch/touch_dev/game_switch_enable /proc/touch_boost"
 
             for P in ${'$'}NODES; do
               if [ -e "${'$'}P" ] && [ -w "${'$'}P" ]; then
@@ -537,6 +542,8 @@ object NukeTouchTuningEngine {
         filterX.beta = profile.beta
         filterY.minCutoff = profile.minCutoff
         filterY.beta = profile.beta
+        // Immediately push updated profile to kernel touch listener daemon.
+        syncToDaemon()
     }
 
     suspend fun applySystemTouchOptimizations(): Boolean = withContext(Dispatchers.IO) {
@@ -556,39 +563,47 @@ object NukeTouchTuningEngine {
     val isDaemonTouchActive: Boolean get() = daemonTouchActive
 
     fun getLibTouchPath(context: Context): String {
-        val tmpWandev = java.io.File("/data/local/tmp/libwandev.so")
-        if (tmpWandev.exists() && tmpWandev.length() > 0) return tmpWandev.absolutePath
-
-        val tmpTouch = java.io.File("/data/local/tmp/libtouch.so")
-        if (tmpTouch.exists() && tmpTouch.length() > 0) return tmpTouch.absolutePath
+        val tmpWandev = java.io.File(nuke.wandev.touch.NukeTouchDeployer.TARGET_PATH)
+        if (tmpWandev.exists() && tmpWandev.length() >= 20_000L) return tmpWandev.absolutePath
 
         val nativeDir = context.applicationInfo.nativeLibraryDir
         val directWandev = java.io.File(nativeDir, "libwandev.so")
-        if (directWandev.exists()) return directWandev.absolutePath
+        if (directWandev.exists() && directWandev.length() >= 20_000L) return directWandev.absolutePath
 
-        val directTouch = java.io.File(nativeDir, "libtouch.so")
-        if (directTouch.exists()) return directTouch.absolutePath
-
-        return "/data/local/tmp/libwandev.so"
+        return nuke.wandev.touch.NukeTouchDeployer.TARGET_PATH
     }
 
     fun startDaemonTouchAsync(context: Context, onComplete: ((Boolean) -> Unit)? = null) {
         kotlin.concurrent.thread(name = "nuke-start-daemon-touch", isDaemon = true) {
             val ok = try {
+                // Ensure libwandev.so is deployed to /data/local/tmp/libwandev.so before anything else
+                nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(context)
                 val libPath = getLibTouchPath(context)
 
                 // 1. Check if privileged Binder service is available (Shizuku / iAdb auto-reconnect)
                 val shellService = NukeConnectionManager.ensureShellService(2500L)
                 if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
+                    // Pre-deploy via Binder in case /data/local/tmp was empty or wiped
+                    nuke.wandev.touch.NukeTouchDeployer.deployViaBinder(shellService, context)
                     val count = shellService.touchStart(libPath)
                     if (count >= 0) {
                         shellService.touchConfigure(
                             xMultiplier, yMultiplier, sensArea, curveMode,
-                            euroEnabled, euroMinCutoff, euroBeta
+                            euroEnabled, euroMinCutoff, euroBeta, dragShotCurve
                         )
                         daemonTouchActive = true
                         android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Binder ($count devices)")
+                        
+                        // Auto-push macro pins if profile is active
+                        runCatching {
+                            val prof = NukeMacroRepository.activeProfile(context)
+                            if (prof.useMapping && prof.pins.isNotEmpty()) {
+                                NukeMacroRepository.pushProfileToDaemon(context, prof)
+                            }
+                        }
                         return@thread onComplete?.invoke(true) ?: Unit
+                    } else {
+                        android.util.Log.w("NukeTouchTuningEngine", "Binder touchStart returned negative count: $count — falling back to Core Daemon")
                     }
                 }
 
@@ -601,8 +616,10 @@ object NukeTouchTuningEngine {
                     }
                 }
                 if (NukeDaemonClient.ping(force = true)) {
-                    val started = NukeDaemonClient.touchStart(libPath)
-                    if (started) {
+                    val lib = if (libPath.isNotBlank()) libPath else nuke.wandev.touch.NukeTouchDeployer.TARGET_PATH
+                    val started = NukeDaemonClient.touchStart(lib)
+                    val isRunning = started || NukeDaemonClient.touchStatus()
+                    if (isRunning) {
                         NukeDaemonClient.touchConfig(
                             sx = xMultiplier,
                             sy = yMultiplier,
@@ -615,6 +632,14 @@ object NukeTouchTuningEngine {
                         )
                         daemonTouchActive = true
                         android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Native Daemon (TCP/Socket)")
+
+                        // Auto-push macro pins if profile is active
+                        runCatching {
+                            val prof = NukeMacroRepository.activeProfile(context)
+                            if (prof.useMapping && prof.pins.isNotEmpty()) {
+                                NukeMacroRepository.pushProfileToDaemon(context, prof)
+                            }
+                        }
                         true
                     } else {
                         android.util.Log.w("NukeTouchTuningEngine", "touchStart returned false from daemon")
@@ -625,7 +650,7 @@ object NukeTouchTuningEngine {
                     false
                 }
             } catch (t: Throwable) {
-                android.util.Log.e("NukeTouchTuningEngine", "startDaemonTouch failed: ${t.message}")
+                android.util.Log.e("NukeTouchTuningEngine", "startDaemonTouch failed: ${t.message}", t)
                 false
             }
             onComplete?.invoke(ok)
@@ -635,26 +660,29 @@ object NukeTouchTuningEngine {
     fun syncToDaemon(context: Context? = null) {
         kotlin.concurrent.thread(name = "nuke-sync-touch", isDaemon = true) {
             try {
-                val shellService = NukeConnectionManager.ensureShellService(1000L)
-                if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
-                    shellService.touchConfigure(
-                        xMultiplier, yMultiplier, sensArea, curveMode,
-                        euroEnabled, euroMinCutoff, euroBeta
-                    )
-                    return@thread
-                }
-                if (NukeDaemonClient.ping()) {
-                    NukeDaemonClient.touchConfig(
-                        sx = xMultiplier,
-                        sy = yMultiplier,
-                        area = sensArea,
-                        curve = curveMode,
-                        smooth = euroEnabled,
-                        minCutoff = euroMinCutoff,
-                        beta = euroBeta,
-                        dragShot = dragShotCurve
-                    )
-                }
+                NukeConnectionManager.touchConfigure(
+                    sx = xMultiplier,
+                    sy = yMultiplier,
+                    area = sensArea,
+                    curve = curveMode,
+                    smooth = euroEnabled,
+                    minCutoff = euroMinCutoff,
+                    beta = euroBeta,
+                    dragShot = dragShotCurve
+                )
+                val sensXVal = (xMultiplier * 50).toInt().coerceIn(10, 200)
+                val sensYVal = (yMultiplier * 50).toInt().coerceIn(10, 250)
+                val script = """
+                    settings put system game_turbo_touch_sensitivity $sensXVal >/dev/null 2>&1
+                    settings put secure game_turbo_touch_sensitivity $sensXVal >/dev/null 2>&1
+                    settings put system game_turbo_touch_response $sensYVal >/dev/null 2>&1
+                    settings put secure game_turbo_touch_response $sensYVal >/dev/null 2>&1
+                    settings put system touch_sensitivity $sensXVal >/dev/null 2>&1
+                    settings put secure touch_sensitivity $sensXVal >/dev/null 2>&1
+                    settings put system touch_response $sensYVal >/dev/null 2>&1
+                    settings put secure touch_response $sensYVal >/dev/null 2>&1
+                """.trimIndent()
+                NukeConnectionManager.executeCommand(script, 1000L)
             } catch (_: Throwable) {}
         }
     }
@@ -662,16 +690,47 @@ object NukeTouchTuningEngine {
     fun stopDaemonTouchAsync(onComplete: ((Boolean) -> Unit)? = null) {
         daemonTouchActive = false
         kotlin.concurrent.thread(name = "nuke-stop-daemon-touch", isDaemon = true) {
-            val ok = try {
+            // Immediately neutralize sensitivity multipliers to 1.0f across all backends
+            runCatching {
+                NukeConnectionManager.touchConfigure(
+                    sx = 1.0f,
+                    sy = 1.0f,
+                    area = 0,
+                    curve = 0,
+                    smooth = false,
+                    minCutoff = 1.0f,
+                    beta = 0.007f,
+                    dragShot = false
+                )
+            }
+
+            var anyOk = false
+            // 1. Privileged Binder (Shizuku / iAdb)
+            try {
                 val shellService = NukeConnectionManager.getShellService()
                 if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
                     shellService.touchStop()
-                    true
-                } else if (NukeDaemonClient.ping()) {
-                    NukeDaemonClient.touchStop()
-                } else false
-            } catch (_: Throwable) { false }
-            onComplete?.invoke(ok)
+                    anyOk = true
+                }
+            } catch (_: Throwable) {}
+
+            // 2. Persistent Local Core TCP daemon
+            try {
+                if (NukeDaemonClient.ping(force = false)) {
+                    val stopped = NukeDaemonClient.touchStop()
+                    if (stopped) anyOk = true
+                }
+            } catch (_: Throwable) {}
+
+            // 3. Local in-process TouchService fallback if loaded
+            try {
+                if (nuke.wandev.touch.NukeTouchService.isRunning()) {
+                    nuke.wandev.touch.NukeTouchService.stop()
+                    anyOk = true
+                }
+            } catch (_: Throwable) {}
+
+            onComplete?.invoke(anyOk)
         }
     }
 
@@ -698,14 +757,26 @@ object NukeTouchTuningEngine {
                 .apply()
         }
 
-        // 3. Reset Android input settings and OEM driver nodes via privileged shell
+        // 3. Local settings reset if permission allows
+        runCatching {
+            Settings.System.putInt(context.contentResolver, "pointer_speed", 0)
+        }
+
+        // 4. Reset Android input settings and OEM driver nodes via privileged shell
         kotlin.concurrent.thread(name = "nuke-touch-reset", isDaemon = true) {
             val resetScript = """
                 # Revert pointer speed to system neutral (0)
                 settings put system pointer_speed 0 >/dev/null 2>&1
+                settings put secure pointer_speed 0 >/dev/null 2>&1
                 settings put system view_configuration_touch_slop 8 >/dev/null 2>&1
 
-                # Clean up all injected touch overrides
+                # Clean up all injected touch sensitivity and Game Turbo overrides
+                settings delete system game_turbo_touch_sensitivity >/dev/null 2>&1
+                settings delete system game_turbo_touch_response >/dev/null 2>&1
+                settings delete system touch_sensitivity >/dev/null 2>&1
+                settings delete secure game_touch_sensitivity >/dev/null 2>&1
+                settings delete secure pointer_speed >/dev/null 2>&1
+                settings delete system view.scroll_friction >/dev/null 2>&1
                 settings delete system touch.pressure.scale >/dev/null 2>&1
                 settings delete system touch.size.scale >/dev/null 2>&1
                 settings delete system touch.distance.scale >/dev/null 2>&1
@@ -733,14 +804,15 @@ object NukeTouchTuningEngine {
             """.trimIndent()
 
             runCatching {
-                val adb = AdbManager.getInstance(context)
-                if (adb.isConnected()) {
-                    adb.executeCommand(resetScript, "/", 3_000L)
-                } else {
-                    NukeConnectionManager.executeCommand(resetScript, 3_000L)
+                val res = NukeConnectionManager.executeCommand(resetScript, 3_000L)
+                if (res == null || !res.isSuccess) {
+                    val adb = AdbManager.getInstance(context)
+                    if (adb.isConnected()) {
+                        adb.executeCommand(resetScript, "/", 3_000L)
+                    }
                 }
             }
-            android.util.Log.i("NukeTouchTuningEngine", "Touch settings reverted to system defaults")
+            android.util.Log.i("NukeTouchTuningEngine", "Touch settings completely reverted to system defaults")
         }
     }
 }

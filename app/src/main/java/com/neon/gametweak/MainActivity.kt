@@ -510,8 +510,39 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
     var webServer by remember { mutableStateOf<LocalWebServer?>(null) }
     var showManualAdBlockDialog by remember { mutableStateOf(false) }
     var manualAdBlockStatus by remember { mutableStateOf(AdBlockStatus()) }
+    var showVipSubscriptionDialog by remember { mutableStateOf(false) }
+    var showPaymentHistoryDialog by remember { mutableStateOf(false) }
+    var activeResumeOrder by remember { mutableStateOf<NukeSubscriptionManager.OrderRecord?>(null) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
+    val currentAppLanguage by NukeTranslationManager.currentLanguage.collectAsState()
+    val subStatus by NukeSubscriptionManager.subscriptionState.collectAsState()
+    val isVip = subStatus.isActive
+    val remainingDays = subStatus.remainingDays
 
-    if (showManualAdBlockDialog && manualAdBlockStatus.isDetected) {
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                NukeSubscriptionManager.syncStatusIfNeeded(context, force = true)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    LaunchedEffect(Unit) {
+        NukeTranslationManager.init(context)
+        NukeSubscriptionManager.init(context)
+    }
+
+    LaunchedEffect(drawerState.isOpen) {
+        if (drawerState.isOpen) {
+            NukeSubscriptionManager.syncStatusIfNeeded(context, force = true)
+        }
+    }
+
+    key(currentAppLanguage) {
+        if (showManualAdBlockDialog && manualAdBlockStatus.isDetected) {
         NukeAdBlockDetectedDialog(
             status = manualAdBlockStatus,
             adbManager = adbManager,
@@ -623,15 +654,15 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             Box(
                                 modifier = Modifier
                                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF38BDF8).copy(alpha = 0.12f))
-                                    .border(0.8.dp, Color(0xFF38BDF8).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(if (isVip) Color(0xFFFFB830).copy(alpha = 0.15f) else Color(0xFF38BDF8).copy(alpha = 0.12f))
+                                    .border(0.8.dp, if (isVip) Color(0xFFFFB830).copy(alpha = 0.45f) else Color(0xFF38BDF8).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             ) {
                                 Text(
-                                    "ENTERPRISE UTILITY · v${BuildConfig.VERSION_NAME}",
-                                    color = Color(0xFF38BDF8),
+                                    if (isVip) "PREMIUM EDITION · v${BuildConfig.VERSION_NAME}" else "ENTERPRISE UTILITY · v${BuildConfig.VERSION_NAME}",
+                                    color = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
                                     fontSize = 8.5.sp,
-                                    fontWeight = FontWeight.SemiBold,
+                                    fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.8.sp,
                                 )
                             }
@@ -645,11 +676,94 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             .background(Color(0xFF1E2836)),
                     )
 
+                    // ── VIP STATUS CARD ──────────────────────────────────
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                            .background(if (isVip) Color(0xFF0D281C) else Color(0xFF111822))
+                            .border(
+                                1.dp,
+                                if (isVip) Color(0xFF10B981).copy(alpha = 0.85f) else Color(0xFF38BDF8).copy(alpha = 0.35f),
+                                androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+                            )
+                            .clickable {
+                                showVipSubscriptionDialog = true
+                                coroutineScope.launch { drawerState.close() }
+                            }
+                            .padding(12.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(34.dp)
+                                        .clip(CircleShape)
+                                        .background(if (isVip) Color(0xFFFFB830).copy(alpha = 0.25f) else Color(0xFF38BDF8).copy(alpha = 0.15f)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        if (isVip) Icons.Rounded.WorkspacePremium else Icons.Rounded.Star,
+                                        contentDescription = null,
+                                        tint = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Column {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Text(
+                                            if (isVip) tr("PREMIUM VIP ACTIVE") else tr("FREE TIER"),
+                                            color = if (isVip) Color(0xFFFFB830) else Color.White,
+                                            fontSize = 11.5.sp,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                        if (isVip) {
+                                            Spacer(Modifier.width(5.dp))
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(6.dp)
+                                                    .clip(CircleShape)
+                                                    .background(Color(0xFF10B981))
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        if (isVip) "$remainingDays ${tr("Days Remaining")} (${tr("No Ads")})" else tr("Tap to Remove All Ads"),
+                                        color = if (isVip) Color(0xFF34D399) else Color(0xFF94A3B8),
+                                        fontSize = 9.sp,
+                                        fontWeight = if (isVip) FontWeight.SemiBold else FontWeight.Normal
+                                    )
+                                }
+                            }
+                            Text(
+                                if (isVip) tr("MANAGE / UPGRADE") else tr("UPGRADE"),
+                                color = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Black
+                            )
+                        }
+                    }
+
                     // ── DRAWER NAVIGATION ITEMS ──────────────────────────
                     Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        Spacer(modifier = Modifier.height(8.dp))
+                        Spacer(modifier = Modifier.height(6.dp))
+                        DrawerItem(Icons.Rounded.WorkspacePremium, tr("VIP Pass (Ad-Free)")) {
+                            showVipSubscriptionDialog = true
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                        DrawerItem(Icons.Rounded.ReceiptLong, tr("Payment History")) {
+                            showPaymentHistoryDialog = true
+                            coroutineScope.launch { drawerState.close() }
+                        }
+                        Spacer(modifier = Modifier.height(6.dp))
                         Text(
-                            "CORE ENGINES",
+                            tr("CORE ENGINES"),
                             color = Color(0xFF64748B),
                             fontSize = 9.sp,
                             fontWeight = FontWeight.Bold,
@@ -657,18 +771,18 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             modifier = Modifier.padding(start = 22.dp, top = 6.dp, bottom = 4.dp),
                         )
 
-                        DrawerItem(Icons.Rounded.Tune, "Device System Editor") {
+                        DrawerItem(Icons.Rounded.Tune, tr("Device System Editor")) {
                             navigateWithAd("system_editor")
                             coroutineScope.launch { drawerState.close() }
                         }
-                        DrawerItem(Icons.Rounded.Dns, "Web Server & REST API") {
+                        DrawerItem(Icons.Rounded.Dns, tr("Web Server & REST API")) {
                             navigateWithAd("webui")
                             coroutineScope.launch { drawerState.close() }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "DIAGNOSTICS & SYSTEM",
+                            tr("DIAGNOSTICS & SYSTEM"),
                             color = Color(0xFF9BB0A6),
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -676,7 +790,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             modifier = Modifier.padding(start = 22.dp, top = 6.dp, bottom = 4.dp),
                         )
 
-                        DrawerItem(Icons.Rounded.Security, "Network Integrity Status") {
+                        DrawerItem(Icons.Rounded.Security, tr("Network Integrity Status")) {
                             coroutineScope.launch {
                                 drawerState.close()
                                 val status = withContext(Dispatchers.IO) {
@@ -690,18 +804,18 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 }
                             }
                         }
-                        DrawerItem(Icons.Rounded.LibraryBooks, "Documentation") {
+                        DrawerItem(Icons.Rounded.LibraryBooks, tr("Documentation")) {
                             navigateWithAd("tutorial")
                             coroutineScope.launch { drawerState.close() }
                         }
-                        DrawerItem(Icons.Rounded.PersonSearch, "About Developer") {
+                        DrawerItem(Icons.Rounded.PersonSearch, tr("About Developer")) {
                             navigateWithAd("dev")
                             coroutineScope.launch { drawerState.close() }
                         }
 
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            "PREFERENCES",
+                            tr("PREFERENCES"),
                             color = Color(0xFF9BB0A6),
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
@@ -710,19 +824,25 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         )
 
                         if (ConsentManager.isPrivacyOptionsRequired(context)) {
-                            DrawerItem(Icons.Rounded.PrivacyTip, "Ad Privacy") {
+                            DrawerItem(Icons.Rounded.PrivacyTip, tr("Ad Privacy")) {
                                 coroutineScope.launch { drawerState.close() }
                                 context.findActivity()?.let { ConsentManager.showPrivacyOptionsForm(it) }
                             }
                         }
-                        DrawerItem(Icons.Rounded.SystemUpdate, "Check Update") {
+                        val currentLangName = NukeTranslationManager.SUPPORTED_LANGUAGES
+                            .firstOrNull { it.code == currentAppLanguage }?.nativeName ?: "English"
+                        DrawerItem(Icons.Rounded.Language, "${tr("Language")} · $currentLangName") {
+                            coroutineScope.launch { drawerState.close() }
+                            showLanguageDialog = true
+                        }
+                        DrawerItem(Icons.Rounded.SystemUpdate, tr("Check Update")) {
                             coroutineScope.launch { drawerState.close() }
                             context.findActivity()?.let { activity ->
                                 NukeToast.success(activity, "Checking for updates...")
                                 AppUpdateController.startFlexibleUpdate(activity)
                             }
                         }
-                        DrawerItem(Icons.Rounded.Verified, "Rate App") {
+                        DrawerItem(Icons.Rounded.Verified, tr("Rate App")) {
                             coroutineScope.launch { drawerState.close() }
                             context.findActivity()?.let { activity ->
                                 NukeToast.success(activity, "Opening review page...")
@@ -813,15 +933,15 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     )
                                     Text(
                                         when (route) {
-                                            "dashboard" -> ("Command Center")
-                                            "system_editor" -> ("Device System Editor")
-                                            "games" -> ("Game Profiles")
-                                            "cleaner" -> ("Deep Wipe")
-                                            "processes" -> ("Task Manager")
-                                            "exec" -> ("Diagnostics")
-                                            "webui" -> ("Local Server")
+                                            "dashboard" -> tr("Command Center")
+                                            "system_editor" -> tr("Device System Editor")
+                                            "games" -> tr("Game Profiles")
+                                            "cleaner" -> tr("Deep Wipe")
+                                            "processes" -> tr("Task Manager")
+                                            "exec" -> tr("Diagnostics")
+                                            "webui" -> tr("Local Server")
                                             "dev" -> "Agung Dev"
-                                            else -> ("Documentation")
+                                            else -> tr("Documentation")
                                         },
                                         fontWeight = FontWeight.Bold,
                                         color = Color.White,
@@ -854,21 +974,21 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         selected = currentRoute == "dashboard",
                         onClick = { navigateWithAd("dashboard") },
                         icon = { Icon(Icons.Rounded.Speed, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(("Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        label = { Text(tr("Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "games",
                         onClick = { navigateWithAd("games") },
                         icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(("Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        label = { Text(tr("Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "cleaner",
                         onClick = { navigateWithAd("cleaner") },
                         icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = null, modifier = Modifier.size(26.dp)) },
-                        label = { Text(("Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
+                        label = { Text(tr("Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
                         colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
                     )
 
@@ -913,7 +1033,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                 }
                 // Keep banners on high-value passive screens only. Do not cover diagnostics, Web UI,
                 // developer, or tutorial workflows where persistent ads are distracting.
-                if (currentRoute in setOf("dashboard", "games", "cleaner")) {
+                if (!isVip && currentRoute in setOf("dashboard", "games", "cleaner")) {
                     Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF090D12))) {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(1.dp).background(
@@ -929,6 +1049,43 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
         }
     }
 
+    if (showVipSubscriptionDialog) {
+        com.neon.gametweak.ui.components.NukeVipSubscriptionDialog(
+            onDismiss = {
+                showVipSubscriptionDialog = false
+                activeResumeOrder = null
+            },
+            initialOrder = activeResumeOrder,
+            onOpenPaymentHistory = {
+                showPaymentHistoryDialog = true
+            }
+        )
+    }
+
+    if (showPaymentHistoryDialog) {
+        com.neon.gametweak.ui.components.NukePaymentHistoryDialog(
+            onDismiss = { showPaymentHistoryDialog = false },
+            onResumePayment = { order ->
+                showPaymentHistoryDialog = false
+                activeResumeOrder = order
+                showVipSubscriptionDialog = true
+            }
+        )
+    }
+
+        if (showLanguageDialog) {
+            com.neon.gametweak.ui.components.NukeLanguageSelectionDialog(
+                currentCode = currentAppLanguage,
+                onSelectLanguage = { langCode ->
+                    NukeTranslationManager.setLanguage(context, langCode)
+                    showLanguageDialog = false
+                    val name = NukeTranslationManager.SUPPORTED_LANGUAGES.find { it.code == langCode }?.nativeName ?: langCode
+                    NukeToast.success(context, "${tr("Language")}: $name")
+                },
+                onDismiss = { showLanguageDialog = false }
+            )
+        }
+    }
 }
 
 @Composable

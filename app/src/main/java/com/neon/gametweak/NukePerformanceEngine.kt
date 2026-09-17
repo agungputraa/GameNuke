@@ -594,6 +594,13 @@ class NukePerformanceEngine(
         if (packageName == appContext.packageName || packageName == targetPackage) return false
         if (NukeScreenRecordGuardian.isProtected(packageName)) return false
         val lower = packageName.lowercase()
+
+        // Explicitly allow heavy background hogs even if pre-installed / system-updated
+        val isExplicitHog = lower == "com.android.chrome" || lower == "com.google.android.youtube" ||
+            lower == "com.android.vending" || lower == "com.android.settings" || lower == "com.android.mms" ||
+            lower == "com.milink.service" || lower == "com.xiaomi.mi_connect_service"
+        if (isExplicitHog) return true
+
         if (lower == "android" || lower.startsWith("com.android.") ||
             lower.startsWith("com.google.android.gms") || lower.startsWith("com.google.android.gsf") ||
             lower.contains("systemui") || lower.contains("launcher") || lower.contains("inputmethod") ||

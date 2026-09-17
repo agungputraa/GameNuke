@@ -195,8 +195,8 @@ class AdbManager private constructor(context: Context) {
         val candidates = buildList<AdbEndpoint> {
             latestConnectEndpoint?.takeIf { isEndpointFresh(it, CONNECT_ENDPOINT_TTL_MS) }?.let(::add)
 
-            // Persisten: selalu coba target tersimpan tanpa batas waktu.
-            // TTL lama (120 detik) menyebabkan reconnect gagal setelah WiFi dimatikan.
+            // Persistent reconnect: always retry the saved endpoint without an artificial TTL.
+            // The previous 120-second TTL could block reconnects after Wi-Fi was toggled.
             val saved = getTarget().takeIf { it.isNotBlank() }
             saved?.let(::parseTarget)?.let { (host, port) ->
                 if (none { it.host == host && it.port == port }) {
@@ -218,6 +218,11 @@ class AdbManager private constructor(context: Context) {
                 clearAuthorizationRevokedHint()
                 saveTarget(endpoint.target())
                 stopNetworkScanner()
+                thread(name = "Nuke-NativeAdbTouchDeploy", isDaemon = true) {
+                    runCatching {
+                        nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(mContext)
+                    }
+                }
                 return true
             }
         }
@@ -308,6 +313,11 @@ class AdbManager private constructor(context: Context) {
                 thread(name = "Nuke-AutoOverlayGrant", isDaemon = true) {
                     runCatching { OverlayPermissionController.tryAutoGrantViaBridge(mContext, silent = true) }
                 }
+                thread(name = "Nuke-NativeAdbTouchDeploy", isDaemon = true) {
+                    runCatching {
+                        nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(mContext)
+                    }
+                }
                 true
             } else if (discoveredEndpoint != null && tcpEndpointReachable(endpoint)) {
                 observeAuthorizationFailure("authorization rejected by reachable wireless ADB endpoint")
@@ -358,8 +368,8 @@ class AdbManager private constructor(context: Context) {
         // Kill stale daemon only if socket exists but doesn't respond (zombie).
         // Use the existing ADB connection to run the kill.
         runCatching {
-            executeCommandDirect("pkill -f game-nuke-core 2>/dev/null || true", timeoutMs = 1_500L, maxOutputChars = 128)
-            Thread.sleep(400)  // Wait for socket to be released
+            executeCommandDirect("kill -9 \$(pidof game-nuke-core 2>/dev/null) 2>/dev/null; pkill -9 -f game-nuke-core 2>/dev/null || true", timeoutMs = 1_500L, maxOutputChars = 128)
+            Thread.sleep(300)  // Wait for socket to be released
         }
 
         val apkResult = executeCommandDirect("pm path ${mContext.packageName}", timeoutMs = 3_500L, maxOutputChars = 8_192)
@@ -371,12 +381,13 @@ class AdbManager private constructor(context: Context) {
         val className = NukeShellDaemon::class.java.name
         val nativeLibDir = shellQuote(mContext.applicationInfo.nativeLibraryDir)
 
-        // Ensure dalvik-cache exists, ANDROID_DATA is set, and libwandev.so is available in /data/local/tmp
-        val setupEnv = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; unzip -o -j $quotedApk lib/arm64-v8a/libwandev.so -d /data/local/tmp/ >/dev/null 2>&1 || cp $nativeLibDir/libwandev.so /data/local/tmp/libwandev.so 2>/dev/null; chmod 755 /data/local/tmp/libwandev.so 2>/dev/null"
-        executeCommandDirect(setupEnv, timeoutMs = 3_000L, maxOutputChars = 256)
+        // Ensure dalvik-cache exists, ANDROID_DATA is set, token is written, and libwandev.so is available in /data/local/tmp
+        val tok = NukeDaemonClient.getToken(mContext)
+        val setupEnv = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; echo '$tok' > /data/local/tmp/.nuke_token 2>/dev/null; chmod 644 /data/local/tmp/.nuke_token 2>/dev/null"
+        executeCommandDirect(setupEnv, timeoutMs = 2_000L, maxOutputChars = 256)
+        nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(mContext)
 
         // ── Shizuku's exact launch pattern with ANDROID_DATA and detached stdio ──
-        val tok = NukeDaemonClient.getToken(mContext)
         val tokenArg = if (tok.isNotEmpty()) "--token=$tok" else ""
         val launch = "mkdir -p /data/local/tmp/dalvik-cache 2>/dev/null; export ANDROID_DATA=/data/local/tmp; (export CLASSPATH=$quotedApk; exec /system/bin/app_process /system/bin --nice-name=game-nuke-core $className $myUid $tokenArg </dev/null >/dev/null 2>&1)&"
         writeTraceLog("BOOTSTRAP CMD: $launch")
@@ -399,9 +410,10 @@ class AdbManager private constructor(context: Context) {
                     timeoutMs = 1500L,
                     maxOutputChars = 128
                 )
-                thread(name = "Nuke-AutoOverlayGrant", isDaemon = true) {
-                    runCatching { OverlayPermissionController.tryAutoGrantViaBridge(mContext, silent = true) }
-                }
+
+                // Instant hardware touch activation, sensitivity and macro pin sync:
+                NukeConnectionManager.notifyBridgeReady(mContext)
+                writeTraceLog("NATIVE ADB ONLINE: persistent core and touch engine armed")
                 return true
             }
             try { Thread.sleep(175L) } catch (_: InterruptedException) { Thread.currentThread().interrupt(); return false }
@@ -631,7 +643,7 @@ class AdbManager private constructor(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
             return NukePairingResult(
                 success = false,
-                message = "Wireless Debugging pairing membutuhkan Android 11 atau lebih baru.",
+                message = "Wireless Debugging pairing requires Android 11 or newer.",
             )
         }
         if (!normalizedCode.matches(Regex("^[0-9]{6}$"))) {
@@ -970,15 +982,15 @@ class AdbManager private constructor(context: Context) {
     fun hasPairedBefore(): Boolean = NukeDaemonClient.ping() || prefs.safeLong("last_pair_time", 0L) > 0L
 
     /**
-     * True jika device sudah pernah dipair dan identitas ADB belum dicabut.
+     * True when the device has been paired before and the ADB identity is still valid.
      * Berbeda dari hasPairedBefore(): ini juga memeriksa authorization revoke,
-     * sehingga UI dapat membedakan "perlu pairing ulang" vs "hanya terputus jaringan".
+     * so the UI can distinguish "pairing required" from a temporary network disconnect.
      */
     fun isPairedAndTrusted(): Boolean =
         !authorizationRevokedHint && prefs.safeLong("last_pair_time", 0L) > 0L
 
     /**
-     * Warm-up kunci RSA di background thread agar buka aplikasi tidak macet.
+     * Warm up the RSA key on a background thread so app launch stays responsive.
      * Dipanggil dari Application.onCreate() via thread terpisah.
      */
     fun warmUpKeyMaterial() {
@@ -1048,7 +1060,7 @@ class AdbManager private constructor(context: Context) {
                         runCatching {
                             NotificationHelper(mContext).updateNotification(
                                 "Game Nuke Core Online",
-                                "Device Control terhubung dan siap digunakan.",
+                                "Device Control is connected and ready.",
                                 true,
                                 false,
                                 null,
@@ -1145,6 +1157,13 @@ class AdbManager private constructor(context: Context) {
     }
 
     fun startNetworkScanner() {
+        val activeBackend = NukeConnectionManager.activeBackend()
+        if (activeBackend == NukeConnectionManager.Backend.IADB || activeBackend == NukeConnectionManager.Backend.SHIZUKU) {
+            stopNetworkScanner()
+            runCatching { NotificationHelper(mContext).cancel() }
+            return
+        }
+
         val generation = scannerGeneration.incrementAndGet()
         thread(name = "Nuke-NSD-Scanner-$generation", isDaemon = true) {
             val nsdManager = mContext.getSystemService(Context.NSD_SERVICE) as? NsdManager ?: return@thread
@@ -1158,6 +1177,14 @@ class AdbManager private constructor(context: Context) {
                     return@thread
                 }
                 if (generation != scannerGeneration.get()) return@thread
+
+                val currentBackend = NukeConnectionManager.activeBackend()
+                if (currentBackend == NukeConnectionManager.Backend.IADB || currentBackend == NukeConnectionManager.Backend.SHIZUKU) {
+                    clearNsdState(nsdManager)
+                    releaseMdnsMulticastLock()
+                    runCatching { NotificationHelper(mContext).cancel() }
+                    return@thread
+                }
 
                 runCatching {
                     NotificationHelper(mContext).updateNotification(
