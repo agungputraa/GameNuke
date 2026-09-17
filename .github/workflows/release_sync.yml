@@ -18,51 +18,75 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: main
+          fetch-depth: 0
 
       - name: Extract Release Metadata & Update version.json
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
           if [ -z "$TAG_NAME" ]; then
-            TAG_NAME=$(git describe --tags --abbrev=0 || echo "v2.3.0-prem")
+            TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v3.2.1-Spectra")
           fi
           CLEAN_VERSION="${TAG_NAME#v}"
           
           echo "Processing Release Tag: $TAG_NAME (Version: $CLEAN_VERSION)"
           
-          ASSET_NAME=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .name' "$GITHUB_EVENT_PATH" | head -n 1)
-          DOWNLOAD_URL=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .browser_download_url' "$GITHUB_EVENT_PATH" | head -n 1)
-          ASSET_SIZE_BYTES=$(jq -r '.release.assets[] | select(.name | endswith(".apk")) | .size' "$GITHUB_EVENT_PATH" | head -n 1)
+          ASSET_NAME=""
+          DOWNLOAD_URL=""
+          ASSET_SIZE_BYTES=""
+          
+          if [ -f "$GITHUB_EVENT_PATH" ]; then
+            ASSET_NAME=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .name' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+            DOWNLOAD_URL=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .browser_download_url' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+            ASSET_SIZE_BYTES=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .size' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+          fi
           
           if [ -z "$ASSET_NAME" ] || [ "$ASSET_NAME" = "null" ]; then
-            ASSET_NAME="GameNuke-Premium-v${CLEAN_VERSION}.apk"
+            ASSET_NAME="GameNuke-v${CLEAN_VERSION}.apk"
             DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${ASSET_NAME}"
-            SIZE_MB="24.3"
+            SIZE_MB="32.1"
           else
-            SIZE_MB=$(echo "scale=1; $ASSET_SIZE_BYTES / 1048576" | bc || echo "24.3")
+            SIZE_MB=$(awk "BEGIN {printf \"%.1f\", $ASSET_SIZE_BYTES / 1048576}" 2>/dev/null || echo "32.1")
           fi
 
           PUB_DATE=$(date -u +"%Y-%m-%d")
 
-          # Update version.json safely
+          TARGET_FILE="gamenukeweb/version.json"
+          if [ ! -f "$TARGET_FILE" ]; then
+            echo "Error: $TARGET_FILE not found!"
+            exit 1
+          fi
+
+          EDITION_NAME="${CLEAN_VERSION##*-}"
+          if [ -z "$EDITION_NAME" ] || [ "$EDITION_NAME" = "$CLEAN_VERSION" ]; then
+            EDITION_NAME="Spectra"
+          fi
+
           jq --arg ver "$CLEAN_VERSION" \
              --arg dl "$DOWNLOAD_URL" \
-             --arg sz "$SIZE_MB" \
              --arg dt "$PUB_DATE" \
-             '.versionName = $ver | .downloadUrl = $dl | .apkSizeMb = $sz | .publishedAt = $dt' \
-             version.json > version.json.tmp && mv version.json.tmp version.json
+             --arg name "Game Nuke $EDITION_NAME Edition" \
+             --arg asset "$ASSET_NAME" \
+             '.versionName = $ver | .downloadUrl = $dl | .githubReleaseUrl = $dl | .localApkUrl = $asset | .appName = $name | .publishedAt = $dt' \
+             "$TARGET_FILE" > "${TARGET_FILE}.tmp" && mv "${TARGET_FILE}.tmp" "$TARGET_FILE"
 
-          echo "Updated version.json:"
-          cat version.json
+          echo "Updated $TARGET_FILE successfully:"
+          cat "$TARGET_FILE"
 
-      - name: Commit and Push Updated version.json
+      - name: Commit and Push Updated version.json to main
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add version.json
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync version.json for release ${{ github.event.release.tag_name }} [skip ci]" && git push origin main)
+          git add gamenukeweb/version.json
+          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-sync version.json for release ${{ github.event.release.tag_name || 'v3.2.1-Spectra' }} [skip ci]" && git push origin main)
 
-      - name: Deploy to gh-pages Branch
+      - name: Deploy gamenukeweb to gh-pages Branch
         run: |
-          git checkout -B gh-pages
-          git add .
-          git diff --quiet && git diff --staged --quiet || (git commit -m "Auto-deploy Edge CDN metadata for ${{ github.event.release.tag_name }} [skip ci]" && git push origin gh-pages --force)
+          cd gamenukeweb
+          touch .nojekyll
+          rm -rf .git
+          git init
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Auto-deploy Edge CDN web portal for ${{ github.event.release.tag_name || 'v3.2.1-Spectra' }} [skip ci]"
+          git push "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git" HEAD:gh-pages --force
