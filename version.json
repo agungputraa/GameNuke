@@ -1,0 +1,24 @@
+{
+  "versionCode": 28,
+  "versionName": "3.3.0-Hyperion",
+  "appName": "Game Nuke Hyperion Edition",
+  "publishedAt": "2026-09-20",
+  "minAndroidVersion": 11,
+  "targetSdk": 36,
+  "releaseNotes": [
+    "Hyperion Multi-Touch Engine: Full kernel alignment with low-latency touch translation, combo scheduling, and slide-in gesture detection.",
+    "Absolute Zero-Ghost Touch Protection: Hardware kernel BTN_TOUCH release detection guarantees instant pointer purge with zero phantom taps.",
+    "AI Agent Smart Scroll: Upgraded floating overlay with intelligent scroll anchoring and focus isolation, completely fixing panel bounce-back.",
+    "Ironclad Process Immunity Shield: Sentinel, Task Manager, and Autonomous AI Agent 100% protect Game Nuke, active games, and all OEM/3rd-party screen recorders.",
+    "Cross-Brand Android 11\u201316 Stability: Pre-flight injection capability tests ensure zero screen freeze across Samsung, Xiaomi/HyperOS, Oppo, Vivo, Asus ROG, Transsion, and Pixel.",
+    "Enhanced Sensi Y & Drag Shot Headroom: Aspect ratio compensation and generous virtual bounds for silky-smooth, responsive vertical aiming in Free Fire & FPS games.",
+    "Seamless Direct Download Flow: Instant APK download stream with dedicated safety guidance for the Android browser verification prompt."
+  ],
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.3.0-Hyperion/GameNuke-v3.3.0-Hyperion.apk",
+  "localApkUrl": "GameNuke-v3.3.0-Hyperion.apk",
+  "apkSizeMb": "32.1",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.3.0-Hyperion/GameNuke-v3.3.0-Hyperion.apk",
+  "sha256": "8b10d808c2dd8492f5080c7e9b0b174775a711f07ab04a624af0a6b050b873c6",
+  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
+}
