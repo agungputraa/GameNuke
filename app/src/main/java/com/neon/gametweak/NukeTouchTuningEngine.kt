@@ -65,8 +65,8 @@ object NukeTouchTuningEngine {
     data class TouchProfile(
         val xMultiplier: Float = 1.0f,
         val yMultiplier: Float = 1.0f,
-        val area: Int = AREA_RIGHT,
-        val curve: Int = CURVE_ACCELERATE,
+        val area: Int = AREA_ALL,
+        val curve: Int = CURVE_LINEAR,
         val smoothingEnabled: Boolean = false,
         val minCutoff: Float = 8.0f,
         val beta: Float = 0.08f
@@ -80,7 +80,7 @@ object NukeTouchTuningEngine {
     @Volatile var euroEnabled = false
     @Volatile var euroMinCutoff = 8.0f
     @Volatile var euroBeta = 0.08f
-    @Volatile var dragShotCurve = false
+    @Volatile var dragShotCurve = true
 
     val currentXMultiplier: Float get() = xMultiplier
     val currentYMultiplier: Float get() = yMultiplier
@@ -284,8 +284,8 @@ object NukeTouchTuningEngine {
         }
 
         val vendorValue = if (enableVendorGameTouch) "1" else "0"
-        val sensXValue = (xMultiplier * 50).toInt().coerceIn(10, 200)
-        val sensYValue = (yMultiplier * 50).toInt().coerceIn(10, 250)
+        val sensXValue = (xMultiplier * 50).toInt().coerceIn(10, 100)
+        val sensYValue = (yMultiplier * 50).toInt().coerceIn(10, 100)
         val smoothValue = if (stabilize) "1" else "0"
 
         // Auto-kill any rogue tracking zombies left behind by third-party tools
@@ -308,15 +308,11 @@ object NukeTouchTuningEngine {
             settings put secure touch_response $sensYValue >/dev/null 2>&1
             settings put secure game_touch_sensitivity $sensXValue >/dev/null 2>&1
             settings put secure game_touch_response $sensYValue >/dev/null 2>&1
-            settings put system view.scroll_friction 0.002 >/dev/null 2>&1
             settings put system edge_touch_prevention 0 >/dev/null 2>&1
             settings put system edge_mistouch_prevention 0 >/dev/null 2>&1
             settings put system oplus_touch_screen_anti_mistouch 0 >/dev/null 2>&1
             settings put system vivo_game_touch_acceleration 1 >/dev/null 2>&1
             settings put system touch_blocking_period 0 >/dev/null 2>&1
-            settings put system touch.pressure.scale 0.001 >/dev/null 2>&1
-            settings put system touch.size.scale 0.001 >/dev/null 2>&1
-            settings put system touch.distance.scale 0 >/dev/null 2>&1
             settings put system cloud_turbo_sched_enable_speed_touch true >/dev/null 2>&1
             setprop persist.vendor.touch.game_mode $vendorValue >/dev/null 2>&1
             setprop persist.sys.touch.latency 0 >/dev/null 2>&1
@@ -406,7 +402,7 @@ object NukeTouchTuningEngine {
             settings put system touch_game_turbo 1 >/dev/null 2>&1
             settings put system touch.pressure.scale 0.001 >/dev/null 2>&1
             settings put system touch.size.scale 0.001 >/dev/null 2>&1
-            settings put system touch.distance.scale 0 >/dev/null 2>&1
+            settings delete system touch.distance.scale >/dev/null 2>&1
             setprop persist.vendor.touch.game_mode 1 >/dev/null 2>&1
             setprop persist.sys.touch.latency 0 >/dev/null 2>&1
             setprop debug.touch.latency_level 0 >/dev/null 2>&1
@@ -445,8 +441,8 @@ object NukeTouchTuningEngine {
 
         var sx = 1.0f
         var sy = 1.0f
-        var area = AREA_RIGHT
-        var curve = CURVE_ACCELERATE
+        var area = AREA_ALL
+        var curve = CURVE_LINEAR
 
         // Parse sensitivity profiles JSON (matches Red Corner v44)
         runCatching {
@@ -549,10 +545,8 @@ object NukeTouchTuningEngine {
     suspend fun applySystemTouchOptimizations(): Boolean = withContext(Dispatchers.IO) {
         if (!NukeConnectionManager.isConnected()) return@withContext false
         val cmd = """
-            settings put system pointer_speed 7
+            settings put system pointer_speed 0
             settings put secure long_press_timeout 250
-            settings put system touch.pressure.scale 0.001
-            settings put system view_configuration_touch_slop 4
             settings put system touch.size.calibration geometric
         """.trimIndent()
         val res = NukeConnectionManager.executeCommand(cmd)
@@ -576,8 +570,8 @@ object NukeTouchTuningEngine {
     fun startDaemonTouchAsync(context: Context, onComplete: ((Boolean) -> Unit)? = null) {
         kotlin.concurrent.thread(name = "nuke-start-daemon-touch", isDaemon = true) {
             val ok = try {
-                // Ensure libwandev.so is deployed to /data/local/tmp/libwandev.so before anything else
-                nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(context)
+                // Ensure fresh libwandev.so is deployed to /data/local/tmp/libwandev.so before starting
+                nuke.wandev.touch.NukeTouchDeployer.redeployFresh(context)
                 val libPath = getLibTouchPath(context)
 
                 // 1. Check if privileged Binder service is available (Shizuku / iAdb auto-reconnect)
@@ -587,12 +581,16 @@ object NukeTouchTuningEngine {
                     nuke.wandev.touch.NukeTouchDeployer.deployViaBinder(shellService, context)
                     val count = shellService.touchStart(libPath)
                     if (count >= 0) {
+                        val hasMacroPins = runCatching { NukeMacroRepository.activeProfile(context).pins.any { it.enabled && it.triggerSource == MacroTriggerSource.TOUCH_SCREEN } }.getOrDefault(false)
+                        val needGrab = (xMultiplier != 1.0f || yMultiplier != 1.0f) || hasMacroPins
+                        shellService.touchSetGrab(needGrab)
                         shellService.touchConfigure(
                             xMultiplier, yMultiplier, sensArea, curveMode,
                             euroEnabled, euroMinCutoff, euroBeta, dragShotCurve
                         )
                         daemonTouchActive = true
-                        android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Binder ($count devices)")
+                        syncToDaemon(context)
+                        android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Binder ($count devices, grab=$needGrab)")
                         
                         // Auto-push macro pins if profile is active
                         runCatching {
@@ -620,6 +618,9 @@ object NukeTouchTuningEngine {
                     val started = NukeDaemonClient.touchStart(lib)
                     val isRunning = started || NukeDaemonClient.touchStatus()
                     if (isRunning) {
+                        val hasMacroPins = runCatching { NukeMacroRepository.activeProfile(context).pins.any { it.enabled && it.triggerSource == MacroTriggerSource.TOUCH_SCREEN } }.getOrDefault(false)
+                        val needGrab = (xMultiplier != 1.0f || yMultiplier != 1.0f) || hasMacroPins
+                        NukeDaemonClient.touchSetGrab(needGrab)
                         NukeDaemonClient.touchConfig(
                             sx = xMultiplier,
                             sy = yMultiplier,
@@ -631,7 +632,8 @@ object NukeTouchTuningEngine {
                             dragShot = dragShotCurve
                         )
                         daemonTouchActive = true
-                        android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Native Daemon (TCP/Socket)")
+                        syncToDaemon(context)
+                        android.util.Log.i("NukeTouchTuningEngine", "Touch Listener active via Native Daemon (TCP/Socket, grab=$needGrab)")
 
                         // Auto-push macro pins if profile is active
                         runCatching {
@@ -670,19 +672,80 @@ object NukeTouchTuningEngine {
                     beta = euroBeta,
                     dragShot = dragShotCurve
                 )
-                val sensXVal = (xMultiplier * 50).toInt().coerceIn(10, 200)
-                val sensYVal = (yMultiplier * 50).toInt().coerceIn(10, 250)
+                // Universal Android 11–16 Framework Tuning:
+                // 1. Slop: lowering touch slop from 8 to 2 eliminates micro-drag deadzones in FPS games
+                val maxMult = maxOf(xMultiplier, yMultiplier)
+                val slop = if (maxMult > 1.0f) maxOf(2, (8.0f / maxMult).toInt()) else 8
+                val friction = if (maxMult > 1.0f) (0.015f / maxMult).coerceIn(0.003f, 0.015f) else 0.015f
+                val pSpeed = ((maxMult - 1.0f) * 6.0f).toInt().coerceIn(-7, 7)
+
+                // 2. Xiaomi HyperOS & MIUI Game Turbo registers
+                val rawX = (xMultiplier * 137).toInt().coerceIn(50, 350)
+                val rawY = (yMultiplier * 160).toInt().coerceIn(50, 450)
+                val turboX = (xMultiplier * 100).toInt().coerceIn(40, 250)
+                val turboY = (yMultiplier * 120).toInt().coerceIn(40, 300)
+                val masterSens = maxOf(turboX, turboY, (xMultiplier * 100).toInt(), (yMultiplier * 120).toInt()).coerceIn(60, 300)
+
                 val script = """
-                    settings put system game_turbo_touch_sensitivity $sensXVal >/dev/null 2>&1
-                    settings put secure game_turbo_touch_sensitivity $sensXVal >/dev/null 2>&1
-                    settings put system game_turbo_touch_response $sensYVal >/dev/null 2>&1
-                    settings put secure game_turbo_touch_response $sensYVal >/dev/null 2>&1
-                    settings put system touch_sensitivity $sensXVal >/dev/null 2>&1
-                    settings put secure touch_sensitivity $sensXVal >/dev/null 2>&1
-                    settings put system touch_response $sensYVal >/dev/null 2>&1
-                    settings put secure touch_response $sensYVal >/dev/null 2>&1
+                    # ── Universal Android 11–16 Touchscreen Framework Tuning ──
+                    settings put system high_touch_sensitivity_enable 1 >/dev/null 2>&1
+                    settings put secure high_touch_sensitivity_enable 1 >/dev/null 2>&1
+                    settings put system display_touch_sensitivity 1 >/dev/null 2>&1
+                    settings put system touch_blocking_period 0 >/dev/null 2>&1
+                    settings put system edge_touch_prevention 0 >/dev/null 2>&1
+                    settings put system edge_mistouch_prevention 0 >/dev/null 2>&1
+                    settings put system pointer_speed $pSpeed >/dev/null 2>&1
+                    settings put secure pointer_speed $pSpeed >/dev/null 2>&1
+
+                    # ── Xiaomi / Redmi / POCO (HyperOS & MIUI) ──
+                    settings put system touch_sensitivity_x $rawX >/dev/null 2>&1
+                    settings put secure touch_sensitivity_x $rawX >/dev/null 2>&1
+                    settings put system touch_sensitivity_y $rawY >/dev/null 2>&1
+                    settings put secure touch_sensitivity_y $rawY >/dev/null 2>&1
+                    settings put system game_turbo_touch_sensitivity $masterSens >/dev/null 2>&1
+                    settings put secure game_turbo_touch_sensitivity $masterSens >/dev/null 2>&1
+                    settings put system game_turbo_touch_response 100 >/dev/null 2>&1
+                    settings put secure game_turbo_touch_response 100 >/dev/null 2>&1
+                    settings put system touch_sensitivity $masterSens >/dev/null 2>&1
+                    settings put secure touch_sensitivity $masterSens >/dev/null 2>&1
+                    settings put system touch_response 100 >/dev/null 2>&1
+                    settings put secure touch_response 100 >/dev/null 2>&1
+                    setprop persist.vendor.touch.game_mode 1 >/dev/null 2>&1
+                    setprop persist.sys.touch.latency 0 >/dev/null 2>&1
+                    setprop debug.touch.latency_level 0 >/dev/null 2>&1
+
+                    # ── Samsung Galaxy (OneUI 3, 4, 5, 6, 7) ──
+                    settings put system high_touch_sensitivity 1 >/dev/null 2>&1
+                    settings put system high_sensitivity_mode 1 >/dev/null 2>&1
+                    settings put secure game_touch_sensitivity 1 >/dev/null 2>&1
+                    for SP in /sys/class/sec/sec_touchscreen/game_mode /sys/class/sec/sec_touchscreen/high_sensitivity_mode; do
+                      [ -w "${'$'}SP" ] && echo 1 > "${'$'}SP" 2>/dev/null
+                    done
+                    [ -w /sys/class/sec/sec_touchscreen/touch_sensitivity ] && echo 2 > /sys/class/sec/sec_touchscreen/touch_sensitivity 2>/dev/null
+
+                    # ── OPPO / Realme / OnePlus (ColorOS / OxygenOS 11–16) ──
+                    settings put system oplus_touch_screen_anti_mistouch 0 >/dev/null 2>&1
+                    settings put system touch_game_turbo 1 >/dev/null 2>&1
+                    for OP in /proc/touchpanel/game_switch_enable /proc/touchpanel/high_sensitivity_enable; do
+                      [ -w "${'$'}OP" ] && echo 1 > "${'$'}OP" 2>/dev/null
+                    done
+                    [ -w /proc/touchpanel/oppo_tp_limit_enable ] && echo 0 > /proc/touchpanel/oppo_tp_limit_enable 2>/dev/null
+
+                    # ── Vivo / iQOO (FuntouchOS / OriginOS 11–16) ──
+                    settings put system vivo_game_touch_acceleration 1 >/dev/null 2>&1
+                    for VP in /sys/touchscreen/touch_panel/game_mode /sys/touchscreen/touch_panel/touch_sensitivity; do
+                      [ -w "${'$'}VP" ] && echo 1 > "${'$'}VP" 2>/dev/null
+                    done
+
+                    # ── ASUS ROG Phone / Zenfone ──
+                    for AP in /sys/class/asus_touch/game_mode /sys/class/asus_touch/touch_sensitivity; do
+                      [ -w "${'$'}AP" ] && echo 1 > "${'$'}AP" 2>/dev/null
+                    done
+
+                    # ── Transsion (Infinix XOS / Tecno HiOS) ──
+                    settings put system cloud_turbo_sched_enable_speed_touch 1 >/dev/null 2>&1
                 """.trimIndent()
-                NukeConnectionManager.executeCommand(script, 1000L)
+                NukeConnectionManager.executeCommand(script, 1500L)
             } catch (_: Throwable) {}
         }
     }
@@ -709,6 +772,7 @@ object NukeTouchTuningEngine {
             try {
                 val shellService = NukeConnectionManager.getShellService()
                 if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
+                    runCatching { shellService.touchSetGrab(false) }
                     shellService.touchStop()
                     anyOk = true
                 }
@@ -717,6 +781,7 @@ object NukeTouchTuningEngine {
             // 2. Persistent Local Core TCP daemon
             try {
                 if (NukeDaemonClient.ping(force = false)) {
+                    runCatching { NukeDaemonClient.touchSetGrab(false) }
                     val stopped = NukeDaemonClient.touchStop()
                     if (stopped) anyOk = true
                 }
@@ -725,10 +790,15 @@ object NukeTouchTuningEngine {
             // 3. Local in-process TouchService fallback if loaded
             try {
                 if (nuke.wandev.touch.NukeTouchService.isRunning()) {
+                    runCatching { nuke.wandev.touch.NukeTouchService.setGrab(false) }
                     nuke.wandev.touch.NukeTouchService.stop()
                     anyOk = true
                 }
             } catch (_: Throwable) {}
+
+            runCatching {
+                NukeConnectionManager.executeCommand("settings delete system touch.distance.scale", 1000L)
+            }
 
             onComplete?.invoke(anyOk)
         }
@@ -749,8 +819,12 @@ object NukeTouchTuningEngine {
         // 1. Immediately drop hardware grab and stop listener daemon
         stopDaemonTouchAsync()
 
-        // 2. Clear persisted overlay active state
+        // 2. Clear persisted overlay active state across preference keys
         runCatching {
+            context.getSharedPreferences("NukeTouchListenerPrefs", Context.MODE_PRIVATE)
+                .edit()
+                .putBoolean("touch_listener_active", false)
+                .apply()
             context.getSharedPreferences("nuke_touch_panel_prefs", Context.MODE_PRIVATE)
                 .edit()
                 .putBoolean("touch_listener_active", false)
@@ -769,6 +843,20 @@ object NukeTouchTuningEngine {
                 settings put system pointer_speed 0 >/dev/null 2>&1
                 settings put secure pointer_speed 0 >/dev/null 2>&1
                 settings put system view_configuration_touch_slop 8 >/dev/null 2>&1
+
+                # Revert Xiaomi HyperOS hardware touch registers to stock defaults
+                settings put system touch_sensitivity_x 137 >/dev/null 2>&1
+                settings put secure touch_sensitivity_x 137 >/dev/null 2>&1
+                settings put system touch_sensitivity_y 137 >/dev/null 2>&1
+                settings put secure touch_sensitivity_y 137 >/dev/null 2>&1
+                settings put system game_turbo_touch_sensitivity 100 >/dev/null 2>&1
+                settings put secure game_turbo_touch_sensitivity 100 >/dev/null 2>&1
+                settings put system game_turbo_touch_response 100 >/dev/null 2>&1
+                settings put secure game_turbo_touch_response 100 >/dev/null 2>&1
+                settings put system touch_sensitivity 100 >/dev/null 2>&1
+                settings put secure touch_sensitivity 100 >/dev/null 2>&1
+                settings put system touch_response 100 >/dev/null 2>&1
+                settings put secure touch_response 100 >/dev/null 2>&1
 
                 # Clean up all injected touch sensitivity and Game Turbo overrides
                 settings delete system game_turbo_touch_sensitivity >/dev/null 2>&1

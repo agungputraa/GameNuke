@@ -92,6 +92,7 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -146,8 +147,8 @@ private data class CommandCenterTelemetry(
     val iadbAvailable: Boolean = false,
 )
 
-private val ReactorShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-private val ReactorSmall = androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
+private val ReactorShape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp)
+private val ReactorSmall = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)
 
 /**
  * Main Game Nuke command center. The first screen is deliberately not a collection of generic
@@ -264,9 +265,11 @@ fun DashboardScreen(
         telemetry.batteryUnrestricted,
     ).count { it }
     val readiness = readyCount / 5f
+    val configuration = LocalConfiguration.current
+    val isWide = configuration.screenWidthDp >= 680
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Neon.Bg),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))),
         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -275,9 +278,9 @@ fun DashboardScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                         .background(Color(0xFF281013))
-                        .border(1.dp, Color(0xFFFF4B55), androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                        .border(1.dp, Color(0xFFFF4B55), androidx.compose.foundation.shape.RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                         .clickable { showAdBlockDialog = true }
                         .padding(12.dp)
                 ) {
@@ -339,59 +342,92 @@ fun DashboardScreen(
         }
 
         item {
-            SectionRail(("LIVE ENGINE"), ("MEASURED TELEMETRY"))
-            Spacer(Modifier.height(8.dp))
-            DualGaugeDeck(telemetry)
-        }
-
-        item {
-            TelemetryMatrix(telemetry)
-        }
-
-        item {
-            SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
-            Spacer(Modifier.height(8.dp))
-            ReadinessDeck(
-                context = context,
-                telemetry = telemetry,
-                onAdb = { showConnectionDialog = true },
-            )
-        }
-
-        item {
-            SectionRail(tr("NUKE DECK"), tr("HIGH-VALUE CONTROLS"))
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                CommandTile(
-                    tr("GAME SPACE"), tr("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
-                    Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
-                )
-                CommandTile(
-                    tr("DEEP CLEAN"), tr("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
-                    Color(0xFFFFB830), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                CommandTile(
-                    tr("SYSTEM EDITOR"), tr("Find & tweak parameters safely"), Icons.Rounded.Tune,
-                    Color(0xFF00E5FF), Modifier.fillMaxWidth(), { handleToolClick(onOpenSystemEditor) },
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            Row(Modifier.fillMaxWidth()) {
-                CommandTile(
-                    tr("DEVICE CONTROL"), if (telemetry.adbConnected) "${tr("Connected via")} ${telemetry.connectionMode}" else tr("Select connection method"),
-                    Icons.Rounded.Adb, if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
+            if (isWide) {
+                Row(
                     Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.Top,
                 ) {
-                    showConnectionDialog = true
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SectionRail(tr("LIVE ENGINE"), tr("MEASURED TELEMETRY"))
+                        DualGaugeDeck(telemetry)
+                        TelemetryMatrix(telemetry)
+                    }
+                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                        SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
+                        ReadinessDeck(
+                            context = context,
+                            telemetry = telemetry,
+                            onAdb = { showConnectionDialog = true },
+                        )
+                        SystemIntelligenceCard(telemetry)
+                    }
+                }
+            } else {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    SectionRail(tr("LIVE ENGINE"), tr("MEASURED TELEMETRY"))
+                    DualGaugeDeck(telemetry)
+                    TelemetryMatrix(telemetry)
+                    SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
+                    ReadinessDeck(
+                        context = context,
+                        telemetry = telemetry,
+                        onAdb = { showConnectionDialog = true },
+                    )
                 }
             }
         }
 
         item {
-            SystemIntelligenceCard(telemetry)
+            SectionRail(tr("NUKE DECK"), tr("HIGH-VALUE CONTROLS"))
+            Spacer(Modifier.height(8.dp))
+            if (isWide) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CommandTile(
+                        tr("GAME SPACE"), tr("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
+                        Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
+                    )
+                    CommandTile(
+                        tr("DEEP CLEAN"), tr("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
+                        Color(0xFFFFB84A), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
+                    )
+                    CommandTile(
+                        tr("SYSTEM EDITOR"), tr("Find & tweak parameters safely"), Icons.Rounded.Tune,
+                        Color(0xFF73E7D3), Modifier.weight(1f), { handleToolClick(onOpenSystemEditor) },
+                    )
+                    CommandTile(
+                        tr("DEVICE CONTROL"), if (telemetry.adbConnected) "${tr("Connected via")} ${telemetry.connectionMode}" else tr("Select connection method"),
+                        Icons.Rounded.Adb, if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
+                        Modifier.weight(1f),
+                    ) { showConnectionDialog = true }
+                }
+            } else {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    CommandTile(
+                        tr("GAME SPACE"), tr("Choose a game and arm the HUD"), Icons.Rounded.Gamepad,
+                        Neon.Accent, Modifier.weight(1f), { handleToolClick(onOpenGames) },
+                    )
+                    CommandTile(
+                        tr("DEEP CLEAN"), tr("Storage & memory maintenance"), Icons.Rounded.CleaningServices,
+                        Color(0xFFFFB84A), Modifier.weight(1f), { handleToolClick(onOpenCleaner) },
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                CommandTile(
+                    tr("SYSTEM EDITOR"), tr("Find & tweak parameters safely"), Icons.Rounded.Tune,
+                    Color(0xFF73E7D3), Modifier.fillMaxWidth(), { handleToolClick(onOpenSystemEditor) },
+                )
+                Spacer(Modifier.height(8.dp))
+                CommandTile(
+                    tr("DEVICE CONTROL"), if (telemetry.adbConnected) "${tr("Connected via")} ${telemetry.connectionMode}" else tr("Select connection method"),
+                    Icons.Rounded.Adb, if (telemetry.adbConnected) Neon.Accent else Color(0xFFFF7A59),
+                    Modifier.fillMaxWidth(),
+                ) { showConnectionDialog = true }
+            }
+        }
+
+        if (!isWide) {
+            item { SystemIntelligenceCard(telemetry) }
         }
     }
 }
@@ -404,7 +440,7 @@ private fun ReactorCommandHero(
     onArm: () -> Unit,
     onAdb: () -> Unit,
 ) {
-    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB830)
+    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB84A)
 
     Box(
         Modifier.fillMaxWidth()
@@ -420,13 +456,29 @@ private fun ReactorCommandHero(
             .border(0.8.dp, accent.copy(alpha = 0.30f), ReactorShape)
             .padding(18.dp),
     ) {
+        Canvas(Modifier.fillMaxSize()) {
+            val core = Offset(size.width * .88f, size.height * .26f)
+            listOf(34.dp, 58.dp, 82.dp).forEachIndexed { index, radius ->
+                drawCircle(
+                    color = accent.copy(alpha = .09f - index * .018f),
+                    radius = radius.toPx(),
+                    center = core,
+                    style = Stroke(width = .8.dp.toPx()),
+                )
+            }
+            val trace = accent.copy(alpha = .13f)
+            drawLine(trace, Offset(0f, size.height * .76f), Offset(size.width * .18f, size.height * .76f), .8.dp.toPx())
+            drawLine(trace, Offset(size.width * .18f, size.height * .76f), Offset(size.width * .23f, size.height * .68f), .8.dp.toPx())
+            drawLine(trace, Offset(size.width * .23f, size.height * .68f), Offset(size.width * .44f, size.height * .68f), .8.dp.toPx())
+            drawCircle(accent.copy(alpha = .55f), 1.8.dp.toPx(), Offset(size.width * .18f, size.height * .76f))
+        }
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Box(
                     Modifier.size(54.dp)
-                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
                         .background(accent.copy(alpha = 0.12f))
-                        .border(0.8.dp, accent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp)),
+                        .border(0.8.dp, accent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Icon(
@@ -535,7 +587,7 @@ private fun DualGaugeDeck(telemetry: CommandCenterTelemetry) {
                 label = tr("CPU Load"),
                 value = cpu,
                 valueText = telemetry.cpuLoad?.let { "$it%" } ?: "--",
-                accent = Color(0xFF35F2FF),
+                accent = Color(0xFF55F5B0),
                 modifier = Modifier.weight(1f),
             )
             Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -619,14 +671,14 @@ private fun AnimatedSpeedometer(
 private fun TelemetryMatrix(telemetry: CommandCenterTelemetry) {
     Column(verticalArrangement = Arrangement.spacedBy(7.dp)) {
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            MetricTile(tr("DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(tr("DISPLAY"), "${telemetry.currentHz}/${telemetry.maxHz}Hz", Icons.Rounded.Speed, Color(0xFF55F5B0), Modifier.weight(1f))
             MetricTile(tr("THERMAL"), "${"%.1f".format(telemetry.temperatureC)}°C", Icons.Rounded.Thermostat, if (telemetry.temperatureC > 43f) Color(0xFFFF5D67) else Neon.Accent, Modifier.weight(1f))
-            MetricTile(tr("BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFB830), Modifier.weight(1f))
+            MetricTile(tr("BATTERY"), "${telemetry.batteryPercent}%", Icons.Rounded.BatteryChargingFull, Color(0xFFFFB84A), Modifier.weight(1f))
         }
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(7.dp)) {
             MetricTile(tr("RAM"), "${"%.1f".format(telemetry.ramUsedGb)}/${"%.1f".format(telemetry.ramTotalGb)}G", Icons.Rounded.Memory, Neon.Accent, Modifier.weight(1f))
             MetricTile(tr("STORAGE"), "${"%.1f".format(telemetry.storageFreeGb)}G ${tr("FREE")}", Icons.Rounded.Storage, Color(0xFF9877FF), Modifier.weight(1f))
-            MetricTile(tr("NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF35F2FF), Modifier.weight(1f))
+            MetricTile(tr("NETWORK"), telemetry.network, Icons.Rounded.Wifi, Color(0xFF55F5B0), Modifier.weight(1f))
         }
     }
 }
@@ -674,7 +726,7 @@ private data class ReadinessItem(val title: String, val ready: Boolean, val deta
 
 @Composable
 private fun ReadinessTile(item: ReadinessItem, modifier: Modifier = Modifier) {
-    val accent = if (item.ready) Neon.Accent else Color(0xFFFFB830)
+    val accent = if (item.ready) Neon.Accent else Color(0xFFFFB84A)
     Row(
         modifier.clip(ReactorSmall).background(Color(0xFF08110E))
             .border(1.dp, accent.copy(alpha = .28f), ReactorSmall)
@@ -697,7 +749,7 @@ private fun ReadinessTile(item: ReadinessItem, modifier: Modifier = Modifier) {
 private fun CommandTile(title: String, detail: String, icon: ImageVector, accent: Color, modifier: Modifier = Modifier, onClick: () -> Unit) {
     Column(
         modifier.height(104.dp).clip(ReactorSmall)
-            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF111720), Color(0xFF090D12))))
+            .background(Brush.verticalGradient(listOf(accent.copy(alpha = .09f), Color(0xFF111720), Color(0xFF020705))))
             .border(1.dp, accent.copy(alpha = .32f), ReactorSmall)
             .nukePressFeedback().clickable(onClick = onClick).padding(12.dp),
     ) {
@@ -717,7 +769,7 @@ private fun CommandTile(title: String, detail: String, icon: ImageVector, accent
 
 @Composable
 private fun SystemIntelligenceCard(telemetry: CommandCenterTelemetry) {
-    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB830)
+    val accent = if (telemetry.adbConnected) Neon.Accent else Color(0xFFFFB84A)
     Column(
         Modifier.fillMaxWidth().clip(ReactorShape).background(Color(0xFF050B09))
             .border(1.dp, Color(0xFF163B31), ReactorShape).padding(14.dp),
@@ -975,8 +1027,8 @@ private fun NukeConnectionSelectorDialog(
                 val iadbBadgeColor = when {
                     isIadbConnected -> Neon.Accent
                     !isIadbInstalled -> Color(0xFFFF5D67)
-                    !isIadbRunning || !isIadbPermitted -> Color(0xFFFFB830)
-                    else -> Color(0xFF35F2FF)
+                    !isIadbRunning || !isIadbPermitted -> Color(0xFFFFB84A)
+                    else -> Color(0xFF55F5B0)
                 }
                 ConnectionMethodCard(
                     title = ("Connect with iAdb"),
@@ -1027,8 +1079,8 @@ private fun NukeConnectionSelectorDialog(
                 val shizukuBadgeColor = when {
                     isShizukuConnected -> Neon.Accent
                     !isShizukuInstalled -> Color(0xFFFF5D67)
-                    !isShizukuRunning || !isShizukuPermitted -> Color(0xFFFFB830)
-                    else -> Color(0xFF35F2FF)
+                    !isShizukuRunning || !isShizukuPermitted -> Color(0xFFFFB84A)
+                    else -> Color(0xFF55F5B0)
                 }
                 ConnectionMethodCard(
                     title = ("Connect with Shizuku"),
@@ -1037,7 +1089,7 @@ private fun NukeConnectionSelectorDialog(
                     badgeColor = shizukuBadgeColor,
                     description = ("Privileged system daemon — stays active permanently across Wi-Fi toggles and gaming sessions."),
                     icon = Icons.Rounded.AdminPanelSettings,
-                    iconTint = Color(0xFF35F2FF),
+                    iconTint = Color(0xFF55F5B0),
                     onClick = {
                         when {
                             isShizukuConnected -> {
@@ -1076,7 +1128,7 @@ private fun NukeConnectionSelectorDialog(
                 }
                 val nativeBadgeColor = when {
                     telemetry.connectionMode == "LOCAL CORE" || (telemetry.adbConnected && telemetry.connectionMode != "SHIZUKU" && telemetry.connectionMode != "IADB") -> Neon.Accent
-                    else -> Color(0xFFFFB830)
+                    else -> Color(0xFFFFB84A)
                 }
                 ConnectionMethodCard(
                     title = ("Wireless ADB Pairing"),
@@ -1085,7 +1137,7 @@ private fun NukeConnectionSelectorDialog(
                     badgeColor = nativeBadgeColor,
                     description = ("Manual device link via Developer Options (Wi-Fi network + 6-digit pairing code)."),
                     icon = Icons.Rounded.WifiTethering,
-                    iconTint = Color(0xFFFFB830),
+                    iconTint = Color(0xFFFFB84A),
                     onClick = {
                         if (telemetry.network == "OFFLINE") {
                             NukeToast.error(context, ("Please enable Wi-Fi for Wireless ADB pairing."))
@@ -1116,9 +1168,9 @@ private fun ConnectionMethodCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
             .background(Color(0xFF0C1613))
-            .border(0.8.dp, Color(0xFF1E3A31), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+            .border(0.8.dp, Color(0xFF1E3A31), androidx.compose.foundation.shape.RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
             .nukePressFeedback().clickable(onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp)
     ) {

@@ -98,9 +98,9 @@ class NukeTouchInjector {
 
     @Volatile var sensX: Float = 1.0f
     @Volatile var sensY: Float = 1.0f
-    @Volatile var sensArea: Int = AREA_RIGHT
-    @Volatile var sensCurve: Int = CURVE_ACCELERATE
-    @Volatile var euroEnabled: Boolean = true
+    @Volatile var sensArea: Int = AREA_ALL  // Default AREA_ALL: sensitivity active on full screen
+    @Volatile var sensCurve: Int = CURVE_LINEAR
+    @Volatile var euroEnabled: Boolean = false
     @Volatile var euroMinCutoff: Float = 1.0f
     @Volatile var euroBeta: Float = 0.007f
     @Volatile var relativeAimEnabled: Boolean = true
@@ -251,17 +251,30 @@ class NukeTouchInjector {
         return try {
             val im = inputManager ?: return false
             val method = injectInputEventMethod ?: return false
-            val dummy = MotionEvent.obtain(0L, 0L, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
+            val now = SystemClock.uptimeMillis()
+            val dummy = MotionEvent.obtain(now, now, MotionEvent.ACTION_CANCEL, 0f, 0f, 0)
             setDisplayIdMethod?.invoke(dummy, 0)
-            val res = if (injectParamCount == 2) {
-                method.invoke(im, dummy, INJECT_MODE_ASYNC)
-            } else if (injectParamCount >= 3) {
-                method.invoke(im, dummy, INJECT_MODE_ASYNC, 0)
-            } else {
-                method.invoke(im, dummy)
+            try {
+                if (injectParamCount == 2) {
+                    method.invoke(im, dummy, INJECT_MODE_ASYNC)
+                } else if (injectParamCount >= 3) {
+                    method.invoke(im, dummy, INJECT_MODE_ASYNC, 0)
+                } else {
+                    method.invoke(im, dummy)
+                }
+                true
+            } catch (inv: java.lang.reflect.InvocationTargetException) {
+                val cause = inv.targetException ?: inv
+                if (cause is SecurityException) {
+                    Log.w(TAG, "testInjectionCapability: INJECT_EVENTS permission denied: ${cause.message}")
+                    false
+                } else {
+                    // Non-security rejection (e.g. orphan event drop in dispatcher) still means injection method is accessible!
+                    true
+                }
+            } finally {
+                dummy.recycle()
             }
-            dummy.recycle()
-            (res == true || res == null)
         } catch (t: Throwable) {
             Log.w(TAG, "testInjectionCapability failed: ${t.message} — grab must NOT be enabled")
             false
@@ -281,7 +294,11 @@ class NukeTouchInjector {
                 method.invoke(im, ev)
             }
             ev.recycle()
-            res == true || res == null
+            val ok = res == true || res == null
+            if (!ok) {
+                runCatching { NukeTouchService.emergencyReleaseGrab("injectSingleEvent rejected by system") }
+            }
+            ok
         } catch (t: Throwable) {
             runCatching { ev.recycle() }
             runCatching { NukeTouchService.emergencyReleaseGrab("injectSingleEvent error: ${t.message}") }
@@ -524,6 +541,8 @@ class NukeTouchInjector {
         return inputManager != null && injectInputEventMethod != null
     }
 
+    @Volatile private var consecutiveInjectionFailures = 0
+
     private fun injectNow(event: MotionEvent) {
         val qSize = injectQueue.size
         if (qSize > 40) {
@@ -546,14 +565,35 @@ class NukeTouchInjector {
             setDisplayIdMethod?.invoke(event, 0)
         } catch (_: Throwable) {}
         try {
-            val im = inputManager ?: return
-            val method = injectInputEventMethod ?: return
-            if (injectParamCount == 2) {
+            val im = inputManager ?: run {
+                consecutiveInjectionFailures++
+                if (consecutiveInjectionFailures >= 3) {
+                    NukeTouchService.emergencyReleaseGrab("IInputManager not available")
+                }
+                return
+            }
+            val method = injectInputEventMethod ?: run {
+                consecutiveInjectionFailures++
+                if (consecutiveInjectionFailures >= 3) {
+                    NukeTouchService.emergencyReleaseGrab("injectInputEvent method not resolved")
+                }
+                return
+            }
+            val res = if (injectParamCount == 2) {
                 method.invoke(im, event, INJECT_MODE_ASYNC)
             } else if (injectParamCount >= 3) {
                 method.invoke(im, event, INJECT_MODE_ASYNC, 0)
             } else {
                 method.invoke(im, event)
+            }
+            if (res == false) {
+                consecutiveInjectionFailures++
+                if (consecutiveInjectionFailures >= 15) {
+                    Log.e(TAG, "15 consecutive injection rejections from Android InputManager; releasing hardware grab for user safety!")
+                    NukeTouchService.emergencyReleaseGrab("Android InputManager continuously rejected touch events")
+                }
+            } else {
+                consecutiveInjectionFailures = 0
             }
         } catch (t: Throwable) {
             Log.w(TAG, "injectNow error: ${t.message}")
@@ -564,13 +604,24 @@ class NukeTouchInjector {
     }
 
     private fun allocId(): Int {
+        // Compute active IDs directly from live active pointers to guarantee zero state desync across all devices
+        val activeIds = activePointers.values.map { it.id }.toSet()
         for (i in 0 until MAX_POINTERS) {
-            if (!usedIds[i]) {
+            if (i !in activeIds) {
                 usedIds[i] = true
                 return i
             }
         }
-        return -1
+        // Fail-safe: if all 10 hardware pointer slots are genuinely full, release the oldest pointer
+        val oldest = activePointers.minByOrNull { it.value.lastUpdateTime }
+        if (oldest != null) {
+            val recycledId = oldest.value.id
+            macroPointerUp(oldest.key)
+            usedIds[recycledId] = true
+            return recycledId
+        }
+        usedIds.fill(false)
+        return 0
     }
 
     private fun biasedGain(sx: Float, sy: Float, weight: Float): Float {
@@ -586,19 +637,21 @@ class NukeTouchInjector {
         return when (sensCurve) {
             CURVE_LINEAR -> 1.0f
             CURVE_ACCELERATE -> {
-                val ratio = (normalizedSpeed / 0.04f).coerceIn(0f, 1f)
-                (ratio * 0.8f) + 1.0f
+                // Tuned for high-refresh 120Hz–480Hz digitizers (POCO / flagship gaming phones):
+                // Lower threshold from 0.06f to 0.02f so per-frame micro-swipes smoothly engage the acceleration curve
+                val ratio = (normalizedSpeed / 0.02f).coerceIn(0f, 1f)
+                (ratio * 0.30f) + 1.0f
             }
             CURVE_DECELERATE -> {
-                val ratio = (normalizedSpeed / 0.04f).coerceIn(0f, 1f)
-                1.0f - (ratio * 0.5f)
+                val ratio = (normalizedSpeed / 0.02f).coerceIn(0f, 1f)
+                1.0f - (ratio * 0.20f)
             }
             else -> 1.0f
         }
     }
 
     private fun maxCurveFactor(): Float {
-        return if (sensCurve == CURVE_ACCELERATE) 1.8f else 1.0f
+        return if (sensCurve == CURVE_ACCELERATE) 1.30f else 1.0f
     }
 
     private fun inSensArea(x: Float, displayWidth: Int): Boolean {
@@ -651,7 +704,9 @@ class NukeTouchInjector {
         props: Array<MotionEvent.PointerProperties>,
         coords: Array<MotionEvent.PointerCoords>
     ): Boolean {
-        val eTime = if (evTime > lastInjectEventTime) evTime else lastInjectEventTime + 1
+        val now = SystemClock.uptimeMillis()
+        val boundedEvTime = if (evTime > 0L) evTime.coerceAtMost(now) else now
+        val eTime = if (boundedEvTime > lastInjectEventTime) boundedEvTime else lastInjectEventTime + 1
         lastInjectEventTime = eTime
         val down = if (dTime > eTime) eTime else dTime
 
@@ -709,9 +764,15 @@ class NukeTouchInjector {
     }
 
     private fun startPointer(key: Long, ev: TouchEvent) {
-        val dx = if (ev.dispXf.isNaN()) ev.dispX.toFloat() else ev.dispXf
-        val dy = if (ev.dispYf.isNaN()) ev.dispY.toFloat() else ev.dispYf
-        val inArea = inSensArea(dx, ev.displayWidth)
+        val safeW = if (ev.displayWidth > 0) ev.displayWidth else 1080
+        val safeH = if (ev.displayHeight > 0) ev.displayHeight else 2400
+        val safeMaxX = (safeW - 1).toFloat().coerceAtLeast(1f)
+        val safeMaxY = (safeH - 1).toFloat().coerceAtLeast(1f)
+        val rawX = if (ev.dispXf.isNaN()) ev.dispX.toFloat() else ev.dispXf
+        val rawY = if (ev.dispYf.isNaN()) ev.dispY.toFloat() else ev.dispYf
+        val dx = rawX.coerceIn(0f, safeMaxX)
+        val dy = rawY.coerceIn(0f, safeMaxY)
+        val inArea = inSensArea(dx, safeW)
         beginPointer(key, dx, dy, normPressure(ev.pressure), normSize(ev.touchMajor), inArea)
     }
 
@@ -738,62 +799,84 @@ class NukeTouchInjector {
     }
 
     private fun integrateMove(ptr: PointerState, ev: TouchEvent) {
-        val dx = if (ev.dispXf.isNaN()) ev.dispX.toFloat() else ev.dispXf
-        val dy = if (ev.dispYf.isNaN()) ev.dispY.toFloat() else ev.dispYf
+        val dispX = if (ev.dispXf.isNaN()) ev.dispX.toFloat() else ev.dispXf
+        val dispY = if (ev.dispYf.isNaN()) ev.dispY.toFloat() else ev.dispYf
 
-        val deltaX = dx - ptr.rawX
-        val deltaY = dy - ptr.rawY
-        ptr.rawX = dx
-        ptr.rawY = dy
+        val rawX = dispX - ptr.rawX
+        val rawY = dispY - ptr.rawY
+        ptr.rawX = dispX
+        ptr.rawY = dispY
 
-        val inArea = ptr.inSensArea
-        val absX = abs(deltaX)
-        val absY = abs(deltaY)
+        val inSensArea = ptr.inSensArea
+        val absX = abs(rawX)
+        val absY = abs(rawY)
         val totalDelta = absX + absY
 
         val displayWidth = ev.displayWidth
+        val displayHeight = ev.displayHeight
+
+        // Drag Shot Bonus for vertical flick (deltaY < -0.2f):
+        val dragShotMultiplier = if (dragShotCurve && rawY < -0.2f) 1.25f else 1.0f
+        val effectiveSy = sensY * dragShotMultiplier
+
         val normSpeed = if (displayWidth > 0) totalDelta / displayWidth.toFloat() else 0.0f
-        val gain = if (!inArea || totalDelta <= 1e-4f) {
+        val weight = if (totalDelta > 1e-4f) absY / totalDelta else 0.0f
+
+        val gain = if (!inSensArea || totalDelta <= 1e-4f) {
             1.0f
         } else {
-            biasedGain(sensX, sensY, absY / totalDelta) * curveFactor(normSpeed)
+            biasedGain(sensX, effectiveSy, weight) * curveFactor(normSpeed)
         }
 
-        val nextAccumX = (deltaX * gain) + ptr.accumX
-        val nextAccumY = (deltaY * gain) + ptr.accumY
+        val accumX = (rawX * gain) + ptr.accumX
+        val accumY = (rawY * gain) + ptr.accumY
 
-        val clampedX: Float
-        val clampedY: Float
+        val finalX: Float
+        val finalY: Float
 
-        if (!relativeAimEnabled || !inArea || ev.displayWidth <= 0 || ev.displayHeight <= 0) {
-            val w = ev.displayWidth.toFloat()
-            val h = ev.displayHeight.toFloat()
-            clampedX = if (w > 0f) nextAccumX.coerceIn(0f, w - 1f) else nextAccumX
-            clampedY = if (h > 0f) nextAccumY.coerceIn(0f, h - 1f) else nextAccumY
+        if (!relativeAimEnabled || !inSensArea || displayWidth <= 0 || displayHeight <= 0) {
+            val maxW = if (displayWidth > 0) (displayWidth - 1).toFloat() else 1079f
+            val maxH = if (displayHeight > 0) (displayHeight - 1).toFloat() else 2399f
+            finalX = accumX.coerceIn(0f, maxW)
+            finalY = accumY.coerceIn(0f, maxH)
         } else {
-            val maxFactor = (maxOf(sensX, sensY) * maxCurveFactor()) - 1.0f
-            val overflow = if (maxFactor >= 0f) maxFactor else 0.0f
-            val overflowW = ev.displayWidth.toFloat() * overflow
-            val overflowH = ev.displayHeight.toFloat() * overflow
-            clampedX = nextAccumX.coerceIn(-overflowW, (ev.displayWidth - 1).toFloat() + overflowW)
-            clampedY = nextAccumY.coerceIn(-overflowH, (ev.displayHeight - 1).toFloat() + overflowH)
+            val maxFactor = maxOf(sensX, effectiveSy) * maxCurveFactor() - 1.0f
+            val f4 = if (maxFactor >= 0f) maxFactor else 0f
+            val headroomW = displayWidth.toFloat() * f4
+            val headroomH = displayHeight.toFloat() * f4
+            finalX = accumX.coerceIn(-headroomW, (displayWidth - 1).toFloat() + headroomW)
+            finalY = accumY.coerceIn(-headroomH, (displayHeight - 1).toFloat() + headroomH)
         }
 
-        ptr.accumX = clampedX
-        ptr.accumY = clampedY
+        ptr.accumX = finalX
+        ptr.accumY = finalY
 
         if (euroEnabled) {
             val t = eventTime()
-            ptr.x = ptr.filterX.filter(clampedX, t, euroMinCutoff, euroBeta)
-            ptr.y = ptr.filterY.filter(clampedY, t, euroMinCutoff, euroBeta)
+            val fx = ptr.filterX.filter(finalX, t, euroMinCutoff, euroBeta)
+            val fy = ptr.filterY.filter(finalY, t, euroMinCutoff, euroBeta)
+            ptr.x = fx
+            ptr.y = fy
         } else {
-            ptr.x = clampedX
-            ptr.y = clampedY
+            ptr.x = finalX
+            ptr.y = finalY
         }
 
         ptr.pressure = normPressure(ev.pressure)
         ptr.size = normSize(ev.touchMajor)
+        ptr.lastUpdateTime = SystemClock.uptimeMillis()
         moveDirty = true
+    }
+
+    @Synchronized
+    fun onPhysicalScreenReleased() {
+        if (activePointers.isEmpty()) return
+        val physicalKeys = activePointers.entries.filter { !it.value.isSynthetic }.map { it.key }
+        for (key in physicalKeys) {
+            macroPointerUp(key)
+        }
+        pendingPointers.clear()
+        moveDirty = false
     }
 
     @Synchronized
@@ -802,13 +885,15 @@ class NukeTouchInjector {
         val now = SystemClock.uptimeMillis()
         val stuckKeys = mutableListOf<Long>()
         for ((key, ptr) in activePointers) {
-            val maxAge = if (ptr.isSynthetic) 600L else 1500L
-            if (now - ptr.lastUpdateTime > maxAge) {
+            // Only auto-release synthetic macro pointers if an automation session was abandoned (1500ms).
+            // Physical pointers must NEVER be terminated by a timer while the player's finger is on the screen!
+            // Physical touches are 100% reliably closed by the hardware kernel BTN_TOUCH=0 signal or ACTION_UP.
+            if (ptr.isSynthetic && now - ptr.lastUpdateTime > 1500L) {
                 stuckKeys.add(key)
             }
         }
         for (key in stuckKeys) {
-            Log.w(TAG, "Ghost Touch Guard: auto-releasing stuck pointer key=$key")
+            Log.w(TAG, "Macro Safety Guard: auto-releasing abandoned synthetic pointer key=$key")
             macroPointerUp(key)
         }
     }
@@ -828,7 +913,10 @@ class NukeTouchInjector {
 
         when (act) {
             TouchEvent.ACTION_DOWN -> {
-                if (activePointers.containsKey(key)) return
+                if (activePointers.containsKey(key)) {
+                    activePointers[key]?.lastUpdateTime = SystemClock.uptimeMillis()
+                    return
+                }
                 if (inBounds(ev)) {
                     startPointer(key, ev)
                 } else {
@@ -839,6 +927,7 @@ class NukeTouchInjector {
             TouchEvent.ACTION_MOVE -> {
                 val ptr = activePointers[key]
                 if (ptr != null) {
+                    ptr.lastUpdateTime = SystemClock.uptimeMillis()
                     // Safe move-drain guarantee: if moveDirty was already pending from a previous sample
                     // without an intervening ACTION_FRAME, flush the previous move immediately so aiming
                     // NEVER freezes on OEM drivers that omit SYN_REPORT.
@@ -846,7 +935,10 @@ class NukeTouchInjector {
                         flushPendingMove()
                     }
                     integrateMove(ptr, ev)
-                } else if (pendingPointers.contains(key) && inBounds(ev)) {
+                } else if (inBounds(ev)) {
+                    // Universal OEM Touch Recovery (Anti-Layar Macet):
+                    // If a finger was already in contact (e.g. during an overlay dismiss, app transition,
+                    // or high-speed flick that skipped discrete ACTION_DOWN), recover and start tracking immediately!
                     pendingPointers.remove(key)
                     startPointer(key, ev)
                 }

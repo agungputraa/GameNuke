@@ -55,11 +55,6 @@ class NukeApplication : Application(), Application.ActivityLifecycleCallbacks, D
             runCatching { AdbManager.getInstance(applicationContext).warmUpKeyMaterial() }
         }
 
-        // Proactively deploy kernel touch driver (libwandev.so) to /data/local/tmp
-        kotlin.concurrent.thread(name = "Nuke-TouchDeploy", isDaemon = true) {
-            runCatching { nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(applicationContext) }
-        }
-
         // Initialize Autonomous AI Game Sentinel
         runCatching { NukeAiSentinel.init(this) }
 

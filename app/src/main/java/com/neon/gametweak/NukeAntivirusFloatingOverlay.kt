@@ -86,8 +86,20 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
     fun show() {
         if (isShowing) return
         try {
-            val panelW = (320 * d).toInt().coerceAtMost((context.resources.displayMetrics.widthPixels * 0.92f).toInt())
-            val panelH = (440 * d).toInt().coerceAtMost((context.resources.displayMetrics.heightPixels * 0.85f).toInt())
+            val dm = context.resources.displayMetrics
+            val sw = dm.widthPixels
+            val sh = dm.heightPixels
+            val isLandscape = sw > sh
+            val panelW = if (isLandscape) {
+                minOf((470 * d).toInt(), (sw * 0.55f).toInt())
+            } else {
+                minOf((348 * d).toInt(), (sw * 0.92f).toInt())
+            }.coerceAtLeast(minOf((280 * d).toInt(), (sw * 0.82f).toInt()))
+            val panelH = if (isLandscape) {
+                minOf((390 * d).toInt(), (sh * 0.90f).toInt())
+            } else {
+                minOf((520 * d).toInt(), (sh * 0.84f).toInt())
+            }.coerceAtLeast(minOf((300 * d).toInt(), (sh * 0.72f).toInt()))
 
             val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -141,11 +153,14 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
     private fun buildExecutivePanel(): View {
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#EE0B0F15")) // Deep matte obsidian glass
-                cornerRadius = 14 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#1E293B")) // Stealth dark slate border
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 16 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             setPadding((14 * d).toInt(), (12 * d).toInt(), (14 * d).toInt(), (12 * d).toInt())
             elevation = 20 * d
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
@@ -170,7 +185,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#10B981")) // Active emerald dot
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON) // Active emerald dot
             }
         }
         statusDotView = dot
@@ -192,7 +207,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val subTv = TextView(context).apply {
             text = "PERMISSION & PACKAGE RISK REVIEW"
             textSize = 7.5f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             typeface = Typeface.MONOSPACE
         }
         titleCol.addView(titleTv)
@@ -204,7 +219,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             text = "[MONITORING]"
             textSize = 8.5f
             typeface = Typeface.MONOSPACE
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1010B981"))
                 cornerRadius = 4 * d
@@ -225,7 +240,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val closeBtn = TextView(context).apply {
             text = "✕"
             textSize = 13f
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding((6 * d).toInt(), (2 * d).toInt(), (4 * d).toInt(), (2 * d).toInt())
             setOnClickListener { hide() }
@@ -235,7 +250,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
 
         // Divider
         val div = View(context).apply {
-            setBackgroundColor(Color.parseColor("#1E293B"))
+            setBackgroundColor(NukeCyberHudStyler.COLOR_BG_RAISED)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
                 bottomMargin = (10 * d).toInt()
             }
@@ -248,7 +263,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#080D13"))
                 cornerRadius = 8 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#1E293B"))
+                setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_BG_RAISED)
             }
             setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
             layoutParams = LinearLayout.LayoutParams(
@@ -265,11 +280,11 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT)
         }
 
-        val pkgMetricCol = buildMetricCell("PACKAGES AUDITED", "0", Color.parseColor("#38BDF8"))
+        val pkgMetricCol = buildMetricCell("PACKAGES AUDITED", "0", NukeCyberHudStyler.COLOR_TELEMETRY)
         packagesMetricTv = pkgMetricCol.second
         metricRow1.addView(pkgMetricCol.first)
 
-        val payloadMetricCol = buildMetricCell("FILE PAYLOADS", "0", Color.parseColor("#38BDF8"))
+        val payloadMetricCol = buildMetricCell("FILE PAYLOADS", "0", NukeCyberHudStyler.COLOR_TELEMETRY)
         payloadsMetricTv = payloadMetricCol.second
         metricRow1.addView(payloadMetricCol.first)
         metricsGrid.addView(metricRow1)
@@ -291,10 +306,10 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         }
 
         val shellStatus = if (NukeConnectionManager.isConnected()) "UID 2000 (PRIVILEGED)" else "FRAMEWORK"
-        val shellMetricCol = buildMetricCell("SECURITY PRIVILEGE", shellStatus, Color.parseColor("#10B981"))
+        val shellMetricCol = buildMetricCell("SECURITY PRIVILEGE", shellStatus, NukeCyberHudStyler.COLOR_CYAN_NEON)
         metricRow2.addView(shellMetricCol.first)
 
-        val threatMetricCol = buildMetricCell("RISK FINDINGS", "0 DETECTED", Color.parseColor("#10B981"))
+        val threatMetricCol = buildMetricCell("RISK FINDINGS", "0 DETECTED", NukeCyberHudStyler.COLOR_CYAN_NEON)
         threatIndexMetricTv = threatMetricCol.second
         metricRow2.addView(threatMetricCol.first)
         metricsGrid.addView(metricRow2)
@@ -318,7 +333,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             text = "Ready • Background risk monitoring active"
             textSize = 7.5f
             typeface = Typeface.MONOSPACE
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 bottomMargin = (8 * d).toInt()
             }
@@ -353,7 +368,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val emptyDesc = TextView(context).apply {
             text = "No high-risk permissions, overlay interceptors, or anomalous background packages detected."
             textSize = 8f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = (4 * d).toInt()
@@ -382,7 +397,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             gravity = Gravity.CENTER
             setTextColor(Color.parseColor("#0B0F15"))
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#10B981"))
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 cornerRadius = 7 * d
             }
             setPadding((12 * d).toInt(), (9 * d).toInt(), (12 * d).toInt(), (9 * d).toInt())
@@ -431,7 +446,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val tTv = TextView(context).apply {
             text = title
             textSize = 6.8f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         }
@@ -502,11 +517,11 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         } else {
             statusDotView?.background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#10B981")) // Secure Emerald
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON) // Secure Emerald
             }
             statusBadgeTv?.apply {
                 text = if (state.isScanning) "[SCANNING]" else "[MONITORING]"
-                val color = if (state.isScanning) Color.parseColor("#38BDF8") else Color.parseColor("#10B981")
+                val color = if (state.isScanning) NukeCyberHudStyler.COLOR_TELEMETRY else NukeCyberHudStyler.COLOR_CYAN_NEON
                 setTextColor(color)
                 background = GradientDrawable().apply {
                     setColor(if (state.isScanning) Color.parseColor("#1538BDF8") else Color.parseColor("#1010B981"))
@@ -516,7 +531,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             }
             threatIndexMetricTv?.apply {
                 text = "0 DETECTED"
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             actionCleanBtn?.visibility = View.GONE
         }
@@ -565,7 +580,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val levelColorHex = when (threat.severity) {
             NukeAntivirusEngine.ThreatSeverity.CRITICAL -> "#EF4444"
             NukeAntivirusEngine.ThreatSeverity.HIGH -> "#F59E0B"
-            NukeAntivirusEngine.ThreatSeverity.WARNING -> "#38BDF8"
+            NukeAntivirusEngine.ThreatSeverity.WARNING -> NukeAiThemeController.telemetryHex()
         }
 
         val levelBadge = TextView(context).apply {
@@ -602,7 +617,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
             text = threat.targetIdentifier
             textSize = 7.5f
             typeface = Typeface.MONOSPACE
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.MIDDLE
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -615,7 +630,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         val descTv = TextView(context).apply {
             text = threat.description
             textSize = 8f
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 topMargin = (3 * d).toInt()
                 bottomMargin = (6 * d).toInt()
@@ -631,7 +646,7 @@ class NukeAntivirusFloatingOverlay(private val context: Context) {
         }
 
         if (!threat.isFile) {
-            val isolateBtn = buildMiniActionButton("ISOLATE", "#38BDF8") {
+            val isolateBtn = buildMiniActionButton("ISOLATE", NukeAiThemeController.telemetryHex()) {
                 NukeAntivirusEngine.isolateThreat(context, threat)
             }
             actionsRow.addView(isolateBtn)

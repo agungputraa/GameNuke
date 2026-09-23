@@ -250,9 +250,9 @@ fun NukeVipSubscriptionDialog(
                 .widthIn(max = 420.dp)
                 .heightIn(max = maxDialogHeight)
                 .wrapContentHeight()
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                 .background(Color(0xFF070B0E))
-                .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.5f), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                 .padding(14.dp)
         ) {
             Column(
@@ -293,7 +293,7 @@ fun NukeVipSubscriptionDialog(
                             )
                             Text(
                                 if (isAlreadyVip) "${tr("ACTIVE")} ($remainingDays ${tr("Days Left")})" else tr("100% AD-FREE PASS"),
-                                color = if (isAlreadyVip) Color(0xFF10B981) else Color(0xFF94A3B8),
+                                color = if (isAlreadyVip) Color(0xFF55F5B0) else Color(0xFF9CB8AD),
                                 fontSize = 9.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
@@ -308,7 +308,7 @@ fun NukeVipSubscriptionDialog(
                         Icon(
                             Icons.Rounded.Close,
                             contentDescription = "Close",
-                            tint = Color(0xFF94A3B8),
+                            tint = Color(0xFF9CB8AD),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -343,7 +343,7 @@ fun NukeVipSubscriptionDialog(
                                     .fillMaxWidth()
                                     .clip(RoundedCornerShape(10.dp))
                                     .background(Color(0xFF0F241A))
-                                    .border(1.dp, Color(0xFF10B981).copy(alpha = 0.85f), RoundedCornerShape(10.dp))
+                                    .border(1.dp, Color(0xFF55F5B0).copy(alpha = 0.85f), RoundedCornerShape(10.dp))
                                     .padding(10.dp)
                             ) {
                                 Column {
@@ -357,13 +357,13 @@ fun NukeVipSubscriptionDialog(
                                                 modifier = Modifier
                                                     .size(26.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color(0xFF10B981).copy(alpha = 0.25f)),
+                                                    .background(Color(0xFF55F5B0).copy(alpha = 0.25f)),
                                                 contentAlignment = Alignment.Center
                                             ) {
                                                 Icon(
                                                     Icons.Rounded.WorkspacePremium,
                                                     contentDescription = null,
-                                                    tint = Color(0xFFFFB830),
+                                                    tint = Color(0xFFFFB84A),
                                                     modifier = Modifier.size(17.dp)
                                                 )
                                             }
@@ -371,14 +371,14 @@ fun NukeVipSubscriptionDialog(
                                             Column {
                                                 Text(
                                                     tr("ACTIVE VIP SUBSCRIPTION"),
-                                                    color = Color(0xFFFFB830),
+                                                    color = Color(0xFFFFB84A),
                                                     fontSize = 11.sp,
                                                     fontWeight = FontWeight.Black,
                                                     letterSpacing = 0.5.sp
                                                 )
                                                 Text(
                                                     "$remainingDays ${tr("Days Remaining")} · ${tr("100% Ad-Free")}",
-                                                    color = Color(0xFF34D399),
+                                                    color = Color(0xFF68F59A),
                                                     fontSize = 9.sp,
                                                     fontWeight = FontWeight.Bold
                                                 )
@@ -387,13 +387,13 @@ fun NukeVipSubscriptionDialog(
                                         Box(
                                             modifier = Modifier
                                                 .clip(RoundedCornerShape(4.dp))
-                                                .background(Color(0xFF10B981).copy(alpha = 0.2f))
-                                                .border(0.5.dp, Color(0xFF10B981), RoundedCornerShape(4.dp))
+                                                .background(Color(0xFF55F5B0).copy(alpha = 0.2f))
+                                                .border(0.5.dp, Color(0xFF55F5B0), RoundedCornerShape(4.dp))
                                                 .padding(horizontal = 6.dp, vertical = 2.dp)
                                         ) {
                                             Text(
                                                 tr("ACTIVE"),
-                                                color = Color(0xFF10B981),
+                                                color = Color(0xFF55F5B0),
                                                 fontSize = 8.5.sp,
                                                 fontWeight = FontWeight.Black
                                             )
@@ -405,11 +405,11 @@ fun NukeVipSubscriptionDialog(
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(6.dp))
                                             .background(Color(0xFF064E3B).copy(alpha = 0.35f))
-                                            .border(0.8.dp, Color(0xFF10B981).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                            .border(0.8.dp, Color(0xFF55F5B0).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
                                             .padding(horizontal = 8.dp, vertical = 6.dp)
                                     ) {
                                         Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Icon(Icons.Rounded.Info, null, tint = Color(0xFF34D399), modifier = Modifier.size(14.dp))
+                                            Icon(Icons.Rounded.Info, null, tint = Color(0xFF68F59A), modifier = Modifier.size(14.dp))
                                             Spacer(Modifier.width(6.dp))
                                             Text(
                                                 tr("Extend or Upgrade: Purchasing any tier below will ADD extra days directly on top of your remaining days. Zero days are lost!"),
@@ -490,10 +490,10 @@ fun NukeVipSubscriptionDialog(
                                             modifier = Modifier
                                                 .weight(1f)
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .background(if (isSelected) Color(0xFF1E293B) else Color(0xFF0D1219))
+                                                .background(if (isSelected) Color(0xFF10231D) else Color(0xFF07100D))
                                                 .border(
                                                     1.dp,
-                                                    if (isSelected) Color(0xFFF59E0B) else Color(0xFF1E293B),
+                                                    if (isSelected) Color(0xFFF59E0B) else Color(0xFF10231D),
                                                     RoundedCornerShape(8.dp)
                                                 )
                                                 .nukePressFeedback()
@@ -508,7 +508,7 @@ fun NukeVipSubscriptionDialog(
                                                 Icon(
                                                     if (opt.method == "qris") Icons.Rounded.QrCode else Icons.Rounded.AccountBalance,
                                                     contentDescription = null,
-                                                    tint = if (isSelected) Color(0xFFF59E0B) else Color(0xFF94A3B8),
+                                                    tint = if (isSelected) Color(0xFFF59E0B) else Color(0xFF9CB8AD),
                                                     modifier = Modifier.size(15.dp)
                                                 )
                                                 Spacer(Modifier.width(6.dp))
@@ -522,7 +522,7 @@ fun NukeVipSubscriptionDialog(
                                                     )
                                                     Text(
                                                         if (opt.method == "qris") tr("E-Wallet / Bank") else tr("Virtual Account"),
-                                                        color = if (isSelected) Color(0xFFF59E0B).copy(alpha = 0.8f) else Color(0xFF64748B),
+                                                        color = if (isSelected) Color(0xFFF59E0B).copy(alpha = 0.8f) else Color(0xFF668679),
                                                         fontSize = 7.5.sp,
                                                         maxLines = 1
                                                     )
@@ -541,8 +541,8 @@ fun NukeVipSubscriptionDialog(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF1E293B).copy(alpha = 0.6f))
-                                .border(0.8.dp, Color(0xFF38BDF8).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
+                                .background(Color(0xFF10231D).copy(alpha = 0.6f))
+                                .border(0.8.dp, Color(0xFF73E7D3).copy(alpha = 0.35f), RoundedCornerShape(6.dp))
                                 .padding(8.dp)
                         ) {
                             Column {
@@ -550,13 +550,13 @@ fun NukeVipSubscriptionDialog(
                                     Icon(
                                         Icons.Rounded.Info,
                                         contentDescription = null,
-                                        tint = Color(0xFF38BDF8),
+                                        tint = Color(0xFF73E7D3),
                                         modifier = Modifier.size(13.dp)
                                     )
                                     Spacer(Modifier.width(6.dp))
                                     Text(
                                         tr("Outside Indonesia? Buy VIP via Live Chat"),
-                                        color = Color(0xFF38BDF8),
+                                        color = Color(0xFF73E7D3),
                                         fontSize = 9.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -564,7 +564,7 @@ fun NukeVipSubscriptionDialog(
                                 Spacer(Modifier.height(3.dp))
                                 Text(
                                     tr("Automated checkout supports Indonesian QRIS and Bank VA. International gamers can purchase VIP directly by chatting with our support."),
-                                    color = Color(0xFF94A3B8),
+                                    color = Color(0xFF9CB8AD),
                                     fontSize = 8.sp,
                                     lineHeight = 11.sp
                                 )
@@ -573,7 +573,7 @@ fun NukeVipSubscriptionDialog(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(4.dp))
                                         .background(Color(0xFF0284C7).copy(alpha = 0.25f))
-                                        .border(0.5.dp, Color(0xFF38BDF8), RoundedCornerShape(4.dp))
+                                        .border(0.5.dp, Color(0xFF73E7D3), RoundedCornerShape(4.dp))
                                         .nukePressFeedback()
                                         .clickable {
                                             onDismiss()
@@ -584,7 +584,7 @@ fun NukeVipSubscriptionDialog(
                                 ) {
                                     Text(
                                         "💬 " + tr("Open Live Chat Support"),
-                                        color = Color(0xFF38BDF8),
+                                        color = Color(0xFF73E7D3),
                                         fontSize = 8.5.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -647,7 +647,7 @@ fun NukeVipSubscriptionDialog(
 
                         Text(
                             tr("View Payment History"),
-                            color = Color(0xFF38BDF8),
+                            color = Color(0xFF73E7D3),
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
                             modifier = Modifier
@@ -674,7 +674,7 @@ fun NukeVipSubscriptionDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(10.dp))
-                                        .background(Color(0xFF1F2937).copy(alpha = 0.5f))
+                                        .background(Color(0xFF10231D).copy(alpha = 0.5f))
                                         .border(1.dp, Color(0xFF475569), RoundedCornerShape(10.dp))
                                         .padding(16.dp),
                                     contentAlignment = Alignment.Center
@@ -696,7 +696,7 @@ fun NukeVipSubscriptionDialog(
                                         Spacer(Modifier.height(4.dp))
                                         Text(
                                             tr("This payment session has timed out (15-minute limit). Please initiate a new order."),
-                                            color = Color(0xFF94A3B8),
+                                            color = Color(0xFF9CB8AD),
                                             fontSize = 9.5.sp,
                                             textAlign = TextAlign.Center,
                                             lineHeight = 13.sp
@@ -731,12 +731,12 @@ fun NukeVipSubscriptionDialog(
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(6.dp))
                                         .background(Color(0xFF141C24))
-                                        .border(1.dp, Color(0xFF1E293B), RoundedCornerShape(6.dp))
+                                        .border(1.dp, Color(0xFF10231D), RoundedCornerShape(6.dp))
                                         .padding(horizontal = 10.dp, vertical = 5.dp),
                                     horizontalArrangement = Arrangement.SpaceBetween,
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Text(tr("Expires in:"), color = Color(0xFF94A3B8), fontSize = 9.5.sp)
+                                    Text(tr("Expires in:"), color = Color(0xFF9CB8AD), fontSize = 9.5.sp)
                                     Text(timerText, color = Color(0xFFF59E0B), fontSize = 11.5.sp, fontWeight = FontWeight.Black)
                                 }
 
@@ -782,7 +782,7 @@ fun NukeVipSubscriptionDialog(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
-                                            .background(Color(0xFF1E293B))
+                                            .background(Color(0xFF10231D))
                                             .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                                             .clickable {
                                                 val ok = saveQrisToGallery(context, res.qrisString ?: "", res.orderId ?: "", res.totalPayment.toLong())
@@ -809,7 +809,7 @@ fun NukeVipSubscriptionDialog(
                                     Spacer(Modifier.height(5.dp))
                                     Text(
                                         tr("Download QRIS to scan from your e-wallet gallery or point camera."),
-                                        color = Color(0xFF94A3B8),
+                                        color = Color(0xFF9CB8AD),
                                         fontSize = 8.5.sp,
                                         textAlign = TextAlign.Center,
                                         lineHeight = 11.sp
@@ -838,7 +838,7 @@ fun NukeVipSubscriptionDialog(
                                             Row(
                                                 modifier = Modifier
                                                     .clip(RoundedCornerShape(6.dp))
-                                                    .background(Color(0xFF1E293B))
+                                                    .background(Color(0xFF10231D))
                                                     .nukePressFeedback()
                                                     .clickable {
                                                         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
@@ -862,7 +862,7 @@ fun NukeVipSubscriptionDialog(
                                             Spacer(Modifier.height(6.dp))
                                             Text(
                                                 tr("Open Mobile Banking > Transfer > Virtual Account > Paste VA Number"),
-                                                color = Color(0xFF64748B),
+                                                color = Color(0xFF668679),
                                                 fontSize = 8.sp,
                                                 textAlign = TextAlign.Center
                                             )
@@ -877,8 +877,8 @@ fun NukeVipSubscriptionDialog(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clip(RoundedCornerShape(8.dp))
-                                        .background(Color(0xFF0E131A))
-                                        .border(1.dp, Color(0xFF1F2937), RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF07100D))
+                                        .border(1.dp, Color(0xFF10231D), RoundedCornerShape(8.dp))
                                         .padding(10.dp)
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
@@ -889,7 +889,7 @@ fun NukeVipSubscriptionDialog(
                                                 formatRupiah(res.fee)
                                             )
                                         }
-                                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF1F2937)))
+                                        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF10231D)))
                                         Row(
                                             modifier = Modifier.fillMaxWidth(),
                                             horizontalArrangement = Arrangement.SpaceBetween,
@@ -1010,8 +1010,8 @@ fun NukeVipSubscriptionDialog(
                                             }
                                             currentStep = DialogStep.SELECT_PLAN
                                         },
-                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF94A3B8)),
-                                        border = BorderStroke(1.dp, Color(0xFF1E293B)),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9CB8AD)),
+                                        border = BorderStroke(1.dp, Color(0xFF10231D)),
                                         shape = RoundedCornerShape(8.dp),
                                         modifier = Modifier
                                             .weight(1f)
@@ -1053,10 +1053,10 @@ fun NukeVipSubscriptionDialog(
                             modifier = Modifier
                                 .size(52.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF10B981).copy(alpha = 0.2f)),
+                                .background(Color(0xFF55F5B0).copy(alpha = 0.2f)),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(34.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(34.dp))
                         }
 
                         Spacer(Modifier.height(10.dp))
@@ -1081,7 +1081,7 @@ fun NukeVipSubscriptionDialog(
 
                         Button(
                             onClick = onDismiss,
-                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.Black),
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF55F5B0), contentColor = Color.Black),
                             shape = RoundedCornerShape(8.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -1102,14 +1102,14 @@ private fun CompactChip(text: String, modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .clip(RoundedCornerShape(6.dp))
-            .background(Color(0xFF111827))
-            .border(0.8.dp, Color(0xFF1F2937), RoundedCornerShape(6.dp))
+            .background(Color(0xFF0B1814))
+            .border(0.8.dp, Color(0xFF10231D), RoundedCornerShape(6.dp))
             .padding(vertical = 5.dp, horizontal = 6.dp),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text,
-            color = Color(0xFF94A3B8),
+            color = Color(0xFF9CB8AD),
             fontSize = 8.sp,
             fontWeight = FontWeight.SemiBold,
             maxLines = 1,
@@ -1124,8 +1124,8 @@ private fun PlanCardCompact(
     isSelected: Boolean,
     onClick: () -> Unit
 ) {
-    val borderColor = if (isSelected) Color(0xFFF59E0B) else Color(0xFF1E293B)
-    val bgColor = if (isSelected) Color(0xFF161E28) else Color(0xFF0D1219)
+    val borderColor = if (isSelected) Color(0xFFF59E0B) else Color(0xFF10231D)
+    val bgColor = if (isSelected) Color(0xFF161E28) else Color(0xFF07100D)
 
     Row(
         modifier = Modifier
@@ -1170,7 +1170,7 @@ private fun PlanCardCompact(
             Spacer(Modifier.height(2.dp))
             Text(
                 "${plan.durationDays} ${tr("Days Duration")}",
-                color = Color(0xFF64748B),
+                color = Color(0xFF668679),
                 fontSize = 8.5.sp,
                 maxLines = 1
             )
@@ -1195,7 +1195,7 @@ private fun PriceRowCompact(label: String, value: String) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Text(label, color = Color(0xFF94A3B8), fontSize = 9.sp)
+        Text(label, color = Color(0xFF9CB8AD), fontSize = 9.sp)
         Text(value, color = Color(0xFFE2E8F0), fontSize = 9.5.sp, fontWeight = FontWeight.SemiBold)
     }
 }
@@ -1265,7 +1265,7 @@ private fun saveQrisToGallery(
         paint.color = AndroidColor.parseColor("#F1F5F9")
         canvas.drawRect(40f, 140f, (cardWidth - 40).toFloat(), 250f, paint)
 
-        paint.color = AndroidColor.parseColor("#64748B")
+        paint.color = AndroidColor.parseColor("#64778D")
         paint.textSize = 24f
         paint.isFakeBoldText = false
         canvas.drawText("TOTAL PEMBAYARAN PAS", cardWidth / 2f, 180f, paint)
@@ -1289,15 +1289,15 @@ private fun saveQrisToGallery(
         paint.style = Paint.Style.FILL
 
         // Footer Order Info
-        paint.color = AndroidColor.parseColor("#1E293B")
+        paint.color = AndroidColor.parseColor("#10231D")
         paint.textSize = 26f
         paint.isFakeBoldText = true
         canvas.drawText("ORDER ID: $orderId", cardWidth / 2f, 1030f, paint)
 
-        paint.color = AndroidColor.parseColor("#64748B")
+        paint.color = AndroidColor.parseColor("#64778D")
         paint.textSize = 21f
         paint.isFakeBoldText = false
-        canvas.drawText("Scan dari Galeri di GoPay, OVO, DANA, BCA, Mandiri, ShopeePay", cardWidth / 2f, 1070f, paint)
+        canvas.drawText("Scan from Gallery in GoPay, OVO, DANA, BCA, Mandiri, ShopeePay", cardWidth / 2f, 1070f, paint)
 
         val cleanId = orderId.replace("[^a-zA-Z0-9_-]".toRegex(), "_")
         val filename = "QRIS_${cleanId}_${System.currentTimeMillis()}.png"

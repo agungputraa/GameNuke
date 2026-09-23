@@ -98,15 +98,15 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             val (sw, sh) = getScreenSize()
             val isLandscape = sw > sh
             val panelW = if (isLandscape) {
-                (340 * d).toInt().coerceAtMost((sw * 0.48f).toInt())
+                minOf((430 * d).toInt(), (sw * 0.54f).toInt())
             } else {
-                (330 * d).toInt().coerceAtMost((sw * 0.90f).toInt())
-            }
+                minOf((356 * d).toInt(), (sw * 0.92f).toInt())
+            }.coerceAtLeast(minOf((286 * d).toInt(), (sw * 0.80f).toInt()))
             val panelH = if (isLandscape) {
-                (sh * 0.90f).toInt()
+                minOf((420 * d).toInt(), (sh * 0.90f).toInt())
             } else {
-                (500 * d).toInt().coerceAtMost((sh * 0.84f).toInt())
-            }
+                minOf((550 * d).toInt(), (sh * 0.84f).toInt())
+            }.coerceAtLeast(minOf((286 * d).toInt(), (sh * 0.58f).toInt()))
 
             val lp = WindowManager.LayoutParams(
                 panelW, panelH,
@@ -370,7 +370,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             background = NukeCyberHudStyler.TacticalPanelDrawable(
                 density = d,
                 cornerRadiusPx = 16 * d,
-                strokeColor = NukeCyberHudStyler.COLOR_EMERALD_NEON,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
                 bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
                 showGrid = true,
                 showBrackets = true
@@ -413,14 +413,14 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         val titleTv = TextView(context).apply {
             text = "DEVICE HEALTH & TELEMETRY"
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         }
         val subTv = TextView(context).apply {
             text = "Hardware telemetry • Device readiness"
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             textSize = 7.8f
             setPadding(0, (1 * d).toInt(), 0, 0)
         }
@@ -473,7 +473,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         overallScoreTv = TextView(context).apply {
             text = "—"
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             textSize = 22f
             typeface = Typeface.DEFAULT_BOLD
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
@@ -486,7 +486,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         }
         val scoreTitle = TextView(context).apply {
             text = "DEVICE READINESS SCORE"
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             textSize = 8.5f
             typeface = Typeface.DEFAULT_BOLD
         }
@@ -555,7 +555,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             max = 100
             progress = 65
             progressDrawable = GradientDrawable().apply {
-                setColor(Color.parseColor("#10B981"))
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 cornerRadius = 3 * d
             }
         }
@@ -580,7 +580,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
         // Action Buttons Deck
         actionStatusTv = TextView(context).apply {
             text = "Live hardware telemetry active"
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             textSize = 9f
             gravity = Gravity.CENTER
             setPadding(0, (4 * d).toInt(), 0, (4 * d).toInt())
@@ -598,7 +598,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             textSize = 10f
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#10B981"))
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 cornerRadius = 10 * d
             }
             layoutParams = LinearLayout.LayoutParams(0, (38 * d).toInt(), 1f).apply {
@@ -606,7 +606,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             }
             setOnClickListener {
                 actionStatusTv?.text = "Optimizing background workload & reclaiming system RAM..."
-                actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 scope.launch {
                     try {
                         val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
@@ -619,7 +619,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                         Log.e(TAG, "Error managing load and RAM: ${t.message}", t)
                         withContext(Dispatchers.Main) {
                             actionStatusTv?.text = "✓ Workload optimized (Protected active game & system)"
-                            actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                            actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                         }
                     }
                 }
@@ -634,14 +634,14 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#111A24"))
                 cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#38BDF8"))
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_TELEMETRY)
             }
             layoutParams = LinearLayout.LayoutParams(0, (38 * d).toInt(), 1f).apply {
                 leftMargin = (4 * d).toInt()
             }
             setOnClickListener {
                 actionStatusTv?.text = "Reviewing stalled background processes and thermal load..."
-                actionStatusTv?.setTextColor(Color.parseColor("#38BDF8"))
+                actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
                 scope.launch {
                     try {
                         val killedZombies = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
@@ -655,7 +655,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
                         Log.e(TAG, "Error killing zombie loops: ${t.message}", t)
                         withContext(Dispatchers.Main) {
                             actionStatusTv?.text = "✓ Rogue zombie scan complete • System clean"
-                            actionStatusTv?.setTextColor(Color.parseColor("#38BDF8"))
+                            actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
                         }
                     }
                 }
@@ -675,7 +675,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
     private fun createSectionHeader(title: String, colorHex: String? = null): TextView {
         return TextView(context).apply {
             text = "■ $title"
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             textSize = 8.5f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.08f
@@ -711,7 +711,7 @@ class NukePhoneHealthOverlay private constructor(private val context: Context) {
     private fun createSmallLabel(lbl: String): TextView {
         return TextView(context).apply {
             text = lbl
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             textSize = 7.5f
             typeface = Typeface.DEFAULT_BOLD
         }

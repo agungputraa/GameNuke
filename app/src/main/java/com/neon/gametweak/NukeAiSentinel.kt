@@ -47,6 +47,7 @@ object NukeAiSentinel {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private var monitorJob: Job? = null
     private var lastSweepTimestamp = 0L
+    private var lastPriorityRefreshTimestamp = 0L
 
     // ─── Protected System Whitelist ─────────────────────────────────────────
 
@@ -317,13 +318,13 @@ object NukeAiSentinel {
                     val isModerateMemoryPressure = (usedPercent >= 84 || availMb < 850L)
 
                     // Cooldown limits to prevent micro-stutter from frequent sweeps:
-                    // Critical thermal: minimum 60s cooldown
-                    // Memory pressure / game maintenance: minimum 120s cooldown
-                    val cooldownLimit = if (isThermalCritical) 60_000L else 120_000L
+                    // Critical thermal: minimum 90s cooldown
+                    // Memory pressure / game maintenance: minimum 180s cooldown
+                    val cooldownLimit = if (isThermalCritical) 90_000L else 180_000L
                     val cooldownPassed = (now - lastSweepTimestamp) >= cooldownLimit
 
-                    // Periodic game stabilization sweep: every 180s, but ONLY if RAM is actually tight or device is warm
-                    val isPeriodicGameSweep = hasGame && (now - lastSweepTimestamp) >= 180_000L && (isModerateMemoryPressure || isThermalWarm)
+                    // Periodic game stabilization sweep: every 240s, but ONLY if RAM is actually tight or device is warm
+                    val isPeriodicGameSweep = hasGame && (now - lastSweepTimestamp) >= 240_000L && (isModerateMemoryPressure || isThermalWarm)
 
                     val isAdActive = NukeAdManager.isShowingFullScreen
                     val shouldClean = (isThermalCritical || isSevereMemoryPressure || isPeriodicGameSweep) && cooldownPassed && !isAdActive
@@ -336,7 +337,8 @@ object NukeAiSentinel {
                             isCoolingTrigger = isThermalCritical || isThermalWarm,
                             currentTemp = bTemp
                         )
-                    } else if (hasGame && (now - lastSweepTimestamp) >= 45_000L) {
+                    } else if (hasGame && (now - lastPriorityRefreshTimestamp) >= 60_000L) {
+                        lastPriorityRefreshTimestamp = now
                         // Keep game priority refreshed softly without running a heavy sweep
                         refreshGamePriorityOnly(appContext, currentGame, isCoolingTrigger = isThermalWarm, currentTemp = bTemp)
                     }
@@ -346,14 +348,15 @@ object NukeAiSentinel {
                         _isCoolingActive.value = false
                     }
 
-                    // Dynamic polling interval:
-                    // 15s during critical thermal alert
-                    // 30s during active gaming (ultra-low CPU overhead)
-                    // 60s when idle
+                    // Dynamic autonomous pacing based on selected mode + live thermal/stress parameters:
+                    val currentMode = NukeAiThemeController.currentMode
                     val interval = when {
-                        isThermalCritical -> 15_000L
-                        hasGame -> 30_000L
-                        else -> 60_000L
+                        isThermalCritical -> 20_000L
+                        currentMode == NukeAiThemeController.Mode.LOW_POWER -> if (hasGame) 60_000L else 90_000L
+                        currentMode == NukeAiThemeController.Mode.BALANCE -> if (hasGame) 45_000L else 75_000L
+                        currentMode == NukeAiThemeController.Mode.PERFORMANCE -> if (hasGame) 35_000L else 60_000L
+                        currentMode == NukeAiThemeController.Mode.EXTREME -> if (hasGame) 25_000L else 45_000L
+                        else -> if (hasGame) 45_000L else 75_000L
                     }
                     delay(interval)
                 } catch (e: Throwable) {

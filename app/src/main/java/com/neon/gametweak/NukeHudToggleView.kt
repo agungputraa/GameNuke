@@ -73,7 +73,7 @@ class NukeHudToggleView @JvmOverloads constructor(
             )
             trackTintList = ColorStateList(
                 arrayOf(intArrayOf(android.R.attr.state_checked), intArrayOf()),
-                intArrayOf(Color.rgb(30, 171, 89), Color.rgb(62, 76, 69)),
+                intArrayOf(Color.rgb(36, 166, 198), Color.rgb(49, 63, 82)),
             )
             setOnCheckedChangeListener { _, checked ->
                 if (internalChange) return@setOnCheckedChangeListener
@@ -141,12 +141,12 @@ class NukeHudToggleView @JvmOverloads constructor(
     private fun shellDrawable(on: Boolean): GradientDrawable = GradientDrawable(
         GradientDrawable.Orientation.TL_BR,
         intArrayOf(
-            if (on) Color.rgb(9, 34, 22) else Color.rgb(7, 17, 13),
-            Color.rgb(3, 9, 7),
+            if (on) Color.rgb(12, 35, 52) else Color.rgb(9, 15, 24),
+            Color.rgb(5, 7, 11),
         ),
     ).apply {
-        cornerRadius = dpF(5f)
-        setStroke(dp(1), if (on) Color.argb(170, 83, 245, 138) else Color.argb(75, 83, 245, 138))
+        cornerRadius = dpF(8f)
+        setStroke(dp(1), if (on) Color.argb(190, 56, 232, 255) else Color.argb(80, 52, 80, 107))
     }
 
     private fun dp(v: Int): Int = (v * d).toInt().coerceAtLeast(1)

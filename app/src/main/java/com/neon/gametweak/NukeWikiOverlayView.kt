@@ -112,9 +112,9 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
             // ── Root Obsidian Cyber Glass Container ──────────────────────────────
             val root = FrameLayout(context).apply {
                 background = GradientDrawable().apply {
-                    setColor(Color.argb((currentAlpha * 255).toInt(), 8, 12, 16)) // Obsidian Glass
+                    setColor(Color.argb((currentAlpha * 255).toInt(), 5, 7, 11)) // Obsidian Glass
                     cornerRadius = 16 * d
-                    setStroke((1.2f * d).toInt(), Color.parseColor("#3300FF88")) // Cyber Emerald Glow
+                    setStroke((1.2f * d).toInt(), Color.parseColor("#6638E8FF")) // Cyber Emerald Glow
                 }
                 elevation = 20f
                 clipToOutline = true
@@ -157,14 +157,14 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
 
             val titleView = TextView(context).apply {
                 text = "⚡ TACTICAL PIP WIKI"
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(Color.parseColor("#38E8FF"))
                 textSize = 11.5f
                 paint.isFakeBoldText = true
             }
 
             val subtitleView = TextView(context).apply {
                 text = "In-Game Meta & Strategy Guide"
-                setTextColor(Color.parseColor("#64748B"))
+                setTextColor(Color.parseColor("#64778D"))
                 textSize = 8f
             }
 
@@ -175,15 +175,15 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
             val alphaSlider = SeekBar(context).apply {
                 max = 100
                 progress = (currentAlpha * 100).toInt()
-                thumbTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10B981"))
-                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#10B981"))
+                thumbTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#38E8FF"))
+                progressTintList = android.content.res.ColorStateList.valueOf(Color.parseColor("#38E8FF"))
                 layoutParams = LinearLayout.LayoutParams((80 * d).toInt(), ViewGroup.LayoutParams.WRAP_CONTENT)
                 setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
                     override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
                         val p = progress.coerceAtLeast(25)
                         currentAlpha = p / 100f
                         (root.background as? GradientDrawable)?.setColor(
-                            Color.argb((currentAlpha * 255).toInt(), 8, 12, 16)
+                            Color.argb((currentAlpha * 255).toInt(), 5, 7, 11)
                         )
                     }
                     override fun onStartTrackingTouch(seekBar: SeekBar?) {}
@@ -194,7 +194,7 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
             // Minimize Button
             val minimizeBtn = TextView(context).apply {
                 text = " ─ "
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(Color.parseColor("#38E8FF"))
                 textSize = 12f
                 paint.isFakeBoldText = true
                 gravity = Gravity.CENTER
@@ -272,7 +272,7 @@ class NukeWikiOverlayView private constructor(private val context: Context) {
                 gravity = Gravity.CENTER
                 setPadding((10 * d).toInt(), (4 * d).toInt(), (10 * d).toInt(), (4 * d).toInt())
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#1E293B"))
+                    setColor(Color.parseColor("#243448"))
                     cornerRadius = 6 * d
                     setStroke((0.8f * d).toInt(), Color.parseColor("#33475B"))
                 }

@@ -32,6 +32,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.vector.ImageVector
@@ -54,6 +55,7 @@ import com.vungle.ads.VungleBannerView
 import com.neon.gametweak.ui.screens.*
 import com.neon.gametweak.ui.theme.NukeEnterpriseTheme
 import com.neon.gametweak.ui.theme.Neon
+import com.neon.gametweak.ui.theme.ReactorBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
@@ -170,6 +172,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        NukeAiThemeController.init(applicationContext)
         runCatching { AppUpdateController.register(this) }
 
         val adbManager = AdbManager.getInstance(this)
@@ -328,10 +331,10 @@ fun BlankFallback(message: String) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color(0xFF090D12)),
+            .background(Color(0xFF020705)),
         contentAlignment = Alignment.Center
     ) {
-        Text(message, color = Color(0xFF10B981), fontWeight = FontWeight.Bold)
+        Text(message, color = Color(0xFF55F5B0), fontWeight = FontWeight.Bold)
     }
 }
 
@@ -475,7 +478,7 @@ fun BannerAdView() {
         modifier = Modifier
             .fillMaxWidth()
             .height(50.dp)
-            .background(Color(0xFF090D12)),
+            .background(Color(0xFF020705)),
         contentAlignment = Alignment.Center
     ) {
         AndroidView(
@@ -499,12 +502,80 @@ fun BannerAdView() {
 }
 
 
+@Composable
+private fun NukeLandscapeRail(
+    currentRoute: String,
+    onNavigate: (String) -> Unit,
+) {
+    NavigationRail(
+        containerColor = Color(0xFF020705).copy(alpha = .96f),
+        modifier = Modifier
+            .width(76.dp)
+            .fillMaxHeight()
+            .border(
+                width = .7.dp,
+                brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                    listOf(Color(0xFF55F5B0).copy(alpha = .38f), Color(0xFF1D4034), Color.Transparent)
+                ),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(topEnd = 10.dp, bottomEnd = 10.dp)
+            ),
+        header = {
+            Box(
+                modifier = Modifier
+                    .padding(top = 10.dp, bottom = 12.dp)
+                    .size(42.dp)
+                    .clip(androidx.compose.foundation.shape.RoundedCornerShape(11.dp))
+                    .background(
+                        androidx.compose.ui.graphics.Brush.linearGradient(
+                            listOf(Color(0xFF10231D), Color(0xFF07100D))
+                        )
+                    )
+                    .border(.8.dp, Color(0xFF55F5B0).copy(alpha = .55f), androidx.compose.foundation.shape.RoundedCornerShape(11.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(Icons.Rounded.SportsEsports, contentDescription = null, tint = Color(0xFF55F5B0), modifier = Modifier.size(24.dp))
+            }
+        },
+    ) {
+        val colors = NavigationRailItemDefaults.colors(
+            selectedIconColor = Color(0xFF020705),
+            selectedTextColor = Color(0xFF55F5B0),
+            indicatorColor = Color(0xFF55F5B0),
+            unselectedIconColor = Color(0xFF9CB8AD),
+            unselectedTextColor = Color(0xFF9CB8AD),
+        )
+        NavigationRailItem(
+            selected = currentRoute == "dashboard",
+            onClick = { onNavigate("dashboard") },
+            icon = { Icon(Icons.Rounded.Speed, contentDescription = null, modifier = Modifier.size(23.dp)) },
+            label = { Text(tr("Core"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+            colors = colors,
+        )
+        NavigationRailItem(
+            selected = currentRoute == "games",
+            onClick = { onNavigate("games") },
+            icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null, modifier = Modifier.size(23.dp)) },
+            label = { Text(tr("Games"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+            colors = colors,
+        )
+        NavigationRailItem(
+            selected = currentRoute == "cleaner",
+            onClick = { onNavigate("cleaner") },
+            icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = null, modifier = Modifier.size(23.dp)) },
+            label = { Text(tr("Optimize"), fontSize = 9.sp, fontWeight = FontWeight.Bold) },
+            colors = colors,
+        )
+    }
+}
+
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
     val drawerState = rememberDrawerState(initialValue = DrawerValue.Closed)
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val isLandscape = LocalConfiguration.current.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
     var currentRoute by remember { mutableStateOf("dashboard") }
     var showAdvanced by remember { mutableStateOf(false) }
     var webServer by remember { mutableStateOf<LocalWebServer?>(null) }
@@ -603,10 +674,10 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
         drawerContent = {
             Surface(
                 modifier = Modifier
-                    .widthIn(min = 280.dp, max = 340.dp)
+                    .widthIn(min = 288.dp, max = 352.dp)
                     .fillMaxWidth(0.85f)
                     .fillMaxHeight(),
-                color = Color(0xFF090D12)
+                color = Color(0xFF020705)
             ) {
                 Column(modifier = Modifier.fillMaxSize()) {
                     // ── DRAWER HEADER WITH BRANDING & TELEMETRY ──────────
@@ -616,8 +687,8 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             .background(
                                 androidx.compose.ui.graphics.Brush.verticalGradient(
                                     listOf(
-                                        Color(0xFF141D26),
-                                        Color(0xFF0C1217),
+                                        Color(0xFF0B1814),
+                                        Color(0xFF040B08),
                                     )
                                 )
                             )
@@ -630,8 +701,8 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 modifier = Modifier
                                     .size(68.dp)
                                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
-                                    .background(Color(0xFF161E27))
-                                    .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
+                                    .background(Color(0xFF10231D))
+                                    .border(1.dp, Color(0xFF55F5B0).copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(16.dp)),
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Image(
@@ -654,13 +725,13 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             Box(
                                 modifier = Modifier
                                     .clip(androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
-                                    .background(if (isVip) Color(0xFFFFB830).copy(alpha = 0.15f) else Color(0xFF38BDF8).copy(alpha = 0.12f))
-                                    .border(0.8.dp, if (isVip) Color(0xFFFFB830).copy(alpha = 0.45f) else Color(0xFF38BDF8).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
+                                    .background(if (isVip) Color(0xFFFFB84A).copy(alpha = 0.15f) else Color(0xFF55F5B0).copy(alpha = 0.12f))
+                                    .border(0.8.dp, if (isVip) Color(0xFFFFB84A).copy(alpha = 0.45f) else Color(0xFF55F5B0).copy(alpha = 0.30f), androidx.compose.foundation.shape.RoundedCornerShape(6.dp))
                                     .padding(horizontal = 8.dp, vertical = 2.dp),
                             ) {
                                 Text(
                                     if (isVip) "PREMIUM EDITION · v${BuildConfig.VERSION_NAME}" else "ENTERPRISE UTILITY · v${BuildConfig.VERSION_NAME}",
-                                    color = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
+                                    color = if (isVip) Color(0xFFFFB84A) else Color(0xFF55F5B0),
                                     fontSize = 8.5.sp,
                                     fontWeight = FontWeight.Bold,
                                     letterSpacing = 0.8.sp,
@@ -673,7 +744,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(1.dp)
-                            .background(Color(0xFF1E2836)),
+                            .background(Color(0xFF1D4034)),
                     )
 
                     // ── VIP STATUS CARD ──────────────────────────────────
@@ -682,10 +753,10 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             .fillMaxWidth()
                             .padding(horizontal = 14.dp, vertical = 10.dp)
                             .clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                            .background(if (isVip) Color(0xFF0D281C) else Color(0xFF111822))
+                            .background(if (isVip) Color(0xFF0B231A) else Color(0xFF07100D))
                             .border(
                                 1.dp,
-                                if (isVip) Color(0xFF10B981).copy(alpha = 0.85f) else Color(0xFF38BDF8).copy(alpha = 0.35f),
+                                if (isVip) Color(0xFF55F5B0).copy(alpha = 0.85f) else Color(0xFF55F5B0).copy(alpha = 0.35f),
                                 androidx.compose.foundation.shape.RoundedCornerShape(12.dp)
                             )
                             .clickable {
@@ -704,13 +775,13 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     modifier = Modifier
                                         .size(34.dp)
                                         .clip(CircleShape)
-                                        .background(if (isVip) Color(0xFFFFB830).copy(alpha = 0.25f) else Color(0xFF38BDF8).copy(alpha = 0.15f)),
+                                        .background(if (isVip) Color(0xFFFFB84A).copy(alpha = 0.25f) else Color(0xFF55F5B0).copy(alpha = 0.15f)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         if (isVip) Icons.Rounded.WorkspacePremium else Icons.Rounded.Star,
                                         contentDescription = null,
-                                        tint = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
+                                        tint = if (isVip) Color(0xFFFFB84A) else Color(0xFF55F5B0),
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -719,7 +790,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     Row(verticalAlignment = Alignment.CenterVertically) {
                                         Text(
                                             if (isVip) tr("PREMIUM VIP ACTIVE") else tr("FREE TIER"),
-                                            color = if (isVip) Color(0xFFFFB830) else Color.White,
+                                            color = if (isVip) Color(0xFFFFB84A) else Color.White,
                                             fontSize = 11.5.sp,
                                             fontWeight = FontWeight.Bold
                                         )
@@ -729,13 +800,13 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                                 modifier = Modifier
                                                     .size(6.dp)
                                                     .clip(CircleShape)
-                                                    .background(Color(0xFF10B981))
+                                                    .background(Color(0xFF55F5B0))
                                             )
                                         }
                                     }
                                     Text(
                                         if (isVip) "$remainingDays ${tr("Days Remaining")} (${tr("No Ads")})" else tr("Tap to Remove All Ads"),
-                                        color = if (isVip) Color(0xFF34D399) else Color(0xFF94A3B8),
+                                        color = if (isVip) Color(0xFF34D399) else Color(0xFF9CB8AD),
                                         fontSize = 9.sp,
                                         fontWeight = if (isVip) FontWeight.SemiBold else FontWeight.Normal
                                     )
@@ -743,7 +814,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             }
                             Text(
                                 if (isVip) tr("MANAGE / UPGRADE") else tr("UPGRADE"),
-                                color = if (isVip) Color(0xFFFFB830) else Color(0xFF38BDF8),
+                                color = if (isVip) Color(0xFFFFB84A) else Color(0xFF55F5B0),
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Black
                             )
@@ -783,7 +854,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             tr("DIAGNOSTICS & SYSTEM"),
-                            color = Color(0xFF9BB0A6),
+                            color = Color(0xFF9CB8AD),
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.5.sp,
@@ -816,7 +887,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
                             tr("PREFERENCES"),
-                            color = Color(0xFF9BB0A6),
+                            color = Color(0xFF9CB8AD),
                             fontSize = 9.5.sp,
                             fontWeight = FontWeight.Bold,
                             letterSpacing = 1.5.sp,
@@ -859,7 +930,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     androidx.compose.ui.graphics.Brush.horizontalGradient(
                                         listOf(
                                             Color.Transparent,
-                                            Color(0xFF10B981).copy(alpha = 0.25f),
+                                            Color(0xFF55F5B0).copy(alpha = 0.25f),
                                             Color.Transparent,
                                         )
                                     )
@@ -874,7 +945,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                         ) {
                             Text(
                                 "ENGINEERED BY",
-                                color = Color(0xFF9BB0A6),
+                                color = Color(0xFF9CB8AD),
                                 fontSize = 8.5.sp,
                                 fontWeight = FontWeight.Bold,
                                 letterSpacing = 2.sp,
@@ -882,7 +953,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
                                 "AGUNG · DEV",
-                                color = Color(0xFF10B981),
+                                color = Color(0xFF55F5B0),
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Black,
                                 letterSpacing = 2.5.sp,
@@ -920,13 +991,13 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                     Modifier
                                         .width(3.dp)
                                         .height(34.dp)
-                                        .background(Color(0xFF10B981))
+                                        .background(Color(0xFF55F5B0))
                                 )
                                 Spacer(Modifier.width(10.dp))
                                 Column {
                                     Text(
                                         "GAME NUKE",
-                                        color = Color(0xFF9BB0A6),
+                                        color = Color(0xFF9CB8AD),
                                         fontWeight = FontWeight.SemiBold,
                                         fontSize = 10.sp,
                                         letterSpacing = 1.sp,
@@ -952,7 +1023,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             }
                         }
                     },
-                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF090D12)),
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF020705)),
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }, modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
                             Icon(Icons.Rounded.Sort, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(28.dp))
@@ -961,45 +1032,60 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                 )
             },
             bottomBar = {
-                Column {
+                if (!isLandscape) Column {
                     Box(
                         modifier = Modifier.fillMaxWidth().height(1.dp).background(
                             androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                listOf(Color.Transparent, Color(0xFF10B981).copy(alpha = 0.5f), Color(0xFF10B981).copy(alpha = 0.5f), Color.Transparent)
+                                listOf(Color.Transparent, Color(0xFF55F5B0).copy(alpha = 0.5f), Color(0xFF55F5B0).copy(alpha = 0.5f), Color.Transparent)
                             )
                         )
                     )
-                    NavigationBar(containerColor = Color(0xFF090D12), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
+                    NavigationBar(containerColor = Color(0xFF020705), tonalElevation = 0.dp, modifier = Modifier.height(80.dp)) {
                     NavigationBarItem(
                         selected = currentRoute == "dashboard",
                         onClick = { navigateWithAd("dashboard") },
                         icon = { Icon(Icons.Rounded.Speed, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(tr("Core"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF55F5B0), indicatorColor = Color(0xFF55F5B0).copy(alpha = 0.16f), unselectedIconColor = Color(0xFF9CB8AD), unselectedTextColor = Color(0xFF9CB8AD))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "games",
                         onClick = { navigateWithAd("games") },
                         icon = { Icon(Icons.Rounded.Gamepad, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(tr("Games"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF55F5B0), indicatorColor = Color(0xFF55F5B0).copy(alpha = 0.16f), unselectedIconColor = Color(0xFF9CB8AD), unselectedTextColor = Color(0xFF9CB8AD))
                     )
                     NavigationBarItem(
                         selected = currentRoute == "cleaner",
                         onClick = { navigateWithAd("cleaner") },
                         icon = { Icon(Icons.Rounded.CleaningServices, contentDescription = null, modifier = Modifier.size(26.dp)) },
                         label = { Text(tr("Optimize"), fontSize = 11.sp, fontWeight = FontWeight.Bold) },
-                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF10B981), indicatorColor = Color(0xFF10B981).copy(alpha = 0.14f), unselectedIconColor = Color(0xFF9BB0A6), unselectedTextColor = Color(0xFF9BB0A6))
+                        colors = NavigationBarItemDefaults.colors(selectedIconColor = Color.White, selectedTextColor = Color(0xFF55F5B0), indicatorColor = Color(0xFF55F5B0).copy(alpha = 0.16f), unselectedIconColor = Color(0xFF9CB8AD), unselectedTextColor = Color(0xFF9CB8AD))
                     )
 
                 }
                 }
             },
-            containerColor = Color(0xFF090D12),
+            containerColor = Color.Transparent,
             modifier = Modifier.navigationBarsPadding()
         ) { innerPadding ->
-            Column(modifier = Modifier.padding(innerPadding).fillMaxSize()) {
-                Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
+            Box(
+                modifier = Modifier
+                    .padding(innerPadding)
+                    .fillMaxSize()
+                    .background(
+                        androidx.compose.ui.graphics.Brush.verticalGradient(
+                            listOf(Color(0xFF020705), Color(0xFF06130E), Color(0xFF020705))
+                        )
+                    )
+            ) {
+                ReactorBackdrop(Modifier.fillMaxSize())
+                Row(Modifier.fillMaxSize()) {
+                    if (isLandscape) {
+                        NukeLandscapeRail(currentRoute = currentRoute, onNavigate = ::navigateWithAd)
+                    }
+                    Column(modifier = Modifier.weight(1f).fillMaxHeight()) {
+                        Box(modifier = Modifier.weight(1f).fillMaxWidth()) {
                     AnimatedContent(
                         targetState = currentRoute,
                         transitionSpec = {
@@ -1034,15 +1120,17 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                 // Keep banners on high-value passive screens only. Do not cover diagnostics, Web UI,
                 // developer, or tutorial workflows where persistent ads are distracting.
                 if (!isVip && currentRoute in setOf("dashboard", "games", "cleaner")) {
-                    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF090D12))) {
+                    Column(modifier = Modifier.fillMaxWidth().background(Color(0xFF020705))) {
                         Box(
                             modifier = Modifier.fillMaxWidth().height(1.dp).background(
                                 androidx.compose.ui.graphics.Brush.horizontalGradient(
-                                    listOf(Color.Transparent, Color(0xFF10B981).copy(alpha = 0.28f), Color.Transparent)
+                                    listOf(Color.Transparent, Color(0xFF55F5B0).copy(alpha = 0.28f), Color.Transparent)
                                 )
                             )
                         )
                         BannerAdView()
+                    }
+                }
                     }
                 }
             }
@@ -1090,7 +1178,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
 
 @Composable
 fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
-    val accent = Color(0xFF38BDF8)
+    val accent = Color(0xFF55F5B0)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -1104,8 +1192,8 @@ fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
             modifier = Modifier
                 .size(32.dp)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                .background(Color(0xFF131B24))
-                .border(0.8.dp, Color(0xFF1E2836), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
+                .background(Color(0xFF0B1814))
+                .border(0.8.dp, Color(0xFF1D4034), androidx.compose.foundation.shape.RoundedCornerShape(8.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(icon, contentDescription = null, tint = accent, modifier = Modifier.size(16.dp))
@@ -1129,13 +1217,13 @@ fun DrawerItem(icon: ImageVector, title: String, onClick: () -> Unit) {
 }
 
 @Composable
-fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White, borderAccent: Color = Color(0xFF10B981)) {
+fun SocialButton(icon: ImageVector, url: String, brandTint: Color = Color.White, borderAccent: Color = Color(0xFF55F5B0)) {
     val uriHandler = LocalUriHandler.current
     Box(
         modifier = Modifier
             .size(width = 66.dp, height = 44.dp)
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
-            .background(Color(0xFF131B24))
+            .background(Color(0xFF0B1814))
             .border(0.8.dp, borderAccent.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(10.dp))
             .clickable { runCatching { uriHandler.openUri(url) } },
         contentAlignment = Alignment.Center,

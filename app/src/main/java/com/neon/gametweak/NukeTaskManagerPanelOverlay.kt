@@ -98,15 +98,15 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             val (sw, sh) = getScreenSize()
             val isLandscape = sw > sh
             val panelW = if (isLandscape) {
-                (360 * d).toInt().coerceAtMost((sw * 0.52f).toInt())
+                minOf((440 * d).toInt(), (sw * 0.56f).toInt())
             } else {
-                (340 * d).toInt().coerceAtMost((sw * 0.92f).toInt())
-            }
+                minOf((360 * d).toInt(), (sw * 0.92f).toInt())
+            }.coerceAtLeast(minOf((286 * d).toInt(), (sw * 0.80f).toInt()))
             val panelH = if (isLandscape) {
-                (sh * 0.90f).toInt()
+                minOf((430 * d).toInt(), (sh * 0.90f).toInt())
             } else {
-                (520 * d).toInt().coerceAtMost((sh * 0.85f).toInt())
-            }
+                minOf((570 * d).toInt(), (sh * 0.84f).toInt())
+            }.coerceAtLeast(minOf((290 * d).toInt(), (sh * 0.58f).toInt()))
 
             val lp = WindowManager.LayoutParams(
                 panelW, panelH,
@@ -166,7 +166,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             background = NukeCyberHudStyler.TacticalPanelDrawable(
                 density = d,
                 cornerRadiusPx = 14 * d,
-                strokeColor = NukeCyberHudStyler.COLOR_EMERALD_NEON,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
                 bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
                 showGrid = true,
                 showBrackets = true
@@ -195,7 +195,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         actionStatusTv = TextView(context).apply {
             text = "PROCESS CONTROL: Select an eligible background app to manage or end its process"
             textSize = 9.5f
-            setTextColor(Color.parseColor("#00E5C8"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             gravity = Gravity.CENTER
             setPadding(0, (4 * d).toInt(), 0, (6 * d).toInt())
@@ -249,7 +249,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0F1A17"))
                 cornerRadius = 8 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#10B981"))
+                setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             setPadding((10 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
         }
@@ -295,7 +295,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             background = GradientDrawable().apply {
                 shape = GradientDrawable.OVAL
-                setColor(Color.parseColor("#10B981"))
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
         }
         dragArea.addView(dot)
@@ -333,11 +333,11 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             text = "↺"
             textSize = 14f
             gravity = Gravity.CENTER
-            setTextColor(Color.parseColor("#00E5C8"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#142B24"))
                 cornerRadius = 6 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#00E5C8"))
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             layoutParams = LinearLayout.LayoutParams((30 * d).toInt(), (30 * d).toInt()).apply {
                 rightMargin = (6 * d).toInt()
@@ -441,7 +441,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                         val killed = NukeProcessPurgeGuardian.killRogueZombieProcesses(context)
                         withContext(Dispatchers.Main) {
                             actionStatusTv?.text = if (killed > 0) "Completed: stopped $killed stalled background process group(s)." else "No stalled background process groups detected."
-                            actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                            actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                             refreshTasksList()
                         }
                     } catch (t: Throwable) {
@@ -455,13 +455,13 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val balanceAllBtn = TextView(context).apply {
             text = tr("BALANCE")
             textSize = 7.5f
-            setTextColor(Color.parseColor("#00E5C8"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0E2420"))
                 cornerRadius = 6 * d
-                setStroke((0.8f * d).toInt(), Color.parseColor("#00E5C8"))
+                setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             layoutParams = LinearLayout.LayoutParams(
                 LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -481,7 +481,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#10B981"))
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 cornerRadius = 6 * d
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -508,7 +508,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.VISIBLE
                     actionStatusTv?.text = "SCANNING ELIGIBLE BACKGROUND APPS..."
-                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
 
                 val tasks = queryRunningUserApps()
@@ -522,7 +522,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.GONE
                     actionStatusTv?.text = "✓ TASK MONITOR READY"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
             }
         }
@@ -1044,9 +1044,9 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 if (isProt) {
                     setColor(Color.parseColor("#12161A"))
                     cornerRadius = 8 * d
-                    setStroke((0.8f * d).toInt(), Color.parseColor("#334155"))
+                    setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_BORDER_BRIGHT)
                 } else {
-                    setColor(Color.parseColor("#0C1217"))
+                    setColor(NukeCyberHudStyler.COLOR_BG_CARD)
                     cornerRadius = 8 * d
                     setStroke((0.8f * d).toInt(), Color.parseColor("#1A2530"))
                 }
@@ -1071,7 +1071,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 else -> "•"
             }
             textSize = 11f
-            setTextColor(if (isProt) Color.parseColor("#94A3B8") else Color.parseColor("#00E5C8"))
+            setTextColor(if (isProt) Color.parseColor("#9CB8AD") else NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams((32 * d).toInt(), (32 * d).toInt()).apply {
@@ -1079,13 +1079,13 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             background = GradientDrawable().apply {
                 if (isProt) {
-                    setColor(Color.parseColor("#1E293B"))
+                    setColor(NukeCyberHudStyler.COLOR_BG_RAISED)
                     cornerRadius = 6 * d
                     setStroke((0.8f * d).toInt(), Color.parseColor("#475569"))
                 } else {
                     setColor(Color.parseColor("#14222E"))
                     cornerRadius = 6 * d
-                    setStroke((0.8f * d).toInt(), Color.parseColor("#00E5C8"))
+                    setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
             }
         }
@@ -1115,10 +1115,10 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val ramBadge = TextView(context).apply {
             text = " ${item.estimatedRamMb} MB "
             textSize = 7f
-            setTextColor(if (isProt) Color.parseColor("#94A3B8") else Color.parseColor("#10B981"))
+            setTextColor(if (isProt) Color.parseColor("#9CB8AD") else NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.MONOSPACE
             background = GradientDrawable().apply {
-                setColor(if (isProt) Color.parseColor("#1E293B") else Color.parseColor("#142B22"))
+                setColor(if (isProt) NukeCyberHudStyler.COLOR_BG_RAISED else NukeCyberHudStyler.COLOR_BG_CARD_ALT)
                 cornerRadius = 3 * d
             }
             layoutParams = LinearLayout.LayoutParams(
@@ -1137,19 +1137,19 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                     when {
                         item.statusTag.contains("RECORDING") -> Color.parseColor("#FF6B6B")
                         item.statusTag.contains("RECORDER") -> Color.parseColor("#C084FC")
-                        item.statusTag.contains("PLAYING NOW") -> Color.parseColor("#10B981")
-                        item.statusTag.contains("ACTIVE NOW") -> Color.parseColor("#10B981")
+                        item.statusTag.contains("PLAYING NOW") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                        item.statusTag.contains("ACTIVE NOW") -> NukeCyberHudStyler.COLOR_CYAN_NEON
                         item.statusTag.contains("GAME NUKE") -> Color.parseColor("#F59E0B")
                         item.statusTag.contains("YOUTUBE") -> Color.parseColor("#FF0033")
-                        item.statusTag.contains("GAME") -> Color.parseColor("#00E5C8")
-                        item.statusTag.contains("MEDIA") -> Color.parseColor("#38BDF8")
+                        item.statusTag.contains("GAME") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                        item.statusTag.contains("MEDIA") -> NukeCyberHudStyler.COLOR_TELEMETRY
                         item.statusTag.contains("MUSIC") -> Color.parseColor("#EC4899")
                         else -> Color.parseColor("#E2E8F0")
                     }
                 )
                 typeface = Typeface.DEFAULT_BOLD
                 background = GradientDrawable().apply {
-                    setColor(if (isProt) Color.parseColor("#334155") else Color.parseColor("#1E293B"))
+                    setColor(if (isProt) NukeCyberHudStyler.COLOR_BORDER_BRIGHT else NukeCyberHudStyler.COLOR_BG_RAISED)
                     cornerRadius = 3 * d
                     if (!isProt) setStroke((0.6f * d).toInt(), Color.parseColor("#475569"))
                 }
@@ -1168,7 +1168,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
         val pkgTv = TextView(context).apply {
             text = "${pidText}${item.packageName}"
             textSize = 6.6f
-            setTextColor(if (isProt) Color.parseColor("#64748B") else Color.parseColor("#7A9E94"))
+            setTextColor(if (isProt) Color.parseColor("#64778D") else Color.parseColor("#7A9E94"))
             typeface = Typeface.MONOSPACE
             maxLines = 1
             ellipsize = TextUtils.TruncateAt.END
@@ -1199,17 +1199,17 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             }
             val badgeColor = when {
                 item.statusTag.contains("RECORDING") -> Color.parseColor("#FF3D55")
-                item.statusTag.contains("RECORDER") -> Color.parseColor("#A855F7")
-                item.statusTag.contains("PLAYING NOW") -> Color.parseColor("#10B981")
-                item.statusTag.contains("ACTIVE NOW") -> Color.parseColor("#10B981")
-                item.statusTag.contains("GAME (RECENT)") -> Color.parseColor("#00E5C8")
-                item.statusTag.contains("GAME (BG)") -> Color.parseColor("#00E5C8")
-                item.statusTag.contains("GAME") -> Color.parseColor("#00E5C8")
+                item.statusTag.contains("RECORDER") -> Color.parseColor("#A8FFE0")
+                item.statusTag.contains("PLAYING NOW") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                item.statusTag.contains("ACTIVE NOW") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                item.statusTag.contains("GAME (RECENT)") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                item.statusTag.contains("GAME (BG)") -> NukeCyberHudStyler.COLOR_CYAN_NEON
+                item.statusTag.contains("GAME") -> NukeCyberHudStyler.COLOR_CYAN_NEON
                 item.statusTag.contains("GAME NUKE") -> Color.parseColor("#F59E0B")
                 item.statusTag.contains("YOUTUBE") -> Color.parseColor("#FF0033")
-                item.statusTag.contains("MEDIA") -> Color.parseColor("#38BDF8")
+                item.statusTag.contains("MEDIA") -> NukeCyberHudStyler.COLOR_TELEMETRY
                 item.statusTag.contains("MUSIC") -> Color.parseColor("#EC4899")
-                else -> Color.parseColor("#94A3B8")
+                else -> Color.parseColor("#9CB8AD")
             }
             val immuneBadge = TextView(context).apply {
                 text = badgeText
@@ -1218,7 +1218,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#1E293B"))
+                    setColor(NukeCyberHudStyler.COLOR_BG_RAISED)
                     cornerRadius = 5 * d
                     setStroke((0.8f * d).toInt(), badgeColor)
                 }
@@ -1236,13 +1236,13 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
             val balanceBtn = TextView(context).apply {
                 text = "⚖ BAL"
                 textSize = 7.5f
-                setTextColor(Color.parseColor("#00E5C8"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#102B24"))
                     cornerRadius = 5 * d
-                    setStroke((0.8f * d).toInt(), Color.parseColor("#00E5C8"))
+                    setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
                 layoutParams = LinearLayout.LayoutParams(
                     LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -1292,7 +1292,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
     private fun balanceTask(item: BackgroundAppItem, cardView: View, balanceBtn: TextView) {
         if (item.isProtectedOrActive) {
             actionStatusTv?.text = "PROTECTED PROCESS • CANNOT COMPACT"
-            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
             return
         }
 
@@ -1306,10 +1306,10 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 }
                 withContext(Dispatchers.Main) {
                     balanceBtn.text = "✓ OK"
-                    balanceBtn.setTextColor(Color.parseColor("#10B981"))
+                    balanceBtn.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     balanceBtn.isClickable = false
                     actionStatusTv?.text = "✓ MEMORY COMPACTED: ${item.appLabel.uppercase()}"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "balanceTask error: ${t.message}", t)
@@ -1350,27 +1350,27 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
 
         if (isRecorder) {
             actionStatusTv?.text = "SCREEN RECORDER • PROTECTED"
-            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
             return
         }
 
         val detectorSync = ActiveGameDetector(context)
         if (item.isProtectedOrActive || detectorSync.isLikelyGame(pkg) || detectorSync.classifyGame(pkg) != null || NukeProcessPurgeGuardian.isProtected(context, item.packageName)) {
             actionStatusTv?.text = "GAME / PROTECTED TASK • CANNOT TERMINATE"
-            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
             return
         }
 
         val isCurrentPlaying = activeGame.isNotBlank() && (pkg == activeGame || pkg.startsWith("$activeGame:"))
         if (isCurrentPlaying) {
             actionStatusTv?.text = "ACTIVE GAME • CANNOT TERMINATE ACTIVE GAME"
-            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
             return
         }
 
         if (isSensitiveSystemPackage(pkg)) {
             actionStatusTv?.text = "SYSTEM CORE • PROTECTED"
-            actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+            actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
             return
         }
 
@@ -1389,7 +1389,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 if (currentPlayingGame.isNotBlank() && (pkg == currentPlayingGame || pkg.startsWith("$currentPlayingGame:"))) {
                     withContext(Dispatchers.Main) {
                         actionStatusTv?.text = "ACTIVE GAME • CANNOT TERMINATE ACTIVE GAME"
-                        actionStatusTv?.setTextColor(Color.parseColor("#94A3B8"))
+                        actionStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
                     }
                     return@launch
                 }
@@ -1432,7 +1432,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                         .start()
 
                     actionStatusTv?.text = "Ended: ${item.appLabel.uppercase()} • estimated ${item.estimatedRamMb} MB available"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "terminateTask error: ${t.message}", t)
@@ -1446,7 +1446,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.VISIBLE
                     actionStatusTv?.text = "REQUESTING MEMORY COMPACTION FOR ELIGIBLE APPS..."
-                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
 
                 val myPkg = context.packageName.lowercase(Locale.US)
@@ -1525,7 +1525,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.GONE
                     actionStatusTv?.text = "✓ BALANCE: COMPACTED MEMORY FOR ${balanceTasks.size} BACKGROUND APP(S)"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     refreshTasksList()
                 }
             } catch (t: Throwable) {
@@ -1533,7 +1533,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.GONE
                     actionStatusTv?.text = "✓ MEMORY COMPACTION COMPLETE"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     refreshTasksList()
                 }
             }
@@ -1546,7 +1546,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.VISIBLE
                     actionStatusTv?.text = "ENDING ELIGIBLE BACKGROUND TASKS..."
-                    actionStatusTv?.setTextColor(Color.parseColor("#00E5C8"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 }
 
                 val myPkg = context.packageName.lowercase(Locale.US)
@@ -1639,7 +1639,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.GONE
                     actionStatusTv?.text = "Completed: ${killableTasks.size} eligible app(s) ended • estimated ${freedTotalMb} MB available"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     refreshTasksList()
                 }
             } catch (t: Throwable) {
@@ -1647,7 +1647,7 @@ class NukeTaskManagerPanelOverlay private constructor(private val context: Conte
                 withContext(Dispatchers.Main) {
                     loadingProgressBar?.visibility = View.GONE
                     actionStatusTv?.text = "Process action completed; protected game and system services were excluded"
-                    actionStatusTv?.setTextColor(Color.parseColor("#10B981"))
+                    actionStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     refreshTasksList()
                 }
             }

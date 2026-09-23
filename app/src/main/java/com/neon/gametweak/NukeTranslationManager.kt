@@ -75,6 +75,35 @@ object NukeTranslationManager {
     // Comprehensive offline dictionaries covering 100% of Dashboard, Tools, Floating HUD & In-Game Overlays
     private val OFFLINE_DICTIONARY: Map<String, Map<String, String>> = mapOf(
         "id" to mapOf(
+            // ── 4 Performance Modes ──
+            "Low Power" to "Hemat Daya",
+            "LOW POWER" to "HEMAT DAYA",
+            "Balance" to "Seimbang",
+            "BALANCE" to "SEIMBANG",
+            "Performance" to "Performa Tinggi",
+            "PERFORMANCE" to "PERFORMA TINGGI",
+            "Extreme" to "Ekstrem",
+            "EXTREME" to "EKSTREM",
+            "ECO" to "ECO",
+            "BAL" to "BAL",
+            "PERF" to "PERF",
+            "XTRM" to "XTRM",
+
+            // ── Game Space & Launchers ──
+            "GAME SPACE // SESSION LAUNCHER" to "RUANG GAME // PELUNCUR SESI",
+            "DETECTED" to "TERDETEKSI",
+            "ALL APPS" to "SEMUA APLIKASI",
+            "OPEN ALL APPS" to "BUKA SEMUA APLIKASI",
+            "SCANNING LAUNCHERS" to "MEMINDAI PELUNCUR",
+            "NO GAME CATEGORY FOUND" to "KATEGORI GAME TIDAK DITEMUKAN",
+            "Some games/OEMs do not expose CATEGORY_GAME. Open ALL APPS and select the game once." to "Beberapa game/OEM tidak mengekspos CATEGORY_GAME. Buka SEMUA APLIKASI dan pilih game sekali.",
+            "Game Nuke scans all installed games and tunes the session upon launch. If a game is not auto-detected, use the ALL APPS tab." to "Game Nuke memindai seluruh game terinstal dan mengoptimalkan sesi saat diluncurkan. Jika game belum terdeteksi, gunakan tab SEMUA APLIKASI.",
+            "Game Nuke Floating HUD requires 'Display over other apps' permission so the gaming cockpit remains active during gameplay." to "Floating HUD Game Nuke memerlukan izin 'Tampilkan di atas aplikasi lain' agar kokpit game tetap aktif saat bermain.",
+            "NO ACTIVE GAME • COCKPIT STANDBY" to "TIDAK ADA GAME AKTIF • KOKPIT STANDBY",
+            "NO ACTIVE GAME" to "TIDAK ADA GAME AKTIF",
+            "LIVE ENGINE" to "MESIN AKTIF",
+            "MEASURED TELEMETRY" to "TELEMETRI TERUKUR",
+
             // ── Dashboard Core & Telemetry ──
             "Command Center" to "Pusat Komando",
             "Standard Mode Ready" to "Mode Standar Siap",
@@ -141,6 +170,11 @@ object NukeTranslationManager {
             "OPEN" to "BUKA",
             "LIVE ENGINE" to "MESIN LANGSUNG",
             "MEASURED TELEMETRY" to "TELEMETRI TERUKUR",
+            "CURATED PRESETS" to "PRESET GAMING",
+            "MODIFIED" to "DIMODIFIKASI",
+            "FAVORITES" to "FAVORIT",
+            "PROPERTIES" to "PROPERTI",
+            "Search key, value or gaming preset..." to "Cari parameter, nilai atau preset...",
 
             // ── Navigation Bottom Bar & Drawer ──
             "Core" to "Inti",

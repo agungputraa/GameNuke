@@ -87,10 +87,16 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             if (rootView != null) return@post
             val dm = context.resources.displayMetrics
             val isLandscape = dm.widthPixels > dm.heightPixels
-            val panelW = if (isLandscape) (360 * d).toInt().coerceAtMost((dm.widthPixels * 0.52f).toInt())
-                         else (340 * d).toInt().coerceAtMost((dm.widthPixels * 0.94f).toInt())
-            val panelH = if (isLandscape) (dm.heightPixels * 0.92f).toInt()
-                         else (540 * d).toInt().coerceAtMost((dm.heightPixels * 0.85f).toInt())
+            val panelW = if (isLandscape) {
+                minOf((430 * d).toInt(), (dm.widthPixels * 0.54f).toInt())
+            } else {
+                minOf((360 * d).toInt(), (dm.widthPixels * 0.94f).toInt())
+            }.coerceAtLeast(minOf((290 * d).toInt(), (dm.widthPixels * 0.80f).toInt()))
+            val panelH = if (isLandscape) {
+                minOf((430 * d).toInt(), (dm.heightPixels * 0.88f).toInt())
+            } else {
+                minOf((570 * d).toInt(), (dm.heightPixels * 0.82f).toInt())
+            }.coerceAtLeast(minOf((300 * d).toInt(), (dm.heightPixels * 0.58f).toInt()))
 
             val lp = WindowManager.LayoutParams(
                 panelW, panelH,
@@ -103,7 +109,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
                 x = if (isLandscape) (dm.widthPixels - panelW - (20 * d).toInt()) else (16 * d).toInt()
-                y = (40 * d).toInt()
+                y = if (isLandscape) (dm.heightPixels * 0.04f).toInt() else (dm.heightPixels * 0.08f).toInt()
             }
 
             rootParams = lp
@@ -144,8 +150,8 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
                 engine.isPlaying.collectLatest { playing ->
                     playPauseBtn?.text = if (playing) "❚❚ PAUSE" else "▶ PLAY"
                     playPauseBtn?.setBackgroundDrawable(createRoundedDrawable(
-                        if (playing) Color.parseColor("#10B981") else Color.parseColor("#00E5C8"),
-                        Color.parseColor("#047857"),
+                        if (playing) NukeCyberHudStyler.COLOR_CYAN_NEON else NukeCyberHudStyler.COLOR_CYAN_NEON,
+                        NukeCyberHudStyler.COLOR_CYAN_DIM,
                         (6 * d).toInt(), (1 * d).toInt()
                     ))
                 }
@@ -230,14 +236,14 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         }
         val titleTv = TextView(context).apply {
             text = "CYBER JUKEBOX"
-            setTextColor(Color.parseColor("#00E5C8"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             textSize = 10.5f
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.08f
         }
         val subtitleTv = TextView(context).apply {
             text = "YOUTUBE IN-GAME AUDIO STREAMER"
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             textSize = 6.5f
             typeface = Typeface.MONOSPACE
         }
@@ -248,11 +254,11 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         val closeBtn = TextView(context).apply {
             text = "✕"
             textSize = 12f
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams((26 * d).toInt(), (26 * d).toInt())
-            background = createRoundedDrawable(Color.parseColor("#1E293B"), Color.parseColor("#334155"), (6 * d).toInt(), 1)
+            background = createRoundedDrawable(NukeCyberHudStyler.COLOR_BG_RAISED, NukeCyberHudStyler.COLOR_BORDER_BRIGHT, (6 * d).toInt(), 1)
             setOnClickListener { hide() }
         }
         header.addView(closeBtn)
@@ -265,7 +271,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
                 topMargin = (6 * d).toInt()
                 bottomMargin = (6 * d).toInt()
             }
-            background = createRoundedDrawable(Color.parseColor("#0A141A"), Color.parseColor("#00E5C8"), (8 * d).toInt(), (1 * d).toInt())
+            background = createRoundedDrawable(Color.parseColor("#0A141A"), NukeCyberHudStyler.COLOR_CYAN_NEON, (8 * d).toInt(), (1 * d).toInt())
             setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
         }
 
@@ -277,7 +283,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
 
         val eqAnim = TextView(context).apply {
             text = "●"
-            setTextColor(Color.parseColor("#00E5C8"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             textSize = 10f
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                 marginEnd = (6 * d).toInt()
@@ -302,7 +308,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
 
         val tArtist = TextView(context).apply {
             text = "Phonk Gaming Drift • 2:45"
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             textSize = 7.5f
             maxLines = 1
         }
@@ -331,7 +337,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             layoutParams = LinearLayout.LayoutParams((62 * d).toInt(), (26 * d).toInt()).apply {
                 marginEnd = (8 * d).toInt()
             }
-            background = createRoundedDrawable(Color.parseColor("#1E293B"), Color.parseColor("#334155"), (5 * d).toInt(), 1)
+            background = createRoundedDrawable(NukeCyberHudStyler.COLOR_BG_RAISED, NukeCyberHudStyler.COLOR_BORDER_BRIGHT, (5 * d).toInt(), 1)
             setOnClickListener { engine.playPrevPreset() }
         }
         controlsRow.addView(prevBtn)
@@ -343,7 +349,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams((78 * d).toInt(), (28 * d).toInt())
-            background = createRoundedDrawable(Color.parseColor("#00E5C8"), Color.parseColor("#047857"), (6 * d).toInt(), (1 * d).toInt())
+            background = createRoundedDrawable(NukeCyberHudStyler.COLOR_CYAN_NEON, NukeCyberHudStyler.COLOR_CYAN_DIM, (6 * d).toInt(), (1 * d).toInt())
             setOnClickListener { engine.togglePlayPause() }
         }
         playPauseBtn = playBtn
@@ -358,7 +364,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             layoutParams = LinearLayout.LayoutParams((62 * d).toInt(), (26 * d).toInt()).apply {
                 marginStart = (8 * d).toInt()
             }
-            background = createRoundedDrawable(Color.parseColor("#1E293B"), Color.parseColor("#334155"), (5 * d).toInt(), 1)
+            background = createRoundedDrawable(NukeCyberHudStyler.COLOR_BG_RAISED, NukeCyberHudStyler.COLOR_BORDER_BRIGHT, (5 * d).toInt(), 1)
             setOnClickListener { engine.playNextPreset() }
         }
         controlsRow.addView(nextBtn)
@@ -374,7 +380,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         }
         val volLbl = TextView(context).apply {
             text = "VOL: 85%"
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             textSize = 7f
             typeface = Typeface.MONOSPACE
             layoutParams = LinearLayout.LayoutParams((52 * d).toInt(), LinearLayout.LayoutParams.WRAP_CONTENT)
@@ -424,12 +430,12 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         presets.forEach { (label, searchKey, defaultTrack) ->
             val chip = TextView(context).apply {
                 text = label
-                setTextColor(Color.parseColor("#00E5C8"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 textSize = 7.5f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
                 setPadding((8 * d).toInt(), (3 * d).toInt(), (8 * d).toInt(), (3 * d).toInt())
-                background = createRoundedDrawable(Color.parseColor("#0C2024"), Color.parseColor("#00E5C8"), (4 * d).toInt(), 1)
+                background = createRoundedDrawable(Color.parseColor("#0C2024"), NukeCyberHudStyler.COLOR_CYAN_NEON, (4 * d).toInt(), 1)
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, (22 * d).toInt()).apply {
                     marginEnd = (5 * d).toInt()
                 }
@@ -455,12 +461,12 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
 
         val et = EditText(context).apply {
             hint = "Search YouTube track or artist…"
-            setHintTextColor(Color.parseColor("#64748B"))
+            setHintTextColor(Color.parseColor("#64778D"))
             setTextColor(Color.WHITE)
             textSize = 8.5f
             imeOptions = EditorInfo.IME_ACTION_SEARCH
             setSingleLine(true)
-            background = createRoundedDrawable(Color.parseColor("#0B131B"), Color.parseColor("#1E293B"), (5 * d).toInt(), 1)
+            background = createRoundedDrawable(Color.parseColor("#0B131B"), NukeCyberHudStyler.COLOR_BG_RAISED, (5 * d).toInt(), 1)
             setPadding((8 * d).toInt(), 0, (8 * d).toInt(), 0)
             layoutParams = LinearLayout.LayoutParams(0, (32 * d).toInt(), 1f).apply {
                 marginEnd = (6 * d).toInt()
@@ -485,7 +491,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             layoutParams = LinearLayout.LayoutParams((62 * d).toInt(), (32 * d).toInt())
-            background = createRoundedDrawable(Color.parseColor("#00E5C8"), Color.parseColor("#00E5C8"), (5 * d).toInt(), 1)
+            background = createRoundedDrawable(NukeCyberHudStyler.COLOR_CYAN_NEON, NukeCyberHudStyler.COLOR_CYAN_NEON, (5 * d).toInt(), 1)
             setOnClickListener {
                 val query = et.text.toString()
                 engine.search(query)
@@ -532,7 +538,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         if (tracks.isEmpty()) {
             val emptyTv = TextView(context).apply {
                 text = "No songs found. Try different keywords!"
-                setTextColor(Color.parseColor("#64748B"))
+                setTextColor(Color.parseColor("#64778D"))
                 textSize = 8f
                 gravity = Gravity.CENTER
                 setPadding(0, (20 * d).toInt(), 0, 0)
@@ -559,7 +565,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
 
             val numTv = TextView(context).apply {
                 text = "${index + 1}"
-                setTextColor(Color.parseColor("#00E5C8"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 textSize = 8.5f
                 typeface = Typeface.MONOSPACE
                 gravity = Gravity.CENTER
@@ -584,7 +590,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
             }
             val metaTv = TextView(context).apply {
                 text = "${track.artist} ${if (track.duration.isNotBlank()) "• ${track.duration}" else ""}"
-                setTextColor(Color.parseColor("#64748B"))
+                setTextColor(Color.parseColor("#64778D"))
                 textSize = 6.8f
                 maxLines = 1
             }
@@ -594,7 +600,7 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
 
             val playIcon = TextView(context).apply {
                 text = "▶"
-                setTextColor(Color.parseColor("#00E5C8"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 textSize = 11f
                 gravity = Gravity.CENTER
                 layoutParams = LinearLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt())
@@ -605,13 +611,15 @@ class NukeCyberJukeboxOverlay private constructor(private val context: Context) 
         }
     }
 
-    private fun createCyberBackground(): GradientDrawable {
-        return GradientDrawable().apply {
-            shape = GradientDrawable.RECTANGLE
-            cornerRadius = 12 * d
-            setColor(Color.parseColor("#060A0E"))
-            setStroke((1.2f * d).toInt(), Color.parseColor("#00E5C8"))
-        }
+    private fun createCyberBackground(): android.graphics.drawable.Drawable {
+        return NukeCyberHudStyler.TacticalPanelDrawable(
+            density = d,
+            cornerRadiusPx = 14 * d,
+            strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+            bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+            showGrid = true,
+            showBrackets = true
+        )
     }
 
     private fun createRoundedDrawable(bgColor: Int, strokeColor: Int, radiusPx: Int, strokeWidthPx: Int): GradientDrawable {

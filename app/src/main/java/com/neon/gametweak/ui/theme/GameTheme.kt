@@ -40,13 +40,13 @@ object Neon {
     val Bg          = NukeBackground
     val BgRaised    = NukeSurface
     val BgCard      = NukeSurfaceHigh
-    val BgCardL     = Color(0xFF1E293B)
+    val BgCardL     = NukeSurfaceElevated
     val BgInset     = NukeInset
     val Outline     = NukeOutline
     val TextDim     = NukeTextSecondary
 }
-val HudShape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)
-val HudShapeSmall = androidx.compose.foundation.shape.RoundedCornerShape(10.dp)
+val HudShape = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 18.dp, topEnd = 8.dp, bottomEnd = 18.dp, bottomStart = 8.dp)
+val HudShapeSmall = androidx.compose.foundation.shape.RoundedCornerShape(topStart = 11.dp, topEnd = 5.dp, bottomEnd = 11.dp, bottomStart = 5.dp)
 
 @Composable
 fun HudHeader(
@@ -61,18 +61,18 @@ fun HudHeader(
     ) {
         Box(
             Modifier
-                .width(3.5.dp)
-                .height(20.dp)
+                 .width(4.dp)
+                .height(24.dp)
                 .clip(androidx.compose.foundation.shape.RoundedCornerShape(2.dp))
-                .background(accent)
+                .background(Brush.verticalGradient(listOf(accent, NukeCyan.copy(alpha = 0.62f))))
         )
         Spacer(Modifier.width(10.dp))
         if (icon != null) {
             Box(
                 modifier = Modifier
-                    .size(28.dp)
+                     .size(30.dp)
                     .clip(HudShapeSmall)
-                    .background(accent.copy(alpha = 0.12f))
+                    .background(Brush.linearGradient(listOf(accent.copy(alpha = 0.18f), NukeBlue.copy(alpha = 0.08f))))
                     .border(0.8.dp, accent.copy(alpha = 0.28f), HudShapeSmall),
                 contentAlignment = Alignment.Center,
             ) {
@@ -86,15 +86,15 @@ fun HudHeader(
                 color = Color.White,
                 fontSize = 14.sp,
                 fontWeight = FontWeight.Bold,
-                letterSpacing = 0.3.sp,
+                letterSpacing = 0.8.sp,
             )
             if (!subtitle.isNullOrBlank()) {
                 Text(
                     subtitle,
-                    color = accent.copy(alpha = 0.85f),
-                    fontSize = 11.sp,
+                    color = Neon.TextDim,
+                    fontSize = 10.sp,
                     fontWeight = FontWeight.Medium,
-                    letterSpacing = 0.2.sp,
+                    letterSpacing = 0.55.sp,
                 )
             }
         }
@@ -135,11 +135,12 @@ fun HudCard(
                 Brush.verticalGradient(
                     listOf(
                         background,
-                        Color(0xFF090E0C),
+                        NukeSurface,
+                        NukeInset,
                     )
                 )
             )
-            .border(0.8.dp, accent.copy(alpha = borderAlpha), HudShape)
+            .border(1.dp, Brush.linearGradient(listOf(accent.copy(alpha = borderAlpha), NukeCyan.copy(alpha = 0.12f), NukeOutline.copy(alpha = 0.72f))), HudShape)
             .padding(16.dp),
         content = content,
     )
@@ -155,7 +156,7 @@ fun HudStatChip(
     Box(
         modifier = modifier
             .clip(HudShapeSmall)
-            .background(Color(0xFF0D1512))
+            .background(Brush.linearGradient(listOf(NukeSurfaceHigh, NukeInset)))
             .border(0.8.dp, accent.copy(alpha = 0.24f), HudShapeSmall)
             .padding(horizontal = 12.dp, vertical = 8.dp),
     ) {
@@ -196,7 +197,7 @@ fun HudButton(
         colors = ButtonDefaults.buttonColors(
             containerColor = effectiveAccent.copy(alpha = 0.12f),
             contentColor = effectiveAccent,
-            disabledContainerColor = Color(0xFF0D1512),
+            disabledContainerColor = NukeInset,
             disabledContentColor = Neon.TextDim,
         ),
         border = androidx.compose.foundation.BorderStroke(0.8.dp, effectiveAccent.copy(alpha = 0.35f)),
@@ -277,6 +278,53 @@ private fun DrawScope.drawHex(c: Offset, r: Float, color: Color, density: Float)
     }
 }
 
+
+@Composable
+fun ReactorBackdrop(
+    modifier: Modifier = Modifier,
+    accent: Color = NukeGreen,
+) {
+    Canvas(modifier = modifier) {
+        // Sparse static tactical grid. Designed for low overdraw and no animation loop.
+        val grid = 42.dp.toPx()
+        var x = grid
+        while (x < size.width) {
+            drawLine(accent.copy(alpha = .018f), Offset(x, 0f), Offset(x, size.height), .55.dp.toPx())
+            x += grid
+        }
+        var y = grid
+        while (y < size.height) {
+            drawLine(accent.copy(alpha = .025f), Offset(0f, y), Offset(size.width, y), .55.dp.toPx())
+            y += grid
+        }
+
+        val core = Offset(size.width * .88f, size.height * .13f)
+        val ringStroke = .8.dp.toPx()
+        var ringIndex = 0
+        while (ringIndex < 3) {
+            val radiusDp = when (ringIndex) { 0 -> 80f; 1 -> 126f; else -> 174f }
+            drawCircle(
+                color = accent.copy(alpha = .045f - ringIndex * .009f),
+                radius = radiusDp.dp.toPx(),
+                center = core,
+                style = Stroke(width = ringStroke),
+            )
+            ringIndex++
+        }
+
+        val trace = NukeCyan.copy(alpha = .09f)
+        val sw = .9.dp.toPx()
+        drawLine(trace, Offset(0f, size.height * .23f), Offset(size.width * .11f, size.height * .23f), sw)
+        drawLine(trace, Offset(size.width * .11f, size.height * .23f), Offset(size.width * .15f, size.height * .19f), sw)
+        drawLine(trace, Offset(size.width * .15f, size.height * .19f), Offset(size.width * .34f, size.height * .19f), sw)
+        drawCircle(accent.copy(alpha = .35f), 2.dp.toPx(), Offset(size.width * .11f, size.height * .23f))
+
+        drawLine(trace, Offset(size.width, size.height * .78f), Offset(size.width * .91f, size.height * .78f), sw)
+        drawLine(trace, Offset(size.width * .91f, size.height * .78f), Offset(size.width * .87f, size.height * .82f), sw)
+        drawLine(trace, Offset(size.width * .87f, size.height * .82f), Offset(size.width * .68f, size.height * .82f), sw)
+    }
+}
+
 @Composable
 fun HudStatusPill(
     label: String,
@@ -288,7 +336,7 @@ fun HudStatusPill(
         verticalAlignment = Alignment.CenterVertically,
         modifier = Modifier
             .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-            .background(Color(0xFF0D1512))
+            .background(Brush.linearGradient(listOf(NukeSurfaceHigh, NukeInset)))
             .border(0.8.dp, color.copy(alpha = 0.35f), androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
             .padding(horizontal = 10.dp, vertical = 5.dp),
     ) {
@@ -301,7 +349,7 @@ fun HudStatusPill(
         Text(
             label,
             color = color,
-            fontSize = 11.sp,
+            fontSize = 10.sp,
             fontWeight = FontWeight.SemiBold,
             letterSpacing = 0.4.sp,
         )

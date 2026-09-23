@@ -151,8 +151,19 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
 
     private fun buildAndAttachView() {
         val dm = context.resources.displayMetrics
-        val width = (dm.widthPixels * 0.94f).coerceAtMost(480 * d).toInt()
-        val height = (dm.heightPixels * 0.58f).coerceIn(320 * d, 560 * d).toInt()
+        val sw = dm.widthPixels
+        val sh = dm.heightPixels
+        val isLandscape = sw > sh
+        val width = if (isLandscape) {
+            minOf((560 * d).toInt(), (sw * 0.62f).toInt())
+        } else {
+            minOf((480 * d).toInt(), (sw * 0.94f).toInt())
+        }.coerceAtLeast(minOf((300 * d).toInt(), (sw * 0.82f).toInt()))
+        val height = if (isLandscape) {
+            minOf((390 * d).toInt(), (sh * 0.88f).toInt())
+        } else {
+            minOf((560 * d).toInt(), (sh * 0.62f).toInt())
+        }.coerceAtLeast(minOf((280 * d).toInt(), (sh * 0.58f).toInt()))
 
         val layoutType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
@@ -179,11 +190,14 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
 
         val container = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#EE060A0F")) // Deep Obsidian Glass
-                cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981")) // Cyber Green Border
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 16 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             elevation = 24 * d
             clipToOutline = true
         }
@@ -233,7 +247,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = ">_"
                 textSize = 13f
                 typeface = Typeface.MONOSPACE
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 setPadding(0, 0, (6 * d).toInt(), 0)
             }
             addView(titleIcon)
@@ -252,11 +266,11 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = " $label "
                 textSize = 8.5f
                 typeface = Typeface.MONOSPACE
-                setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981") else Color.parseColor("#F59E0B"))
+                setTextColor(if (NukeConnectionManager.isConnected()) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#F59E0B"))
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#15202B"))
                     cornerRadius = 4 * d
-                    setStroke((0.8f * d).toInt(), if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981").and(0x66FFFFFF) else Color.parseColor("#F59E0B").and(0x66FFFFFF))
+                    setStroke((0.8f * d).toInt(), if (NukeConnectionManager.isConnected()) NukeCyberHudStyler.COLOR_CYAN_NEON.and(0x66FFFFFF) else Color.parseColor("#F59E0B").and(0x66FFFFFF))
                 }
                 setPadding((5 * d).toInt(), (1 * d).toInt(), (5 * d).toInt(), (1 * d).toInt())
                 layoutParams = LinearLayout.LayoutParams(
@@ -362,7 +376,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                     text = label
                     textSize = 8.5f
                     typeface = Typeface.MONOSPACE
-                    setTextColor(Color.parseColor("#38BDF8"))
+                    setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
                     background = GradientDrawable().apply {
                         setColor(Color.parseColor("#0F1E2E"))
                         cornerRadius = 10 * d
@@ -426,7 +440,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 text = "sh$ "
                 textSize = 11.5f
                 typeface = Typeface.MONOSPACE
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 setPadding(0, 0, (4 * d).toInt(), 0)
             }
             addView(promptTv)
@@ -434,7 +448,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             // Command Input
             commandInputEt = EditText(context).apply {
                 hint = "Enter shell command..."
-                setHintTextColor(Color.parseColor("#64748B"))
+                setHintTextColor(Color.parseColor("#64778D"))
                 setTextColor(Color.WHITE)
                 textSize = 11f
                 typeface = Typeface.MONOSPACE
@@ -443,7 +457,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 background = GradientDrawable().apply {
                     setColor(Color.parseColor("#04070A"))
                     cornerRadius = 8 * d
-                    setStroke((0.8f * d).toInt(), Color.parseColor("#1E293B"))
+                    setStroke((0.8f * d).toInt(), NukeCyberHudStyler.COLOR_BG_RAISED)
                 }
                 setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
                 layoutParams = LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f).apply {
@@ -477,7 +491,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 val upBtn = TextView(context).apply {
                     text = "▲"
                     textSize = 10f
-                    setTextColor(Color.parseColor("#38BDF8"))
+                    setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
                     setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt())
                     background = GradientDrawable().apply {
                         setColor(Color.parseColor("#0E1A26"))
@@ -498,7 +512,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 val downBtn = TextView(context).apply {
                     text = "▼"
                     textSize = 10f
-                    setTextColor(Color.parseColor("#38BDF8"))
+                    setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
                     setPadding((6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt(), (6 * d).toInt())
                     background = GradientDrawable().apply {
                         setColor(Color.parseColor("#0E1A26"))
@@ -544,7 +558,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
                 typeface = Typeface.DEFAULT_BOLD
                 setTextColor(Color.parseColor("#000000"))
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#10B981"))
+                    setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     cornerRadius = 8 * d
                 }
                 setPadding(0, 0, 0, 0)
@@ -579,7 +593,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             append("╚═════════════════════════════════════════════════════╝\n")
             append("Type shell command below or tap preset chips above.")
         }
-        appendConsoleLine(banner, Color.parseColor("#38BDF8"), isPrompt = false)
+        appendConsoleLine(banner, NukeCyberHudStyler.COLOR_TELEMETRY, isPrompt = false)
     }
 
     private fun executeCommand(cmd: String) {
@@ -611,14 +625,14 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             execProgressBar?.visibility = View.GONE
 
             if (result.stdout.isNotBlank()) {
-                appendConsoleLine(result.stdout.trimEnd(), Color.parseColor("#10B981"))
+                appendConsoleLine(result.stdout.trimEnd(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             if (result.stderr.isNotBlank()) {
                 appendConsoleLine(result.stderr.trimEnd(), Color.parseColor("#EF4444"))
             }
 
             // Exit code summary
-            val exitColor = if (result.exitCode == 0) Color.parseColor("#10B981") else Color.parseColor("#EF4444")
+            val exitColor = if (result.exitCode == 0) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#EF4444")
             val exitSummary = "[Process exited with code ${result.exitCode}]"
             appendConsoleLine(exitSummary, exitColor)
 
@@ -626,7 +640,7 @@ class NukeTerminalOverlay private constructor(private val context: Context) {
             backendBadgeTv?.let { tv ->
                 val label = NukeConnectionManager.connectionLabel()
                 tv.text = " $label "
-                tv.setTextColor(if (NukeConnectionManager.isConnected()) Color.parseColor("#10B981") else Color.parseColor("#F59E0B"))
+                tv.setTextColor(if (NukeConnectionManager.isConnected()) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#F59E0B"))
             }
         }
     }

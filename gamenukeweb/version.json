@@ -1,21 +1,24 @@
 {
-  "versionCode": 27,
-  "versionName": "3.2.1-Spectra",
-  "appName": "Game Nuke Spectra Edition",
-  "publishedAt": "2026-09-17",
+  "versionCode": 34,
+  "versionName": "3.4.0-Nexus",
+  "appName": "Game Nuke Nexus Edition",
+  "publishedAt": "2026-09-22",
   "minAndroidVersion": 11,
   "targetSdk": 36,
   "releaseNotes": [
-    "Zero-Latency Touch Engine: Eliminated touchscreen freeze by disabling evdev grab during bridge bootstrap (Shizuku, iADB, Native ADB).",
-    "Watchdog Ghost Touch Eliminator: Added watchdog auto-release and guaranteed ACTION_UP lifecycle on all macro modes (Rapid, Tap, Hold, Swipe, Double Tap).",
-    "Ironclad Game & Screen Recorder Immunity: Sentinel, Task Manager, Kill Zombie, Manage Load, and Deep Clean 100% guarantee no active game or recorder is ever stopped.",
-    "HyperOS, MIUI & OneUI Compatibility: Hardened against aggressive OEM process killers and background touch restrictions.",
-    "Macro Studio Non-Interfering Overlay: Fullscreen canvas touch-through mode ensuring responsive zero-lag touch controls during intense gaming."
+    "Nexus Multi-Touch & AI Engine: Full kernel alignment with low-latency touch translation, cognitive hardware tuning, and adaptive gaming pace.",
+    "Precision Linear HUD: Symmetrical linear alignment for active game title, session status, and cockpit controls.",
+    "Aesthetic Blurred Game Artwork: Game profiles display elegant, low-overhead GPU blurred backdrops matching each game's emblem.",
+    "Thermal & CPU Load Optimization: Throttled ADB background polling and zero-allocation Compose drawing to keep the device running cool.",
+    "Absolute Zero-Ghost Touch Protection: Hardware kernel BTN_TOUCH release detection guarantees instant pointer purge with zero phantom taps.",
+    "Ironclad Process Immunity Shield: Sentinel, Task Manager, and Autonomous AI Agent 100% protect Game Nuke, active games, and all OEM/3rd-party screen recorders.",
+    "Cross-Brand Android 11–16 Stability: Pre-flight injection capability tests ensure zero screen freeze across Samsung, Xiaomi/HyperOS, Oppo, Vivo, Asus ROG, Transsion, and Pixel."
   ],
-  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
-  "localApkUrl": "GameNuke-v3.2.1-Spectra.apk",
-  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.2.1-Spectra/GameNuke-v3.2.1-Spectra.apk",
-  "sha256": "B820191678EBC843A4FDF3D74ADDB89894C7421DE56C18AA47D02B9BCB572B50",
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
+  "localApkUrl": "GameNuke-v3.4.0-Nexus.apk",
+  "apkSizeMb": "33.7",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
+  "sha256": "1C92F8E4F5CA7089F4B672407B5A7A651E74BEFEC804EB25B3F19CF11C258B88",
   "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
   "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
 }

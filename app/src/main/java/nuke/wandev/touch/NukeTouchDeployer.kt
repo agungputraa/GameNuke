@@ -162,9 +162,58 @@ object NukeTouchDeployer {
     }
 
     /**
+     * Fresh redeployment requested by user:
+     * When Game Nuke connects to bridge or on fresh startup, checks /data/local/tmp/libwandev.so.
+     * If the library is there, deletes it first (hapus dulu), then deploys the fresh new version
+     * from APK assets/jniLibs and sets executable permissions (chmod 755), ensuring macro and
+     * sensitivity X/Y function correctly with pristine binaries.
+     */
+    fun redeployFresh(context: Context): Boolean {
+        Log.i(TAG, "redeployFresh: Checking and cleaning old libwandev.so from /data/local/tmp...")
+        val cleanCmd = "rm -f $TARGET_PATH $TARGET_PATH.tmp $TARGET_PATH.b64 2>/dev/null"
+        val shellService = NukeConnectionManager.ensureShellService(1500L)
+        if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
+            runCatching { shellService.execCommand(cleanCmd, 1500L) }
+        } else {
+            runCatching { NukeConnectionManager.executeCommand(cleanCmd, timeoutMs = 1500L) }
+        }
+        runCatching { File(TARGET_PATH).delete() }
+        runCatching { File("$TARGET_PATH.tmp").delete() }
+
+        // Deploy fresh library bytes from assets / APK
+        var success = false
+        if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
+            success = deployViaBinder(shellService, context)
+            if (success) {
+                Log.i(TAG, "redeployFresh succeeded via privileged Binder")
+            }
+        }
+        if (!success) {
+            success = deployViaCommand(context)
+            if (success) {
+                Log.i(TAG, "redeployFresh succeeded via shell command")
+            }
+        }
+
+        // Verify executable permission and non-zero size
+        val chmodCmd = "chmod 755 $TARGET_PATH && [ -s $TARGET_PATH ] && echo DEPLOYED_OK"
+        val verifyRes = if (shellService != null && runCatching { shellService.ping() }.getOrDefault(false)) {
+            runCatching { shellService.execCommand(chmodCmd, 1500L).output }.getOrNull()
+        } else {
+            runCatching { NukeConnectionManager.executeCommand(chmodCmd, timeoutMs = 1500L)?.output }.getOrNull()
+        }
+        val isOk = verifyRes?.contains("DEPLOYED_OK") == true || isDeployed()
+        Log.i(TAG, "redeployFresh finished: verified=$isOk")
+        return isOk
+    }
+
+    /**
      * High-level orchestrator: attempts deployment through each supported backend in priority order.
      */
-    fun ensureDeployed(context: Context): Boolean {
+    fun ensureDeployed(context: Context, force: Boolean = false): Boolean {
+        if (force) {
+            return redeployFresh(context)
+        }
         if (isDeployed()) {
             return true
         }

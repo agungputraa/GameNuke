@@ -97,15 +97,15 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
             val (sw, sh) = getScreenSize()
             val isLandscape = sw > sh
             val panelW = if (isLandscape) {
-                (330 * d).toInt().coerceAtMost((sw * 0.46f).toInt())
+                minOf((430 * d).toInt(), (sw * 0.54f).toInt())
             } else {
-                (320 * d).toInt().coerceAtMost((sw * 0.88f).toInt())
-            }
+                minOf((352 * d).toInt(), (sw * 0.92f).toInt())
+            }.coerceAtLeast(minOf((282 * d).toInt(), (sw * 0.80f).toInt()))
             val panelH = if (isLandscape) {
-                (sh * 0.88f).toInt()
+                minOf((420 * d).toInt(), (sh * 0.90f).toInt())
             } else {
-                (500 * d).toInt().coerceAtMost((sh * 0.84f).toInt())
-            }
+                minOf((550 * d).toInt(), (sh * 0.84f).toInt())
+            }.coerceAtLeast(minOf((284 * d).toInt(), (sh * 0.58f).toInt()))
 
             val lp = WindowManager.LayoutParams(
                 panelW, panelH,
@@ -151,11 +151,14 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
 
     private fun buildPanel(lp: WindowManager.LayoutParams, panelW: Int): View {
         val root = FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                cornerRadius = 16f * d
-                setColor(Color.parseColor("#F5080C10")) // Obsidian Dark Glass
-                setStroke((1.2f * d).toInt(), Color.parseColor("#3300FF88"))
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 18 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             elevation = 20f * d
             setPadding((12 * d).toInt(), (8 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
         }
@@ -187,7 +190,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         body.addView(sectionTitle("RESOLUTION & DISPLAY SCALER"))
         body.addView(buildResolutionRow())
         body.addView(space(6))
-        body.addView(actionBtn("↺  RESTORE NATIVE DISPLAY", "#10B981") {
+        body.addView(actionBtn("↺  RESTORE NATIVE DISPLAY", NukeCyberHudStyler.COLOR_CYAN_NEON) {
             setResolution("NATIVE")
         })
         body.addView(space(10))
@@ -228,7 +231,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         statusTv = TextView(context).apply {
             text = "Engine: Ready • Privileged Shell Active"
             textSize = 8.5f
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             gravity = Gravity.CENTER
             setPadding(0, dp2px(4), 0, dp2px(4))
         }
@@ -278,7 +281,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         titleCol.addView(TextView(context).apply {
             text = "🎮 GPU & DISPLAY TUNER"
             textSize = 11.5f
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.DEFAULT_BOLD
             letterSpacing = 0.05f
         })
@@ -286,7 +289,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
         titleCol.addView(TextView(context).apply {
             text = "Renderer, Resolution & Surface Booster"
             textSize = 7.8f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             setPadding(0, (1 * d).toInt(), 0, 0)
         })
 
@@ -384,11 +387,11 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
     }
 
     private fun updateChipVisual(v: TextView, active: Boolean) {
-        v.setTextColor(Color.parseColor(if (active) "#10B981" else "#94a3b8"))
+        v.setTextColor(if (active) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#94a3b8"))
         v.background = GradientDrawable().apply {
             cornerRadius = 7f * d
             setColor(Color.parseColor(if (active) "#0d2618" else "#111c26"))
-            setStroke(dp2px(1), Color.parseColor(if (active) "#10B981" else "#1e293b"))
+            setStroke(dp2px(1), if (active) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#1e293b"))
         }
     }
 
@@ -423,19 +426,19 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
 
         val sw = Switch(context).apply {
             isChecked = checked
-            thumbTintList = ColorStateList.valueOf(Color.parseColor("#10B981"))
-            trackTintList = ColorStateList.valueOf(Color.parseColor("#1A3B2F"))
+            thumbTintList = ColorStateList.valueOf(NukeCyberHudStyler.COLOR_CYAN_NEON)
+            trackTintList = ColorStateList.valueOf(NukeCyberHudStyler.COLOR_BORDER_SUBTLE)
             setOnCheckedChangeListener { _, isChecked -> onChecked(isChecked) }
         }
         row.addView(sw)
         return row
     }
 
-    private fun actionBtn(text: String, colorHex: String, onClick: () -> Unit): TextView {
+    private fun actionBtn(text: String, color: Int, onClick: () -> Unit): TextView {
         return TextView(context).apply {
             this.text = text
             textSize = 9f
-            setTextColor(Color.parseColor(colorHex))
+            setTextColor(color)
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             setPadding(0, dp2px(7), 0, dp2px(7))
@@ -582,7 +585,7 @@ class NukeGpuGraphicsPanelOverlay private constructor(private val context: Conte
     private fun sectionTitle(title: String) = TextView(context).apply {
         text = "■ $title"
         textSize = 8f
-        setTextColor(Color.parseColor("#94A3B8"))
+        setTextColor(Color.parseColor("#9CB8AD"))
         typeface = Typeface.DEFAULT_BOLD
         letterSpacing = 0.08f
         setPadding(0, dp2px(4), 0, dp2px(3))

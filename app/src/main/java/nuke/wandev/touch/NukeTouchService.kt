@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  */
 object NukeTouchService {
     private const val TAG = "NukeTouchService"
-    private const val GRAB_GRACE_MS = 30000L
+    private const val GRAB_GRACE_MS = 15000L
 
     private val displayTransform = DisplayTransform()
     val injector = NukeTouchInjector()
@@ -55,7 +55,7 @@ object NukeTouchService {
         Thread(r, "nuke-macro-worker").apply { isDaemon = true }
     }
 
-    fun start(libPath: String? = null, allowGrab: Boolean = false): Int {
+    fun start(libPath: String? = null, allowGrab: Boolean = true): Int {
         if (listening) return 1
         val touch = TouchListener.INSTANCE
         if (!touch.isLoaded) {
@@ -68,13 +68,17 @@ object NukeTouchService {
                 loaded = touch.load(libPath)
             }
             if (!loaded) {
+                loaded = touch.loadLibrary("wandev")
+            }
+            if (!loaded) {
                 loaded = touch.loadLibrary("touch")
             }
             if (!loaded) {
                 // Check standard fallback paths on device
                 val fallbacks = listOf(
                     "/data/local/tmp/libwandev.so",
-                    "/system/lib64/libwandev.so"
+                    "/system/lib64/libwandev.so",
+                    "/vendor/lib64/libwandev.so"
                 )
                 for (fb in fallbacks) {
                     if (touch.load(fb)) {
@@ -93,30 +97,49 @@ object NukeTouchService {
         injector.start()
 
         TouchListener.setSink { rawEvent ->
-            if (!eventReceivedSinceGrab) {
+            if (grabActive && !eventReceivedSinceGrab) {
                 eventReceivedSinceGrab = true
                 grabSafetyTimer?.cancel(true)
                 grabSafetyTimer = null
-                Log.i(TAG, "Touch hardware event verified — safety net disarmed")
             }
+
+            // Kernel hardware event: BTN_TOUCH = 0 (type 1, code 330, value 0)
+            // Absolute hardware signal that ZERO fingers touch the physical screen. Purge any stuck pointers immediately.
+            if (rawEvent.rawType == 1 && rawEvent.rawCode == 330 && rawEvent.rawValue == 0) {
+                injector.onPhysicalScreenReleased()
+                if (activeSessions.isNotEmpty()) {
+                    activeSessions.keys.forEach { stopMacroSession(it) }
+                }
+            }
+
             if (rawEvent.action == TouchEvent.ACTION_FRAME) {
                 injector.onFrame()
                 return@setSink
             }
 
             val px = displayTransform.toDisplayPixelsF(rawEvent.normX, rawEvent.normY)
-            if (px == null) {
-                return@setSink
+            if (px != null) {
+                rawEvent.dispX = px[0].toInt()
+                rawEvent.dispY = px[1].toInt()
+                rawEvent.dispXf = px[0]
+                rawEvent.dispYf = px[1]
+            } else {
+                // Safe non-blocking fallback if normX/normY was not resolved by display transform
+                val snap = displayTransform.snapshot
+                val dw = if (snap.width > 0) snap.width else 1080
+                val dh = if (snap.height > 0) snap.height else 2400
+                val nx = if (rawEvent.normX >= 0f) rawEvent.normX.coerceIn(0f, 1f) else 0f
+                val ny = if (rawEvent.normY >= 0f) rawEvent.normY.coerceIn(0f, 1f) else 0f
+                rawEvent.dispX = (nx * dw).toInt()
+                rawEvent.dispY = (ny * dh).toInt()
+                rawEvent.dispXf = nx * dw
+                rawEvent.dispYf = ny * dh
             }
-            rawEvent.dispX = px[0].toInt()
-            rawEvent.dispY = px[1].toInt()
-            rawEvent.dispXf = px[0]
-            rawEvent.dispYf = px[1]
-            rawEvent.displayWidth = displayTransform.snapshot.width
-            rawEvent.displayHeight = displayTransform.snapshot.height
+            rawEvent.displayWidth = displayTransform.snapshot.width.let { if (it > 0) it else 1080 }
+            rawEvent.displayHeight = displayTransform.snapshot.height.let { if (it > 0) it else 2400 }
             rawEvent.rotation = displayTransform.snapshot.rotation
 
-            // --- RED CORNER MULTI-TOUCH MACRO ROUTER (uu4.java) ---
+            // --- RED CORNER MULTI-TOUCH MACRO ROUTER (uu4.java & NukeTouchService dump reference) ---
             val curPins = macroPins
             val hwKey = (rawEvent.slot.toLong() and 0xFFFFFFFFL) or (rawEvent.deviceId.toLong() shl 32)
 
@@ -127,51 +150,25 @@ object NukeTouchService {
                 val dwNorm = if (dw > 0f) dw else 1080f
                 val dhNorm = if (dh > 0f) dh else 2400f
 
-                fun findHitPin(): NukeTouchInjector.MacroPinTarget? {
-                    return curPins.firstOrNull { pin ->
-                        val pinPxX = if (pin.x <= 1.0f && dw > 0f) pin.x * dw else pin.x
-                        val pinPxY = if (pin.y <= 1.0f && dh > 0f) pin.y * dh else pin.y
-                        val pinPxR = if (pin.radiusPx <= 1.0f && dw > 0f) pin.radiusPx * dw else pin.radiusPx
-                        val effectiveRadius = maxOf(pinPxR * 1.35f, pinPxR + 30f)
-                        val dx = rawEvent.dispXf - pinPxX
-                        val dy = rawEvent.dispYf - pinPxY
-                        (dx * dx + dy * dy) <= (effectiveRadius * effectiveRadius)
-                    }
-                }
-
-                fun resolveTarget(hitPin: NukeTouchInjector.MacroPinTarget): Pair<Float, Float> {
-                    val tx = if (hitPin.targetX > 0f) {
-                        if (hitPin.targetX <= 1.0f) hitPin.targetX * dwNorm else hitPin.targetX
-                    } else {
-                        if (hitPin.x <= 1.0f) hitPin.x * dwNorm else hitPin.x
-                    }
-                    val ty = if (hitPin.targetY > 0f) {
-                        if (hitPin.targetY <= 1.0f) hitPin.targetY * dhNorm else hitPin.targetY
-                    } else {
-                        if (hitPin.y <= 1.0f) hitPin.y * dhNorm else hitPin.y
-                    }
-                    return Pair(tx, ty)
-                }
-
                 if (act == TouchEvent.ACTION_DOWN) {
-                    val hitPin = findHitPin()
-                    if (hitPin != null) {
-                        val (targetX, targetY) = resolveTarget(hitPin)
-                        startMacroSession(hwKey, hitPin, targetX, targetY)
+                    val hit = findHitPin(curPins, dwNorm, dhNorm, rawEvent)
+                    if (hit != null) {
+                        val (resolvedTx, resolvedTy) = resolveTarget(dwNorm, dhNorm, hit)
+                        startMacroSession(hwKey, hit, resolvedTx, resolvedTy)
 
-                        // ── Multi-Pin Trigger (One-tap triggers all linked pins) ──
-                        if (hitPin.linkedPinIds.isNotEmpty()) {
-                            val linkedPins = curPins.filter { it.enabled && hitPin.linkedPinIds.contains(it.id) }
-                            val delayMs = hitPin.multiPinDelayMs.coerceIn(0L, 500L)
-                            linkedPins.forEachIndexed { i, linked ->
-                                val (lx, ly) = resolveTarget(linked)
-                                val linkedHwKey = hwKey + ((i + 1L) shl 32)
-                                if (delayMs > 0L && i > 0) {
-                                    macroExecutor.schedule({
-                                        startMacroSession(linkedHwKey, linked, lx, ly)
-                                    }, delayMs * i, TimeUnit.MILLISECONDS)
+                        // Execute linked combo pins if configured
+                        if (hit.linkedPinIds.isNotEmpty()) {
+                            val linkedTargets = curPins.filter { it.enabled && hit.linkedPinIds.contains(it.id) }
+                            val delayMs = hit.multiPinDelayMs.coerceIn(0L, 500L)
+                            linkedTargets.forEachIndexed { index, linkedPin ->
+                                val (lTx, lTy) = resolveTarget(dwNorm, dhNorm, linkedPin)
+                                val linkedHwKey = hwKey + ((index + 1).toLong() shl 32)
+                                if (delayMs <= 0 || index == 0) {
+                                    startMacroSession(linkedHwKey, linkedPin, lTx, lTy)
                                 } else {
-                                    startMacroSession(linkedHwKey, linked, lx, ly)
+                                    macroExecutor.schedule({
+                                        startMacroSession(linkedHwKey, linkedPin, lTx, lTy)
+                                    }, delayMs * index, TimeUnit.MILLISECONDS)
                                 }
                             }
                         }
@@ -180,26 +177,39 @@ object NukeTouchService {
                 } else if (act == TouchEvent.ACTION_MOVE) {
                     val session = activeSessions[hwKey]
                     if (session != null) {
-                        if (session.pin.mode == 3) {
-                            val pinX = if (session.pin.x <= 1.0f) session.pin.x * dw else session.pin.x
-                            val pinY = if (session.pin.y <= 1.0f) session.pin.y * dh else session.pin.y
-                            val relX = rawEvent.dispXf - pinX
-                            val relY = rawEvent.dispYf - pinY
-                            val finalDx = (if (session.pin.invertX) -relX else relX) * session.pin.sensX
-                            val finalDy = (if (session.pin.invertY) -relY else relY) * session.pin.sensY
-                            val baseTargetX = if (session.pin.targetX <= 1.0f && session.pin.targetX > 0f) session.pin.targetX * dw else session.targetX
-                            val baseTargetY = if (session.pin.targetY <= 1.0f && session.pin.targetY > 0f) session.pin.targetY * dh else session.targetY
-                            injector.pointerMove(session.synthKey, (baseTargetX + finalDx).coerceIn(0f, dw), (baseTargetY + finalDy).coerceIn(0f, dh))
+                        if (session.pin.mode == 3 && session.isAlive.get()) {
+                            // MODE 3: STICK_FOLLOW (Virtual Aim/Move Stick displacement from pin origin)
+                            val pinOriginX = if (session.pin.x <= 1.0f) session.pin.x * dwNorm else session.pin.x
+                            val pinOriginY = if (session.pin.y <= 1.0f) session.pin.y * dhNorm else session.pin.y
+                            val curX = if (!rawEvent.dispXf.isNaN()) rawEvent.dispXf else rawEvent.dispX.toFloat()
+                            val curY = if (!rawEvent.dispYf.isNaN()) rawEvent.dispYf else rawEvent.dispY.toFloat()
+                            var dispX = curX - pinOriginX
+                            var dispY = curY - pinOriginY
+                            if (session.pin.invertX) dispX = -dispX
+                            if (session.pin.invertY) dispY = -dispY
+                            val sensX = dispX * session.pin.sensX
+                            val sensY = dispY * session.pin.sensY
+                            val baseTx = if (session.pin.targetX > 0f) {
+                                if (session.pin.targetX <= 1.0f) session.pin.targetX * dwNorm else session.pin.targetX
+                            } else session.targetX
+                            val baseTy = if (session.pin.targetY > 0f) {
+                                if (session.pin.targetY <= 1.0f) session.pin.targetY * dhNorm else session.pin.targetY
+                            } else session.targetY
+                            injector.pointerMove(
+                                session.synthKey,
+                                (baseTx + sensX).coerceIn(0f, dwNorm),
+                                (baseTy + sensY).coerceIn(0f, dhNorm)
+                            )
                         }
-                        return@setSink // Absorb movement of macro finger
-                    } else {
-                        // Resilient fallback: finger moved/settled onto macro pin
-                        val hitPin = findHitPin()
-                        if (hitPin != null) {
-                            val (targetX, targetY) = resolveTarget(hitPin)
-                            startMacroSession(hwKey, hitPin, targetX, targetY)
-                            return@setSink
-                        }
+                        return@setSink
+                    }
+
+                    // Slide-in gesture detection: finger slid from game screen onto a macro pin
+                    val slideHit = findHitPin(curPins, dwNorm, dhNorm, rawEvent)
+                    if (slideHit != null) {
+                        val (resolvedTx, resolvedTy) = resolveTarget(dwNorm, dhNorm, slideHit)
+                        startMacroSession(hwKey, slideHit, resolvedTx, resolvedTy)
+                        return@setSink
                     }
                 } else if (act == TouchEvent.ACTION_UP) {
                     if (activeSessions.containsKey(hwKey)) {
@@ -209,7 +219,8 @@ object NukeTouchService {
                 }
             }
 
-            // Normal gaming touch or camera aim swipe -> passes directly to injector with full X/Y sensitivity
+            // Normal gaming touch or camera aim swipe passes to injector when grab is active.
+            // When grab is inactive (1.0x native sensitivity), Linux passes directly to Android OS with 0ms latency.
             if (grabActive) {
                 injector.onSample(rawEvent)
             }
@@ -220,35 +231,62 @@ object NukeTouchService {
             listening = true
             eventReceivedSinceGrab = false
 
-            // CRITICAL SCREEN FREEZE PREVENTION:
-            // Never enable hardware grab by default! Only allow when explicitly requested AND verified
-            // by a real pre-flight injection capability test (prevents freeze on Xiaomi/HyperOS, Samsung, etc.)
             val canInject = injector.testInjectionCapability()
             if (allowGrab && canInject) {
-                val grabOk = runCatching { touch.nativeSetGrab(true); true }.getOrDefault(false)
-                grabActive = grabOk
-                Log.i(TAG, "Touch listener started and kernel grab active ($grabOk) for $res device(s)")
-
-                if (grabActive) {
-                    grabSafetyTimer?.cancel(true)
-                    grabSafetyTimer = safetyExecutor.schedule({
-                        if (listening && grabActive && !eventReceivedSinceGrab) {
-                            Log.w(TAG, "SAFETY NET: no events after ${GRAB_GRACE_MS}ms — releasing grab")
-                            touch.nativeSetGrab(false)
-                            grabActive = false
-                            injector.reset()
-                        }
-                    }, GRAB_GRACE_MS, TimeUnit.MILLISECONDS)
-                }
+                runCatching { touch.nativeSetGrab(true) }
+                grabActive = true
+                Log.i(TAG, "Touch listener active with hardware grab ENABLED (sensitivity scaling active)")
+                grabSafetyTimer?.cancel(true)
+                grabSafetyTimer = safetyExecutor.schedule({
+                    if (!eventReceivedSinceGrab) {
+                        Log.w(TAG, "Watchdog: No touch events received within grace period; releasing grab")
+                        emergencyReleaseGrab("No touch events received")
+                    }
+                }, GRAB_GRACE_MS, TimeUnit.MILLISECONDS)
             } else {
-                touch.nativeSetGrab(false)
+                runCatching { touch.nativeSetGrab(false) }
                 grabActive = false
-                Log.i(TAG, "Touch listener active in safe monitor mode (grabActive=false, screen free)")
+                Log.i(TAG, "Touch listener active in monitor mode (grab=false, canInject=$canInject)")
             }
         } else {
             Log.e(TAG, "nativeStart returned failure: $res")
         }
         return res
+    }
+
+    private fun findHitPin(pins: List<NukeTouchInjector.MacroPinTarget>, w: Float, h: Float, ev: TouchEvent): NukeTouchInjector.MacroPinTarget? {
+        val touchX = if (!ev.dispXf.isNaN()) ev.dispXf else ev.dispX.toFloat()
+        val touchY = if (!ev.dispYf.isNaN()) ev.dispYf else ev.dispY.toFloat()
+        for (pin in pins) {
+            val px = if (pin.x > 1.0f || w <= 0f) pin.x else pin.x * w
+            val py = if (pin.y > 1.0f || h <= 0f) pin.y else pin.y * h
+            val radiusPx = if (pin.radiusPx > 1.0f || w <= 0f) pin.radiusPx else pin.radiusPx * w
+            val max = maxOf(1.35f * radiusPx, radiusPx + 30.0f)
+            val dx = touchX - px
+            val dy = touchY - py
+            if ((dx * dx + dy * dy) <= max * max) {
+                return pin
+            }
+        }
+        return null
+    }
+
+    private fun resolveTarget(w: Float, h: Float, pin: NukeTouchInjector.MacroPinTarget): Pair<Float, Float> {
+        val tx = if (pin.targetX > 0f) {
+            if (pin.targetX <= 1.0f) pin.targetX * w else pin.targetX
+        } else if (pin.x <= 1.0f) {
+            pin.x * w
+        } else {
+            pin.x
+        }
+        val ty = if (pin.targetY > 0f) {
+            if (pin.targetY <= 1.0f) pin.targetY * h else pin.targetY
+        } else if (pin.y <= 1.0f) {
+            pin.y * h
+        } else {
+            pin.y
+        }
+        return Pair(tx, ty)
     }
 
     private fun startMacroSession(hwKey: Long, pin: NukeTouchInjector.MacroPinTarget, targetX: Float, targetY: Float) {
@@ -265,8 +303,9 @@ object NukeTouchService {
 
         when (pin.mode) {
             0 -> { // RAPID SPAM / BURST (REPEAT_TAP) — Continuous while held on screen
-                val holdMs = pin.tapDurationMs.coerceIn(10L, 200L)
-                val intervalMs = pin.intervalMs.coerceIn(10L, 200L)
+                // Calibrated esports pacing: ~10-14 taps/sec prevents InputDispatcher choking and camera fling
+                val holdMs = pin.tapDurationMs.coerceIn(30L, 200L)
+                val intervalMs = pin.intervalMs.coerceIn(40L, 500L)
                 val repeatLimit = if (pin.repeatCount <= 0) Int.MAX_VALUE else pin.repeatCount
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
 
@@ -307,7 +346,7 @@ object NukeTouchService {
             }
             1 -> { // SINGLE TAP
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                val tapDur = pin.tapDurationMs.coerceIn(10L, 200L)
+                val tapDur = pin.tapDurationMs.coerceIn(30L, 200L)
                 session.scheduledFuture = macroExecutor.schedule({
                     if (!session.isAlive.get()) return@schedule
                     try {
@@ -343,13 +382,15 @@ object NukeTouchService {
             4 -> { // SWIPE / DRAG (Red Corner 드래그 — pin coordinate -> target coordinate)
                 val dw = displayTransform.snapshot.width.toFloat().let { if (it > 0f) it else 1080f }
                 val dh = displayTransform.snapshot.height.toFloat().let { if (it > 0f) it else 2400f }
-                val startX = targetX.coerceIn(0f, dw)
-                val startY = targetY.coerceIn(0f, dh)
-                val endX = (if (pin.targetX <= 1.0f && pin.targetX > 0f) pin.targetX * dw else if (pin.targetX > 0f) pin.targetX else startX).coerceIn(0f, dw)
-                val endY = (if (pin.targetY <= 1.0f && pin.targetY > 0f) pin.targetY * dh else if (pin.targetY > 0f) pin.targetY else startY).coerceIn(0f, dh)
-                val dur = pin.swipeDurationMs.coerceIn(20L, 2000L)
-                val steps = ((dur / 8L).toInt()).coerceIn(4, 64)
-                val stepMs = (dur / steps).coerceAtLeast(1L)
+                val pinPxX = if (pin.x <= 1.0f) pin.x * dw else pin.x
+                val pinPxY = if (pin.y <= 1.0f) pin.y * dh else pin.y
+                val startX = pinPxX.coerceIn(0f, dw)
+                val startY = pinPxY.coerceIn(0f, dh)
+                val endX = targetX.coerceIn(0f, dw)
+                val endY = targetY.coerceIn(0f, dh)
+                val dur = pin.swipeDurationMs.coerceIn(40L, 2000L)
+                val steps = ((dur / 10L).toInt()).coerceIn(4, 64)
+                val stepMs = (dur / steps).coerceAtLeast(4L)
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
 
                 session.scheduledFuture = macroExecutor.schedule({
@@ -376,8 +417,8 @@ object NukeTouchService {
             }
             5 -> { // DOUBLE TAP (Red Corner 더블 탭)
                 val startDelay = pin.startDelayMs.coerceAtLeast(0L)
-                val tapDur = pin.tapDurationMs.coerceIn(10L, 200L)
-                val gapMs = pin.intervalMs.coerceIn(15L, 500L)
+                val tapDur = pin.tapDurationMs.coerceIn(30L, 150L)
+                val gapMs = pin.intervalMs.coerceIn(40L, 300L)
                 session.scheduledFuture = macroExecutor.schedule({
                     if (!session.isAlive.get()) return@schedule
                     try {
@@ -455,6 +496,38 @@ object NukeTouchService {
 
     fun isRunning(): Boolean = listening
 
+    fun isGrabActive(): Boolean = grabActive
+
+    fun setGrab(enable: Boolean): Boolean {
+        val touch = TouchListener.INSTANCE
+        if (!touch.isLoaded) return false
+        if (enable) {
+            val canInject = injector.testInjectionCapability()
+            if (!canInject) {
+                Log.w(TAG, "Cannot enable grab: testInjectionCapability failed")
+                return false
+            }
+            runCatching { touch.nativeSetGrab(true) }
+            grabActive = true
+            Log.i(TAG, "setGrab: hardware grab ENABLED (sensitivity scaling active)")
+            grabSafetyTimer?.cancel(true)
+            grabSafetyTimer = safetyExecutor.schedule({
+                if (!eventReceivedSinceGrab) {
+                    Log.w(TAG, "Watchdog: No touch events received within grace period; releasing grab")
+                    emergencyReleaseGrab("No touch events received")
+                }
+            }, GRAB_GRACE_MS, TimeUnit.MILLISECONDS)
+        } else {
+            injector.flushAllActivePointers()
+            runCatching { touch.nativeSetGrab(false) }
+            grabActive = false
+            grabSafetyTimer?.cancel(true)
+            grabSafetyTimer = null
+            Log.i(TAG, "setGrab: hardware grab disabled, physical touches direct to OS")
+        }
+        return true
+    }
+
     fun emergencyReleaseGrab(reason: String) {
         if (!grabActive) return
         Log.e(TAG, "EMERGENCY SAFETY RELEASE: $reason — releasing hardware grab immediately!")
@@ -469,12 +542,12 @@ object NukeTouchService {
     fun configure(
         sx: Float,
         sy: Float,
-        area: Int = NukeTouchInjector.AREA_RIGHT,
-        curve: Int = NukeTouchInjector.CURVE_ACCELERATE,
-        smoothing: Boolean = true,
+        area: Int = NukeTouchInjector.AREA_ALL,
+        curve: Int = NukeTouchInjector.CURVE_LINEAR,
+        smoothing: Boolean = false,
         minCutoff: Float = 1.0f,
         beta: Float = 0.007f,
-        dragShot: Boolean = true
+        dragShot: Boolean = false
     ) {
         injector.sensX = sx
         injector.sensY = sy
@@ -484,6 +557,7 @@ object NukeTouchService {
         injector.euroMinCutoff = minCutoff
         injector.euroBeta = beta
         injector.dragShotCurve = dragShot
+        injector.relativeAimEnabled = true
         // Reset per-pointer accumulators so an in-flight gesture doesn't
         // jump to the screen edge when sensitivity changes mid-touch.
         injector.resetAccumulators()
@@ -496,7 +570,24 @@ object NukeTouchService {
         macroPins.addAll(pins.filter { it.enabled })
         injector.macroPinTargets = macroPins
         Log.i(TAG, "Configured ${macroPins.size} macro pin(s) in NukeTouchService router")
+
+        val touch = TouchListener.INSTANCE
+        val needGrab = macroPins.isNotEmpty() || (injector.sensX != 1.0f || injector.sensY != 1.0f)
+        if (listening && touch.isLoaded) {
+            if (needGrab && !grabActive) {
+                runCatching { touch.nativeSetGrab(true) }
+                grabActive = true
+                Log.i(TAG, "Hardware grab activated for ${macroPins.size} armed macro pin(s)")
+            } else if (!needGrab && grabActive) {
+                runCatching { touch.nativeSetGrab(false) }
+                grabActive = false
+                injector.reset()
+                Log.i(TAG, "Hardware grab deactivated (no macro pins & 1.0x sensitivity)")
+            }
+        }
     }
+
+    fun hasActiveMacroPins(): Boolean = macroPins.isNotEmpty()
 
     fun setMacroPinTriggerListener(listener: ((NukeTouchInjector.MacroPinTarget) -> Unit)?) {
         injector.onMacroPinTriggered = listener

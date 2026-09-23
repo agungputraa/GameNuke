@@ -768,7 +768,7 @@ object NukeLiveChatRepository {
                                         if (!targetMediaFileId.isNullOrBlank()) {
                                             downloadedPhotoPath = downloadTelegramPhoto(appContext, targetMediaFileId)
                                         }
-                                        val devText = if (rawText.isBlank() && hasMedia) "📷 Foto dari Developer" else rawText
+                                        val devText = if (rawText.isBlank() && hasMedia) "📷 Photo from Developer" else rawText
 
                                         // Precise Reply Routing:
                                         // 1. Developer tapped "Reply" (Balas) in Telegram to a message sent by THIS device
@@ -938,7 +938,7 @@ object NukeLiveChatRepository {
                                 if (!targetMediaFileId.isNullOrBlank()) {
                                     downloadedPhotoPath = downloadTelegramPhoto(appContext, targetMediaFileId)
                                 }
-                                val devText = if (rawText.isBlank() && hasMedia) "📷 Foto dari Developer" else rawText
+                                val devText = if (rawText.isBlank() && hasMedia) "📷 Photo from Developer" else rawText
 
                                 val isReplyToMyMessage = replyMsgId > 0L && (currentList.any { it.telegramMessageId == replyMsgId } || _messages.value.any { it.telegramMessageId == replyMsgId })
                                 val isReplyToMyUid = replyText.contains(myUid, ignoreCase = true)

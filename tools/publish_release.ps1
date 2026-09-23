@@ -43,7 +43,7 @@ if ($BuildGradle -match 'versionCode\s*=\s*(\d+)') {
 if ($BuildGradle -match 'versionName\s*=\s*"([^"]+)"') {
     $VersionName = $matches[1]
 }
-$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-Vortex", "").Replace("-Hypernova", "").Replace("-Zenith", "").Replace("-Orion", "").Replace("-Spectra", "").Replace("-prem", "")
+$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-Vortex", "").Replace("-Hypernova", "").Replace("-Zenith", "").Replace("-Orion", "").Replace("-Spectra", "").Replace("-Hyperion", "").Replace("-Nexus", "").Replace("-prem", "")
 
 Write-Host "[1/6] Detected target version: v$VersionName (Code: $VersionCode)" -ForegroundColor Cyan
 
@@ -125,7 +125,7 @@ try {
     }
 
     git add .
-    $commitMsg = "feat(release): Game Nuke Spectra Edition Web Portal v$VersionName"
+    $commitMsg = "feat(release): Game Nuke Nexus Edition Web Portal v$VersionName"
     git commit -m $commitMsg -q
 
     # Push to origin 'gh-pages' (Edge CDN serving)
@@ -146,18 +146,18 @@ $Headers = @{
 
 $Tag = "v$VersionName"
 $lines = @(
-    "Game Nuke Spectra Edition v$VersionName",
+    "Game Nuke Nexus Edition v$VersionName",
     "",
-    "Official Standalone Release with Server-to-Server Payment Verification, Ghost Order Auto-Cancellation, and Responsive 2x2 VIP Matrix.",
+    "Official Enterprise Release with NukeTouch Hardware-Synchronized Macro Engine, Zero-Ghost-Touch Touch Calibrator, and Nexus Neural AI Governor.",
     "",
     "Highlights:",
-    "- Payment Security Hardening: Server-to-server transaction inquiry verification against official Pakasir gateway API, completely preventing status spoofing.",
-    "- Anti-Ghost Order Mitigation: Single pending transaction limit per device, automatic reuse, and immediate cancellation via Pakasir API on dismissal.",
-    "- Responsive 2x2 VIP Dialog: Redesigned VIP matrix and payment selector into responsive 2x2 grid eliminating text wrapping.",
-    "- Complete Session Teardown & Temp Purge: Releasing native evdev touch driver (/data/local/tmp/libwandev.so), resetting refresh rate, touch parameters, macro loops, and VPN tunnel to default on booster stop or app kill.",
-    "- Zero-Latency Touch Engine: Eliminated touchscreen freeze by retiring aggressive kernel evdev grab during bridge bootstrap (Shizuku, iADB, Native ADB).",
-    "- Watchdog Ghost Touch Eliminator: Watchdog auto-release with guaranteed ACTION_UP lifecycle on all macro modes.",
-    "- Ironclad Game & Screen Recorder Immunity: Sentinel, Task Manager, Kill Zombie, Manage Load, and Deep Clean 100% guarantee no active game or recorder is ever stopped.",
+    "- NukeTouch Multi-Pin Macro Studio: Fully integrated multi-pin macro system with real-time per-pointer lifecycle, hardware coordinate translation, and zero input drop.",
+    "- Enhanced Sensi Y & Drag Shot Curve: Calibrated vertical sensitivity with landscape aspect compensation and generous virtual bounds for silky-smooth, responsive vertical aiming in Free Fire and FPS shooters.",
+    "- Zero Ghost Touch & Freeze Elimination: Added BTN_TOUCH == 0 hardware signal purge ensuring all synthetic pointer sessions are instantly terminated when physical fingers leave the screen.",
+    "- Universal Brand Compatibility: Fully audited and validated across HyperOS/MIUI (Xiaomi/POCO), One UI (Samsung), ColorOS/OxygenOS (Oppo/Realme/OnePlus), FuntouchOS (Vivo/iQOO), ROG UI (ASUS), and Stock AOSP (Google Pixel) on Android 11 through Android 16.",
+    "- Nexus Neural AI Agent: Deep device parameter telemetry governor optimizing CPU, GPU, RAM, and FPS pacing with zero risk of stopping active games, screen recorders, or Game Nuke services.",
+    "- Optimized Download Experience: Enhanced download portal with instant safety guidance for Chrome/Android 'harmful file' security alerts without disrupting download stream.",
+    "- Payment Security & Session Teardown: Server-to-server transaction inquiry verification against official Pakasir gateway API, ghost order auto-cancellation, and clean driver lifecycle teardown.",
     "",
     "Integrity:",
     "- File: $ApkName",
@@ -169,7 +169,7 @@ $ReleaseBody = $lines -join "`n"
 $ReleasePayload = @{
     tag_name         = $Tag
     target_commitish = "main"
-    name             = "Game Nuke Spectra Edition v$VersionName"
+    name             = "Game Nuke Nexus Edition v$VersionName"
     body             = $ReleaseBody
     draft            = $false
     prerelease       = $false
@@ -223,7 +223,7 @@ Write-Host "   Binary uploaded successfully!" -ForegroundColor Green
 # 8. Final Status Report
 Write-Host "[6/6] Verifying Live Endpoints..." -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   SUCCESS! GAME NUKE SPECTRA ECOSYSTEM IS ONLINE" -ForegroundColor Green
+Write-Host "   SUCCESS! GAME NUKE NEXUS ECOSYSTEM IS ONLINE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "   Landing Page : https://$Owner.github.io/$Repo/" -ForegroundColor Cyan
 Write-Host "   Metadata API : https://$Owner.github.io/$Repo/version.json" -ForegroundColor Cyan

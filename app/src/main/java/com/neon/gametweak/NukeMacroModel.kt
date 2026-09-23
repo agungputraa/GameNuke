@@ -132,13 +132,13 @@ data class MacroPinConfig(
     /** Number of taps in REPEAT_TAP / LOOP mode; 0 means infinite-while-held. */
     var repeatCount: Int = 0,
     /** Interval between taps in ms. */
-    var intervalMs: Long = 35L,
+    var intervalMs: Long = 65L,
     /** Per-tap duration in ms. */
-    var tapDurationMs: Long = 25L,
+    var tapDurationMs: Long = 35L,
     /** Sustained hold duration in ms. */
     var holdDurationMs: Long = 300L,
     /** Drag duration in ms for SWIPE / AUTO_DRAG mode. */
-    var swipeDurationMs: Long = 120L,
+    var swipeDurationMs: Long = 140L,
     /** Target X ratio for SWIPE / AUTO_DRAG. */
     var targetXRatio: Float = 0.5f,
     /** Target Y ratio for SWIPE / AUTO_DRAG (e.g. upward offset for scope headshot flick). */

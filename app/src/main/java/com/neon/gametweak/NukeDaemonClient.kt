@@ -122,6 +122,11 @@ object NukeDaemonClient {
         return resp == "TOUCH_STATUS|true"
     }
 
+    fun touchSetGrab(grab: Boolean): Boolean {
+        val resp = runCatching { request("TOUCH_SET_GRAB|$grab", 3000) }.getOrNull()
+        return resp == "TOUCH_GRAB_OK"
+    }
+
     // Dedicated persistent socket for sub-millisecond touch macro streams (Gloo Wall spam / Rapid Fire)
     @Volatile private var persistentSocket: Socket? = null
     @Volatile private var persistentReader: BufferedReader? = null

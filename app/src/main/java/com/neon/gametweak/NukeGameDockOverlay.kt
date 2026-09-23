@@ -193,12 +193,12 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 } else {
                     floatArrayOf(0f, 0f, r, r, r, r, 0f, 0f)
                 }
-                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
 
             val indicator = View(context).apply {
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#10B981"))
+                    setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     cornerRadius = 2 * d
                 }
                 layoutParams = FrameLayout.LayoutParams((2.5f * d).toInt(), (24 * d).toInt(), Gravity.CENTER)
@@ -366,11 +366,14 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
     private fun buildDrawerContent(): View {
         val root = LinearLayout(context).apply {
             orientation = LinearLayout.VERTICAL
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor("#F008120E")) // Dark glass obsidian
-                cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981"))
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = d,
+                cornerRadiusPx = 16 * d,
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             setPadding((12 * d).toInt(), (10 * d).toInt(), (12 * d).toInt(), (10 * d).toInt())
             elevation = 16 * d
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) isForceDarkAllowed = false
@@ -402,14 +405,14 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
         val subTv = TextView(context).apply {
             text = "Floating Multitask Hub"
             textSize = 8f
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
         }
         titleCol.addView(titleTv)
         titleCol.addView(subTv)
         val switchSideBtn = TextView(context).apply {
             text = if (isOnRightEdge) "⇄ Snap Left" else "⇄ Snap Right"
             textSize = 9f
-            setTextColor(Color.parseColor("#38BDF8"))
+            setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0C2028"))
@@ -436,7 +439,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
         val closeBtn = TextView(context).apply {
             text = "✕"
             textSize = 13f
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             typeface = Typeface.DEFAULT_BOLD
             setPadding((6 * d).toInt(), (2 * d).toInt(), (6 * d).toInt(), (2 * d).toInt())
             setOnClickListener { closeDrawer() }
@@ -609,7 +612,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#0E1C16"))
                 cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             isClickable = true
             isFocusable = true
@@ -623,12 +626,12 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#152C22"))
                 cornerRadius = 10 * d
-                setStroke((1 * d).toInt(), Color.parseColor("#10B981"))
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             val plusTv = TextView(context).apply {
                 text = "＋"
                 textSize = 18f
-                setTextColor(Color.parseColor("#10B981"))
+                setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
             }
@@ -639,7 +642,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
         val nameTv = TextView(context).apply {
             text = "Add App"
             textSize = 8.5f
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             gravity = Gravity.CENTER
             typeface = Typeface.DEFAULT_BOLD
             layoutParams = LinearLayout.LayoutParams(
@@ -699,7 +702,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#F407120D"))
                 cornerRadius = 14 * d
-                setStroke((1.2f * d).toInt(), Color.parseColor("#10B981"))
+                setStroke((1.2f * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             setPadding((16 * d).toInt(), (14 * d).toInt(), (16 * d).toInt(), (14 * d).toInt())
 
@@ -722,7 +725,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 setTextColor(Color.BLACK)
                 typeface = Typeface.DEFAULT_BOLD
                 background = GradientDrawable().apply {
-                    setColor(Color.parseColor("#10B981"))
+                    setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                     cornerRadius = 6 * d
                 }
                 setPadding((12 * d).toInt(), (6 * d).toInt(), (12 * d).toInt(), (6 * d).toInt())
@@ -740,7 +743,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
             val noteTv = TextView(context).apply {
                 text = "Toggle applications you wish to access from the floating edge dock:"
                 textSize = 8.5f
-                setTextColor(Color.parseColor("#94A3B8"))
+                setTextColor(Color.parseColor("#9CB8AD"))
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT).apply {
                     topMargin = (4 * d).toInt()
                     bottomMargin = (8 * d).toInt()
@@ -796,7 +799,7 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                 val checkTv = TextView(context).apply {
                     text = if (isChecked) "✓" else "＋"
                     textSize = 13f
-                    setTextColor(if (isChecked) Color.parseColor("#10B981") else Color.parseColor("#64748B"))
+                    setTextColor(if (isChecked) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#64778D"))
                     typeface = Typeface.DEFAULT_BOLD
                 }
                 itemRow.addView(checkTv)
@@ -805,12 +808,12 @@ class NukeGameDockOverlay private constructor(private val context: Context) {
                     if (savedCustom.contains(pkg)) {
                         savedCustom.remove(pkg)
                         checkTv.text = "＋"
-                        checkTv.setTextColor(Color.parseColor("#64748B"))
+                        checkTv.setTextColor(Color.parseColor("#64778D"))
                         itemRow.setBackgroundColor(Color.parseColor("#0C1712"))
                     } else {
                         savedCustom.add(pkg)
                         checkTv.text = "✓"
-                        checkTv.setTextColor(Color.parseColor("#10B981"))
+                        checkTv.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                         itemRow.setBackgroundColor(Color.parseColor("#152A20"))
                     }
                 }

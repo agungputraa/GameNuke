@@ -1,21 +1,24 @@
 package com.neon.gametweak
 
-import android.graphics.Color
-
-/** Shared visual tokens for the rebuilt floating cockpit. */
+/** Shared low-overhead visual tokens for the Game Nuke adaptive AI cockpit. */
 object NukeHudPalette {
-    val Void = Color.parseColor("#090D12")
-    val Panel = Color.parseColor("#0D1A13")
-    val PanelRaised = Color.parseColor("#0F2018")
-    val PanelSoft = Color.parseColor("#0F2018")
-    val Green = Color.parseColor("#10B981")
-    val GreenDim = Color.rgb(34, 111, 66)
-    val Cyan = Color.rgb(56, 217, 209)
-    val Blue = Color.rgb(79, 116, 255)
-    val Violet = Color.rgb(138, 102, 255)
-    val Amber = Color.parseColor("#FFB830")
-    val Danger = Color.parseColor("#FF4D6A")
-    val Text = Color.parseColor("#FFFFFF")
-    val Muted = Color.parseColor("#9BB0A6")
-    val MutedDeep = Color.rgb(85, 107, 94)
+    val Void get() = NukeAiThemeController.currentPalette.background
+    val Panel get() = NukeAiThemeController.currentPalette.panel
+    val PanelRaised get() = NukeAiThemeController.currentPalette.panelRaised
+    val PanelSoft get() = NukeAiThemeController.currentPalette.panelSoft
+    val Cyan get() = NukeAiThemeController.currentPalette.telemetry
+    val CyanDim get() = NukeAiThemeController.currentPalette.accentDim
+    val Blue get() = NukeAiThemeController.currentPalette.accent
+    val Violet get() = NukeAiThemeController.currentPalette.accentBright
+    val Green get() = NukeAiThemeController.currentPalette.accent
+    val GreenBright get() = NukeAiThemeController.currentPalette.accentBright
+    val GreenDim get() = NukeAiThemeController.currentPalette.accentDim
+    val GreenMuted get() = NukeAiThemeController.currentPalette.panelSoft
+    val Amber get() = NukeAiThemeController.currentPalette.warning
+    val Danger get() = NukeAiThemeController.currentPalette.danger
+    val Text get() = NukeAiThemeController.currentPalette.text
+    val Muted get() = NukeAiThemeController.currentPalette.muted
+    val MutedDeep get() = NukeAiThemeController.currentPalette.borderBright
+    val Outline get() = NukeAiThemeController.currentPalette.border
+    val OutlineBright get() = NukeAiThemeController.currentPalette.borderBright
 }

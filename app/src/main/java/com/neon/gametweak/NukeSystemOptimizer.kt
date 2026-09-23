@@ -32,10 +32,9 @@ object NukeSystemOptimizer {
             val sb = StringBuilder()
 
             // ── 1. GAMING TOUCH & SAMPLING ENGINE ──────────────────────────
-            // Increase pointer speed to max (7 is standard Android max)
-            sb.appendLine("settings put system pointer_speed 7 2>/dev/null")
-            // Sensitive touch response & pressure scale (bypasses tap latency)
-            sb.appendLine("settings put system touch.pressure.scale 0.001 2>/dev/null")
+            // Clean 1:1 pointer speed (0 is standard Android 1:1 unaccelerated baseline)
+            sb.appendLine("settings put system pointer_speed 0 2>/dev/null")
+            // Zero touch blocking period
             sb.appendLine("settings put system touch_blocking_period 0 2>/dev/null")
             // Remove edge deadzones for gaming controls
             sb.appendLine("settings put system edge_mistouch_prevention 0 2>/dev/null")

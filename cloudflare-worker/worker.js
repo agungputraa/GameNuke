@@ -1,18 +1,3 @@
-/**
- * Game Nuke VIP Edge Engine & Enterprise Admin API (Cloudflare Worker)
- * 
- * Enterprise & Free-Tier Quota Optimized (98% KV Read/List Reduction):
- * - Index-based Zero-Scan Architecture: Aggregates `index:devices` and `index:orders`
- *   to eliminate expensive recursive `kv.list()` and N-key loops.
- * - In-Memory Isolate Caching (LRU/TTL) for stats, devices, orders, and features.
- * - Edge Cache-Control headers for client polling endpoints (/api/subscription/status).
- * - Full Bidirectional Synchronization: Admin VIP Grants, Webhooks, and Client Orders
- *   are instantly synchronized across `device:${id}`, `device_orders:${id}`, and indices.
- * - Active Auto-Expiration: Orders older than 15 mins actively transition to "expired".
- * - Multi-Payment Support: QRIS, BCA VA, Mandiri VA, BRI VA with exact fee reconciliation.
- * - Security: 7-day Admin Token Expiration, Project-guarded Webhook, and Universal CORS.
- */
-
 const ADMIN_USER = "Agung220903";
 const ADMIN_PASS = "@Wanda025";
 const ADMIN_SECRET = "GN_SECRET_9824_K9X_VIP";
@@ -24,15 +9,13 @@ const PLANS = {
   "1_year": { id: "1_year", name: "Annual VIP Pass", durationDays: 365, durationMs: 365 * 86400000, price: 260000, badge: "Best Value" }
 };
 
-/**
- * Official Pakasir Fee Calculation Formula
- * QRIS:
- *   <= Rp 105.000: 0.7% + Rp 310 (e.g., Rp 45.000 -> 315 + 310 = Rp 625)
- *   >  Rp 105.000: 1% flat (1% + Rp 0)
- * Virtual Account:
- *   Bank Artha Graha, Sampoerna: Rp 2.000
- *   Bank BNI, BRI, CIMB Niaga, Permata, Maybank, BNC, ATM Bersama: Rp 3.500
- */
+const TRIAL_CONFIG = {
+  enabled: true,
+  durationDays: 3,
+  durationMs: 3 * 86400000,
+  maxTrialsPerIp24h: 2
+};
+
 function calculatePakasirFee(amount, paymentMethod, bank) {
   const method = (paymentMethod || "qris").toLowerCase().trim();
   if (method === "qris") {
@@ -49,10 +32,6 @@ function calculatePakasirFee(amount, paymentMethod, bank) {
   return 3500;
 }
 
-/**
- * Map user payment selection to Pakasir method code:
- * qris, bni_va, bri_va, cimb_niaga_va, permata_va, maybank_va, sampoerna_va, bnc_va, atm_bersama_va, artha_graha_va
- */
 function getPakasirMethod(paymentMethod, bank) {
   const method = (paymentMethod || "qris").toLowerCase().trim();
   if (method === "qris") return "qris";
@@ -99,9 +78,12 @@ const CORS_HEADERS = {
   "Access-Control-Max-Age": "86400"
 };
 
-// ── In-Memory Worker Isolate Cache (Zero-Cost Quota Saver) ──
 const MEM_DEVICE_CACHE = new Map();
 const MEM_DEVICE_TTL_MS = 60000;
+
+const MEM_ORDER_RECORDS = new Map();
+const MEM_IP_TRIALS = new Map();
+const MEM_IP_TTL_MS = 3600000;
 
 let MEM_DEVICES_LIST = null;
 let MEM_DEVICES_LIST_TS = 0;
@@ -136,7 +118,7 @@ function getMemDevice(id) {
 
 function setMemDevice(id, data) {
   MEM_DEVICE_CACHE.set(id, { ts: Date.now(), data });
-  if (MEM_DEVICE_CACHE.size > 1000) {
+  if (MEM_DEVICE_CACHE.size > 2000) {
     const firstKey = MEM_DEVICE_CACHE.keys().next().value;
     MEM_DEVICE_CACHE.delete(firstKey);
   }
@@ -144,6 +126,36 @@ function setMemDevice(id, data) {
 
 function delMemDevice(id) {
   MEM_DEVICE_CACHE.delete(id);
+}
+
+function getMemOrder(id) {
+  return MEM_ORDER_RECORDS.get(id) || null;
+}
+
+function setMemOrder(id, data) {
+  MEM_ORDER_RECORDS.set(id, data);
+  if (MEM_ORDER_RECORDS.size > 1000) {
+    const firstKey = MEM_ORDER_RECORDS.keys().next().value;
+    MEM_ORDER_RECORDS.delete(firstKey);
+  }
+}
+
+function getMemIpTrials(ip) {
+  const item = MEM_IP_TRIALS.get(ip);
+  if (!item) return 0;
+  if (Date.now() - item.ts > MEM_IP_TTL_MS) {
+    MEM_IP_TRIALS.delete(ip);
+    return 0;
+  }
+  return item.count;
+}
+
+function setMemIpTrials(ip, count) {
+  MEM_IP_TRIALS.set(ip, { ts: Date.now(), count });
+  if (MEM_IP_TRIALS.size > 2000) {
+    const firstKey = MEM_IP_TRIALS.keys().next().value;
+    MEM_IP_TRIALS.delete(firstKey);
+  }
 }
 
 async function safeJson(request) {
@@ -154,9 +166,41 @@ async function safeJson(request) {
   }
 }
 
+async function safeKvGet(kv, key, type = "text") {
+  if (!kv) return null;
+  try {
+    return await kv.get(key, type);
+  } catch (_) {
+    return null;
+  }
+}
+
+async function safeKvPut(kv, key, value, options) {
+  if (!kv) return false;
+  try {
+    if (options) {
+      await kv.put(key, value, options);
+    } else {
+      await kv.put(key, value);
+    }
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
+async function safeKvDelete(kv, key) {
+  if (!kv) return false;
+  try {
+    await kv.delete(key);
+    return true;
+  } catch (_) {
+    return false;
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
-    // Universal CORS Preflight Handling
     if (request.method === "OPTIONS") {
       return new Response(null, { status: 204, headers: CORS_HEADERS });
     }
@@ -169,31 +213,34 @@ export default {
 
     const kv = env.GAMENUKE_KV || env.KV;
 
-    // Helper functions for Indexed KV Management
     async function getIndexedDevices() {
       const now = Date.now();
       if (MEM_DEVICES_LIST && (now - MEM_DEVICES_LIST_TS < 30000)) {
         return MEM_DEVICES_LIST;
       }
-      let list = await kv.get("index:devices", "json");
+      let list = await safeKvGet(kv, "index:devices", "json");
       if (!list) {
-        // Self-healing fallback on empty index
-        const rawList = await kv.list({ prefix: "device:", limit: 200 });
-        list = [];
-        for (const k of rawList.keys) {
-          const d = await kv.get(k.name, "json");
-          if (d) list.push(d);
+        try {
+          const rawList = await kv.list({ prefix: "device:", limit: 200 });
+          list = [];
+          for (const k of rawList.keys) {
+            const d = await safeKvGet(kv, k.name, "json");
+            if (d) list.push(d);
+          }
+          await safeKvPut(kv, "index:devices", JSON.stringify(list.slice(0, 200)));
+        } catch (_) {
+          list = list || [];
         }
-        await kv.put("index:devices", JSON.stringify(list));
       }
-      MEM_DEVICES_LIST = list;
+      MEM_DEVICES_LIST = Array.isArray(list) ? list.slice(0, 200) : [];
       MEM_DEVICES_LIST_TS = now;
-      return list;
+      return MEM_DEVICES_LIST;
     }
 
     async function saveIndexedDevices(devices) {
-      await kv.put("index:devices", JSON.stringify(devices));
-      MEM_DEVICES_LIST = devices;
+      const sliced = Array.isArray(devices) ? devices.slice(0, 200) : [];
+      await safeKvPut(kv, "index:devices", JSON.stringify(sliced));
+      MEM_DEVICES_LIST = sliced;
       MEM_DEVICES_LIST_TS = Date.now();
       MEM_STATS_CACHE = null;
     }
@@ -222,88 +269,146 @@ export default {
       if (MEM_ORDERS_LIST && (now - MEM_ORDERS_LIST_TS < 30000)) {
         return MEM_ORDERS_LIST;
       }
-      let list = await kv.get("index:orders", "json");
+      let list = await safeKvGet(kv, "index:orders", "json");
       if (!list) {
-        // Self-healing fallback on empty index
-        const rawList = await kv.list({ prefix: "order:", limit: 200 });
-        list = [];
-        for (const k of rawList.keys) {
-          const o = await kv.get(k.name, "json");
-          if (o) list.push(o);
-        }
-        await kv.put("index:orders", JSON.stringify(list));
-      }
-      // Auto-expire pending orders & clean up from Pakasir gateway
-      let changed = false;
-      for (const o of list) {
-        const isExp = o.status === "pending" && (o.expiresAt ? (now > o.expiresAt) : ((now - (o.createdAt || 0)) > 15 * 60000));
-        if (isExp) {
-          o.status = "expired";
-          changed = true;
-          ctx.waitUntil(kv.put(`order:${o.orderId}`, JSON.stringify(o), { expirationTtl: 86400 }));
-          ctx.waitUntil(cancelPakasirTransaction(o.orderId, o.amount));
+        try {
+          const rawList = await kv.list({ prefix: "order:", limit: 200 });
+          list = [];
+          for (const k of rawList.keys) {
+            const o = await safeKvGet(kv, k.name, "json");
+            if (o) list.push(o);
+          }
+          await safeKvPut(kv, "index:orders", JSON.stringify(list.slice(0, 150)));
+        } catch (_) {
+          list = list || [];
         }
       }
-      if (changed) {
-        ctx.waitUntil(kv.put("index:orders", JSON.stringify(list)));
+      if (Array.isArray(list)) {
+        let changed = false;
+        for (const o of list) {
+          const isExp = o.status === "pending" && (o.expiresAt ? (now > o.expiresAt) : ((now - (o.createdAt || 0)) > 15 * 60000));
+          if (isExp) {
+            o.status = "expired";
+            changed = true;
+            ctx.waitUntil(safeKvPut(kv, `order:${o.orderId}`, JSON.stringify(o), { expirationTtl: 86400 }));
+            ctx.waitUntil(cancelPakasirTransaction(o.orderId, o.amount));
+          }
+        }
+        if (changed) {
+          ctx.waitUntil(safeKvPut(kv, "index:orders", JSON.stringify(list.slice(0, 150))));
+        }
       }
-      MEM_ORDERS_LIST = list;
+      MEM_ORDERS_LIST = Array.isArray(list) ? list.slice(0, 150) : [];
       MEM_ORDERS_LIST_TS = now;
-      return list;
+      return MEM_ORDERS_LIST;
     }
 
     async function saveIndexedOrders(orders) {
-      await kv.put("index:orders", JSON.stringify(orders.slice(0, 150)));
-      MEM_ORDERS_LIST = orders;
+      const sliced = Array.isArray(orders) ? orders.slice(0, 150) : [];
+      await safeKvPut(kv, "index:orders", JSON.stringify(sliced));
+      MEM_ORDERS_LIST = sliced;
       MEM_ORDERS_LIST_TS = Date.now();
       MEM_STATS_CACHE = null;
     }
 
     try {
-      // ── Health Check ──
       if (path === "/health") {
         return jsonResponse({
           status: "ok",
           timestamp: Date.now(),
-          service: "Game Nuke Edge Engine v3.2.1-Spectra",
+          service: "Game Nuke Edge Engine v3.4.0-Nexus",
           region: request.cf?.colo || "EDGE"
         }, 200, 60);
       }
 
-      // ── Public VIP Plans ──
       if (path === "/api/plans") {
         return jsonResponse({ success: true, plans: Object.values(PLANS) }, 200, 300);
       }
 
-      // ── Public Booster Features / Dynamic Maintenance Control ──
       if (path === "/booster_features.json" || path === "/api/features") {
         const now = Date.now();
         if (MEM_FEATURES_CACHE && (now - MEM_FEATURES_TS < 60000)) {
           return jsonResponse(MEM_FEATURES_CACHE, 200, 120);
         }
-        const cached = await kv.get("config:booster_features", "json");
+        const cached = await safeKvGet(kv, "config:booster_features", "json");
         const features = cached || DEFAULT_FEATURES;
         MEM_FEATURES_CACHE = features;
         MEM_FEATURES_TS = now;
         return jsonResponse(features, 200, 120);
       }
 
-      // ── Device Subscription Status (Quota Optimized) ──
       if (path === "/api/subscription/status") {
         const deviceId = (url.searchParams.get("deviceId") || url.searchParams.get("device_id") || "").trim();
-        if (!deviceId) return jsonResponse({ error: "deviceId required" }, 400);
+        if (!deviceId || deviceId.length < 16 || deviceId.length > 64) {
+          return jsonResponse({ error: "valid deviceId required (16-64 chars)" }, 400);
+        }
 
+        const now = Date.now();
         let data = getMemDevice(deviceId);
         if (!data) {
-          data = await kv.get(`device:${deviceId}`, "json");
+          data = await safeKvGet(kv, `device:${deviceId}`, "json");
           if (data) setMemDevice(deviceId, data);
+        }
+
+        if (!data && TRIAL_CONFIG.enabled) {
+          const isValidId = /^[a-fA-F0-9_-]{16,64}$/.test(deviceId) &&
+                            deviceId !== "9774d56d682e549c" &&
+                            !/^(.)\1+$/.test(deviceId);
+
+          const clientIp = request.headers.get("CF-Connecting-IP") || "0.0.0.0";
+          let ipAllowed = true;
+
+          if (isValidId && clientIp !== "0.0.0.0") {
+            const memCount = getMemIpTrials(clientIp);
+            if (memCount >= TRIAL_CONFIG.maxTrialsPerIp24h) {
+              ipAllowed = false;
+            } else {
+              const ipKey = `trial_ip:${clientIp}`;
+              const currentIpTrials = Number(await safeKvGet(kv, ipKey)) || 0;
+              if (currentIpTrials >= TRIAL_CONFIG.maxTrialsPerIp24h) {
+                ipAllowed = false;
+                setMemIpTrials(clientIp, currentIpTrials);
+              } else {
+                setMemIpTrials(clientIp, currentIpTrials + 1);
+                ctx.waitUntil(safeKvPut(kv, ipKey, String(currentIpTrials + 1), { expirationTtl: 86400 }));
+              }
+            }
+          }
+
+          if (isValidId && ipAllowed) {
+            const trialExpiresAt = now + TRIAL_CONFIG.durationMs;
+            data = {
+              deviceId,
+              planId: "3_days_trial",
+              planName: "3-Day Free Trial",
+              isTrial: true,
+              trialUsed: true,
+              trialStartedAt: now,
+              expiresAt: trialExpiresAt,
+              createdAt: now,
+              updatedAt: now,
+              registeredIp: clientIp,
+              source: "auto_trial_grant"
+            };
+
+            setMemDevice(deviceId, data);
+            ctx.waitUntil(safeKvPut(kv, `device:${deviceId}`, JSON.stringify(data)));
+
+            ctx.waitUntil((async () => {
+              try {
+                let devs = await getIndexedDevices();
+                const idx = devs.findIndex(d => d.deviceId === deviceId);
+                if (idx >= 0) devs[idx] = data; else devs.unshift(data);
+                await saveIndexedDevices(devs);
+              } catch (_) {}
+            })());
+          }
         }
 
         if (!data || !data.expiresAt) {
           return jsonResponse({ isActive: false, expiresAt: 0, remainingDays: 0, remainingSeconds: 0 }, 200, 15);
         }
 
-        const now = Date.now();
         const diff = data.expiresAt - now;
         const isActive = diff > 0;
         const remainingDays = isActive ? Math.ceil(diff / 86400000) : 0;
@@ -311,14 +416,14 @@ export default {
 
         return jsonResponse({
           isActive,
-          planId: data.planId || "VIP",
+          planId: data.planId || (data.isTrial ? "3_days_trial" : "VIP"),
           expiresAt: data.expiresAt,
           remainingDays,
-          remainingSeconds
+          remainingSeconds,
+          isTrial: !!data.isTrial
         }, 200, 15);
       }
 
-      // ── Create Order (Multi-Payment: QRIS, BCA VA, Mandiri VA, BRI VA + Fee Handling) ──
       if (path === "/api/order/create" && request.method === "POST") {
         const body = await safeJson(request);
         const deviceId = (body.deviceId || "").trim();
@@ -328,11 +433,8 @@ export default {
 
         if (!deviceId) return jsonResponse({ success: false, errorMessage: "deviceId required" }, 400);
 
-        // Anti-Tuyul & De-duplication Policy: Max 1 active pending order per device.
-        // If user already has a pending order for the same plan & method, reuse it.
-        // If user changed plan or method, cancel previous pending order in Pakasir immediately.
         try {
-          const existingDevOrders = (await kv.get(`device_orders:${deviceId}`, "json")) || [];
+          const existingDevOrders = (await safeKvGet(kv, `device_orders:${deviceId}`, "json")) || [];
           const nowCheck = Date.now();
           const activePending = existingDevOrders.find(o => o.status === "pending" && (nowCheck - (o.createdAt || 0)) < 15 * 60000);
           
@@ -358,11 +460,10 @@ export default {
                 isReused: true
               });
             } else {
-              // User changed plan or method: cancel the old pending order in Pakasir & mark cancelled
               activePending.status = "cancelled";
               activePending.cancelledAt = nowCheck;
               ctx.waitUntil(cancelPakasirTransaction(activePending.orderId, activePending.amount));
-              ctx.waitUntil(kv.put(`order:${activePending.orderId}`, JSON.stringify(activePending), { expirationTtl: 86400 }));
+              ctx.waitUntil(safeKvPut(kv, `order:${activePending.orderId}`, JSON.stringify(activePending), { expirationTtl: 86400 }));
             }
           }
         } catch (_) {}
@@ -370,15 +471,13 @@ export default {
         const plan = PLANS[planId] || PLANS["1_month"];
         const orderId = `GN-${plan.id.toUpperCase()}-${Date.now().toString().slice(-6)}-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
-        const mode = (await kv.get("config:mode")) || "production";
+        const mode = (await safeKvGet(kv, "config:mode")) || "production";
         const isSandbox = mode === "sandbox";
 
         const calculatedFee = calculatePakasirFee(plan.price, paymentMethod, bank);
         const pakasirMethod = getPakasirMethod(paymentMethod, bank);
         let pakasirResult = null;
 
-        // Call Pakasir API (transactioncreate/{method})
-        // Note: Pakasir uses the same endpoint for both Sandbox & Production (sandbox mode is toggled in Pakasir dashboard)
         if (env.PAKASIR_PROJECT && env.PAKASIR_API_KEY) {
           try {
             const resp = await fetch(`https://app.pakasir.com/api/transactioncreate/${pakasirMethod}`, {
@@ -397,7 +496,6 @@ export default {
           } catch (_) {}
         }
 
-        // Unpack response: Pakasir returns { payment: { fee, total_payment, payment_number, expired_at, ... } }
         const resData = pakasirResult ? (pakasirResult.payment || pakasirResult.transaction || pakasirResult) : null;
 
         const fee = (resData && resData.fee != null) ? Number(resData.fee) : calculatedFee;
@@ -443,12 +541,11 @@ export default {
           expiresAt
         };
 
-        // Write order details
-        await kv.put(`order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
+        setMemOrder(orderId, orderRecord);
+        ctx.waitUntil(safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 }));
 
-        // Update device_orders
         try {
-          let devOrders = (await kv.get(`device_orders:${deviceId}`, "json")) || [];
+          let devOrders = (await safeKvGet(kv, `device_orders:${deviceId}`, "json")) || [];
           devOrders.unshift({
             orderId,
             planId: plan.id,
@@ -465,14 +562,13 @@ export default {
             expiresAt
           });
           if (devOrders.length > 20) devOrders = devOrders.slice(0, 20);
-          await kv.put(`device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+          ctx.waitUntil(safeKvPut(kv, `device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
         } catch (_) {}
 
-        // Prepend to aggregate orders index
         try {
           let allOrders = await getIndexedOrders();
           allOrders.unshift(orderRecord);
-          await saveIndexedOrders(allOrders);
+          ctx.waitUntil(saveIndexedOrders(allOrders));
         } catch (_) {}
 
         return jsonResponse({
@@ -490,12 +586,11 @@ export default {
         });
       }
 
-      // ── Device Order History (with Active Auto-Expiry) ──
       if (path === "/api/orders/device") {
         const deviceId = (url.searchParams.get("deviceId") || url.searchParams.get("device_id") || "").trim();
         if (!deviceId) return jsonResponse({ error: "deviceId required" }, 400);
 
-        let devOrders = (await kv.get(`device_orders:${deviceId}`, "json")) || [];
+        let devOrders = (await safeKvGet(kv, `device_orders:${deviceId}`, "json")) || [];
         const now = Date.now();
         let changed = false;
         for (const o of devOrders) {
@@ -505,12 +600,12 @@ export default {
             changed = true;
             ctx.waitUntil((async () => {
               try {
-                const s = await kv.get(`order:${o.orderId}`);
+                const s = await safeKvGet(kv, `order:${o.orderId}`);
                 if (s) {
                   const rec = JSON.parse(s);
                   if (rec.status === "pending") {
                     rec.status = "expired";
-                    await kv.put(`order:${o.orderId}`, JSON.stringify(rec), { expirationTtl: 86400 });
+                    await safeKvPut(kv, `order:${o.orderId}`, JSON.stringify(rec), { expirationTtl: 86400 });
                   }
                 }
               } catch (_) {}
@@ -518,23 +613,26 @@ export default {
           }
         }
         if (changed) {
-          await kv.put(`device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+          ctx.waitUntil(safeKvPut(kv, `device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
         }
         return jsonResponse({ success: true, orders: devOrders }, 200, 10);
       }
 
-      // ── Order Status Check (Active Expiry Calculation) ──
       if (path === "/api/order/status") {
         const orderId = (url.searchParams.get("orderId") || url.searchParams.get("order_id") || "").trim();
         if (!orderId) return jsonResponse({ error: "orderId required" }, 400);
 
-        const orderRecordStr = await kv.get(`order:${orderId}`);
-        if (!orderRecordStr) return jsonResponse({ success: false, status: "not_found" }, 404);
-        
-        const orderRecord = JSON.parse(orderRecordStr);
+        let orderRecord = getMemOrder(orderId);
+        if (!orderRecord) {
+          const orderRecordStr = await safeKvGet(kv, `order:${orderId}`);
+          if (orderRecordStr) {
+            try { orderRecord = JSON.parse(orderRecordStr); } catch (_) {}
+          }
+        }
+
+        if (!orderRecord) return jsonResponse({ success: false, status: "not_found" }, 404);
         const now = Date.now();
 
-        // If pending, check with Pakasir transactiondetail in case webhook was delayed or dropped
         if (orderRecord.status === "pending" && env.PAKASIR_PROJECT && env.PAKASIR_API_KEY) {
           try {
             const detailUrl = `https://app.pakasir.com/api/transactiondetail?project=${encodeURIComponent(env.PAKASIR_PROJECT)}&amount=${orderRecord.amount}&order_id=${encodeURIComponent(orderId)}&api_key=${encodeURIComponent(env.PAKASIR_API_KEY)}`;
@@ -545,23 +643,27 @@ export default {
               if (dData && dData.status === "completed") {
                 orderRecord.status = "completed";
                 orderRecord.paidAt = now;
-                await kv.put(`order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
+                setMemOrder(orderId, orderRecord);
+                ctx.waitUntil(safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 }));
 
                 const plan = PLANS[orderRecord.planId] || PLANS["1_month"];
-                const existingDev = (await kv.get(`device:${orderRecord.deviceId}`, "json")) || {};
+                let existingDev = getMemDevice(orderRecord.deviceId) || (await safeKvGet(kv, `device:${orderRecord.deviceId}`, "json")) || {};
                 const currentExpires = existingDev.expiresAt && existingDev.expiresAt > now ? existingDev.expiresAt : now;
                 const newExpiresAt = currentExpires + plan.durationMs;
 
                 const devData = {
                   deviceId: orderRecord.deviceId,
                   planId: plan.id,
+                  planName: plan.name,
+                  isTrial: false,
+                  trialUsed: true,
                   expiresAt: newExpiresAt,
                   updatedAt: now,
                   source: "pakasir_status_sync"
                 };
 
-                await kv.put(`device:${orderRecord.deviceId}`, JSON.stringify(devData));
                 setMemDevice(orderRecord.deviceId, devData);
+                ctx.waitUntil(safeKvPut(kv, `device:${orderRecord.deviceId}`, JSON.stringify(devData)));
 
                 ctx.waitUntil((async () => {
                   try {
@@ -583,11 +685,11 @@ export default {
                 })());
 
                 try {
-                  let devOrders = (await kv.get(`device_orders:${orderRecord.deviceId}`, "json")) || [];
+                  let devOrders = (await safeKvGet(kv, `device_orders:${orderRecord.deviceId}`, "json")) || [];
                   for (const o of devOrders) {
                     if (o.orderId === orderId) o.status = "completed";
                   }
-                  await kv.put(`device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+                  ctx.waitUntil(safeKvPut(kv, `device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
                 } catch (_) {}
               }
             }
@@ -597,11 +699,10 @@ export default {
         const isExp = orderRecord.status === "pending" && (orderRecord.expiresAt ? (now > orderRecord.expiresAt) : ((now - (orderRecord.createdAt || 0)) > 15 * 60000));
         if (isExp) {
           orderRecord.status = "expired";
-          await kv.put(`order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
-          // Automatically cancel transaction in Pakasir gateway
+          setMemOrder(orderId, orderRecord);
+          ctx.waitUntil(safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 }));
           ctx.waitUntil(cancelPakasirTransaction(orderId, orderRecord.amount));
 
-          // Synchronize with index:orders
           ctx.waitUntil((async () => {
             try {
               let allOrders = await getIndexedOrders();
@@ -618,7 +719,7 @@ export default {
 
           if (orderRecord.deviceId) {
             try {
-              let devOrders = (await kv.get(`device_orders:${orderRecord.deviceId}`, "json")) || [];
+              let devOrders = (await safeKvGet(kv, `device_orders:${orderRecord.deviceId}`, "json")) || [];
               let devChanged = false;
               for (const o of devOrders) {
                 if (o.orderId === orderId && o.status === "pending") {
@@ -627,11 +728,12 @@ export default {
                 }
               }
               if (devChanged) {
-                await kv.put(`device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+                ctx.waitUntil(safeKvPut(kv, `device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
               }
             } catch (_) {}
           }
         }
+
         return jsonResponse({
           success: true,
           status: orderRecord.status,
@@ -644,26 +746,28 @@ export default {
         }, 200, 5);
       }
 
-      // ── Cancel Pending Order ──
       if (path === "/api/order/cancel" && request.method === "POST") {
         const body = await safeJson(request);
         const orderId = (body.orderId || body.order_id || "").trim();
         const deviceId = (body.deviceId || body.device_id || "").trim();
         if (!orderId) return jsonResponse({ error: "orderId required" }, 400);
 
-        const orderRecordStr = await kv.get(`order:${orderId}`);
-        if (orderRecordStr) {
-          const orderRecord = JSON.parse(orderRecordStr);
-          if (orderRecord.status === "pending") {
-            orderRecord.status = "cancelled";
-            orderRecord.cancelledAt = Date.now();
-            await kv.put(`order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
-            // Cancel immediately in Pakasir gateway
-            ctx.waitUntil(cancelPakasirTransaction(orderId, orderRecord.amount));
+        let orderRecord = getMemOrder(orderId);
+        if (!orderRecord) {
+          const orderRecordStr = await safeKvGet(kv, `order:${orderId}`);
+          if (orderRecordStr) {
+            try { orderRecord = JSON.parse(orderRecordStr); } catch (_) {}
           }
         }
 
-        // Update index:orders
+        if (orderRecord && orderRecord.status === "pending") {
+          orderRecord.status = "cancelled";
+          orderRecord.cancelledAt = Date.now();
+          setMemOrder(orderId, orderRecord);
+          ctx.waitUntil(safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 }));
+          ctx.waitUntil(cancelPakasirTransaction(orderId, orderRecord.amount));
+        }
+
         ctx.waitUntil((async () => {
           try {
             let allOrders = await getIndexedOrders();
@@ -676,38 +780,39 @@ export default {
 
         if (deviceId) {
           try {
-            let devOrders = (await kv.get(`device_orders:${deviceId}`, "json")) || [];
+            let devOrders = (await safeKvGet(kv, `device_orders:${deviceId}`, "json")) || [];
             for (const o of devOrders) {
               if (o.orderId === orderId && o.status === "pending") {
                 o.status = "cancelled";
               }
             }
-            await kv.put(`device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+            ctx.waitUntil(safeKvPut(kv, `device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
           } catch (_) {}
         }
 
         return jsonResponse({ success: true, message: "Order cancelled" });
       }
 
-      // ── Pakasir Payment Webhook (Ironclad Double-Check Verification) ──
       if ((path === "/webhook" || path === "/api/webhook" || path === "/api/webhook/pakasir") && request.method === "POST") {
         const body = await safeJson(request);
         const orderId = (body.order_id || body.orderId || "").trim();
 
         if (!orderId) return jsonResponse({ error: "order_id missing" }, 400);
 
-        const orderRecordStr = await kv.get(`order:${orderId}`);
-        if (!orderRecordStr) return jsonResponse({ error: "order not found" }, 404);
+        let orderRecord = getMemOrder(orderId);
+        if (!orderRecord) {
+          const orderRecordStr = await safeKvGet(kv, `order:${orderId}`);
+          if (orderRecordStr) {
+            try { orderRecord = JSON.parse(orderRecordStr); } catch (_) {}
+          }
+        }
 
-        const orderRecord = JSON.parse(orderRecordStr);
+        if (!orderRecord) return jsonResponse({ error: "order not found" }, 404);
 
-        // If already completed, return idempotent response
         if (orderRecord.status === "completed") {
           return jsonResponse({ success: true, message: "Order already completed" });
         }
 
-        // ── MANDATORY DEFENSE: Server-to-Server Inquiry with Pakasir ──
-        // Never trust the incoming POST body. Verify directly with Pakasir API!
         if (!env.PAKASIR_PROJECT || !env.PAKASIR_API_KEY) {
           return jsonResponse({ error: "Gateway credentials not configured on server" }, 500);
         }
@@ -725,7 +830,6 @@ export default {
 
         const txData = verifyData ? (verifyData.transaction || verifyData.payment || verifyData) : null;
 
-        // Strict validation: Pakasir official server record must show "completed"
         if (!txData || String(txData.status).toLowerCase().trim() !== "completed") {
           return jsonResponse({
             error: "Fraudulent or unverified payment attempt rejected",
@@ -743,26 +847,29 @@ export default {
         orderRecord.status = "completed";
         orderRecord.paidAt = Date.now();
         orderRecord.verifiedVia = "pakasir_double_check";
-        await kv.put(`order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
+        setMemOrder(orderId, orderRecord);
+        ctx.waitUntil(safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 }));
 
         const plan = PLANS[orderRecord.planId] || PLANS["1_month"];
         const now = Date.now();
-        const existingDev = (await kv.get(`device:${orderRecord.deviceId}`, "json")) || {};
+        let existingDev = getMemDevice(orderRecord.deviceId) || (await safeKvGet(kv, `device:${orderRecord.deviceId}`, "json")) || {};
         const currentExpires = existingDev.expiresAt && existingDev.expiresAt > now ? existingDev.expiresAt : now;
         const newExpiresAt = currentExpires + plan.durationMs;
 
         const devData = {
           deviceId: orderRecord.deviceId,
           planId: plan.id,
+          planName: plan.name,
+          isTrial: false,
+          trialUsed: true,
           expiresAt: newExpiresAt,
           updatedAt: now,
           source: "pakasir_verified_webhook"
         };
 
-        await kv.put(`device:${orderRecord.deviceId}`, JSON.stringify(devData));
         setMemDevice(orderRecord.deviceId, devData);
+        ctx.waitUntil(safeKvPut(kv, `device:${orderRecord.deviceId}`, JSON.stringify(devData)));
 
-        // Update index:devices
         ctx.waitUntil((async () => {
           try {
             let devs = await getIndexedDevices();
@@ -772,7 +879,6 @@ export default {
           } catch (_) {}
         })());
 
-        // Update index:orders
         ctx.waitUntil((async () => {
           try {
             let allOrders = await getIndexedOrders();
@@ -783,19 +889,17 @@ export default {
           } catch (_) {}
         })());
 
-        // Update device_orders
         try {
-          let devOrders = (await kv.get(`device_orders:${orderRecord.deviceId}`, "json")) || [];
+          let devOrders = (await safeKvGet(kv, `device_orders:${orderRecord.deviceId}`, "json")) || [];
           for (const o of devOrders) {
             if (o.orderId === orderId) o.status = "completed";
           }
-          await kv.put(`device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+          ctx.waitUntil(safeKvPut(kv, `device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 }));
         } catch (_) {}
 
         return jsonResponse({ success: true, message: "Subscription activated" });
       }
 
-      // ── ADMIN REST APIS ──
       if (path === "/api/admin/login" && request.method === "POST") {
         const body = await safeJson(request);
         const user = (body.username || "").trim();
@@ -823,7 +927,6 @@ export default {
             const parts = decoded.split(":");
             if (parts[0] === ADMIN_USER && parts[1] === ADMIN_SECRET) {
               const tokenTs = Number(parts[2]) || 0;
-              // Token validity: 7 days
               if (tokenTs > 0 && (Date.now() - tokenTs) < 7 * 86400 * 1000) {
                 authorized = true;
               }
@@ -833,20 +936,23 @@ export default {
 
         if (!authorized) return jsonResponse({ error: "Unauthorized access or expired session" }, 401);
 
-        // ── Admin Stats (Instant from Index, 0 KV Scan) ──
         if (path === "/api/admin/stats" && request.method === "GET") {
           const now = Date.now();
           if (MEM_STATS_CACHE && (now - MEM_STATS_TS < 30000)) {
             return jsonResponse({ success: true, stats: MEM_STATS_CACHE });
           }
 
-          const mode = (await kv.get("config:mode")) || "production";
+          const mode = (await safeKvGet(kv, "config:mode")) || "production";
           const devices = await getIndexedDevices();
           const orders = await getIndexedOrders();
 
           let activeVip = 0;
+          let activeTrials = 0;
           for (const d of devices) {
-            if (d && d.expiresAt > now) activeVip++;
+            if (d && d.expiresAt > now) {
+              if (d.isTrial) activeTrials++;
+              else activeVip++;
+            }
           }
 
           let totalRevenue = 0;
@@ -870,6 +976,7 @@ export default {
 
           const stats = {
             activeVip,
+            activeTrials,
             totalDevices: devices.length,
             totalOrders: orders.length,
             totalRevenue,
@@ -886,14 +993,12 @@ export default {
           return jsonResponse({ success: true, stats });
         }
 
-        // ── Admin Devices (Index-based, 1 Read) ──
         if (path === "/api/admin/devices") {
           if (request.method === "GET") {
             const devices = await getIndexedDevices();
             return jsonResponse({ success: true, devices });
           }
 
-          // Grant VIP Access
           if (request.method === "POST") {
             const body = await safeJson(request);
             const deviceId = (body.deviceId || "").trim();
@@ -903,30 +1008,30 @@ export default {
             if (!deviceId) return jsonResponse({ error: "deviceId required" }, 400);
 
             const now = Date.now();
-            const existing = (await kv.get(`device:${deviceId}`, "json")) || {};
+            const existing = (await safeKvGet(kv, `device:${deviceId}`, "json")) || {};
             const currentExp = existing.expiresAt && existing.expiresAt > now ? existing.expiresAt : now;
             const newExpiresAt = currentExp + (days * 86400000);
 
             const devData = {
               deviceId,
               planId,
+              isTrial: false,
+              trialUsed: true,
               expiresAt: newExpiresAt,
               updatedAt: now,
               grantedBy: "admin"
             };
 
-            await kv.put(`device:${deviceId}`, JSON.stringify(devData));
             setMemDevice(deviceId, devData);
+            await safeKvPut(kv, `device:${deviceId}`, JSON.stringify(devData));
 
-            // Update index:devices
             let devs = await getIndexedDevices();
             const idx = devs.findIndex(d => d.deviceId === deviceId);
             if (idx >= 0) devs[idx] = devData; else devs.unshift(devData);
             await saveIndexedDevices(devs);
 
-            // Record into device order history for app visibility
             try {
-              let devOrders = (await kv.get(`device_orders:${deviceId}`, "json")) || [];
+              let devOrders = (await safeKvGet(kv, `device_orders:${deviceId}`, "json")) || [];
               devOrders.unshift({
                 orderId: `GN-ADMIN-${Date.now().toString().slice(-6)}`,
                 planId,
@@ -940,18 +1045,17 @@ export default {
                 expiresAt: newExpiresAt
               });
               if (devOrders.length > 20) devOrders = devOrders.slice(0, 20);
-              await kv.put(`device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+              await safeKvPut(kv, `device_orders:${deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
             } catch (_) {}
 
             return jsonResponse({ success: true, device: devData });
           }
 
-          // Revoke VIP Access
           if (request.method === "DELETE") {
             const deviceId = (url.searchParams.get("deviceId") || "").trim();
             if (!deviceId) return jsonResponse({ error: "deviceId required" }, 400);
 
-            await kv.delete(`device:${deviceId}`);
+            await safeKvDelete(kv, `device:${deviceId}`);
             delMemDevice(deviceId);
 
             let devs = await getIndexedDevices();
@@ -962,7 +1066,6 @@ export default {
           }
         }
 
-        // ── Admin Orders (Index-based, 1 Read) ──
         if (path === "/api/admin/orders") {
           if (request.method === "GET") {
             const orders = await getIndexedOrders();
@@ -977,24 +1080,29 @@ export default {
 
             if (!orderId) return jsonResponse({ error: "orderId required" }, 400);
 
-            const orderStr = await kv.get(`order:${orderId}`);
-            if (!orderStr) return jsonResponse({ error: "order not found" }, 404);
+            let orderRecord = getMemOrder(orderId);
+            if (!orderRecord) {
+              const orderStr = await safeKvGet(kv, `order:${orderId}`);
+              if (orderStr) {
+                try { orderRecord = JSON.parse(orderStr); } catch (_) {}
+              }
+            }
 
-            const order = JSON.parse(orderStr);
-            order.status = newStatus;
-            await kv.put(`order:${orderId}`, JSON.stringify(order), { expirationTtl: 86400 });
+            if (!orderRecord) return jsonResponse({ error: "order not found" }, 404);
 
-            // Update index:orders
+            orderRecord.status = newStatus;
+            setMemOrder(orderId, orderRecord);
+            await safeKvPut(kv, `order:${orderId}`, JSON.stringify(orderRecord), { expirationTtl: 86400 });
+
             let allOrders = await getIndexedOrders();
             for (const ord of allOrders) {
               if (ord.orderId === orderId) ord.status = newStatus;
             }
             await saveIndexedOrders(allOrders);
 
-            // Synchronize status with device_orders
-            if (order.deviceId) {
+            if (orderRecord.deviceId) {
               try {
-                let devOrders = (await kv.get(`device_orders:${order.deviceId}`, "json")) || [];
+                let devOrders = (await safeKvGet(kv, `device_orders:${orderRecord.deviceId}`, "json")) || [];
                 let devChanged = false;
                 for (const o of devOrders) {
                   if (o.orderId === orderId) {
@@ -1003,43 +1111,45 @@ export default {
                   }
                 }
                 if (devChanged) {
-                  await kv.put(`device_orders:${order.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
+                  await safeKvPut(kv, `device_orders:${orderRecord.deviceId}`, JSON.stringify(devOrders), { expirationTtl: 7 * 86400 });
                 }
               } catch (_) {}
             }
 
             if (newStatus === "completed") {
-              const plan = PLANS[order.planId] || PLANS["1_month"];
+              const plan = PLANS[orderRecord.planId] || PLANS["1_month"];
               const now = Date.now();
-              const existingDev = (await kv.get(`device:${order.deviceId}`, "json")) || {};
+              const existingDev = (await safeKvGet(kv, `device:${orderRecord.deviceId}`, "json")) || {};
               const curExp = existingDev.expiresAt && existingDev.expiresAt > now ? existingDev.expiresAt : now;
               const newExpiresAt = curExp + plan.durationMs;
 
               const devData = {
-                deviceId: order.deviceId,
+                deviceId: orderRecord.deviceId,
                 planId: plan.id,
                 expiresAt: newExpiresAt,
                 updatedAt: now,
                 grantedBy: "admin_override"
               };
 
-              await kv.put(`device:${order.deviceId}`, JSON.stringify(devData));
-              setMemDevice(order.deviceId, devData);
+              setMemDevice(orderRecord.deviceId, devData);
+              await safeKvPut(kv, `device:${orderRecord.deviceId}`, JSON.stringify(devData));
 
               let devs = await getIndexedDevices();
-              const idx = devs.findIndex(d => d.deviceId === order.deviceId);
+              const idx = devs.findIndex(d => d.deviceId === orderRecord.deviceId);
               if (idx >= 0) devs[idx] = devData; else devs.unshift(devData);
               await saveIndexedDevices(devs);
             }
 
-            return jsonResponse({ success: true, order });
+            return jsonResponse({ success: true, order: orderRecord });
           }
 
           if (request.method === "DELETE") {
             const orderId = (url.searchParams.get("orderId") || "").trim();
             if (!orderId) return jsonResponse({ error: "orderId required" }, 400);
 
-            await kv.delete(`order:${orderId}`);
+            await safeKvDelete(kv, `order:${orderId}`);
+            MEM_ORDER_RECORDS.delete(orderId);
+
             let allOrders = await getIndexedOrders();
             allOrders = allOrders.filter(o => o.orderId !== orderId);
             await saveIndexedOrders(allOrders);
@@ -1048,7 +1158,6 @@ export default {
           }
         }
 
-        // ── Admin Orders Purge Inactive (Cleans Cancelled & Expired) ──
         if (path === "/api/admin/orders/purge-inactive" && request.method === "POST") {
           let allOrders = await getIndexedOrders();
           const initialCount = allOrders.length;
@@ -1061,15 +1170,19 @@ export default {
           });
         }
 
-        // ── Admin Orders Live Verify with Pakasir ──
         if (path === "/api/admin/orders/verify-pakasir" && request.method === "POST") {
           const body = await safeJson(request);
           const orderId = (body.orderId || "").trim();
           if (!orderId) return jsonResponse({ error: "orderId required" }, 400);
 
-          const orderStr = await kv.get(`order:${orderId}`);
-          if (!orderStr) return jsonResponse({ error: "Order not found in KV" }, 404);
-          const order = JSON.parse(orderStr);
+          let order = getMemOrder(orderId);
+          if (!order) {
+            const orderStr = await safeKvGet(kv, `order:${orderId}`);
+            if (orderStr) {
+              try { order = JSON.parse(orderStr); } catch (_) {}
+            }
+          }
+          if (!order) return jsonResponse({ error: "Order not found" }, 404);
 
           if (!env.PAKASIR_PROJECT || !env.PAKASIR_API_KEY) {
             return jsonResponse({ error: "Pakasir credentials not configured" }, 500);
@@ -1081,10 +1194,9 @@ export default {
           return jsonResponse({ success: true, pakasirData: vJson, localOrder: order });
         }
 
-        // ── Admin Booster Features Configuration ──
         if (path === "/api/admin/booster/features") {
           if (request.method === "GET") {
-            const features = (await kv.get("config:booster_features", "json")) || DEFAULT_FEATURES;
+            const features = (await safeKvGet(kv, "config:booster_features", "json")) || DEFAULT_FEATURES;
             return jsonResponse({ success: true, features });
           }
 
@@ -1099,7 +1211,7 @@ export default {
               emergency_broadcast: body.emergency_broadcast || DEFAULT_FEATURES.emergency_broadcast
             };
 
-            await kv.put("config:booster_features", JSON.stringify(updated));
+            await safeKvPut(kv, "config:booster_features", JSON.stringify(updated));
             MEM_FEATURES_CACHE = updated;
             MEM_FEATURES_TS = Date.now();
 
@@ -1107,10 +1219,9 @@ export default {
           }
         }
 
-        // ── Admin Gateway Settings ──
         if (path === "/api/admin/settings") {
           if (request.method === "GET") {
-            const mode = (await kv.get("config:mode")) || "production";
+            const mode = (await safeKvGet(kv, "config:mode")) || "production";
             return jsonResponse({
               success: true,
               settings: {
@@ -1123,7 +1234,7 @@ export default {
           if (request.method === "PUT") {
             const body = await safeJson(request);
             if (body.gatewayMode) {
-              await kv.put("config:mode", body.gatewayMode);
+              await safeKvPut(kv, "config:mode", body.gatewayMode);
             }
             return jsonResponse({ success: true, message: "Settings saved" });
           }

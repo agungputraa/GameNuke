@@ -15,7 +15,7 @@ class NukeEdgeRailLayout @JvmOverloads constructor(
     private val d: Float
         get() = (resources.configuration.densityDpi / 160f).takeIf { it > 0f } ?: resources.displayMetrics.density
     private val fill = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL }
-    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = NukeHudPalette.Green }
+    private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.STROKE; color = NukeHudPalette.Cyan }
     init { setWillNotDraw(false) }
     override fun onSizeChanged(w:Int,h:Int,ow:Int,oh:Int){
         super.onSizeChanged(w,h,ow,oh)

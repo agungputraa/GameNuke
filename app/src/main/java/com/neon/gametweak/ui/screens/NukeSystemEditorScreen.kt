@@ -76,6 +76,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -94,21 +95,23 @@ import com.neon.gametweak.NukeSystemParamGuardian.RiskLevel
 import com.neon.gametweak.NukeSystemParamRepository
 import com.neon.gametweak.NukeSystemParamRepository.NukeSystemParam
 import com.neon.gametweak.NukeToast
+import com.neon.gametweak.ui.theme.ReactorBackdrop
+import com.neon.gametweak.tr
 import kotlinx.coroutines.launch
 
 // ── EXECUTIVE COLOR SYSTEM (ELEGANT, SOPHISTICATED, NON-LOUD) ─────────────────
-private val StudioBg = Color(0xFF090C0F)           // Matte obsidian base
-private val StudioCard = Color(0xFF11161B)         // Deep charcoal slate surface
-private val StudioCardHigh = Color(0xFF161D24)     // Elevated inset panel
-private val StudioBorder = Color(0xFF222B35)       // Discrete subtle divider
-private val StudioBorderLight = Color(0xFF2E3B48)  // Highlight divider
-private val StudioEmerald = Color(0xFF10B981)      // Verified Safe / Production Ready
-private val StudioSky = Color(0xFF38BDF8)          // Parameter identity / Telemetry
+private val StudioBg = Color(0xFF020705)           // Matte obsidian base
+private val StudioCard = Color(0xFF07100D)         // Deep charcoal slate surface
+private val StudioCardHigh = Color(0xFF0B1814)     // Elevated inset panel
+private val StudioBorder = Color(0xFF1D4034)       // Discrete subtle divider
+private val StudioBorderLight = Color(0xFF2D6653)  // Highlight divider
+private val StudioEmerald = Color(0xFF55F5B0)      // Verified Safe / Production Ready
+private val StudioSky = Color(0xFF73E7D3)          // Parameter identity / Telemetry
 private val StudioAmber = Color(0xFFF59E0B)        // Caution / User Modified
 private val StudioRose = Color(0xFFEF4444)         // Blocked / Security Restriction
 private val StudioTextPrimary = Color(0xFFF8FAFC)  // Crisp white
-private val StudioTextMuted = Color(0xFF94A3B8)    // Slate-400 secondary
-private val StudioTextDim = Color(0xFF64748B)      // Slate-500 tertiary
+private val StudioTextMuted = Color(0xFF9CB8AD)    // Slate-400 secondary
+private val StudioTextDim = Color(0xFF668679)      // Slate-500 tertiary
 
 enum class ParamFilterTab(val title: String) {
     ALL("ALL"),
@@ -211,11 +214,15 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
     val safeCount = remember(combinedParams) { combinedParams.count { it.riskLevel == RiskLevel.SAFE } }
     val curatedCount = remember(combinedParams) { combinedParams.count { it.isCurated } }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(StudioBg)
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(StudioBg, Color(0xFF06140F), StudioBg)))
     ) {
+        ReactorBackdrop(Modifier.fillMaxSize())
+        Column(
+            modifier = Modifier.fillMaxSize()
+        ) {
         // ── TOP TELEMETRY & COMMAND DECK ─────────────────────────────────────
         ExecutiveHeader(
             deviceProfile = deviceProfile,
@@ -250,7 +257,7 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
                     .height(50.dp),
                 placeholder = {
                     Text(
-                        "Search key, value or gaming preset...",
+                        tr("Search key, value or gaming preset..."),
                         color = StudioTextDim,
                         fontSize = 12.sp
                     )
@@ -313,7 +320,7 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
             modifier = Modifier
                 .fillMaxWidth()
                 .padding(horizontal = 16.dp, vertical = 3.dp),
-            shape = RoundedCornerShape(12.dp),
+            shape = RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp),
             color = StudioCard,
             border = BorderStroke(1.dp, StudioBorder)
         ) {
@@ -364,7 +371,7 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
                                 horizontalArrangement = Arrangement.Center
                             ) {
                                 Text(
-                                    tab.title,
+                                    tr(tab.title),
                                     color = if (isSelected) StudioEmerald else StudioTextMuted,
                                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
                                     fontSize = 11.sp
@@ -592,6 +599,7 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
             }
         }
     }
+    }
 
     // ── DIALOGS ──────────────────────────────────────────────────────────────
     editingParam?.let { param ->
@@ -729,9 +737,9 @@ private fun ExecutiveHeader(
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 14.dp, vertical = 6.dp)
-            .clip(RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
             .background(StudioCard)
-            .border(1.dp, StudioBorder, RoundedCornerShape(12.dp))
+            .border(1.dp, StudioBorder, RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
             .padding(12.dp)
     ) {
         // Title and Status Row
@@ -1887,7 +1895,7 @@ private fun ExecutiveModuleExportDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth().height(120.dp),
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF090C0E),
+                    color = Color(0xFF07100D),
                     border = BorderStroke(0.8.dp, StudioBorder)
                 ) {
                     Text(
@@ -2017,7 +2025,7 @@ private fun ExecutiveCreatorGuideDialog(
                 Surface(
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(6.dp),
-                    color = Color(0xFF090C0E),
+                    color = Color(0xFF07100D),
                     border = BorderStroke(0.8.dp, StudioBorder)
                 ) {
                     Text(

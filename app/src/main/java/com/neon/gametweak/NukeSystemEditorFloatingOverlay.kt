@@ -76,20 +76,20 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
         private const val TAG = "NukeSysEditorOverlay"
 
         // ── Enterprise Obsidian & Slate Palette ─────────────────────────────────
-        private const val BG             = "#F7070B10"   // 97% opaque obsidian black
-        private const val SURFACE        = "#FF0E1620"   // Card surface
-        private const val SURFACE_HIGH   = "#FF141F2C"   // Elevated / input surface
-        private const val SURFACE_INSET  = "#FF090E14"   // Inset panel
-        private const val BORDER         = "#FF1E293B"   // Slate border
-        private const val BORDER_ACTIVE  = "#FF334B64"   // Focused / active border
-        private const val TEXT_PRIMARY   = "#FFF1F5F9"   // Slate 100
-        private const val TEXT_SECONDARY = "#FF94A3B8"   // Slate 400
-        private const val TEXT_DIM       = "#FF64748B"   // Slate 500
-        private const val ACCENT         = "#FF065F46"   // Muted emerald
-        private const val ACCENT_BRIGHT  = "#FF10B981"   // Emerald 500
+        private const val BG             = "#F705070B"   // 97% opaque obsidian black
+        private const val SURFACE        = "#FF0B1018"   // Card surface
+        private const val SURFACE_HIGH   = "#FF111A26"   // Elevated / input surface
+        private const val SURFACE_INSET  = "#FF070B11"   // Inset panel
+        private const val BORDER         = "#FF243448"   // Slate border
+        private const val BORDER_ACTIVE  = "#FF34506B"   // Focused / active border
+        private const val TEXT_PRIMARY   = "#FFF4F8FC"   // Slate 100
+        private const val TEXT_SECONDARY = "#FF9CAFC4"   // Slate 400
+        private const val TEXT_DIM       = "#FF64778D"   // Slate 500
+        private const val ACCENT         = "#FF0B5E70"   // Muted emerald
+        private const val ACCENT_BRIGHT  = "#FF55F5B0"   // Emerald 500
         private const val AMBER          = "#FFF59E0B"   // Amber for modified
         private const val ROSE           = "#FFEF4444"   // Rose for restricted
-        private const val CYAN           = "#FF38BDF8"   // Sky blue
+        private const val CYAN           = "#FF73E7D3"   // Sky blue
 
         @Volatile
         private var instance: NukeSystemEditorFloatingOverlay? = null
@@ -133,8 +133,17 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
         val displayMetrics = context.resources.displayMetrics
         val screenWidthDp = displayMetrics.widthPixels / displayMetrics.density
         val screenHeightDp = displayMetrics.heightPixels / displayMetrics.density
-        val targetWidthDp = (screenWidthDp * 0.94f).coerceIn(330f, 430f)
-        val targetHeightDp = (screenHeightDp * 0.72f).coerceIn(460f, 660f)
+        val isLandscape = screenWidthDp > screenHeightDp
+        val targetWidthDp = if (isLandscape) {
+            minOf(560f, screenWidthDp * 0.60f).coerceAtLeast(minOf(320f, screenWidthDp * 0.44f))
+        } else {
+            minOf(440f, screenWidthDp * 0.94f).coerceAtLeast(minOf(300f, screenWidthDp * 0.84f))
+        }
+        val targetHeightDp = if (isLandscape) {
+            minOf(410f, screenHeightDp * 0.90f).coerceAtLeast(minOf(260f, screenHeightDp * 0.70f))
+        } else {
+            minOf(660f, screenHeightDp * 0.76f).coerceAtLeast(minOf(380f, screenHeightDp * 0.58f))
+        }
 
         val width = dp(targetWidthDp)
         val height = dp(targetHeightDp)
@@ -152,11 +161,14 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
         // ── Root Window Frame ────────────────────────────────────────────────────
         val root = FrameLayout(context).apply {
-            background = GradientDrawable().apply {
-                setColor(Color.parseColor(BG))
-                cornerRadius = dp(14f).toFloat()
-                setStroke(dp(1.2f), Color.parseColor(BORDER))
-            }
+            background = NukeCyberHudStyler.TacticalPanelDrawable(
+                density = resources.displayMetrics.density,
+                cornerRadiusPx = dp(16f).toFloat(),
+                strokeColor = NukeCyberHudStyler.COLOR_CYAN_NEON,
+                bgColor = NukeCyberHudStyler.COLOR_BG_OBSIDIAN,
+                showGrid = true,
+                showBrackets = true
+            )
             clipToOutline = true
             elevation = dp(12f).toFloat()
         }
@@ -234,7 +246,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
         countBadgeTv = TextView(context).apply {
             text = ""
-            setTextColor(Color.parseColor(CYAN))
+            setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
             textSize = 9f
             typeface = Typeface.MONOSPACE
             setPadding(dp(6f), dp(1.5f), dp(6f), dp(1.5f))
@@ -541,7 +553,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             }
             val label = TextView(context).apply {
                 text = tab.title
-                setTextColor(if (tab.isActive) Color.parseColor(ACCENT_BRIGHT) else Color.parseColor(TEXT_DIM))
+                setTextColor(if (tab.isActive) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor(TEXT_DIM))
                 textSize = 8.5f
                 typeface = if (tab.isActive) Typeface.DEFAULT_BOLD else Typeface.MONOSPACE
                 letterSpacing = if (tab.isActive) 0.06f else 0.04f
@@ -551,7 +563,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             // Underline indicator
             wrapper.addView(View(context).apply {
                 layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(2f))
-                setBackgroundColor(if (tab.isActive) Color.parseColor(ACCENT_BRIGHT) else Color.TRANSPARENT)
+                setBackgroundColor(if (tab.isActive) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.TRANSPARENT)
             })
             row.addView(wrapper)
         }
@@ -621,7 +633,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                     setStroke(
                         dp(0.9f),
                         when {
-                            isExpanded -> Color.parseColor(ACCENT_BRIGHT)
+                            isExpanded -> NukeCyberHudStyler.COLOR_CYAN_NEON
                             param.isModified -> Color.parseColor(AMBER)
                             param.isDynamicallyDiscovered -> Color.parseColor(BORDER_ACTIVE)
                             else -> Color.parseColor(BORDER)
@@ -645,7 +657,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 ParamSource.SYSTEM -> "SYS" to "#FF0284C7"
                 ParamSource.GLOBAL -> "GLB" to "#FF8B5CF6"
                 ParamSource.SECURE -> "SEC" to "#FFF59E0B"
-                ParamSource.PROP   -> "PROP" to "#FF10B981"
+                ParamSource.PROP   -> "PROP" to "#FF55F5B0"
                 ParamSource.KERNEL -> "KRNL" to "#FFEC4899"
             }
             val srcBadge = TextView(context).apply {
@@ -683,9 +695,9 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 text = param.value.ifBlank { "—" }.take(14)
                 setTextColor(
                     when {
-                        param.isModified -> Color.parseColor(ACCENT_BRIGHT)
+                        param.isModified -> NukeCyberHudStyler.COLOR_CYAN_NEON
                         isBlocked -> Color.parseColor(ROSE)
-                        else -> Color.parseColor(CYAN)
+                        else -> NukeCyberHudStyler.COLOR_TELEMETRY
                     }
                 )
                 textSize = 9f
@@ -711,7 +723,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 val actionBtn = TextView(context).apply {
                     text = if (isExpanded) "Close" else "Edit"
                     setTextColor(
-                        if (isExpanded) Color.parseColor(ACCENT_BRIGHT)
+                        if (isExpanded) NukeCyberHudStyler.COLOR_CYAN_NEON
                         else Color.parseColor(TEXT_SECONDARY)
                     )
                     textSize = 8.5f
@@ -720,7 +732,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                     background = GradientDrawable().apply {
                         setColor(Color.parseColor(SURFACE_HIGH))
                         cornerRadius = dp(4f).toFloat()
-                        setStroke(dp(0.6f), if (isExpanded) Color.parseColor(ACCENT_BRIGHT) else Color.parseColor(BORDER_ACTIVE))
+                        setStroke(dp(0.6f), if (isExpanded) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor(BORDER_ACTIVE))
                     }
                     setOnClickListener {
                         expandedEditParamId = if (isExpanded) null else param.id
@@ -773,14 +785,14 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                     val pBtn = TextView(context).apply {
                         text = preset
                         val isActive = param.value == preset
-                        setTextColor(if (isActive) Color.parseColor(ACCENT_BRIGHT) else Color.parseColor(TEXT_SECONDARY))
+                        setTextColor(if (isActive) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor(TEXT_SECONDARY))
                         textSize = 8f
                         typeface = Typeface.MONOSPACE
                         setPadding(dp(6f), dp(2f), dp(6f), dp(2f))
                         background = GradientDrawable().apply {
                             setColor(Color.parseColor(SURFACE_INSET))
                             cornerRadius = dp(3f).toFloat()
-                            setStroke(dp(0.6f), if (isActive) Color.parseColor(ACCENT_BRIGHT) else Color.parseColor(BORDER))
+                            setStroke(dp(0.6f), if (isActive) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor(BORDER))
                         }
                         layoutParams = LinearLayout.LayoutParams(
                             LinearLayout.LayoutParams.WRAP_CONTENT,
@@ -864,7 +876,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                     typeface = Typeface.DEFAULT_BOLD
                     setPadding(dp(12f), dp(6f), dp(12f), dp(6f))
                     background = GradientDrawable().apply {
-                        setColor(Color.parseColor(ACCENT_BRIGHT))
+                        setColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                         cornerRadius = dp(5f).toFloat()
                     }
                     layoutParams = LinearLayout.LayoutParams(

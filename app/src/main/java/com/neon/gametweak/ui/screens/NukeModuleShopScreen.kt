@@ -39,8 +39,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -52,11 +54,13 @@ import com.neon.gametweak.Tx
 import com.neon.gametweak.safeBoolean
 import com.neon.gametweak.safeInt
 import com.neon.gametweak.ui.theme.Neon
+import com.neon.gametweak.ui.theme.ReactorBackdrop
 
 /** First-party module manager shared with the in-game cockpit. */
 @Composable
 fun NukeModuleShopScreen() {
     val context = LocalContext.current
+    val isWide = LocalConfiguration.current.screenWidthDp >= 680
     val prefs = remember { NukeModuleCatalog.prefs(context) }
     val categories = remember { listOf("All") + NukeModuleCatalog.modules.map { it.category }.distinct() }
     var selectedCategory by remember { mutableStateOf("All") }
@@ -80,16 +84,22 @@ fun NukeModuleShopScreen() {
         }
     }
 
-    LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Neon.Bg),
-        contentPadding = PaddingValues(14.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp),
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705))))
     ) {
+        ReactorBackdrop(Modifier.fillMaxSize())
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = if (isWide) 20.dp else 14.dp, vertical = 14.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
         item {
             Column(
                 modifier = Modifier.fillMaxWidth()
-                    .background(Neon.BgCard, RoundedCornerShape(16.dp))
-                    .border(1.dp, Neon.Outline, RoundedCornerShape(16.dp))
+                    .background(androidx.compose.ui.graphics.Brush.linearGradient(listOf(Color(0xFF10231D), Color(0xFF07100D), Color(0xFF06140F))), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
+                    .border(1.dp, Neon.Accent.copy(alpha = .28f), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                     .padding(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -102,7 +112,7 @@ fun NukeModuleShopScreen() {
                 }
                 Spacer(Modifier.height(10.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFB830))
+                    Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFB84A))
                     Spacer(Modifier.width(8.dp))
                     Text(
                         ("Built-in Game Nuke plugins are packaged tools and profiles managed from this screen."),
@@ -149,42 +159,98 @@ fun NukeModuleShopScreen() {
             }
         }
 
-        items(modules.size, key = { modules[it].id }) { index ->
-            val module = modules[index]
-            val checked = NukeModuleCatalog.isEnabled(prefs, module.id)
-            Row(
-                modifier = Modifier.fillMaxWidth()
-                    .background(Neon.BgCard, RoundedCornerShape(12.dp))
-                    .border(1.dp, if (checked) Neon.Accent.copy(alpha = .30f) else Neon.Outline, RoundedCornerShape(12.dp))
-                    .padding(horizontal = 14.dp, vertical = 12.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(module.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
-                        Spacer(Modifier.width(8.dp))
-                        Text(module.category.uppercase(), color = Neon.Accent, fontFamily = FontFamily.Monospace, fontSize = 7.sp)
+        if (isWide) {
+            items((modules.size + 1) / 2, key = { rowIndex -> "module_row_$rowIndex" }) { rowIndex ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    repeat(2) { column ->
+                        val index = rowIndex * 2 + column
+                        if (index < modules.size) {
+                            val module = modules[index]
+                            ModuleToggleCard(
+                                module = module,
+                                checked = NukeModuleCatalog.isEnabled(prefs, module.id),
+                                modifier = Modifier.weight(1f),
+                                onCheckedChange = { enabled ->
+                                    NukeModuleCatalog.setEnabled(prefs, module.id, enabled)
+                                    revision++
+                                    NukeToast.success(context, if (enabled) "${module.title} enabled" else "${module.title} disabled")
+                                }
+                            )
+                        } else {
+                            Spacer(Modifier.weight(1f))
+                        }
                     }
-                    Spacer(Modifier.height(4.dp))
-                    Text(module.description, color = Neon.TextDim, fontSize = 9.5.sp, lineHeight = 13.sp)
                 }
-                Spacer(Modifier.width(12.dp))
-                Switch(
-                    checked = checked,
+            }
+        } else {
+            items(modules.size, key = { modules[it].id }) { index ->
+                val module = modules[index]
+                ModuleToggleCard(
+                    module = module,
+                    checked = NukeModuleCatalog.isEnabled(prefs, module.id),
+                    modifier = Modifier.fillMaxWidth(),
                     onCheckedChange = { enabled ->
                         NukeModuleCatalog.setEnabled(prefs, module.id, enabled)
                         revision++
-                        NukeToast.success(context, if (enabled) ("${module.title} enabled") else ("${module.title} disabled"))
-                    },
-                    colors = SwitchDefaults.colors(
-                        checkedThumbColor = Color(0xFF090D12),
-                        checkedTrackColor = Neon.Accent,
-                        uncheckedThumbColor = Color(0xFF94A3B8),
-                        uncheckedTrackColor = Neon.BgInset,
-                    ),
+                        NukeToast.success(context, if (enabled) "${module.title} enabled" else "${module.title} disabled")
+                    }
                 )
             }
         }
+        }
+    }
+}
+
+@Composable
+private fun ModuleToggleCard(
+    module: NukeModuleCatalog.Module,
+    checked: Boolean,
+    modifier: Modifier = Modifier,
+    onCheckedChange: (Boolean) -> Unit,
+) {
+    Row(
+        modifier = modifier
+            .background(
+                androidx.compose.ui.graphics.Brush.linearGradient(
+                    listOf(Color(0xEE0B1814), Color(0xF207100D), Color(0xEE0D2119))
+                ),
+                RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)
+            )
+            .border(
+                1.dp,
+                if (checked) Neon.Accent.copy(alpha = .42f) else Neon.Outline,
+                RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)
+            )
+            .padding(horizontal = 14.dp, vertical = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .width(4.dp)
+                .height(38.dp)
+                .background(if (checked) Neon.Accent else Neon.Outline, RoundedCornerShape(2.dp))
+        )
+        Spacer(Modifier.width(10.dp))
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(module.title, color = Color.White, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                Spacer(Modifier.width(8.dp))
+                Text(module.category.uppercase(), color = Neon.Accent, fontFamily = FontFamily.Monospace, fontSize = 7.sp)
+            }
+            Spacer(Modifier.height(4.dp))
+            Text(module.description, color = Neon.TextDim, fontSize = 9.5.sp, lineHeight = 13.sp)
+        }
+        Spacer(Modifier.width(10.dp))
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = Color(0xFF020705),
+                checkedTrackColor = Neon.Accent,
+                uncheckedThumbColor = Color(0xFF9CB8AD),
+                uncheckedTrackColor = Neon.BgInset,
+            ),
+        )
     }
 }
 
@@ -200,8 +266,8 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
 
     Column(
         modifier = Modifier.fillMaxWidth()
-            .background(Neon.BgCard, RoundedCornerShape(12.dp))
-            .border(1.dp, Neon.Accent.copy(alpha = .28f), RoundedCornerShape(12.dp))
+            .background(Neon.BgCard, RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+            .border(1.dp, Neon.Accent.copy(alpha = .28f), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
             .padding(14.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {

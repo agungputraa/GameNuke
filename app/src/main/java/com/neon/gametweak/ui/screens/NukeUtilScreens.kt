@@ -22,6 +22,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -36,15 +39,18 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
@@ -70,6 +76,7 @@ import com.neon.gametweak.NukeIadbBridge
 import com.neon.gametweak.NukeShizukuBridge
 import com.neon.gametweak.NukeDaemonClient
 import com.neon.gametweak.tr
+import com.neon.gametweak.ui.theme.ReactorBackdrop
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -138,51 +145,51 @@ fun CleanerScreen(adbManager: AdbManager) {
     }
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))),
         contentPadding = PaddingValues(14.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp),
     ) {
         item {
             Column(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(16.dp))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                     .background(
                         androidx.compose.ui.graphics.Brush.horizontalGradient(
-                            listOf(Color(0xFF0C241B), Color(0xFF06100C), Color(0xFF100D16)),
+                            listOf(Color(0xFF0C241B), Color(0xFF07100D), Color(0xFF07130E)),
                         ),
                     )
-                    .border(1.dp, Color(0xFF10B981).copy(alpha = .38f), RoundedCornerShape(16.dp))
+                    .border(1.dp, Color(0xFF55F5B0).copy(alpha = .38f), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                     .padding(16.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Box(
-                        Modifier.size(48.dp).clip(RoundedCornerShape(12.dp))
-                            .background(Color(0xFF10B981).copy(alpha = .10f))
-                            .border(1.dp, Color(0xFF10B981).copy(alpha = .35f), RoundedCornerShape(12.dp)),
+                        Modifier.size(48.dp).clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+                            .background(Color(0xFF55F5B0).copy(alpha = .10f))
+                            .border(1.dp, Color(0xFF55F5B0).copy(alpha = .35f), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        Icon(Icons.Rounded.CleaningServices, null, tint = Color(0xFF10B981), modifier = Modifier.size(25.dp))
+                        Icon(Icons.Rounded.CleaningServices, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(25.dp))
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
                         Text(tr("NUKE OPTIMIZER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 15.sp, letterSpacing = 1.2.sp)
                         Text(
                             if (adbConnected) tr("PRIVILEGED CONTROL ONLINE") else tr("STANDARD CONTROL // CONNECT PRIVILEGED ENGINE FOR ADVANCED ACTIONS"),
-                            color = if (adbConnected) Color(0xFF10B981) else Color(0xFFFFB830),
+                            color = if (adbConnected) Color(0xFF55F5B0) else Color(0xFFFFB84A),
                             fontSize = 8.5.sp,
                             fontFamily = FontFamily.Monospace,
                             fontWeight = FontWeight.Bold,
                         )
                     }
-                    Box(Modifier.size(7.dp).background(if (adbConnected) Color(0xFF10B981) else Color(0xFFFFB830), CircleShape))
+                    Box(Modifier.size(7.dp).background(if (adbConnected) Color(0xFF55F5B0) else Color(0xFFFFB84A), CircleShape))
                 }
                 Spacer(Modifier.height(10.dp))
                 Text(
                     tr("Smart cleanup covers app cache, memory reclamation, and storage housekeeping."),
-                    color = Color(0xFF9BB0A6), fontSize = 10.sp, lineHeight = 14.sp,
+                    color = Color(0xFF9CB8AD), fontSize = 10.sp, lineHeight = 14.sp,
                 )
                 if (lastGainMb > 0L) {
                     Spacer(Modifier.height(8.dp))
-                    Text("${tr("LAST RECLAIM")}  +${lastGainMb}MB", color = Color(0xFF10B981), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
+                    Text("${tr("LAST RECLAIM")}  +${lastGainMb}MB", color = Color(0xFF55F5B0), fontSize = 9.sp, fontWeight = FontWeight.Black, fontFamily = FontFamily.Monospace)
                 }
             }
         }
@@ -193,7 +200,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                 detail = tr("Clear temporary Game Nuke cache files"),
                 value = "${"%.1f".format(ownCacheBytes / (1024.0 * 1024.0))} MB",
                 icon = Icons.Rounded.DeleteSweep,
-                accent = Color(0xFF35F2FF),
+                accent = Color(0xFF55F5B0),
                 enabled = !isWorking,
             ) {
                 checkAdBlockOrRun {
@@ -221,7 +228,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                 detail = if (adbConnected) tr("Memory reclamation with supported kernel compaction") else tr("Connect the privileged engine for advanced memory reclamation"),
                 value = if (adbConnected) ("READY") else ("BASIC MODE"),
                 icon = Icons.Rounded.Memory,
-                accent = Color(0xFF10B981),
+                accent = Color(0xFF55F5B0),
                 enabled = adbConnected && !isWorking,
             ) {
                 checkAdBlockOrRun {
@@ -284,7 +291,7 @@ fun CleanerScreen(adbManager: AdbManager) {
                 detail = if (adbConnected) ("Recover bounded storage headroom when supported") else ("Advanced storage cleanup unavailable right now"),
                 value = if (adbConnected) ("SAFE TRIM") else ("BASIC MODE"),
                 icon = Icons.Rounded.Storage,
-                accent = Color(0xFFFFB830),
+                accent = Color(0xFFFFB84A),
                 enabled = adbConnected && !isWorking,
             ) {
                 checkAdBlockOrRun {
@@ -309,8 +316,8 @@ fun CleanerScreen(adbManager: AdbManager) {
 
         item {
             Row(
-                Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF06100C))
-                    .border(1.dp, Color(0xFF173A31), RoundedCornerShape(12.dp))
+                Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)).background(Color(0xFF07100D))
+                    .border(1.dp, Color(0xFF173A31), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .clickable { runCatching { context.startActivity(Intent(android.provider.Settings.ACTION_INTERNAL_STORAGE_SETTINGS)) } }
                     .padding(13.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -319,9 +326,9 @@ fun CleanerScreen(adbManager: AdbManager) {
                 Spacer(Modifier.width(10.dp))
                 Column(Modifier.weight(1f)) {
                     Text(("ANDROID STORAGE MANAGER"), color = Color.White, fontSize = 11.sp, fontWeight = FontWeight.Black)
-                    Text(("Open the official system storage controls"), color = Color(0xFF9BB0A6), fontSize = 9.sp)
+                    Text(("Open the official system storage controls"), color = Color(0xFF9CB8AD), fontSize = 9.sp)
                 }
-                Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFF9BB0A6))
+                Icon(Icons.Rounded.ChevronRight, null, tint = Color(0xFF9CB8AD))
             }
         }
 
@@ -332,12 +339,12 @@ fun CleanerScreen(adbManager: AdbManager) {
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     if (isWorking) {
-                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF10B981))
+                        CircularProgressIndicator(modifier = Modifier.size(14.dp), strokeWidth = 2.dp, color = Color(0xFF55F5B0))
                     } else {
-                        Box(Modifier.size(6.dp).background(Color(0xFF10B981), CircleShape))
+                        Box(Modifier.size(6.dp).background(Color(0xFF55F5B0), CircleShape))
                     }
                     Spacer(Modifier.width(8.dp))
-                    Text(operation, color = Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
+                    Text(operation, color = Color(0xFF9CB8AD), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -356,9 +363,9 @@ private fun OptimizerActionCard(
 ) {
     val actualAccent = if (enabled) accent else Color(0xFF56635E)
     Row(
-        Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(actualAccent.copy(alpha = .08f), Color(0xFF111720), Color(0xFF090D12))))
-            .border(1.dp, actualAccent.copy(alpha = .32f), RoundedCornerShape(12.dp))
+        Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+            .background(androidx.compose.ui.graphics.Brush.horizontalGradient(listOf(actualAccent.copy(alpha = .08f), Color(0xFF111720), Color(0xFF020705))))
+            .border(1.dp, actualAccent.copy(alpha = .32f), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
             .nukePressFeedback().clickable(enabled = enabled, onClick = onClick).padding(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -369,7 +376,7 @@ private fun OptimizerActionCard(
         Column(Modifier.weight(1f)) {
             Text(title, color = if (enabled) Color.White else Color(0xFF7E8B85), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = .6.sp)
             Spacer(Modifier.height(2.dp))
-            Text(detail, color = Color(0xFF9BB0A6), fontSize = 9.sp, lineHeight = 12.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+            Text(detail, color = Color(0xFF9CB8AD), fontSize = 9.sp, lineHeight = 12.sp, maxLines = 2, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
         }
         Spacer(Modifier.width(8.dp))
         Text(value, color = actualAccent, fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, maxLines = 1)
@@ -387,12 +394,12 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
     var totalMemoryUsed by remember { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
 
-    val accent = Color(0xFF10B981)
+    val accent = Color(0xFF55F5B0)
     val danger = Color(0xFFFF1744)
     val alert = Color(0xFFFFB300)
-    val bgCard = Color(0xFF06100C)
-    val bgInset = Color(0xFF0D1B15)
-    val textDim = Color(0xFF9BB0A6)
+    val bgCard = Color(0xFF07100D)
+    val bgInset = Color(0xFF07100D)
+    val textDim = Color(0xFF9CB8AD)
 
     val gateway = remember(adbManager) { NukeGamingShellGateway(adbManager) }
     val fetchProcesses = {
@@ -451,7 +458,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
     LaunchedEffect(Unit) { fetchProcesses() }
     val filteredList = processList.filter { it.name.contains(searchQuery, ignoreCase = true) }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)).imePadding()) {
+    Column(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))).imePadding()) {
 
         Column(
             modifier = Modifier.fillMaxWidth()
@@ -494,7 +501,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                     leadingIcon = { Icon(Icons.Rounded.Search, null, tint = textDim, modifier = Modifier.size(16.dp)) },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = accent,
-                        unfocusedBorderColor = Color(0xFF202028),
+                        unfocusedBorderColor = Color(0xFF10231D),
                         focusedContainerColor = bgCard,
                         unfocusedContainerColor = bgCard,
                     ),
@@ -532,8 +539,8 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                 }
                 Box(
                     modifier = Modifier.weight(1f).height(42.dp).clip(RoundedCornerShape(8.dp))
-                        .background(Color(0xFF38BDF8).copy(alpha = 0.12f))
-                        .border(1.2.dp, Color(0xFF38BDF8).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                        .background(Color(0xFF73E7D3).copy(alpha = 0.12f))
+                        .border(1.2.dp, Color(0xFF73E7D3).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
                         .nukePressFeedback()
                         .clickable {
                             scope.launch(Dispatchers.IO) {
@@ -548,15 +555,15 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                     contentAlignment = Alignment.Center,
                 ) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        Icon(Icons.Rounded.Bolt, null, tint = Color(0xFF38BDF8), modifier = Modifier.size(15.dp))
+                        Icon(Icons.Rounded.Bolt, null, tint = Color(0xFF73E7D3), modifier = Modifier.size(15.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(("OPTIMIZE ALL"), color = Color(0xFF38BDF8), fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
+                        Text(("OPTIMIZE ALL"), color = Color(0xFF73E7D3), fontWeight = FontWeight.Bold, fontSize = 10.sp, letterSpacing = 1.sp)
                     }
                 }
             }
         }
 
-        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF202028)))
+        Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF10231D)))
 
         if (filteredList.isEmpty() && !isRefreshing) {
             Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -664,8 +671,8 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                                 modifier = Modifier
                                     .height(28.dp)
                                     .clip(RoundedCornerShape(6.dp))
-                                    .background(Color(0xFF1E293B).copy(alpha = 0.5f))
-                                    .border(0.8.dp, Color(0xFF334155), RoundedCornerShape(6.dp))
+                                    .background(Color(0xFF10231D).copy(alpha = 0.5f))
+                                    .border(0.8.dp, Color(0xFF2D6653), RoundedCornerShape(6.dp))
                                     .clickable {
                                         NukeToast.unsupported(context, "Process is protected (Active Game / Screen Recorder / System Core).")
                                     }
@@ -673,9 +680,9 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF94A3B8), modifier = Modifier.size(11.dp))
+                                    Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF9CB8AD), modifier = Modifier.size(11.dp))
                                     Spacer(Modifier.width(3.dp))
-                                    Text("SAFE", color = Color(0xFF94A3B8), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                    Text("SAFE", color = Color(0xFF9CB8AD), fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -699,8 +706,8 @@ fun DiagnosticsConsoleScreen(adbManager: AdbManager) {
                 "Press RUN DIAGNOSTICS to collect a bounded report."
         )
     }
-    val accent = Color(0xFF10B981)
-    val textDim = Color(0xFF9BB0A6)
+    val accent = Color(0xFF55F5B0)
+    val textDim = Color(0xFF9CB8AD)
 
     fun copyReport() {
         val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as? android.content.ClipboardManager
@@ -708,7 +715,7 @@ fun DiagnosticsConsoleScreen(adbManager: AdbManager) {
         NukeToast.success(context, ("Diagnostics copied"))
     }
 
-    Column(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)).padding(16.dp)) {
+    Column(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))).padding(16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Box(modifier = Modifier.size(9.dp).background(accent, CircleShape))
             Spacer(Modifier.width(10.dp))
@@ -777,8 +784,8 @@ fun DiagnosticsConsoleScreen(adbManager: AdbManager) {
             Text(
                 report,
                 modifier = Modifier.fillMaxSize().verticalScroll(rememberScrollState())
-                    .background(Color(0xFF06100C), RoundedCornerShape(12.dp))
-                    .border(1.dp, accent.copy(alpha = .24f), RoundedCornerShape(12.dp))
+                    .background(Color(0xFF07100D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+                    .border(1.dp, accent.copy(alpha = .24f), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .padding(14.dp),
                 color = Color(0xFFD8E9E0), fontFamily = FontFamily.Monospace, fontSize = 11.sp, lineHeight = 15.sp,
             )
@@ -794,11 +801,11 @@ fun WebUiScreen(webServer: LocalWebServer) {
     var isCopying by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    val accent = Color(0xFF10B981)
+    val accent = Color(0xFF55F5B0)
     val danger = Color(0xFFFF1744)
-    val bgCard = Color(0xFF06100C)
-    val bgInset = Color(0xFF0D1B15)
-    val textDim = Color(0xFF9BB0A6)
+    val bgCard = Color(0xFF07100D)
+    val bgInset = Color(0xFF07100D)
+    val textDim = Color(0xFF9CB8AD)
 
     val folderPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
         if (uri != null) {
@@ -819,7 +826,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
     val baseUrl = "http://127.0.0.1:${webServer.apiPort}"
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(14.dp),
     ) {
@@ -827,12 +834,12 @@ fun WebUiScreen(webServer: LocalWebServer) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
+                    .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
                     .background(bgCard)
                     .border(
                         1.dp,
-                        if (isApiRunning) accent.copy(alpha = 0.6f) else Color(0xFF202028),
-                        RoundedCornerShape(14.dp),
+                        if (isApiRunning) accent.copy(alpha = 0.6f) else Color(0xFF10231D),
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp),
                     )
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -910,12 +917,12 @@ fun WebUiScreen(webServer: LocalWebServer) {
 
         item {
             Column(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(14.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
                     .background(bgCard)
                     .border(
                         1.dp,
-                        if (isWebRunning) accent.copy(alpha = 0.6f) else Color(0xFF202028),
-                        RoundedCornerShape(14.dp),
+                        if (isWebRunning) accent.copy(alpha = 0.6f) else Color(0xFF10231D),
+                        RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp),
                     )
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(12.dp),
@@ -1026,7 +1033,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
         item {
             Box(
                 modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(10.dp))
-                    .background(bgCard).border(1.dp, Color(0xFF202028), RoundedCornerShape(10.dp))
+                    .background(bgCard).border(1.dp, Color(0xFF10231D), RoundedCornerShape(10.dp))
                     .padding(14.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1276,8 +1283,8 @@ fun ApiEndpointCard(
     val fullUrlPreview = baseUrl + spec.path + if (queryInput.isNotBlank()) "?$queryInput" else ""
 
     Column(
-        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-            .background(bgCard).border(1.dp, Color(0xFF202028), RoundedCornerShape(12.dp)),
+        modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+            .background(bgCard).border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)),
     ) {
         Row(
             modifier = Modifier.fillMaxWidth().clickable { expanded = !expanded }.padding(14.dp),
@@ -1303,7 +1310,7 @@ fun ApiEndpointCard(
         }
 
         if (expanded) {
-            HorizontalDivider(color = Color(0xFF202028))
+            HorizontalDivider(color = Color(0xFF10231D))
 
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (spec.params.isNotEmpty()) {
@@ -1346,7 +1353,7 @@ fun ApiEndpointCard(
                             textStyle = TextStyle(color = Color.White, fontSize = 12.sp, fontFamily = FontFamily.Monospace),
                             colors = OutlinedTextFieldDefaults.colors(
                                 focusedBorderColor = accent,
-                                unfocusedBorderColor = Color(0xFF202028),
+                                unfocusedBorderColor = Color(0xFF10231D),
                             ),
                             shape = RoundedCornerShape(8.dp),
                         )
@@ -1420,7 +1427,7 @@ fun ApiEndpointCard(
                             ),
                             border = androidx.compose.foundation.BorderStroke(
                                 1.dp,
-                                if (serverRunning) accent else Color(0xFF202028),
+                                if (serverRunning) accent else Color(0xFF10231D),
                             ),
                             shape = RoundedCornerShape(8.dp),
                         ) {
@@ -1553,11 +1560,11 @@ private fun copyFolderRecursive(context: Context, treeUri: Uri, parentDocId: Str
 
 @Composable
 fun DevScreen() {
-    val accent = Color(0xFF10B981)
-    val textDim = Color(0xFF9BB0A6)
+    val accent = Color(0xFF55F5B0)
+    val textDim = Color(0xFF9CB8AD)
 
     Column(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12))
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705))))
             .verticalScroll(rememberScrollState()).padding(20.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -1565,8 +1572,8 @@ fun DevScreen() {
         Spacer(Modifier.height(20.dp))
         Box(
             modifier = Modifier.size(140.dp)
-                .background(Color(0xFF06100C), RoundedCornerShape(16.dp))
-                .border(1.5.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(16.dp)),
+                .background(Color(0xFF07100D), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
+                .border(1.5.dp, accent.copy(alpha = 0.6f), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp)),
             contentAlignment = Alignment.Center,
         ) {
             Icon(Icons.Rounded.AccountCircle, null, tint = accent, modifier = Modifier.size(96.dp))
@@ -1591,9 +1598,9 @@ fun DevScreen() {
         Spacer(Modifier.height(8.dp))
 
         Column(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF06100C))
-                .border(1.dp, Color(0xFF202028), RoundedCornerShape(12.dp))
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+                .background(Color(0xFF07100D))
+                .border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -1609,9 +1616,9 @@ fun DevScreen() {
         }
 
         Column(
-            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                .background(Color(0xFF06100C))
-                .border(1.dp, Color(0xFF202028), RoundedCornerShape(12.dp))
+            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+                .background(Color(0xFF07100D))
+                .border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
@@ -1638,13 +1645,13 @@ fun DevScreen() {
 
 @Composable
 fun TutorialScreen() {
-    val accent = Color(0xFF10B981)
-    val textDim = Color(0xFF9BB0A6)
-    val bgCard = Color(0xFF06100C)
-    val bgInset = Color(0xFF0D1B15)
+    val accent = Color(0xFF55F5B0)
+    val textDim = Color(0xFF9CB8AD)
+    val bgCard = Color(0xFF07100D)
+    val bgInset = Color(0xFF07100D)
 
     LazyColumn(
-        modifier = Modifier.fillMaxSize().background(Color(0xFF090D12)),
+        modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705)))),
         contentPadding = PaddingValues(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
@@ -1666,9 +1673,9 @@ fun TutorialScreen() {
         }
         items(steps) { (num, title, desc) ->
             Row(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .background(bgCard)
-                    .border(1.dp, Color(0xFF202028), RoundedCornerShape(12.dp))
+                    .border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .padding(14.dp),
                 verticalAlignment = Alignment.Top,
             ) {
@@ -1691,9 +1698,9 @@ fun TutorialScreen() {
         item { Spacer(Modifier.height(8.dp)) }
         item {
             Box(
-                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .background(bgInset)
-                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                    .border(1.dp, accent.copy(alpha = 0.3f), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                     .padding(14.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -1714,6 +1721,13 @@ fun TutorialScreen() {
 
 data class GameApp(val name: String, val packageName: String, val detected: Boolean)
 
+private data class GameArtwork(
+    val icon: ImageBitmap? = null,
+    val backdrop: ImageBitmap? = null,
+)
+
+private val artworkCache = android.util.LruCache<String, GameArtwork>(64)
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GameProfileScreen(adbManager: AdbManager) {
@@ -1728,20 +1742,28 @@ fun GameProfileScreen(adbManager: AdbManager) {
     var showAdBlockDialog by remember { mutableStateOf(false) }
     var adBlockStatus by remember { mutableStateOf(AdBlockStatus()) }
 
-    fun loadIcon(packageName: String): ImageBitmap? = try {
-        val iconDrawable = context.packageManager.getApplicationIcon(packageName)
-        val maxPx = 96
-        val rawW = iconDrawable.intrinsicWidth.coerceAtLeast(1)
-        val rawH = iconDrawable.intrinsicHeight.coerceAtLeast(1)
-        val scale = minOf(1f, maxPx.toFloat() / maxOf(rawW, rawH).toFloat())
-        val width = (rawW * scale).toInt().coerceAtLeast(1)
-        val height = (rawH * scale).toInt().coerceAtLeast(1)
-        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap)
-        iconDrawable.setBounds(0, 0, width, height)
-        iconDrawable.draw(canvas)
-        bitmap.asImageBitmap()
-    } catch (_: Exception) { null }
+    fun loadArtwork(packageName: String): GameArtwork {
+        artworkCache.get(packageName)?.let { return it }
+        return try {
+            val iconDrawable = context.packageManager.getApplicationIcon(packageName)
+            val maxPx = 108
+            val rawW = iconDrawable.intrinsicWidth.coerceAtLeast(1)
+            val rawH = iconDrawable.intrinsicHeight.coerceAtLeast(1)
+            val scale = minOf(1f, maxPx.toFloat() / maxOf(rawW, rawH).toFloat())
+            val width = (rawW * scale).toInt().coerceAtLeast(1)
+            val height = (rawH * scale).toInt().coerceAtLeast(1)
+            val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap)
+            iconDrawable.setBounds(0, 0, width, height)
+            iconDrawable.draw(canvas)
+
+            val artwork = GameArtwork(icon = bitmap.asImageBitmap(), backdrop = bitmap.asImageBitmap())
+            artworkCache.put(packageName, artwork)
+            artwork
+        } catch (_: Exception) {
+            GameArtwork()
+        }
+    }
 
     fun refreshCatalog() {
         isLoading = true
@@ -1764,95 +1786,99 @@ fun GameProfileScreen(adbManager: AdbManager) {
     LaunchedEffect(Unit) { refreshCatalog() }
     val visibleApps = if (showAllApps) allLaunchable else gameList
 
-    Box(modifier = Modifier.fillMaxSize().background(Color(0xFF090D12))) {
+    Box(modifier = Modifier.fillMaxSize().background(androidx.compose.ui.graphics.Brush.verticalGradient(listOf(Color(0xFF020705), Color(0xFF06140F), Color(0xFF020705))))) {
+        ReactorBackdrop(Modifier.fillMaxSize())
         Column(modifier = Modifier.fillMaxSize()) {
             Column(
                 modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF10B981), CircleShape))
+                    Box(modifier = Modifier.size(8.dp).background(Color(0xFF55F5B0), CircleShape))
                     Spacer(Modifier.width(8.dp))
-                    Text(("GAME SPACE // SESSION LAUNCHER"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                    Text(tr("GAME SPACE // SESSION LAUNCHER"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                 }
                 Text(
-                    "Game Nuke scans all installed games and tunes the session upon launch. If a game is not auto-detected, use the ALL APPS tab.",
-                    color = Color(0xFF9BB0A6), fontSize = 11.sp, lineHeight = 15.sp,
+                    tr("Game Nuke scans all installed games and tunes the session upon launch. If a game is not auto-detected, use the ALL APPS tab."),
+                    color = Color(0xFF9CB8AD), fontSize = 11.sp, lineHeight = 15.sp,
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     Box(
                         Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(8.dp))
-                            .background(if (!showAllApps) Color(0xFF10B981).copy(alpha = .18f) else Color(0xFF07110D))
-                            .border(1.dp, if (!showAllApps) Color(0xFF10B981) else Color(0xFF26362F), RoundedCornerShape(8.dp))
+                            .background(if (!showAllApps) Color(0xFF55F5B0).copy(alpha = .18f) else Color(0xFF07110D))
+                            .border(1.dp, if (!showAllApps) Color(0xFF55F5B0) else Color(0xFF26362F), RoundedCornerShape(8.dp))
                             .clickable { showAllApps = false },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("DETECTED  ${gameList.size}", color = if (!showAllApps) Color(0xFF10B981) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("${tr("DETECTED")}  ${gameList.size}", color = if (!showAllApps) Color(0xFF55F5B0) else Color(0xFF9CB8AD), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                     Box(
                         Modifier.weight(1f).height(38.dp).clip(RoundedCornerShape(8.dp))
-                            .background(if (showAllApps) Color(0xFF10B981).copy(alpha = .18f) else Color(0xFF07110D))
-                            .border(1.dp, if (showAllApps) Color(0xFF10B981) else Color(0xFF26362F), RoundedCornerShape(8.dp))
+                            .background(if (showAllApps) Color(0xFF55F5B0).copy(alpha = .18f) else Color(0xFF07110D))
+                            .border(1.dp, if (showAllApps) Color(0xFF55F5B0) else Color(0xFF26362F), RoundedCornerShape(8.dp))
                             .clickable { showAllApps = true },
                         contentAlignment = Alignment.Center,
                     ) {
-                        Text("ALL APPS  ${allLaunchable.size}", color = if (showAllApps) Color(0xFF10B981) else Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                        Text("${tr("ALL APPS")}  ${allLaunchable.size}", color = if (showAllApps) Color(0xFF55F5B0) else Color(0xFF9CB8AD), fontSize = 9.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                     }
                 }
                 Box(
                     Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
                         .background(Color(0xFF06110D))
-                        .border(1.dp, Color(0xFF10B981).copy(alpha = 0.24f), RoundedCornerShape(8.dp))
+                        .border(1.dp, Color(0xFF55F5B0).copy(alpha = 0.24f), RoundedCornerShape(8.dp))
                         .padding(horizontal = 10.dp, vertical = 7.dp),
                 ) {
                     Text(
-                        "Game Nuke Floating HUD requires 'Display over other apps' permission so the gaming cockpit remains active during gameplay.",
-                        color = Color(0xFF9BB0A6), fontSize = 9.sp, lineHeight = 13.sp,
+                        tr("Game Nuke Floating HUD requires 'Display over other apps' permission so the gaming cockpit remains active during gameplay."),
+                        color = Color(0xFF9CB8AD), fontSize = 9.sp, lineHeight = 13.sp,
                     )
                 }
             }
 
-            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF202028)))
+            Box(modifier = Modifier.fillMaxWidth().height(1.dp).background(Color(0xFF10231D)))
 
             if (isLoading) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        CircularProgressIndicator(color = Color(0xFF10B981), strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+                        CircularProgressIndicator(color = Color(0xFF55F5B0), strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
                         Spacer(Modifier.height(8.dp))
-                        Text(("SCANNING LAUNCHERS"), color = Color(0xFF9BB0A6), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
+                        Text(tr("SCANNING LAUNCHERS"), color = Color(0xFF9CB8AD), fontSize = 10.sp, fontFamily = FontFamily.Monospace, letterSpacing = 2.sp)
                     }
                 }
             } else if (visibleApps.isEmpty()) {
                 Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(24.dp)) {
-                        Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF9BB0A6), modifier = Modifier.size(44.dp))
+                        Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF9CB8AD), modifier = Modifier.size(44.dp))
                         Spacer(Modifier.height(10.dp))
-                        Text(("NO GAME CATEGORY FOUND"), color = Color(0xFF9BB0A6), fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                        Text(tr("NO GAME CATEGORY FOUND"), color = Color(0xFF9CB8AD), fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            ("Some games/OEMs do not expose CATEGORY_GAME. Open ALL APPS and select the game once."),
+                            tr("Some games/OEMs do not expose CATEGORY_GAME. Open ALL APPS and select the game once."),
                             color = Color(0xFF758980), fontSize = 10.sp, textAlign = TextAlign.Center,
                         )
                         Spacer(Modifier.height(14.dp))
-                        Button(onClick = { showAllApps = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.Black), shape = RoundedCornerShape(8.dp), modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
-                            Text(("OPEN ALL APPS"), fontSize = 10.sp, fontWeight = FontWeight.Black)
+                        Button(onClick = { showAllApps = true }, colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF55F5B0), contentColor = Color.Black), shape = RoundedCornerShape(8.dp), modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
+                            Text(tr("OPEN ALL APPS"), fontSize = 10.sp, fontWeight = FontWeight.Black)
                         }
                     }
                 }
             } else {
-                LazyColumn(
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 300.dp),
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 12.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
-                    items(visibleApps, key = { it.packageName }) { game ->
-                        val gameIcon by produceState<ImageBitmap?>(initialValue = null, key1 = game.packageName) {
-                            value = withContext(Dispatchers.IO) { loadIcon(game.packageName) }
+                    gridItems(visibleApps, key = { it.packageName }) { game ->
+                        val artwork by produceState(initialValue = GameArtwork(), key1 = game.packageName) {
+                            value = withContext(Dispatchers.IO) { loadArtwork(game.packageName) }
                         }
-                        Row(
-                            modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp))
-                                .background(Color(0xFF06100C))
-                                .border(1.dp, if (game.detected) Color(0xFF173A2D) else Color(0xFF202028), RoundedCornerShape(12.dp))
+                        val cardShape = RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)
+                        Box(
+                            modifier = Modifier.fillMaxWidth().clip(cardShape)
+                                .background(Color(0xFF07100D))
+                                .border(1.dp, if (game.detected) Color(0xFF173A2D) else Color(0xFF10231D), cardShape)
                                 .nukePressFeedback().clickable(enabled = launchingPackage == null) {
                                     if (adBlockStatus.isDetected) {
                                         showAdBlockDialog = true
@@ -1922,45 +1948,72 @@ fun GameProfileScreen(adbManager: AdbManager) {
                                         }
                                     }
                                 }
-                                .padding(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Box(
-                                modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF0D1B15))
-                                    .border(1.dp, Color(0xFF10B981).copy(alpha = 0.3f), RoundedCornerShape(8.dp)),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                gameIcon?.let { iconBitmap ->
-                                    Image(bitmap = iconBitmap, contentDescription = null, modifier = Modifier.size(36.dp))
-                                } ?: run {
-                                    Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF10B981), modifier = Modifier.size(24.dp))
-                                }
+                            artwork.backdrop?.let { backdrop ->
+                                Image(
+                                    bitmap = backdrop,
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .matchParentSize()
+                                        .blur(4.dp),
+                                    contentScale = ContentScale.Crop,
+                                    alignment = Alignment.CenterEnd,
+                                    alpha = 0.38f,
+                                )
                             }
-                            Spacer(Modifier.width(14.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(game.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                                Spacer(Modifier.height(2.dp))
-                                Text(game.packageName, color = Color(0xFF9BB0A6), fontSize = 9.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
-                            }
-                            Spacer(Modifier.width(8.dp))
                             Box(
-                                modifier = Modifier.height(34.dp).clip(RoundedCornerShape(8.dp))
-                                    .background(Color(0xFF10B981).copy(alpha = 0.15f))
-                                    .border(1.dp, Color(0xFF10B981), RoundedCornerShape(8.dp))
-                                    .padding(horizontal = 10.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Row(verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF10B981), modifier = Modifier.size(15.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text(
-                                        if (launchingPackage == game.packageName) "ARMING" else "BOOST",
-                                        color = Color(0xFF10B981),
-                                        fontSize = 10.sp,
-                                        fontWeight = FontWeight.Black,
-                                        letterSpacing = 1.5.sp,
+                                Modifier.matchParentSize().background(
+                                    androidx.compose.ui.graphics.Brush.horizontalGradient(
+                                        listOf(
+                                            Color(0xD907100D),
+                                            Color(0xAD07100D),
+                                            Color(0x4007100D),
+                                        )
                                     )
+                                )
+                            )
+                            Box(Modifier.fillMaxWidth().height(2.dp).background(Color(0xFF55F5B0).copy(alpha = if (game.detected) .72f else .30f)))
+                            Row(
+                                modifier = Modifier.fillMaxWidth().padding(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                Box(
+                                    modifier = Modifier.size(48.dp).clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xD907100D))
+                                        .border(1.dp, Color(0xFF55F5B0).copy(alpha = 0.38f), RoundedCornerShape(8.dp)),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    artwork.icon?.let { iconBitmap ->
+                                        Image(bitmap = iconBitmap, contentDescription = null, modifier = Modifier.size(36.dp))
+                                    } ?: run {
+                                        Icon(Icons.Rounded.Gamepad, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(24.dp))
+                                    }
+                                }
+                                Spacer(Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(game.name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(game.packageName, color = Color(0xFF9CB8AD), fontSize = 9.sp, fontFamily = FontFamily.Monospace, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                Box(
+                                    modifier = Modifier.height(34.dp).clip(RoundedCornerShape(8.dp))
+                                        .background(Color(0xFF55F5B0).copy(alpha = 0.15f))
+                                        .border(1.dp, Color(0xFF55F5B0), RoundedCornerShape(8.dp))
+                                        .padding(horizontal = 10.dp),
+                                    contentAlignment = Alignment.Center,
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(Icons.Rounded.PlayArrow, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(15.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(
+                                            if (launchingPackage == game.packageName) "ARMING" else "BOOST",
+                                            color = Color(0xFF55F5B0),
+                                            fontSize = 10.sp,
+                                            fontWeight = FontWeight.Black,
+                                            letterSpacing = 1.5.sp,
+                                        )
+                                    }
                                 }
                             }
                         }
@@ -2049,20 +2102,20 @@ fun NukeBoosterRewardDialog(
         Box(
             modifier = Modifier
                 .fillMaxWidth(0.88f)
-                .clip(RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                 .background(Color(0xFF07120E))
-                .border(1.dp, Color(0xFFFFB830).copy(alpha = 0.65f), RoundedCornerShape(16.dp))
+                .border(1.dp, Color(0xFFFFB84A).copy(alpha = 0.65f), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                 .padding(20.dp)
         ) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(
-                    Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFFFB830).copy(alpha = 0.15f)),
+                    Modifier.size(48.dp).clip(CircleShape).background(Color(0xFFFFB84A).copy(alpha = 0.15f)),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(Icons.Rounded.Bolt, null, tint = Color(0xFFFFB830), modifier = Modifier.size(28.dp))
+                    Icon(Icons.Rounded.Bolt, null, tint = Color(0xFFFFB84A), modifier = Modifier.size(28.dp))
                 }
                 Spacer(Modifier.height(10.dp))
-                Text(("START GAMING SESSION"), color = Color(0xFFFFB830), fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(("START GAMING SESSION"), color = Color(0xFFFFB84A), fontSize = 15.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Spacer(Modifier.height(4.dp))
                 Text(
                     gameName,
@@ -2079,26 +2132,26 @@ fun NukeBoosterRewardDialog(
                 ) {
                     Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(("Floating Gaming HUD & Crosshair"), color = Color(0xFFE0EAE5), fontSize = 10.sp)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
                             Text(("Display Settings & Memory Management"), color = Color(0xFFE0EAE5), fontSize = 10.sp)
                         }
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF10B981), modifier = Modifier.size(14.dp))
+                            Icon(Icons.Rounded.CheckCircle, null, tint = Color(0xFF55F5B0), modifier = Modifier.size(14.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text(("No Ads During Session & Full Feature Access"), color = Color(0xFFFFB830), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(("No Ads During Session & Full Feature Access"), color = Color(0xFFFFB84A), fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(
                     ("Watch 1 short sponsor video or upgrade to VIP to unlock an ad-free gaming session and access all features."),
-                    color = Color(0xFF9BB0A6),
+                    color = Color(0xFF9CB8AD),
                     fontSize = 9.5.sp,
                     textAlign = TextAlign.Center,
                     lineHeight = 13.sp
@@ -2106,7 +2159,7 @@ fun NukeBoosterRewardDialog(
                 Spacer(Modifier.height(16.dp))
                 Button(
                     onClick = onWatchAdAndBoost,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB830), contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB84A), contentColor = Color.Black),
                     shape = RoundedCornerShape(10.dp),
                     modifier = (Modifier.fillMaxWidth().height(44.dp)).nukePressFeedback()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2118,7 +2171,7 @@ fun NukeBoosterRewardDialog(
                 Spacer(Modifier.height(8.dp))
                 Button(
                     onClick = onUpgradeToVip,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF10B981), contentColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF55F5B0), contentColor = Color.Black),
                     shape = RoundedCornerShape(10.dp),
                     modifier = (Modifier.fillMaxWidth().height(44.dp)).nukePressFeedback()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
@@ -2130,7 +2183,7 @@ fun NukeBoosterRewardDialog(
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(
                     onClick = onDismiss,
-                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9BB0A6)),
+                    colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9CB8AD)),
                     border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF26362F)),
                     shape = RoundedCornerShape(8.dp),
                     modifier = (Modifier.fillMaxWidth().height(36.dp)).nukePressFeedback()) {

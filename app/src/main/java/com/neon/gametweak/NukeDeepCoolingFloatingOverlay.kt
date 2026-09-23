@@ -87,7 +87,12 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             if (rootView != null) return@post
 
             val (sw, sh) = getScreenSize()
-            val panelW = (320 * d).toInt().coerceAtMost((sw * 0.92f).toInt())
+            val isLandscape = sw > sh
+            val panelW = if (isLandscape) {
+                minOf((390 * d).toInt(), (sw * 0.50f).toInt()).coerceAtLeast(minOf((300 * d).toInt(), (sw * 0.44f).toInt()))
+            } else {
+                minOf((344 * d).toInt(), (sw * 0.92f).toInt())
+            }
             val windowType = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
             } else {
@@ -105,7 +110,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
                 x = ((sw - panelW) / 2).coerceAtLeast(0)
-                y = (sh * 0.16f).toInt()
+                y = if (isLandscape) (sh * 0.04f).toInt() else (sh * 0.11f).toInt()
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
                     layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
                 }
@@ -193,7 +198,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         val subTv = TextView(context).apply {
             text = "PROFILE & CACHE MANAGEMENT"
             textSize = 7.5f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             typeface = Typeface.MONOSPACE
             setPadding(0, (1 * d).toInt(), 0, 0)
         }
@@ -206,7 +211,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             text = "[ACTIVE]"
             textSize = 8.5f
             typeface = Typeface.MONOSPACE
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1410B981"))
                 cornerRadius = 4 * d
@@ -224,11 +229,11 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         val closeBtn = TextView(context).apply {
             text = "✕"
             textSize = 12f
-            setTextColor(Color.parseColor("#94A3B8"))
+            setTextColor(Color.parseColor("#9CB8AD"))
             typeface = Typeface.DEFAULT_BOLD
             gravity = Gravity.CENTER
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#1E293B"))
+                setColor(NukeCyberHudStyler.COLOR_BG_RAISED)
                 cornerRadius = 12 * d
             }
             layoutParams = LinearLayout.LayoutParams((24 * d).toInt(), (24 * d).toInt())
@@ -243,7 +248,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
 
         // Divider
         val div = View(context).apply {
-            setBackgroundColor(Color.parseColor("#1E293B"))
+            setBackgroundColor(NukeCyberHudStyler.COLOR_BG_RAISED)
             layoutParams = LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, (1 * d).toInt()).apply {
                 bottomMargin = (8 * d).toInt()
             }
@@ -276,13 +281,13 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         val tempLabel = TextView(context).apply {
             text = "DEVICE TEMP"
             textSize = 8f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             typeface = Typeface.DEFAULT_BOLD
         }
         tempTv = TextView(context).apply {
             text = "--.-°C"
             textSize = 14f
-            setTextColor(Color.parseColor("#10B981"))
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             typeface = Typeface.DEFAULT_BOLD
         }
         tempBlock.addView(tempLabel)
@@ -294,7 +299,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
             layoutParams = LinearLayout.LayoutParams((1 * d).toInt(), (22 * d).toInt()).apply {
                 leftMargin = (6 * d).toInt(); rightMargin = (6 * d).toInt()
             }
-            setBackgroundColor(Color.parseColor("#1E293B"))
+            setBackgroundColor(NukeCyberHudStyler.COLOR_BG_RAISED)
         }
         telemetryCard.addView(cardDivider)
 
@@ -307,13 +312,13 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         val stateLabel = TextView(context).apply {
             text = "GOVERNOR PROFILE"
             textSize = 8f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             typeface = Typeface.DEFAULT_BOLD
         }
         statusTv = TextView(context).apply {
             text = "ADAPTIVE"
             textSize = 12.5f
-            setTextColor(Color.parseColor("#38BDF8"))
+            setTextColor(NukeCyberHudStyler.COLOR_TELEMETRY)
             typeface = Typeface.DEFAULT_BOLD
         }
         stateBlock.addView(stateLabel)
@@ -361,10 +366,10 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         purgeBtn = Button(context).apply { installNukePressFeedback() }.apply {
             text = "TRIM MEMORY & OPTIMIZE PROFILE"
             textSize = 11.5f
-            setTextColor(Color.parseColor("#06100C"))
+            setTextColor(Color.parseColor("#070B11"))
             typeface = Typeface.DEFAULT_BOLD
             background = GradientDrawable().apply {
-                setColor(Color.parseColor("#10B981")) // Cyber Emerald
+                setColor(NukeCyberHudStyler.COLOR_CYAN_NEON) // Cyber Emerald
                 cornerRadius = 8 * d
             }
             layoutParams = FrameLayout.LayoutParams(
@@ -387,7 +392,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         val footerTv = TextView(context).apply {
             text = "Applies cache trimming and dynamic memory compaction. Hardware temperature is tracked live."
             textSize = 8.5f
-            setTextColor(Color.parseColor("#64748B"))
+            setTextColor(Color.parseColor("#64778D"))
             gravity = Gravity.CENTER
             setPadding(0, (6 * d).toInt(), 0, 0)
         }
@@ -433,11 +438,11 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
         modeButtons.forEach { (mode, btn) ->
             val isSelected = mode == currentMode
             btn.background = GradientDrawable().apply {
-                setColor(if (isSelected) Color.parseColor("#10B981") else Color.parseColor("#111A24"))
+                setColor(if (isSelected) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#111A24"))
                 cornerRadius = 6 * d
-                if (!isSelected) setStroke((1 * d).toInt(), Color.parseColor("#1E293B"))
+                if (!isSelected) setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_BG_RAISED)
             }
-            btn.setTextColor(if (isSelected) Color.parseColor("#06100C") else Color.parseColor("#CBD5E1"))
+            btn.setTextColor(if (isSelected) Color.parseColor("#070B11") else Color.parseColor("#CBD5E1"))
         }
     }
 
@@ -463,7 +468,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                 progressBar?.visibility = View.GONE
                 purgeBtn?.visibility = View.VISIBLE
                 statusTv?.text = "OPTIMIZED"
-                statusTv?.setTextColor(Color.parseColor("#10B981"))
+                statusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                 NukeToast.success(context, "Memory and cache optimization completed.")
             }
         }
@@ -480,7 +485,7 @@ class NukeDeepCoolingFloatingOverlay private constructor(private val context: Co
                         when {
                             temp >= 44f -> Color.parseColor("#EF4444") // Red warm
                             temp >= 40f -> Color.parseColor("#F59E0B") // Amber mild
-                            else -> Color.parseColor("#10B981") // Green cool
+                            else -> NukeCyberHudStyler.COLOR_CYAN_NEON // Green cool
                         }
                     )
                 }

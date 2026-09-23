@@ -273,8 +273,13 @@ object NukeShellDaemon {
             line.startsWith("TOUCH_START") -> {
                 val candidate = line.substringAfter("TOUCH_START|", "").trim()
                 val libPath = ensureLibraryAvailable(candidate.ifEmpty { null })
-                val count = nuke.wandev.touch.NukeTouchService.start(libPath)
+                val count = nuke.wandev.touch.NukeTouchService.start(libPath, allowGrab = true)
                 "TOUCH_STARTED|$count"
+            }
+            line.startsWith("TOUCH_SET_GRAB|") -> {
+                val grab = line.substringAfter("TOUCH_SET_GRAB|", "false").trim().toBoolean()
+                nuke.wandev.touch.NukeTouchService.setGrab(grab)
+                "TOUCH_GRAB_OK"
             }
             line.startsWith("TOUCH_CONFIG|") -> handleTouchConfig(line)
             line.startsWith("TOUCH_TAP|") -> {
@@ -308,6 +313,7 @@ object NukeShellDaemon {
                 handleSetMacroPins(config)
             }
             line == "TOUCH_STOP" -> {
+                runCatching { nuke.wandev.touch.NukeTouchService.setGrab(false) }
                 nuke.wandev.touch.NukeTouchService.stop()
                 "TOUCH_STOPPED"
             }
@@ -334,7 +340,7 @@ object NukeShellDaemon {
                         radiusPx = p[4].toFloatOrNull() ?: 60f,
                         mode = p[5].toIntOrNull() ?: 0,
                         repeatCount = p[6].toIntOrNull() ?: 0,
-                        intervalMs = p[7].toLongOrNull() ?: 20L,
+                        intervalMs = p[7].toLongOrNull() ?: 65L,
                         holdDurationMs = p[8].toLongOrNull() ?: 100L,
                         targetX = if (p.size > 9) p[9].toFloatOrNull() ?: 0f else 0f,
                         targetY = if (p.size > 10) p[10].toFloatOrNull() ?: 0f else 0f,
@@ -343,10 +349,10 @@ object NukeShellDaemon {
                         sensX = if (p.size > 13) p[13].toFloatOrNull() ?: 1.0f else 1.0f,
                         sensY = if (p.size > 14) p[14].toFloatOrNull() ?: 1.0f else 1.0f,
                         startDelayMs = if (p.size > 15) p[15].toLongOrNull() ?: 0L else 0L,
-                        tapDurationMs = if (p.size > 16) p[16].toLongOrNull() ?: 15L else 15L,
+                        tapDurationMs = if (p.size > 16) p[16].toLongOrNull() ?: 35L else 35L,
                         enabled = if (p.size > 17) p[17].toBoolean() else true,
                         label = if (p.size > 18) p[18] else "",
-                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 120L else 120L,
+                        swipeDurationMs = if (p.size > 19) p[19].toLongOrNull() ?: 140L else 140L,
                         linkedPinIds = if (p.size > 20 && p[20].isNotBlank() && p[20] != "none") p[20].split("|") else emptyList(),
                         multiPinDelayMs = if (p.size > 21) p[21].toLongOrNull() ?: 0L else 0L
                     )
@@ -358,7 +364,7 @@ object NukeShellDaemon {
         // Auto-start now so that the very next physical touch on a pin coordinate fires correctly.
         if (list.isNotEmpty() && !nuke.wandev.touch.NukeTouchService.isRunning()) {
             Log.i(TAG, "handleSetMacroPins: NukeTouchService not running — auto-starting for ${list.size} pin(s)")
-            runCatching { nuke.wandev.touch.NukeTouchService.start("/data/local/tmp/libwandev.so") }
+            runCatching { nuke.wandev.touch.NukeTouchService.start("/data/local/tmp/libwandev.so", allowGrab = true) }
                 .onFailure { Log.w(TAG, "handleSetMacroPins: auto-start failed: ${it.message}") }
         }
         nuke.wandev.touch.NukeTouchService.setMacroPins(list)
@@ -379,17 +385,20 @@ object NukeShellDaemon {
         val parts = line.split('|')
         val sx = parts.getOrNull(1)?.toFloatOrNull() ?: 1.0f
         val sy = parts.getOrNull(2)?.toFloatOrNull() ?: 1.0f
-        val area = parts.getOrNull(3)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.AREA_RIGHT
-        val curve = parts.getOrNull(4)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.CURVE_ACCELERATE
-        val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: true
+        val area = parts.getOrNull(3)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.AREA_ALL
+        val curve = parts.getOrNull(4)?.toIntOrNull() ?: nuke.wandev.touch.NukeTouchInjector.CURVE_LINEAR
+        val smooth = parts.getOrNull(5)?.toBooleanStrictOrNull() ?: false
         val minCutoff = parts.getOrNull(6)?.toFloatOrNull() ?: 1.0f
         val beta = parts.getOrNull(7)?.toFloatOrNull() ?: 0.007f
         val dragShot = parts.getOrNull(8)?.toBooleanStrictOrNull() ?: false
-
+        val hasPins = nuke.wandev.touch.NukeTouchService.hasActiveMacroPins()
+        val needGrab = (sx != 1.0f || sy != 1.0f) || hasPins
         if (!nuke.wandev.touch.NukeTouchService.isRunning()) {
             val libPath = ensureLibraryAvailable("/data/local/tmp/libwandev.so")
-            runCatching { nuke.wandev.touch.NukeTouchService.start(libPath) }
+            runCatching { nuke.wandev.touch.NukeTouchService.start(libPath, allowGrab = needGrab) }
                 .onFailure { Log.w(TAG, "handleTouchConfig: auto-start touch service failed: ${it.message}") }
+        } else {
+            nuke.wandev.touch.NukeTouchService.setGrab(needGrab)
         }
 
         nuke.wandev.touch.NukeTouchService.configure(sx, sy, area, curve, smooth, minCutoff, beta, dragShot)

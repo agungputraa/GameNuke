@@ -21,7 +21,7 @@ class NukeEnergyRailView @JvmOverloads constructor(
 ) : View(context, attrs) {
 
     private val basePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = android.graphics.Color.argb(61, 83, 245, 138)
+        color = android.graphics.Color.argb(70, 56, 232, 255)
         strokeWidth = resources.displayMetrics.density
     }
     private val sweepPaint = Paint(Paint.ANTI_ALIAS_FLAG)
@@ -63,10 +63,10 @@ class NukeEnergyRailView @JvmOverloads constructor(
         sweepShader = LinearGradient(
             -sweepHalfWidth, 0f, sweepHalfWidth, 0f,
             intArrayOf(
-                android.graphics.Color.argb(0, 83, 245, 138),
-                android.graphics.Color.argb(199, 56, 217, 209),
-                android.graphics.Color.argb(235, 83, 245, 138),
-                android.graphics.Color.argb(0, 83, 245, 138),
+                android.graphics.Color.argb(0, 56, 232, 255),
+                android.graphics.Color.argb(210, 91, 124, 255),
+                android.graphics.Color.argb(235, 167, 123, 255),
+                android.graphics.Color.argb(0, 56, 232, 255),
             ),
             floatArrayOf(0f, 0.35f, 0.58f, 1f),
             Shader.TileMode.CLAMP,

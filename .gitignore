@@ -35,3 +35,4 @@ tools/apktool.jar
 DumpReference/
 
 implementation_plan.md
+dump/

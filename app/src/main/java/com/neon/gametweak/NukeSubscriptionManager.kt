@@ -29,7 +29,26 @@ object NukeSubscriptionManager {
     private const val SYNC_THROTTLE_MS = 15 * 1000L // 15 seconds throttle for reactive sync
 
     private const val KEY_ORDER_HISTORY = "sub_order_history"
+    private const val KEY_SIGNATURE_SEAL = "sub_sig_seal"
+    private const val ANTI_TUYUL_SALT = "Spectra_Nuke_AntiTuyul_#9981_Salt"
     private const val BASE_URL = "https://gamenukevip.agungofficialdev.workers.dev"
+
+    private fun generateSeal(deviceId: String, expiresAt: Long): String {
+        val raw = "$deviceId:$expiresAt:$ANTI_TUYUL_SALT"
+        return try {
+            val md = java.security.MessageDigest.getInstance("SHA-256")
+            val bytes = md.digest(raw.toByteArray(Charsets.UTF_8))
+            bytes.joinToString("") { "%02x".format(it) }
+        } catch (_: Exception) {
+            (raw.hashCode() xor 0x5C).toString(16)
+        }
+    }
+
+    private fun verifySeal(deviceId: String, expiresAt: Long, storedSeal: String?): Boolean {
+        if (storedSeal.isNullOrBlank()) return false
+        val expected = generateSeal(deviceId, expiresAt)
+        return expected.equals(storedSeal, ignoreCase = true)
+    }
 
     private val executor = Executors.newSingleThreadExecutor()
     private val mainHandler = Handler(Looper.getMainLooper())
@@ -119,12 +138,30 @@ object NukeSubscriptionManager {
     }
 
     fun isVipActive(context: Context): Boolean {
-        val expiresAt = prefs(context).getLong(KEY_EXPIRES_AT, 0L)
+        // 1. Multi-Layer Anti-Tamper & Repack Verification
+        if (IntegrityGuard.isCompromised()) return false
+
+        val sp = prefs(context)
+        val expiresAt = sp.getLong(KEY_EXPIRES_AT, 0L)
         val active = System.currentTimeMillis() < expiresAt
+        if (!active) {
+            return false
+        }
+
+        // 2. Cryptographic Anti-Tuyul Seal Verification
+        // If a modder edited nuke_subscription_prefs.xml with MT Manager or Lucky Patcher,
+        // the seal will not match and VIP is immediately revoked.
+        val deviceId = getDeviceId(context)
+        val storedSeal = sp.getString(KEY_SIGNATURE_SEAL, null)
+        if (!verifySeal(deviceId, expiresAt, storedSeal)) {
+            sp.edit().putLong(KEY_EXPIRES_AT, 0L).remove(KEY_SIGNATURE_SEAL).apply()
+            return false
+        }
+
         if (_subscriptionState.value.isActive != active) {
             _subscriptionState.value = getLocalStatus(context)
         }
-        return active
+        return true
     }
 
     fun getRemainingDays(context: Context): Int {
@@ -197,9 +234,11 @@ object NukeSubscriptionManager {
                     val expiresAt = json.optLong("expiresAt", 0L)
                     val planId = json.optString("planId", "")
 
+                    val seal = generateSeal(deviceId, expiresAt)
                     sp.edit()
                         .putLong(KEY_EXPIRES_AT, expiresAt)
                         .putString(KEY_PLAN_ID, planId)
+                        .putString(KEY_SIGNATURE_SEAL, seal)
                         .putLong(KEY_LAST_SYNC_TS, System.currentTimeMillis())
                         .apply()
 

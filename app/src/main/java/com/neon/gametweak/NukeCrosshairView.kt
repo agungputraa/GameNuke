@@ -28,6 +28,12 @@ class NukeCrosshairView @JvmOverloads constructor(
         SNIPER_T,
         BOX_BRACKET,
         DYNAMIC_GAP,
+        TRI_WING,
+        HOLLOW_DIAMOND,
+        X_TACTICAL,
+        RADAR_LOCK,
+        SNIPER_MIL_DOT,
+        APEX_V_DOT,
     }
 
     private val density: Float
@@ -58,7 +64,7 @@ class NukeCrosshairView @JvmOverloads constructor(
             field = value
             invalidate()
         }
-    var crosshairColor: Int = Color.rgb(0, 230, 118)
+    var crosshairColor: Int = Color.rgb(56, 232, 255)
         set(value) {
             field = value
             invalidate()
@@ -196,6 +202,77 @@ class NukeCrosshairView @JvmOverloads constructor(
                 line(cx + side, cy + side, cx + side - arm, cy + side)
                 line(cx + side, cy + side, cx + side, cy + side - arm)
                 dot(.72f)
+            }
+
+            Style.TRI_WING -> {
+                val sin60 = 0.866f
+                val cos60 = 0.5f
+                // Top vertical prong
+                line(cx, cy - gap, cx, cy - half)
+                // Bottom-left 120° prong
+                line(cx - gap * sin60, cy + gap * cos60, cx - half * sin60, cy + half * cos60)
+                // Bottom-right 120° prong
+                line(cx + gap * sin60, cy + gap * cos60, cx + half * sin60, cy + half * cos60)
+                dot(.75f)
+            }
+
+            Style.HOLLOW_DIAMOND -> {
+                val r = half * .75f
+                line(cx, cy - r, cx + r, cy)
+                line(cx + r, cy, cx, cy + r)
+                line(cx, cy + r, cx - r, cy)
+                line(cx - r, cy, cx, cy - r)
+                dot(.55f)
+            }
+
+            Style.X_TACTICAL -> {
+                val g = (gap * .707f).coerceAtLeast(2f * d)
+                val h = half * .707f
+                line(cx - h, cy - h, cx - g, cy - g)
+                line(cx + g, cy - g, cx + h, cy - h)
+                line(cx - h, cy + h, cx - g, cy + g)
+                line(cx + g, cy + h, cx + h, cy + h)
+                dot(.7f)
+            }
+
+            Style.RADAR_LOCK -> {
+                val rad = (half * .68f).coerceAtLeast(5f * d)
+                circle(rad)
+                val tick = half * .28f
+                line(cx - rad - tick, cy, cx - rad + tick * .3f, cy)
+                line(cx + rad - tick * .3f, cy, cx + rad + tick, cy)
+                line(cx, cy - rad - tick, cx, cy - rad + tick * .3f)
+                line(cx, cy + rad - tick * .3f, cx, cy + rad + tick)
+                dot(.65f)
+            }
+
+            Style.SNIPER_MIL_DOT -> {
+                line(cx - half, cy, cx - gap, cy)
+                line(cx + gap, cy, cx + half, cy)
+                line(cx, cy - half, cx, cy - gap)
+                line(cx, cy + gap, cx, cy + half)
+                val tick1 = half * .45f
+                val tick2 = half * .75f
+                val tLen = stroke * 1.8f
+                line(cx - tick1, cy - tLen, cx - tick1, cy + tLen)
+                line(cx - tick2, cy - tLen, cx - tick2, cy + tLen)
+                line(cx + tick1, cy - tLen, cx + tick1, cy + tLen)
+                line(cx + tick2, cy - tLen, cx + tick2, cy + tLen)
+                line(cx - tLen, cy - tick1, cx + tLen, cy - tick1)
+                line(cx - tLen, cy - tick2, cx + tLen, cy - tick2)
+                line(cx - tLen, cy + tick1, cx + tLen, cy + tick1)
+                line(cx - tLen, cy + tick2, cx + tLen, cy + tick2)
+                dot(.8f)
+            }
+
+            Style.APEX_V_DOT -> {
+                val wing = half * .75f
+                val top = cy - half * .45f
+                val bottom = cy + half * .15f
+                line(cx, top, cx - wing, bottom)
+                line(cx, top, cx + wing, bottom)
+                dot(.6f)
+                line(cx, bottom + 4f * d, cx, bottom + 12f * d)
             }
         }
 

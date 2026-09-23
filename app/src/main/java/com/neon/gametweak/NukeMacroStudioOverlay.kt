@@ -21,8 +21,11 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.waitForUpOrCancellation
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -64,6 +67,7 @@ import androidx.compose.material3.SliderDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -77,6 +81,7 @@ import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -189,6 +194,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     private var panelParams: WindowManager.LayoutParams? = null
     private var panelLifecycleOwner: OverlayComposeLifecycleOwner? = null
 
+
+
     companion object {
         private const val TAG = "NukeMacroV6"
 
@@ -199,26 +206,26 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 instance ?: NukeMacroStudioOverlay(context.applicationContext).also { instance = it }
             }
 
-        // Soft Enterprise Slate Palette
-        val COLOR_OBSIDIAN  = Color(0xF40B0F19)
-        val COLOR_SURFACE   = Color(0xF8111827)
-        val COLOR_CARD      = Color(0xFF1E293B)
-        val COLOR_BORDER    = Color(0xFF334155)
-        val COLOR_ACCENT    = Color(0xFF38BDF8) // Soft Sky Blue
-        val COLOR_SUCCESS   = Color(0xFF34D399) // Soft Jade Green
-        val COLOR_DANGER    = Color(0xFFF43F5E) // Soft Rose Crimson
-        val COLOR_AMBER     = Color(0xFFFBBF24) // Soft Amber
-        val COLOR_INDIGO    = Color(0xFF818CF8) // Soft Indigo
-        val COLOR_TEXT_PRI  = Color(0xFFF8FAFC) // Titanium White
-        val COLOR_TEXT_SEC  = Color(0xFF94A3B8) // Muted Slate
-        val COLOR_TEXT_DIM  = Color(0xFF64748B) // Dim Slate
+        // Mode-aware lightweight palette. Values are read only during composition; no bitmap/theme copy.
+        val COLOR_OBSIDIAN get() = Color(NukeAiThemeController.currentPalette.background).copy(alpha = .98f)
+        val COLOR_SURFACE get() = Color(NukeAiThemeController.currentPalette.panel).copy(alpha = .98f)
+        val COLOR_CARD get() = Color(NukeAiThemeController.currentPalette.panelRaised)
+        val COLOR_BORDER get() = Color(NukeAiThemeController.currentPalette.borderBright)
+        val COLOR_ACCENT get() = Color(NukeAiThemeController.currentPalette.accent)
+        val COLOR_SUCCESS get() = Color(NukeAiThemeController.currentPalette.accentBright)
+        val COLOR_DANGER get() = Color(NukeAiThemeController.currentPalette.danger)
+        val COLOR_AMBER get() = Color(NukeAiThemeController.currentPalette.warning)
+        val COLOR_INDIGO get() = Color(NukeAiThemeController.currentPalette.telemetry)
+        val COLOR_TEXT_PRI get() = Color(NukeAiThemeController.currentPalette.text)
+        val COLOR_TEXT_SEC get() = Color(NukeAiThemeController.currentPalette.muted)
+        val COLOR_TEXT_DIM get() = Color(NukeAiThemeController.currentPalette.muted).copy(alpha = .68f)
 
-        val PIN_PALETTE = listOf(
-            0xFF38BDF8.toInt(), // Soft Sky
-            0xFF34D399.toInt(), // Soft Emerald
-            0xFF818CF8.toInt(), // Soft Indigo
-            0xFFFBBF24.toInt(), // Soft Amber
-            0xFF94A3B8.toInt()  // Soft Titanium
+        val PIN_PALETTE: List<Int> get() = listOf(
+            NukeAiThemeController.currentPalette.accent,
+            NukeAiThemeController.currentPalette.accentBright,
+            NukeAiThemeController.currentPalette.telemetry,
+            NukeAiThemeController.currentPalette.warning,
+            NukeAiThemeController.currentPalette.muted,
         )
     }
 
@@ -277,6 +284,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         if (!isShowing) {
             show()
         } else {
+            ensureDaemonTouch()
             panelView?.visibility = View.VISIBLE
             updateCanvasTouchability(touchable = isEditMode)
             notifyPanelLayoutChanged()
@@ -388,19 +396,24 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 setViewTreeLifecycleOwner(cOwner)
                 setViewTreeViewModelStoreOwner(cOwner)
                 setViewTreeSavedStateRegistryOwner(cOwner)
-                setContent { CanvasRoot() }
+                setContent {
+                    val aiTheme by NukeAiThemeController.state.collectAsState()
+                    androidx.compose.runtime.key(aiTheme.mode) { CanvasRoot() }
+                }
             }
             canvasView = cView
 
             val initialFlags = if (isEditMode) {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
             } else {
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
                     WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
-                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE
+                    WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
+                    WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
             }
             val cLp = WindowManager.LayoutParams(
                 WindowManager.LayoutParams.MATCH_PARENT,
@@ -427,7 +440,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 setViewTreeLifecycleOwner(pOwner)
                 setViewTreeViewModelStoreOwner(pOwner)
                 setViewTreeSavedStateRegistryOwner(pOwner)
-                setContent { FloatingBoxRoot() }
+                setContent {
+                    val aiTheme by NukeAiThemeController.state.collectAsState()
+                    androidx.compose.runtime.key(aiTheme.mode) { FloatingBoxRoot() }
+                }
             }
             panelView = pView
 
@@ -443,7 +459,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                 windowType,
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
                     WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
-                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN,
+                    WindowManager.LayoutParams.FLAG_LAYOUT_IN_SCREEN or
+                    WindowManager.LayoutParams.FLAG_SPLIT_TOUCH,
                 PixelFormat.TRANSLUCENT
             ).apply {
                 gravity = Gravity.TOP or Gravity.START
@@ -471,17 +488,24 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         panelLifecycleOwner = null
     }
 
+    /**
+     * Switches canvas touchability matching dump reference (defpackage/kp0.java):
+     * - touchable=true  (Edit mode):  Full canvas receives touches (FLAG_NOT_TOUCHABLE cleared) to move/resize pins.
+     * - touchable=false (Play mode):  Canvas adds FLAG_NOT_TOUCHABLE (game touches pass directly to libwandev.so kernel router).
+     */
     private fun updateCanvasTouchability(touchable: Boolean) {
         val v = canvasView ?: return
         val lp = canvasParams ?: return
         lp.flags = if (touchable) {
             (lp.flags and WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE.inv()) or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
         } else {
             lp.flags or WindowManager.LayoutParams.FLAG_NOT_TOUCHABLE or
                 WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or
-                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL
+                WindowManager.LayoutParams.FLAG_NOT_TOUCH_MODAL or
+                WindowManager.LayoutParams.FLAG_SPLIT_TOUCH
         }
         runCatching { wm.updateViewLayout(v, lp) }
     }
@@ -569,8 +593,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             mode = MacroTriggerMode.TAP,
             triggerSource = MacroTriggerSource.TOUCH_SCREEN,
             repeatCount = 0,
-            intervalMs = 35L,
-            tapDurationMs = 25L,
+            intervalMs = 65L,
+            tapDurationMs = 35L,
             color = PIN_PALETTE[activePins.size % PIN_PALETTE.size]
         )
         activePins.add(newPin)
@@ -618,14 +642,13 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
     }
 
     private fun ensureDaemonTouch() {
-        isDaemonActive = NukeTouchTuningEngine.isDaemonTouchActive
-        if (!isDaemonActive) {
-            NukeTouchTuningEngine.startDaemonTouchAsync(context) { success ->
-                mainHandler.post {
-                    isDaemonActive = success
-                    if (success && isArmed) {
-                        persistAndSync()
-                    }
+        // Automatically activate Touch Listener switch and start daemon touch
+        val touchPanel = NukeMagicTouchPanelOverlay.getInstance(context)
+        touchPanel.setTouchListenerEnabled(true) { success ->
+            mainHandler.post {
+                isDaemonActive = success
+                if (success && isArmed) {
+                    persistAndSync()
                 }
             }
         }
@@ -997,10 +1020,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         Box(
             Modifier
                 .wrapContentSize()
-                .shadow(10.dp, RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-                .background(COLOR_SURFACE)
-                .border(1.dp, if (isArmed) COLOR_SUCCESS else COLOR_ACCENT, RoundedCornerShape(16.dp))
+                .shadow(12.dp, RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
+                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
+                .background(Brush.horizontalGradient(listOf(COLOR_SURFACE, Color(0xFF081912))))
+                .border(1.dp, if (isArmed) COLOR_SUCCESS else COLOR_ACCENT, RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
                 .semantics {
                     contentDescription = "Macro Studio Pill. Tap to expand."
                     role = Role.Button
@@ -1066,18 +1089,25 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         val screenWdp = (dm.widthPixels / density).dp
         val screenHdp = (dm.heightPixels / density).dp
         val isPortrait = dm.heightPixels > dm.widthPixels
-        val studioWidth = if (isPortrait) minOf(268.dp, screenWdp - 24.dp) else 268.dp
-        val maxAvailableHeight = if (isPortrait) (screenHdp * 0.75f).coerceIn(280.dp, 580.dp) else (screenHdp * 0.85f).coerceIn(220.dp, 360.dp)
+        val studioWidth = if (isPortrait) {
+            minOf(318.dp, screenWdp - 20.dp).coerceAtLeast(minOf(286.dp, screenWdp - 12.dp))
+        } else {
+            minOf(368.dp, screenWdp * 0.44f).coerceAtLeast(minOf(300.dp, screenWdp - 20.dp))
+        }
+        val maxAvailableHeight = if (isPortrait) {
+            (screenHdp * 0.78f).coerceIn(300.dp, 610.dp)
+        } else {
+            (screenHdp * 0.88f).coerceIn(240.dp, 430.dp)
+        }
 
         Column(
             Modifier
                 .width(studioWidth)
                 .heightIn(max = maxAvailableHeight)
                 .alpha(macroOpacity)
-                .shadow(16.dp, RoundedCornerShape(12.dp))
-                .clip(RoundedCornerShape(12.dp))
-                .background(COLOR_OBSIDIAN)
-                .border(1.dp, COLOR_BORDER, RoundedCornerShape(12.dp))
+                .clip(RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
+                .background(Brush.verticalGradient(listOf(Color(0xFF0D2118), COLOR_OBSIDIAN, Color(0xFF030A07))))
+                .border(1.dp, Brush.linearGradient(listOf(COLOR_ACCENT.copy(alpha = .75f), COLOR_INDIGO.copy(alpha = .45f), COLOR_BORDER)), RoundedCornerShape(topStart = 18.dp, topEnd = 7.dp, bottomEnd = 18.dp, bottomStart = 7.dp))
         ) {
             // Fixed Header
             HeaderBar()
@@ -1125,8 +1155,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                         updatePanelPosition(drag.x, drag.y)
                     }
                 }
-                .background(COLOR_CARD)
-                .padding(horizontal = 9.dp, vertical = 5.dp),
+                .background(Brush.horizontalGradient(listOf(Color(0xFF10271D), COLOR_CARD, Color(0xFF0B2118))))
+                .padding(horizontal = 10.dp, vertical = 7.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(5.dp)
         ) {
@@ -1185,7 +1215,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
 
     @Composable
     private fun StatusBar() {
-        Column(Modifier.fillMaxWidth().background(COLOR_SURFACE)) {
+        Column(Modifier.fillMaxWidth().background(Brush.horizontalGradient(listOf(COLOR_SURFACE, Color(0xFF081912), COLOR_SURFACE)))) {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -1321,8 +1351,8 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                             mode = MacroTriggerMode.TAP,
                             triggerSource = MacroTriggerSource.TOUCH_SCREEN,
                             repeatCount = 0,
-                            intervalMs = 20L,
-                            tapDurationMs = 16L,
+                            intervalMs = 65L,
+                            tapDurationMs = 35L,
                             color = PIN_PALETTE[activePins.size % PIN_PALETTE.size]
                         )
                         activePins.add(newPin)
@@ -1610,10 +1640,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                         ) { v ->
                             updatePin { p -> p.copy(repeatCount = v.toInt()) }
                         }
-                        CompactSlider("INTERVAL", "${pin.intervalMs}ms", 10f..200f, pin.intervalMs.toFloat()) { v ->
+                        CompactSlider("INTERVAL", "${pin.intervalMs}ms", 40f..300f, pin.intervalMs.toFloat()) { v ->
                             updatePin { p -> p.copy(intervalMs = v.toLong()) }
                         }
-                        CompactSlider("CONTACT TIME", "${pin.tapDurationMs}ms", 10f..100f, pin.tapDurationMs.toFloat()) { v ->
+                        CompactSlider("CONTACT TIME", "${pin.tapDurationMs}ms", 25f..150f, pin.tapDurationMs.toFloat()) { v ->
                             updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
                         }
                         CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
@@ -1635,10 +1665,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                     }
 
                     MacroTriggerMode.DOUBLE_TAP -> {
-                        CompactSlider("TAP INTERVAL", "${pin.intervalMs}ms", 15f..300f, pin.intervalMs.toFloat()) { v ->
+                        CompactSlider("TAP INTERVAL", "${pin.intervalMs}ms", 40f..300f, pin.intervalMs.toFloat()) { v ->
                             updatePin { p -> p.copy(intervalMs = v.toLong()) }
                         }
-                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..80f, pin.tapDurationMs.toFloat()) { v ->
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 25f..120f, pin.tapDurationMs.toFloat()) { v ->
                             updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
                         }
                         CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
@@ -1647,10 +1677,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                     }
 
                     MacroTriggerMode.COMBO -> {
-                        CompactSlider("COMBO DELAY", "${pin.intervalMs}ms", 10f..300f, pin.intervalMs.toFloat()) { v ->
+                        CompactSlider("COMBO DELAY", "${pin.intervalMs}ms", 35f..400f, pin.intervalMs.toFloat()) { v ->
                             updatePin { p -> p.copy(intervalMs = v.toLong()) }
                         }
-                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..80f, pin.tapDurationMs.toFloat()) { v ->
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 25f..120f, pin.tapDurationMs.toFloat()) { v ->
                             updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
                         }
                         CompactSlider("INITIAL DELAY", "${pin.startDelayMs}ms", 0f..300f, pin.startDelayMs.toFloat()) { v ->
@@ -1663,10 +1693,10 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
                     }
 
                     MacroTriggerMode.LOOP -> {
-                        CompactSlider("LOOP GAP", "${pin.intervalMs}ms", 50f..5000f, pin.intervalMs.toFloat()) { v ->
+                        CompactSlider("LOOP GAP", "${pin.intervalMs}ms", 60f..5000f, pin.intervalMs.toFloat()) { v ->
                             updatePin { p -> p.copy(intervalMs = v.toLong()) }
                         }
-                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 5f..100f, pin.tapDurationMs.toFloat()) { v ->
+                        CompactSlider("TAP DURATION", "${pin.tapDurationMs}ms", 25f..150f, pin.tapDurationMs.toFloat()) { v ->
                             updatePin { p -> p.copy(tapDurationMs = v.toLong()) }
                         }
                         CompactSlider(

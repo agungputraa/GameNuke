@@ -110,7 +110,7 @@ fun NukePaymentHistoryDialog(
                 .fillMaxWidth(0.94f)
                 .clip(RoundedCornerShape(18.dp))
                 .background(Color(0xFF0A0D12))
-                .border(1.dp, Color(0xFF1F2937), RoundedCornerShape(18.dp))
+                .border(1.dp, Color(0xFF10231D), RoundedCornerShape(18.dp))
                 .padding(20.dp)
         ) {
             Column(
@@ -127,8 +127,8 @@ fun NukePaymentHistoryDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(RoundedCornerShape(10.dp))
-                                .background(Color(0xFF111827))
-                                .border(1.dp, Color(0xFF1F2937), RoundedCornerShape(10.dp)),
+                                .background(Color(0xFF0B1814))
+                                .border(1.dp, Color(0xFF10231D), RoundedCornerShape(10.dp)),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
@@ -149,7 +149,7 @@ fun NukePaymentHistoryDialog(
                             )
                             Text(
                                 tr("Orders & Subscription Invoices"),
-                                color = Color(0xFF64748B),
+                                color = Color(0xFF668679),
                                 fontSize = 10.sp
                             )
                         }
@@ -168,14 +168,14 @@ fun NukePaymentHistoryDialog(
                             if (isRefreshing) {
                                 CircularProgressIndicator(
                                     modifier = Modifier.size(16.dp),
-                                    color = Color(0xFF10B981),
+                                    color = Color(0xFF55F5B0),
                                     strokeWidth = 2.dp
                                 )
                             } else {
                                 Icon(
                                     Icons.Rounded.Refresh,
                                     contentDescription = "Refresh",
-                                    tint = Color(0xFF94A3B8),
+                                    tint = Color(0xFF9CB8AD),
                                     modifier = Modifier.size(17.dp)
                                 )
                             }
@@ -189,7 +189,7 @@ fun NukePaymentHistoryDialog(
                             Icon(
                                 Icons.Rounded.Close,
                                 contentDescription = "Close",
-                                tint = Color(0xFF94A3B8),
+                                tint = Color(0xFF9CB8AD),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -204,9 +204,9 @@ fun NukePaymentHistoryDialog(
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(180.dp)
-                            .clip(RoundedCornerShape(14.dp))
+                            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp))
                             .background(Color(0xFF0D1117))
-                            .border(1.dp, Color(0xFF1F2937), RoundedCornerShape(14.dp)),
+                            .border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 16.dp, topEnd = 7.dp, bottomEnd = 16.dp, bottomStart = 7.dp)),
                         contentAlignment = Alignment.Center
                     ) {
                         Column(
@@ -229,7 +229,7 @@ fun NukePaymentHistoryDialog(
                             )
                             Text(
                                 tr("Your pending invoices and VIP subscriptions will appear here."),
-                                color = Color(0xFF64748B),
+                                color = Color(0xFF668679),
                                 fontSize = 10.sp,
                                 modifier = Modifier.padding(top = 3.dp)
                             )
@@ -283,7 +283,7 @@ fun NukePaymentHistoryDialog(
 
                 Text(
                     tr("Invoices are valid for 15 minutes. You can resume or verify your payment status anytime."),
-                    color = Color(0xFF64748B),
+                    color = Color(0xFF668679),
                     fontSize = 9.sp,
                     lineHeight = 13.sp
                 )
@@ -322,8 +322,8 @@ private fun OrderItemCard(
 
     // Clean, subtle fintech status tags
     val (statusLabel, statusBg, statusText, statusBorder) = when {
-        isCompleted -> Quad(tr("PAID"), Color(0xFF064E3B).copy(alpha = 0.5f), Color(0xFF34D399), Color(0xFF059669).copy(alpha = 0.5f))
-        isCancelled -> Quad(tr("CANCELLED"), Color(0xFF1F2937), Color(0xFF94A3B8), Color(0xFF374151))
+        isCompleted -> Quad(tr("PAID"), Color(0xFF064E3B).copy(alpha = 0.5f), Color(0xFF68F59A), Color(0xFF059669).copy(alpha = 0.5f))
+        isCancelled -> Quad(tr("CANCELLED"), Color(0xFF10231D), Color(0xFF9CB8AD), Color(0xFF374151))
         isExpired -> Quad(tr("EXPIRED"), Color(0xFF3B151E).copy(alpha = 0.6f), Color(0xFFFB7185), Color(0xFFE11D48).copy(alpha = 0.5f))
         else -> Quad(tr("PENDING"), Color(0xFF451A03).copy(alpha = 0.5f), Color(0xFFFBBF24), Color(0xFFD97706).copy(alpha = 0.5f))
     }
@@ -341,9 +341,9 @@ private fun OrderItemCard(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(12.dp))
-            .background(Color(0xFF0E131A))
-            .border(1.dp, Color(0xFF1F2937), RoundedCornerShape(12.dp))
+            .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
+            .background(Color(0xFF07100D))
+            .border(1.dp, Color(0xFF10231D), RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
             .padding(14.dp)
     ) {
         Column(modifier = Modifier.fillMaxWidth()) {
@@ -364,12 +364,12 @@ private fun OrderItemCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(4.dp))
-                            .background(Color(0xFF1E293B))
+                            .background(Color(0xFF10231D))
                             .padding(horizontal = 6.dp, vertical = 2.dp)
                     ) {
                         Text(
                             methodDisplay,
-                            color = Color(0xFF94A3B8),
+                            color = Color(0xFF9CB8AD),
                             fontSize = 8.5.sp,
                             fontWeight = FontWeight.Bold
                         )
@@ -398,7 +398,7 @@ private fun OrderItemCard(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Text(
                     order.orderId,
-                    color = Color(0xFF64748B),
+                    color = Color(0xFF668679),
                     fontSize = 9.5.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis
@@ -407,7 +407,7 @@ private fun OrderItemCard(
                 Icon(
                     Icons.Rounded.ContentCopy,
                     contentDescription = "Copy Order ID",
-                    tint = Color(0xFF64748B),
+                    tint = Color(0xFF668679),
                     modifier = Modifier
                         .size(11.dp)
                         .nukePressFeedback()
@@ -450,7 +450,7 @@ private fun OrderItemCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF1E293B))
+                                .background(Color(0xFF10231D))
                                 .padding(horizontal = 6.dp, vertical = 4.dp)
                         ) {
                             Text(
@@ -482,7 +482,7 @@ private fun OrderItemCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF111827))
+                                .background(Color(0xFF0B1814))
                                 .border(0.8.dp, Color(0xFF374151), RoundedCornerShape(6.dp))
                                 .nukePressFeedback()
                                 .clickable { onCheckStatus() }
@@ -500,14 +500,14 @@ private fun OrderItemCard(
                         Box(
                             modifier = Modifier
                                 .clip(RoundedCornerShape(6.dp))
-                                .background(Color(0xFF1F2937))
+                                .background(Color(0xFF10231D))
                                 .nukePressFeedback()
                                 .clickable { onCancel() }
                                 .padding(horizontal = 7.dp, vertical = 5.dp)
                         ) {
                             Text(
                                 tr("Cancel"),
-                                color = Color(0xFF94A3B8),
+                                color = Color(0xFF9CB8AD),
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Medium
                             )
@@ -517,7 +517,7 @@ private fun OrderItemCard(
                     Box(
                         modifier = Modifier
                             .clip(RoundedCornerShape(6.dp))
-                            .background(Color(0xFF1E293B))
+                            .background(Color(0xFF10231D))
                             .border(0.8.dp, Color(0xFF374151), RoundedCornerShape(6.dp))
                             .nukePressFeedback()
                             .clickable { onResume() }

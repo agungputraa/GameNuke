@@ -89,20 +89,20 @@ class NukeHudToolView @JvmOverloads constructor(
         fill.shader = LinearGradient(
             0f, 0f, w, h,
             intArrayOf(
-                android.graphics.Color.rgb(if (on) 10 else 7, if (on) 33 else 15, if (on) 21 else 11),
-                android.graphics.Color.rgb(3, 9, 7),
+                android.graphics.Color.rgb(if (on) 12 else 8, if (on) 34 else 15, if (on) 52 else 24),
+                android.graphics.Color.rgb(5, 7, 11),
             ), null, Shader.TileMode.CLAMP,
         )
         c.drawPath(shell, fill)
         edge.color = when {
             !supported -> android.graphics.Color.argb(70, 125, 135, 128)
-            on -> android.graphics.Color.argb(210, 83, 245, 138)
-            else -> android.graphics.Color.argb(70, 83, 245, 138)
+            on -> android.graphics.Color.argb(220, 56, 232, 255)
+            else -> android.graphics.Color.argb(75, 56, 232, 255)
         }
         c.drawPath(shell, edge)
 
         if (on && supported) {
-            indicator.color = android.graphics.Color.argb(220, 56, 217, 209)
+            indicator.color = android.graphics.Color.argb(225, 167, 123, 255)
             c.drawRoundRect(RectF(w * .28f, h - 2.7f * d, w * .72f, h - 1.2f * d), d, d, indicator)
         }
 
@@ -116,7 +116,7 @@ class NukeHudToolView @JvmOverloads constructor(
         text.textSize = (if (w < 70f * d) 7.0f else 7.8f) * d
         text.color = when {
             !supported -> NukeHudPalette.MutedDeep
-            on -> NukeHudPalette.Green
+            on -> NukeHudPalette.Cyan
             else -> NukeHudPalette.Text
         }
         val y = h * .76f - (text.ascent() + text.descent()) / 2f
@@ -130,8 +130,8 @@ class NukeHudToolView @JvmOverloads constructor(
                 val track = RectF(right - tw, top, right, top + th)
                 indicator.color = when {
                     !supported -> android.graphics.Color.argb(70, 120, 130, 124)
-                    checked -> android.graphics.Color.argb(190, 44, 198, 102)
-                    else -> android.graphics.Color.argb(120, 74, 91, 82)
+                    checked -> android.graphics.Color.argb(205, 56, 232, 255)
+                    else -> android.graphics.Color.argb(120, 52, 68, 88)
                 }
                 c.drawRoundRect(track, th / 2f, th / 2f, indicator)
                 val knob = th * .42f

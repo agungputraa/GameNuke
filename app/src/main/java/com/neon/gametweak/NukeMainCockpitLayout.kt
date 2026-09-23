@@ -33,16 +33,16 @@ class NukeMainCockpitLayout @JvmOverloads constructor(
     private val raised = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = NukeHudPalette.PanelRaised }
     private val bay = Paint(Paint.ANTI_ALIAS_FLAG).apply { style = Paint.Style.FILL; color = NukeHudPalette.Panel }
     private val stroke = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = 1.0f * d; color = android.graphics.Color.argb(190, 83, 245, 138)
+        style = Paint.Style.STROKE; strokeWidth = 1.0f * d; color = android.graphics.Color.argb(225, 85, 245, 176)
     }
     private val fine = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE; strokeWidth = .58f * d; color = android.graphics.Color.argb(115, 71, 138, 101)
+        style = Paint.Style.STROKE; strokeWidth = .58f * d; color = android.graphics.Color.argb(145, 45, 102, 83)
     }
     private val green = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Green }
     private val cyan = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Cyan }
     private val blue = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Blue }
     private val violet = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = NukeHudPalette.Violet }
-    private val energyFinPaints = arrayOf(green, green, cyan, blue, violet)
+    private val energyFinPaints = arrayOf(green, cyan, green, cyan, green)
 
     init {
         setWillNotDraw(false)
@@ -60,9 +60,9 @@ class NukeMainCockpitLayout @JvmOverloads constructor(
         paint.shader = LinearGradient(
             0f, 0f, 0f, h.toFloat(),
             intArrayOf(
-                android.graphics.Color.rgb(10, 25, 18),
-                NukeHudPalette.Void,
-                android.graphics.Color.rgb(5, 14, 10),
+                android.graphics.Color.rgb(5, 16, 11),
+                NukeHudPalette.Panel,
+                android.graphics.Color.rgb(2, 7, 5),
             ),
             floatArrayOf(0f, .48f, 1f),
             Shader.TileMode.CLAMP,

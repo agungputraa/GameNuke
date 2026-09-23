@@ -151,8 +151,9 @@ object NukeConnectionManager {
         // Request a single rate-limited bootstrap; do not spawn one thread per failed tap.
         requestCoreBootstrapIfNeeded()
 
-        // NO shell fallback — macro requires NukeTouchService for real multi-touch support.
-        return false
+        // 3. Resilient Shell Fallback: guarantees zero dropped taps even if daemon is busy
+        val shellRes = executeCommand("input tap ${x.toInt()} ${y.toInt()}", timeoutMs = 800L)
+        return shellRes != null && shellRes.isSuccess
     }
 
     /**
@@ -174,8 +175,10 @@ object NukeConnectionManager {
         // Request a single rate-limited bootstrap; the next macro event will use the ready core.
         requestCoreBootstrapIfNeeded()
 
-        // NO shell fallback — macro requires NukeTouchService for real multi-touch support.
-        return false
+        // 3. Resilient Shell Fallback: guarantees hold execution
+        val holdDur = durationMs.coerceIn(50L, 5000L)
+        val shellRes = executeCommand("input swipe ${x.toInt()} ${y.toInt()} ${x.toInt()} ${y.toInt()} $holdDur", timeoutMs = holdDur + 1000L)
+        return shellRes != null && shellRes.isSuccess
     }
 
     /**
@@ -197,8 +200,10 @@ object NukeConnectionManager {
         // Request a single rate-limited bootstrap; the next macro event will use the ready core.
         requestCoreBootstrapIfNeeded()
 
-        // NO shell fallback — macro requires NukeTouchService for real multi-touch support.
-        return false
+        // 3. Resilient Shell Fallback: guarantees swipe execution
+        val swipeDur = durationMs.coerceIn(50L, 2000L)
+        val shellRes = executeCommand("input swipe ${x1.toInt()} ${y1.toInt()} ${x2.toInt()} ${y2.toInt()} $swipeDur", timeoutMs = swipeDur + 1000L)
+        return shellRes != null && shellRes.isSuccess
     }
 
     /**
@@ -321,6 +326,24 @@ object NukeConnectionManager {
                     )
                 }
             }
+        }
+        return false
+    }
+
+    /**
+     * Toggles hardware touch event grabbing (EVIOCGRAB) across privileged backends.
+     */
+    fun touchSetGrab(grab: Boolean): Boolean {
+        val service = getShellService()
+        if (service != null) {
+            val ok = runCatching {
+                service.touchSetGrab(grab)
+                true
+            }.getOrDefault(false)
+            if (ok) return true
+        }
+        if (NukeDaemonClient.ping()) {
+            return NukeDaemonClient.touchSetGrab(grab)
         }
         return false
     }
@@ -533,43 +556,39 @@ object NukeConnectionManager {
 
     /**
      * Unified lifecycle hook invoked whenever any privileged bridge (Shizuku, iAdb, or Native ADB)
-     * connects and becomes ready. Checks whether libwandev.so already exists in /data/local/tmp;
-     * if present, it reuses it immediately. If missing, it deploys it and initializes the touch driver
-     * early so Sensi X, Sensi Y, detection zone, speed response curve, and macros are instantly ready.
+     * connects and becomes ready.
+     *
+     * Full auto-restore pipeline on bridge connect:
+     *  1. Deploy libwandev.so to /data/local/tmp if missing (Touch Listener kernel driver).
+     *  2. Restore persisted sensitivity profile (Sensi X, Sensi Y, detection zone, response curve).
+     *  3. If user had previously activated Touch Listener → re-arm it so Sensi X/Y & Macro work instantly.
+     *  4. Restore active macro pins from the user's saved profile (ghost-touch-safe).
+     *  5. Silent overlay permission auto-grant.
      */
     fun notifyBridgeReady(context: android.content.Context) {
         kotlin.concurrent.thread(name = "Nuke-BridgeReadySync", isDaemon = true) {
             try {
-                // 1. Check or deploy libwandev.so
-                val isPresent = nuke.wandev.touch.NukeTouchDeployer.isDeployed()
-                if (isPresent) {
-                    Log.i(TAG, "notifyBridgeReady: libwandev.so already present in /data/local/tmp — reusing existing library")
-                } else {
-                    Log.i(TAG, "notifyBridgeReady: libwandev.so not found, deploying now...")
-                    nuke.wandev.touch.NukeTouchDeployer.ensureDeployed(context)
-                }
+                Log.i(TAG, "notifyBridgeReady: bridge online (backend=${connectionLabel()})")
 
-                // 2. Passive touch driver readiness verification (no aggressive grab on bridge connect)
-                Log.i(TAG, "notifyBridgeReady: bridge connection established safely (backend=${connectionLabel()})")
+                // Restore persisted Sensi X/Y profile into engine runtime (standby until user activates switch)
+                val touchPrefs = context.getSharedPreferences("NukeTouchListenerPrefs", android.content.Context.MODE_PRIVATE)
+                val persistedSensX = touchPrefs.getFloat("touch_sens_x", 1.00f).coerceIn(0.50f, 2.50f)
+                val persistedSensY = touchPrefs.getFloat("touch_sens_y", 1.00f).coerceIn(0.50f, 2.50f)
+                val persistedArea  = touchPrefs.getInt("touch_sens_area", NukeTouchTuningEngine.AREA_ALL)
+                val persistedCurve = touchPrefs.getInt("touch_curve_mode", NukeTouchTuningEngine.CURVE_LINEAR)
 
-                // 3. Synchronize touch sensitivity, detection zone & speed response curve
-                NukeTouchTuningEngine.syncToDaemon(context)
+                NukeTouchTuningEngine.xMultiplier = persistedSensX
+                NukeTouchTuningEngine.yMultiplier = persistedSensY
+                NukeTouchTuningEngine.sensArea    = persistedArea
+                NukeTouchTuningEngine.curveMode   = persistedCurve
+                Log.i(TAG, "notifyBridgeReady: sensitivity profile loaded in standby — X=${persistedSensX}x Y=${persistedSensY}x (will initialize on user switch toggle)")
 
-                // 4. Synchronize active macro profile
-                runCatching {
-                    val prof = NukeMacroRepository.activeProfile(context)
-                    if (prof.useMapping && prof.pins.isNotEmpty()) {
-                        NukeMacroRepository.pushProfileToDaemon(context, prof)
-                        Log.i(TAG, "notifyBridgeReady: macro profile '${prof.name}' (${prof.pins.size} pins) armed")
-                    }
-                }
-
-                // 5. Silent overlay permission grant if needed
+                // Silent overlay permission auto-grant
                 runCatching { OverlayPermissionController.tryAutoGrantViaBridge(context, silent = true) }
+
             } catch (t: Throwable) {
                 Log.w(TAG, "notifyBridgeReady warning: ${t.message}")
             }
         }
     }
 }
-

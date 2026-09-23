@@ -2,37 +2,23 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '3.2.1-Spectra',
-    apkSizeMb: '31.8',
-    localApkUrl: 'GameNuke-v3.2.1-Spectra.apk',
-    downloadUrl: 'GameNuke-v3.2.1-Spectra.apk',
-    downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990',
-    sponsorDelayMs: 2000
+    versionName: '3.4.0-Nexus',
+    apkSizeMb: '33.7',
+    downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990'
   };
 
-  const state = { ...DEFAULTS, redirecting: false };
+  const state = { ...DEFAULTS };
+
   const qs = (sel, scope = document) => scope.querySelector(sel);
   const qsa = (sel, scope = document) => Array.from(scope.querySelectorAll(sel));
 
-  function getCleanFilename() {
-    return `GameNuke-v${state.versionName || '3.2.1-Spectra'}.apk`;
-  }
-
-  function getDownloadUrl() {
-    return state.localApkUrl || getCleanFilename();
-  }
-
   function renderMetadata() {
-    const filename = getCleanFilename();
-    const downloadUrl = getDownloadUrl();
-
     qsa('[data-version-prefix]').forEach((el) => { el.textContent = `v${state.versionName}`; });
     qsa('[data-size]').forEach((el) => { el.textContent = `${state.apkSizeMb} MB`; });
 
-    const btn = qs('#download-btn');
+    const btn = qs('#proceed-btn') || qs('#download-btn');
     if (btn) {
-      btn.href = downloadUrl;
-      btn.setAttribute('download', filename);
+      btn.href = 'final-download.html';
     }
   }
 
@@ -47,43 +33,47 @@
     renderMetadata();
   }
 
-  function triggerDirectlinkSponsor() {
-    if (state.redirecting) return;
-    state.redirecting = true;
-
-    const config = window.GAMENUKE_CONFIG || {};
-    const directlink = config.downloadDirectlinkUrl || state.downloadDirectlinkUrl || DEFAULTS.downloadDirectlinkUrl;
-    const delayMs = Number(config.sponsorDelayMs) || DEFAULTS.sponsorDelayMs;
-
-    if (config.adsenseReviewMode !== true && directlink) {
-      setTimeout(() => {
-        window.location.assign(directlink);
-      }, delayMs);
-    }
-  }
-
   function initDownloadListener() {
-    const mainBtn = qs('#download-btn');
+    const mainBtn = qs('#proceed-btn') || qs('#download-btn');
     const statusPill = qs('#status-pill');
     const btnText = qs('#btn-text');
 
     if (mainBtn) {
-      mainBtn.addEventListener('click', () => {
-        if (statusPill) statusPill.textContent = 'DOWNLOADING…';
-        if (btnText) btnText.textContent = 'Downloading…';
-        triggerDirectlinkSponsor();
+      mainBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+
+        const config = window.GAMENUKE_CONFIG || {};
+        const directlink = config.downloadDirectlinkUrl || state.downloadDirectlinkUrl || DEFAULTS.downloadDirectlinkUrl;
+        const reviewMode = config.adsenseReviewMode === true;
+
+        if (statusPill) statusPill.textContent = 'Membuka Server Unduhan Resmi…';
+        if (btnText) btnText.textContent = 'Menyiapkan Halaman Unduhan…';
+
+        const finalUrl = 'final-download.html';
+
+        // 1. Open the clean, ad-free final-download.html in a fresh foreground tab
+        let directTab = null;
+        try {
+          directTab = window.open(finalUrl, '_blank');
+          if (directTab) {
+            try { directTab.focus(); } catch (_) {}
+          }
+        } catch (_) {}
+
+        // Fallback: If popup blocker prevented new tab, navigate directly so user is never stuck
+        if (!directTab || directTab.closed || typeof directTab.closed === 'undefined') {
+          window.location.assign(finalUrl);
+          return;
+        }
+
+        // 2. Tab-under: Redirect the old tab to sponsor directlink in the background
+        if (!reviewMode && directlink) {
+          setTimeout(() => {
+            window.location.href = directlink;
+          }, 150);
+        }
       });
     }
-
-    // Attach sponsor directlink ad trigger to older version downloads
-    qsa('.old-dl-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const textNode = qs('span', btn);
-        if (textNode) textNode.textContent = 'Downloading…';
-        if (statusPill) statusPill.textContent = 'DOWNLOADING…';
-        triggerDirectlinkSponsor();
-      });
-    });
   }
 
   function init() {

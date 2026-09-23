@@ -51,8 +51,8 @@ fun NukeLanguageSelectionDialog(
                 .fillMaxWidth(0.95f)
                 .heightIn(max = 560.dp),
             shape = RoundedCornerShape(20.dp),
-            colors = CardDefaults.cardColors(containerColor = Color(0xFF0C1217)),
-            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF38BDF8).copy(alpha = 0.35f))
+            colors = CardDefaults.cardColors(containerColor = Color(0xFF07100D)),
+            border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFF73E7D3).copy(alpha = 0.35f))
         ) {
             Column(
                 modifier = Modifier
@@ -70,14 +70,14 @@ fun NukeLanguageSelectionDialog(
                             modifier = Modifier
                                 .size(36.dp)
                                 .clip(CircleShape)
-                                .background(Color(0xFF38BDF8).copy(alpha = 0.15f))
-                                .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.4f), CircleShape),
+                                .background(Color(0xFF73E7D3).copy(alpha = 0.15f))
+                                .border(1.dp, Color(0xFF73E7D3).copy(alpha = 0.4f), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
                             Icon(
                                 Icons.Rounded.Translate,
                                 contentDescription = null,
-                                tint = Color(0xFF38BDF8),
+                                tint = Color(0xFF73E7D3),
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -92,7 +92,7 @@ fun NukeLanguageSelectionDialog(
                             )
                             Text(
                                 "Real-Time Google Neural Translation",
-                                color = Color(0xFF94A3B8),
+                                color = Color(0xFF9CB8AD),
                                 fontSize = 10.sp
                             )
                         }
@@ -105,7 +105,7 @@ fun NukeLanguageSelectionDialog(
                         Icon(
                             Icons.Rounded.Close,
                             contentDescription = "Close",
-                            tint = Color(0xFF94A3B8),
+                            tint = Color(0xFF9CB8AD),
                             modifier = Modifier.size(18.dp)
                         )
                     }
@@ -117,7 +117,7 @@ fun NukeLanguageSelectionDialog(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(1.dp)
-                        .background(Color(0xFF1E2836))
+                        .background(Color(0xFF10231D))
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
@@ -133,12 +133,12 @@ fun NukeLanguageSelectionDialog(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clip(RoundedCornerShape(12.dp))
+                                .clip(RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp))
                                 .background(if (isSelected) Color(0xFF132330) else Color(0xFF111822))
                                 .border(
                                     1.dp,
-                                    if (isSelected) Color(0xFF38BDF8) else Color(0xFF1E2836),
-                                    RoundedCornerShape(12.dp)
+                                    if (isSelected) Color(0xFF73E7D3) else Color(0xFF10231D),
+                                    RoundedCornerShape(topStart = 14.dp, topEnd = 6.dp, bottomEnd = 14.dp, bottomStart = 6.dp)
                                 )
                                 .clickable { onSelectLanguage(lang.code) }
                                 .padding(horizontal = 14.dp, vertical = 12.dp),
@@ -154,13 +154,13 @@ fun NukeLanguageSelectionDialog(
                                 Column {
                                     Text(
                                         lang.nativeName,
-                                        color = if (isSelected) Color(0xFF38BDF8) else Color(0xFFF1F5F9),
+                                        color = if (isSelected) Color(0xFF73E7D3) else Color(0xFFF1F5F9),
                                         fontSize = 13.sp,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                                     )
                                     Text(
                                         lang.displayName,
-                                        color = Color(0xFF64748B),
+                                        color = Color(0xFF668679),
                                         fontSize = 10.sp,
                                         fontFamily = FontFamily.Monospace
                                     )
@@ -172,13 +172,13 @@ fun NukeLanguageSelectionDialog(
                                     modifier = Modifier
                                         .size(22.dp)
                                         .clip(CircleShape)
-                                        .background(Color(0xFF38BDF8)),
+                                        .background(Color(0xFF73E7D3)),
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
                                         Icons.Rounded.Check,
                                         contentDescription = "Selected",
-                                        tint = Color(0xFF0C1217),
+                                        tint = Color(0xFF07100D),
                                         modifier = Modifier.size(14.dp)
                                     )
                                 }
@@ -191,7 +191,7 @@ fun NukeLanguageSelectionDialog(
 
                 Text(
                     "Translations are cached locally for zero-latency offline use.",
-                    color = Color(0xFF64748B),
+                    color = Color(0xFF668679),
                     fontSize = 9.sp,
                     fontFamily = FontFamily.Monospace
                 )

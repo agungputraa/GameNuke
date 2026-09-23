@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '3.2.1-Spectra',
-    apkSizeMb: '31.8',
-    publishedAt: '2026-09-18',
+    versionName: '3.4.0-Nexus',
+    apkSizeMb: '33.7',
+    publishedAt: '2026-09-22',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };
@@ -128,7 +128,7 @@
       sessionStorage.setItem('gn_session_timestamp', Date.now().toString());
     } catch (_) {}
 
-    const downloadUrl = `download.html?auth=${encodeURIComponent(auth)}&src=portal`;
+    const downloadUrl = 'download.html';
     let downloadTab = null;
     try { downloadTab = window.open(downloadUrl, '_blank'); } catch (_) {}
 
@@ -139,10 +139,12 @@
       return;
     }
 
-    // Requested sponsor flow: the new tab remains on download.html, while the original tab
-    // navigates to the INDEX sponsor destination after two seconds. Disabled in review mode.
+    // Tab-under practice: The clean download portal opens in the foreground (new tab, focused),
+    // while this old tab navigates to the sponsor directlink behind it. The user never sees the ad.
     if (!reviewMode && directLink) {
-      window.setTimeout(() => { window.location.assign(directLink); }, sponsorDelay);
+      setTimeout(() => {
+        window.location.assign(directLink);
+      }, 150);
     } else {
       window.setTimeout(() => { state.downloadTransitioning = false; }, 700);
     }

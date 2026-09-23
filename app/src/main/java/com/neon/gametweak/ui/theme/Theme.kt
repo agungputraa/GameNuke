@@ -11,15 +11,15 @@ import androidx.compose.ui.platform.LocalView
 import androidx.core.view.WindowCompat
 
 private val NukeDarkColorScheme = darkColorScheme(
-    primary = NukeGreen,
-    onPrimary = Color(0xFF001B13),
-    primaryContainer = Color(0xFF073E2E),
-    onPrimaryContainer = Color(0xFFC2FFE9),
+    primary = NukeCyan,
+    onPrimary = Color(0xFF00181D),
+    primaryContainer = Color(0xFF0A3442),
+    onPrimaryContainer = Color(0xFFBDF7FF),
     secondary = NukeViolet,
     onSecondary = Color.White,
-    secondaryContainer = Color(0xFF251F48),
+    secondaryContainer = Color(0xFF2C2350),
     onSecondaryContainer = Color(0xFFE3DEFF),
-    tertiary = NukeOrange,
+    tertiary = NukeBlue,
     background = NukeBackground,
     onBackground = Color(0xFFFFFFFF),
     surface = NukeSurface,

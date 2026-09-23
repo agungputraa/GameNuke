@@ -30,6 +30,7 @@ import android.view.WindowManager
 import android.widget.AdapterView
 import android.widget.ArrayAdapter
 import android.widget.CheckBox
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.SeekBar
 import android.widget.Spinner
@@ -190,6 +191,7 @@ class FloatingBoosterService : Service() {
     override fun onCreate() {
         super.onCreate()
         activeInstance = this
+        NukeAiThemeController.init(applicationContext)
         NukeDynamicSessionRestoreManager.onSessionStart(applicationContext)
         NukeAntivirusEngine.init(applicationContext)
         wm = getSystemService(Context.WINDOW_SERVICE) as WindowManager
@@ -453,9 +455,9 @@ class FloatingBoosterService : Service() {
             local.state.value.let { updateTelemetryUi(it); publishRuntime(it) }
             while (isActive) {
                 val isVisible = hubVisible()
-                // Throttled to reduce adbd shell-command load on device CPU.
-                // Visible: 3.5 s cadence; hidden: 60 s (zero-overhead background).
-                val interval = if (isVisible) 3_500L else 60_000L
+                // Throttled to reduce adbd shell-command load on device CPU and eliminate thermal spikes.
+                // Visible: 5.0 s cadence; hidden: 90 s (zero-overhead background).
+                val interval = if (isVisible) 5_000L else 90_000L
                 delay(interval)
                 runCatching { local.refreshHudMetrics(includeCpu = isVisible) }
                 val state = local.state.value
@@ -470,8 +472,8 @@ class FloatingBoosterService : Service() {
             engine?.state?.value?.let(::updateTelemetryUi)
             while (isActive) {
                 val isVisible = hubVisible()
-                // Aux telemetry (battery/network) at 6.5 s visible, 75 s hidden.
-                val interval = if (isVisible) 6_500L else 75_000L
+                // Aux telemetry (battery/network) at 10 s visible, 120 s hidden.
+                val interval = if (isVisible) 10_000L else 120_000L
                 delay(interval)
                 if (isVisible) {
                     refreshAuxTelemetry(retryPing = true)
@@ -494,9 +496,9 @@ class FloatingBoosterService : Service() {
                 val state = local.state.value
                 updateTelemetryUi(state)
                 publishRuntime(state)
-                // PowerManager thermal headroom cadence; 18 s reduces adbd overhead
+                // PowerManager thermal headroom cadence; 30 s prevents adbd overheating
                 // while still providing timely overheat warnings.
-                delay(18_000L)
+                delay(30_000L)
             }
         }
         sessionJob = scope.launch(Dispatchers.Default) {
@@ -1004,6 +1006,7 @@ class FloatingBoosterService : Service() {
                 "system_editor" -> NukeSystemEditorFloatingOverlay.getInstance(applicationContext).hide()
                 "cyber_jukebox" -> NukeCyberJukeboxOverlay.getInstance(applicationContext).hide()
                 "macro_studio" -> NukeMacroStudioOverlay.getInstance(applicationContext).hide()
+                "ai_agent" -> NukeAiAgentFloatingOverlay.getInstance(applicationContext).hide()
             }
         }.onFailure { Log.w(TAG, "Failed to close panel $panelId safely: ${it.message}") }
     }
@@ -1017,7 +1020,7 @@ class FloatingBoosterService : Service() {
             // Optimistic UI state update immediately (0ms visual feedback!)
             val currentActive = composeHudState.value.quickToolStates[action] ?: false
             val nextVal = !currentActive
-            if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor" && action != "cyber_jukebox" && action != "vol_trigger" && action != "aim_stabilizer") {
+            if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor" && action != "cyber_jukebox" && action != "vol_trigger" && action != "aim_stabilizer" && action != "ai_agent") {
                 prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
             }
@@ -1332,6 +1335,18 @@ class FloatingBoosterService : Service() {
                 overlay.toggle()
                 toastOutcome(if (opening) "Device Health: OPEN" else "Device Health: CLOSED")
             }
+            "ai_agent" -> {
+                val isVip = NukeSubscriptionManager.isVipActive(applicationContext)
+                if (!isVip) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required for Nexus Neural Core", true)
+                    return
+                }
+                val overlay = NukeAiAgentFloatingOverlay.getInstance(applicationContext)
+                val opening = !overlay.isShowing
+                if (opening) prepareExclusivePanel("ai_agent") else clearExclusivePanel("ai_agent")
+                overlay.toggle()
+                toastOutcome(if (opening) "Nexus Neural Core: OPEN" else "Nexus Neural Core: CLOSED")
+            }
             "task_manager" -> {
                 val overlay = NukeTaskManagerPanelOverlay.getInstance(applicationContext)
                 val opening = !overlay.isShowing
@@ -1599,72 +1614,15 @@ class FloatingBoosterService : Service() {
 }
 
     /**
-     * Restrict window touch interception to the visible saber-panel shape.
-     * Paths here must match the GenericShapes defined in FloatingHudCompose.kt.
-     * We use View-level touch gating (public SDK only) — no hidden Android APIs.
+     * Prepares the floating HUD ComposeView for full touch responsiveness.
+     * With FLAG_NOT_TOUCH_MODAL, touches outside the floating panel bounds
+     * automatically pass through to the underlying game/activity.
      */
     private fun applyWingTouchableRegion(view: View, wing: FloatingHudWing) {
-        view.addOnLayoutChangeListener { _, left, top, right, bottom, _, _, _, _ ->
-            val width = right - left
-            val height = bottom - top
-            if (width <= 0 || height <= 0) return@addOnLayoutChangeListener
-            val wf = width.toFloat()
-            val hf = height.toFloat()
-            // Approximate path matching the Compose saber-curve shapes with line segments
-            // (android.graphics.Path approximation is fine for touch region hit-testing).
-            val path = android.graphics.Path().apply {
-                when (wing) {
-                    FloatingHudWing.LEFT -> {
-                        // Full-height left edge, inner side concave inward at mid-height
-                        val inset = wf * .14f
-                        moveTo(0f, 0f)
-                        lineTo(wf - inset * .3f, 0f)
-                        lineTo(wf, hf * .5f)          // widest concave point (approx)
-                        lineTo(wf - inset * .3f, hf)
-                        lineTo(0f, hf)
-                    }
-                    FloatingHudWing.RIGHT -> {
-                        val inset = wf * .14f
-                        moveTo(wf, 0f)
-                        lineTo(inset * .3f, 0f)
-                        lineTo(0f, hf * .5f)
-                        lineTo(inset * .3f, hf)
-                        lineTo(wf, hf)
-                    }
-                    FloatingHudWing.TOP -> {
-                        val scoop = hf * .18f
-                        moveTo(0f, 0f); lineTo(wf, 0f)
-                        lineTo(wf, hf - scoop)
-                        lineTo(wf * .5f, hf)
-                        lineTo(0f, hf - scoop)
-                    }
-                    FloatingHudWing.BOTTOM -> {
-                        val scoop = hf * .18f
-                        moveTo(0f, hf); lineTo(wf, hf)
-                        lineTo(wf, scoop)
-                        lineTo(wf * .5f, 0f)
-                        lineTo(0f, scoop)
-                    }
-                    FloatingHudWing.PORTRAIT -> {
-                        val r = 14f * density()
-                        addRoundRect(0f, 0f, wf, hf, r, r, android.graphics.Path.Direction.CW)
-                    }
-                }
-                close()
-            }
-            val region = android.graphics.Region().also {
-                it.setPath(path, android.graphics.Region(0, 0, width, height))
-            }
-            view.tag = region
-        }
-        view.setOnTouchListener { v, event ->
-            val region = v.tag as? android.graphics.Region ?: return@setOnTouchListener false
-            val x = event.x.toInt()
-            val y = event.y.toInt()
-            if (!region.contains(x, y)) return@setOnTouchListener false
-            v.onTouchEvent(event)
-        }
+        view.isClickable = true
+        view.isFocusable = false
     }
+
 
     private fun handleComposeTool(tool: FloatingHudTool) {
         when (tool) {
@@ -1788,7 +1746,7 @@ class FloatingBoosterService : Service() {
                     setprop debug.sf.disable_backpressure 1 2>/dev/null
                     setprop persist.sys.game.mode 1 2>/dev/null
                     settings put global restricted_networking_mode 0 2>/dev/null
-                    settings put system pointer_speed 7 2>/dev/null
+                    settings put system pointer_speed 0 2>/dev/null
                     sysctl -w net.ipv4.tcp_low_latency=1 2>/dev/null
                     setprop net.tcp.delack 0 2>/dev/null
                 """.trimIndent()
@@ -2434,10 +2392,15 @@ class FloatingBoosterService : Service() {
         }
         content.addView(preview)
 
-        content.addView(controlTitle("TYPE"))
+        val styleNames = listOf(
+            "DOT", "CLASSIC CROSS", "CIRCLE DOT", "CHEVRON", "SNIPER T",
+            "BOX BRACKET", "DYNAMIC GAP", "TRI-WING", "HOLLOW DIAMOND",
+            "TACTICAL X", "RADAR LOCK", "SNIPER MIL-DOT", "APEX V-DOT"
+        )
+        content.addView(controlTitle("RETICLE SHAPE (13 TACTICAL STYLES)"))
         content.addView(
             spinner(
-                listOf("DOT", "CLASSIC CROSS", "CIRCLE DOT", "CHEVRON", "SNIPER T", "BOX BRACKET", "DYNAMIC GAP"),
+                styleNames,
                 prefs.safeInt("cross_type", 1).coerceIn(0, styles.lastIndex),
             ) { index ->
                 prefs.edit().putInt("cross_type", index).apply()
@@ -2446,13 +2409,109 @@ class FloatingBoosterService : Service() {
             },
         )
 
-        content.addView(controlTitle("COLOR"))
-        val currentColor = prefs.safeInt("cross_color", colors[2])
-        val colorIndex = colors.indexOf(currentColor).takeIf { it >= 0 } ?: 2
-        content.addView(spinner(colorNames, colorIndex) { index ->
-            prefs.edit().putInt("cross_color", colors[index]).apply()
-            preview.crosshairColor = colors[index]
+        content.addView(controlTitle("CUSTOM COLOR TONE STUDIO"))
+
+        val tacticalPresets = intArrayOf(
+            Color.rgb(0, 240, 255),   // Electric Cyan
+            Color.rgb(0, 230, 118),   // Cyber Green
+            Color.rgb(255, 45, 85),   // Neon Red
+            Color.rgb(255, 213, 79),  // Gold Amber
+            Color.WHITE,              // Pure White
+            Color.rgb(255, 60, 172),  // Hot Pink
+            Color.rgb(168, 85, 247),  // Deep Violet
+            Color.rgb(255, 122, 0),   // Blaze Orange
+            Color.rgb(41, 121, 255)   // Tactical Blue
+        )
+
+        var selectedColor = prefs.safeInt("cross_color", tacticalPresets[0])
+        val hsv = FloatArray(3)
+        Color.colorToHSV(selectedColor, hsv)
+        var currentHue = hsv[0]
+        var currentSat = if (hsv[1] > 0f) hsv[1] else 1f
+
+        // Live Color Preview Chip
+        val colorStatusRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(2), 0, dp(4))
+        }
+
+        val colorBadge = View(this).apply {
+            layoutParams = LinearLayout.LayoutParams(dp(22), dp(22)).apply {
+                marginEnd = dp(8)
+            }
+            background = android.graphics.drawable.GradientDrawable().apply {
+                shape = android.graphics.drawable.GradientDrawable.OVAL
+                setColor(selectedColor)
+                setStroke(dp(2), Color.WHITE)
+            }
+        }
+        colorStatusRow.addView(colorBadge)
+
+        val hexLabel = TextView(this).apply {
+            text = String.format(java.util.Locale.US, "TONE: #%06X (CUSTOM SPECTRUM)", 0xFFFFFF and selectedColor)
+            setTextColor(NukeHudPalette.Text)
+            textSize = 10f
+            typeface = android.graphics.Typeface.MONOSPACE
+        }
+        colorStatusRow.addView(hexLabel)
+        content.addView(colorStatusRow)
+
+        fun applySelectedColor(newColor: Int) {
+            selectedColor = newColor
+            prefs.edit().putInt("cross_color", newColor).apply()
+            preview.crosshairColor = newColor
             syncCrosshairOverlay()
+
+            (colorBadge.background as? android.graphics.drawable.GradientDrawable)?.setColor(newColor)
+            hexLabel.text = String.format(java.util.Locale.US, "TONE: #%06X (CUSTOM SPECTRUM)", 0xFFFFFF and newColor)
+        }
+
+        // Preset Swatches Row
+        val swatchRow = LinearLayout(this).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            setPadding(0, dp(4), 0, dp(6))
+        }
+
+        tacticalPresets.forEach { preset ->
+            val swatch = View(this).apply {
+                layoutParams = LinearLayout.LayoutParams(dp(28), dp(28)).apply {
+                    marginEnd = dp(6)
+                }
+                background = android.graphics.drawable.GradientDrawable().apply {
+                    shape = android.graphics.drawable.GradientDrawable.OVAL
+                    setColor(preset)
+                    setStroke(dp(2), if (preset == selectedColor) Color.WHITE else Color.parseColor("#33FFFFFF"))
+                }
+                setOnClickListener {
+                    Color.colorToHSV(preset, hsv)
+                    currentHue = hsv[0]
+                    currentSat = if (hsv[1] > 0f) hsv[1] else 1f
+                    applySelectedColor(preset)
+                }
+            }
+            swatchRow.addView(swatch)
+        }
+
+        val swatchScroll = HorizontalScrollView(this).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(swatchRow)
+        }
+        content.addView(swatchScroll)
+
+        // Continuous Hue Slider (0° to 360°)
+        content.addView(seekControl("COLOR HUE SPECTRUM (0° - 360°)", 0, 360, currentHue.toInt()) { hueVal ->
+            currentHue = hueVal.toFloat()
+            val computed = Color.HSVToColor(floatArrayOf(currentHue, currentSat, 1f))
+            applySelectedColor(computed)
+        })
+
+        // Tone Saturation Slider
+        content.addView(seekControl("TONE SATURATION %", 10, 100, (currentSat * 100).toInt()) { satVal ->
+            currentSat = satVal / 100f
+            val computed = Color.HSVToColor(floatArrayOf(currentHue, currentSat, 1f))
+            applySelectedColor(computed)
         })
 
         content.addView(seekControl("SIZE DP", 8, 64, prefs.safeInt("cross_size", 22)) {
@@ -3041,7 +3100,10 @@ class FloatingBoosterService : Service() {
         // merge only the telemetry fields while keeping the user-modified fields intact.
         composeHudState.update { prev ->
             prev.copy(
-                gameLabel = state.gameLabel,
+                gameLabel = state.gameLabel.ifBlank { "NO ACTIVE GAME" },
+                gamePackage = NukeRuntimeState.state.value.activePackage
+                    ?.takeIf { it.isNotBlank() && it != packageName }
+                    ?: targetPackage?.takeIf { it.isNotBlank() && it != packageName },
                 phaseLabel = "$phaseLabel • ${capabilitySnapshot.compatibilityLabel}",
                 statusMessage = userFacingStatus(state.message).take(132),
                 cpuPercent = state.cpuLoadPercent,
@@ -3286,12 +3348,12 @@ class FloatingBoosterService : Service() {
             view.scaleY = .965f
             view.translationY = dp(5).toFloat()
         }
+        val isHubWing = key.startsWith("hub_")
         val ok = runCatching { wm.addView(view, p) }.onFailure { Log.e(TAG, "addWindow $key failed", it) }.isSuccess
         if (ok) {
             windows[key] = WindowSlot(view, p)
             if (key != "crosshair") {
-                val hubWing = key.startsWith("hub_")
-                NukeMotionEngine.reveal(view, fromScale = if (hubWing) .94f else .91f, fromY = dp(if (hubWing) 10 else 16).toFloat())
+                NukeMotionEngine.reveal(view, fromScale = if (isHubWing) .94f else .91f, fromY = dp(if (isHubWing) 10 else 16).toFloat())
             }
         }
         return ok
@@ -3617,7 +3679,11 @@ class FloatingBoosterService : Service() {
         }
         clearSessionMarker(); engine = null; targetPackage = null
         // Comprehensive Subsystem Teardown on Session End
+        runCatching { NukeTouchTuningEngine.stopDaemonTouchAsync() }
+        runCatching { NukeConnectionManager.touchStop() }
+        runCatching { nuke.wandev.touch.NukeTouchService.setGrab(false) }
         runCatching { nuke.wandev.touch.NukeTouchService.stop() }
+        runCatching { NukeConnectionManager.executeCommand("settings delete system touch.distance.scale", 1000L) }
         runCatching { NukeMacroStudioOverlay.getInstance(applicationContext).deactivateMacro() }
         runCatching {
             if (NukeGameVpnService.isRunning(applicationContext)) {
@@ -3712,7 +3778,11 @@ class FloatingBoosterService : Service() {
         activeExclusivePanel = null
         runCatching { wikiOverlay?.hide() }; wikiOverlay = null
         runCatching { fpsOverlay?.hide() }; fpsOverlay = null
+        runCatching { NukeTouchTuningEngine.stopDaemonTouchAsync() }
+        runCatching { NukeConnectionManager.touchStop() }
+        runCatching { nuke.wandev.touch.NukeTouchService.setGrab(false) }
         runCatching { nuke.wandev.touch.NukeTouchService.stop() }
+        runCatching { NukeConnectionManager.executeCommand("settings delete system touch.distance.scale", 1000L) }
         runCatching { NukeMacroStudioOverlay.getInstance(applicationContext).deactivateMacro() }
         runCatching {
             if (NukeGameVpnService.isRunning(applicationContext)) {

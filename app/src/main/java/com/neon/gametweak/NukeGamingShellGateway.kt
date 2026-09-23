@@ -16,6 +16,8 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
     private data class CpuSample(val total: Long, val idle: Long)
     private data class CachedSupport(val value: Boolean, val at: Long)
     @Volatile private var lastCpuSample: CpuSample? = null
+    @Volatile private var lastProcCpuSampleAt = 0L
+    @Volatile private var cachedProcCpu: Int? = null
     private val supportCache = java.util.concurrent.ConcurrentHashMap<String, CachedSupport>()
 
     private inline fun cachedSupport(key: String, probe: () -> Boolean): Boolean {
@@ -368,6 +370,11 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
         // 1. Try zero-overhead local /proc/stat reading first (0 shell processes, 0ms latency)
         NukeLocalCpuSampler.readPercent()?.let { return it }
 
+        val now = android.os.SystemClock.elapsedRealtime()
+        if (now - lastProcCpuSampleAt < 4_000L && cachedProcCpu != null) {
+            return cachedProcCpu
+        }
+
         fun procSample(): CpuSample? {
             val result = adb.executeCommand("cat /proc/stat", "/", 1_200L, 8_192)
             if (!result.isSuccess) return null
@@ -395,13 +402,16 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
             val previous = lastCpuSample
             lastCpuSample = first
             if (previous != null) {
-                fromDelta(previous, first)?.let { return it }
+                fromDelta(previous, first)?.let {
+                    lastProcCpuSampleAt = now
+                    cachedProcCpu = it
+                    return it
+                }
             }
         }
 
-        // 3. Fallback dumpsys cpuinfo — strictly rate-limited (max once per 8s) to prevent CPU spikes & heat
-        val now = android.os.SystemClock.elapsedRealtime()
-        if (now - lastDumpsysCpuAt < 8_000L && cachedDumpsysCpu != null) {
+        // 3. Fallback dumpsys cpuinfo — strictly rate-limited (max once per 12s) to prevent CPU spikes & heat
+        if (now - lastDumpsysCpuAt < 12_000L && cachedDumpsysCpu != null) {
             return cachedDumpsysCpu
         }
 

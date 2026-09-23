@@ -1,6 +1,8 @@
 package com.neon.gametweak
 
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.Canvas as AndroidCanvas
 import kotlin.math.roundToInt
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -14,6 +16,7 @@ import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -90,6 +93,7 @@ import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material.icons.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material.icons.outlined.WifiTethering
+import androidx.compose.material.icons.rounded.SmartToy
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
@@ -110,6 +114,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -123,6 +128,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.graphicsLayer
@@ -130,6 +137,7 @@ import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.nativeCanvas
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
@@ -145,6 +153,7 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -159,6 +168,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.savedstate.setViewTreeSavedStateRegistryOwner
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
@@ -192,7 +202,8 @@ internal enum class FloatingHudWing { LEFT, RIGHT, TOP, BOTTOM, PORTRAIT }
 
 @Immutable
 internal data class FloatingHudSnapshot(
-    val gameLabel: String = "GAME",
+    val gameLabel: String = "NO ACTIVE GAME",
+    val gamePackage: String? = null,
     val phaseLabel: String = "CORE READY",
     val statusMessage: String = "CORE STANDBY",
     val cpuPercent: Int? = null,
@@ -257,8 +268,10 @@ internal fun createFloatingHudComposeView(
             fontScale = currentDensity.fontScale.coerceIn(0.90f, 1.30f)
         )
         val currentAppLanguage by NukeTranslationManager.currentLanguage.collectAsState()
+        val aiTheme by NukeAiThemeController.state.collectAsStateWithLifecycle()
+        applyFloatingPalette(aiTheme.palette)
 
-        androidx.compose.runtime.key(currentAppLanguage) {
+        androidx.compose.runtime.key(currentAppLanguage, aiTheme.mode) {
             androidx.compose.runtime.CompositionLocalProvider(
                 androidx.compose.ui.platform.LocalDensity provides stableDensity
             ) {
@@ -274,21 +287,22 @@ internal fun createFloatingHudComposeView(
     }
 }
 
-private val NukeGreen = Color(0xFF10B981)
-private val NukeGreenDim = Color(0xFF68C900)
-private val NukeCyan = Color(0xFF00E5C8)
-private val NukeAmber = Color(0xFFFFB830)
-private val NukeRed = Color(0xFFFF4D6A)
-private val NukePurple = Color(0xFFA855F7)
-private val NukeVoid = Color(0xFF090D12)
-private val NukePanel = Color(0xFF0D1A13)
-private val NukePanelHigh = Color(0xFF0F2018)
-private val NukePanelBright = Color(0xFF1C2E2A)
-private val NukeText = Color(0xFFFFFFFF)
-private val NukeMuted = Color(0xFF9BB0A6)
-private val NukeHairline = Color(0xFF1D3528)
+private var NukeGreen = Color(0xFF55F5B0)
+private var NukeGreenDim = Color(0xFF087A55)
+private var NukeCyan = Color(0xFF73E7D3)
+private var NukeAmber = Color(0xFFFFB84A)
+private var NukeRed = Color(0xFFFF5B6F)
+private var NukePurple = Color(0xFF72C9A6)
+private var NukeVoid = Color(0xFF020705)
+private var NukePanel = Color(0xFF07100D)
+private var NukePanelHigh = Color(0xFF0B1814)
+private var NukePanelBright = Color(0xFF10231D)
+private var NukeText = Color(0xFFF3FFF9)
+private var NukeMuted = Color(0xFF9CB8AD)
+private var NukeHairline = Color(0xFF1D4034)
+private var NukeActiveMode = NukeAiThemeController.Mode.BALANCE
 
-private val NukeColorScheme = darkColorScheme(
+private var NukeColorScheme = darkColorScheme(
     primary = NukeGreen,
     secondary = NukeCyan,
     tertiary = NukeAmber,
@@ -300,6 +314,144 @@ private val NukeColorScheme = darkColorScheme(
     onSurface = NukeText,
     error = NukeRed,
 )
+
+private fun applyFloatingPalette(palette: NukeAiThemeController.Palette) {
+    NukeActiveMode = palette.mode
+    NukeGreen = Color(palette.accent)
+    NukeGreenDim = Color(palette.accentDim)
+    NukeCyan = Color(palette.telemetry)
+    NukeAmber = Color(palette.warning)
+    NukeRed = Color(palette.danger)
+    NukePurple = Color(palette.accentBright)
+    NukeVoid = Color(palette.background)
+    NukePanel = Color(palette.panel)
+    NukePanelHigh = Color(palette.panelRaised)
+    NukePanelBright = Color(palette.panelSoft)
+    NukeText = Color(palette.text)
+    NukeMuted = Color(palette.muted)
+    NukeHairline = Color(palette.border)
+    NukeColorScheme = darkColorScheme(
+        primary = NukeGreen,
+        secondary = NukeCyan,
+        tertiary = NukeAmber,
+        background = NukeVoid,
+        surface = NukePanel,
+        surfaceVariant = NukePanelHigh,
+        onPrimary = NukeVoid,
+        onBackground = NukeText,
+        onSurface = NukeText,
+        error = NukeRed,
+    )
+}
+
+private fun loadActiveGameLabel(context: Context, packageName: String?, fallback: String): String {
+    if (packageName.isNullOrBlank() || packageName == context.packageName) return "NO ACTIVE GAME"
+    return runCatching {
+        val pm = context.packageManager
+        val info = pm.getApplicationInfo(packageName, 0)
+        pm.getApplicationLabel(info).toString().ifBlank { fallback }
+    }.getOrElse { fallback.ifBlank { packageName.substringAfterLast('.') } }
+}
+
+@Composable
+private fun rememberActiveGameLabel(snapshot: FloatingHudSnapshot): String {
+    val context = LocalContext.current
+    val label by produceState(
+        initialValue = if (snapshot.gamePackage.isNullOrBlank()) "NO ACTIVE GAME" else snapshot.gameLabel,
+        key1 = snapshot.gamePackage,
+    ) {
+        value = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            loadActiveGameLabel(context, snapshot.gamePackage, snapshot.gameLabel)
+        }
+    }
+    return label
+}
+
+private fun loadGameIconBitmap(context: Context, packageName: String?): ImageBitmap? {
+    if (packageName.isNullOrBlank() || packageName == context.packageName) return null
+    return runCatching {
+        val drawable = context.packageManager.getApplicationIcon(packageName)
+        val maxPx = 72
+        val rawW = drawable.intrinsicWidth.coerceAtLeast(1)
+        val rawH = drawable.intrinsicHeight.coerceAtLeast(1)
+        val scale = minOf(1f, maxPx.toFloat() / maxOf(rawW, rawH).toFloat())
+        val width = (rawW * scale).toInt().coerceAtLeast(1)
+        val height = (rawH * scale).toInt().coerceAtLeast(1)
+        val bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
+        val canvas = AndroidCanvas(bitmap)
+        drawable.setBounds(0, 0, width, height)
+        drawable.draw(canvas)
+        bitmap.asImageBitmap()
+    }.getOrNull()
+}
+
+@Composable
+private fun GameIconOrCore(snapshot: FloatingHudSnapshot, size: Dp) {
+    val context = LocalContext.current
+    val icon by produceState<ImageBitmap?>(initialValue = null, key1 = snapshot.gamePackage) {
+        value = kotlinx.coroutines.withContext(Dispatchers.IO) {
+            loadGameIconBitmap(context, snapshot.gamePackage)
+        }
+    }
+    if (icon != null) {
+        Image(
+            bitmap = icon!!,
+            contentDescription = snapshot.gameLabel,
+            modifier = Modifier
+                .size(size)
+                .clip(RoundedCornerShape(6.dp)),
+            contentScale = ContentScale.Crop,
+        )
+    } else {
+        Icon(
+            Icons.Outlined.SportsEsports,
+            contentDescription = "No active game",
+            tint = NukeGreen,
+            modifier = Modifier.size(size * 0.75f),
+        )
+    }
+}
+
+@Composable
+private fun ActiveModeChip(compact: Boolean = true) {
+    val label = "${NukeActiveMode.shortLabel} • ${NukeAiThemeController.currentPalette.fxLabel}"
+    Box(
+        Modifier
+            .clip(RoundedCornerShape(4.dp))
+            .background(NukeGreen.copy(alpha = .12f))
+            .border(.6.dp, NukeGreen.copy(alpha = .34f), RoundedCornerShape(4.dp))
+            .padding(horizontal = if (compact) 4.dp else 6.dp, vertical = 1.dp),
+    ) {
+        Text(
+            label,
+            color = NukeGreen,
+            fontSize = if (compact) 5.4.sp else 6.5.sp,
+            fontWeight = FontWeight.Black,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+        )
+    }
+}
+
+/**
+ * Static theme ambience: completely eliminates continuous recomposition loops and frame drops.
+ */
+@Composable
+private fun ModeAmbientFx(mode: NukeAiThemeController.Mode, modifier: Modifier = Modifier) {
+    val palette = NukeAiThemeController.currentPalette
+    val accent = Color(palette.accent)
+    Box(
+        modifier
+            .fillMaxSize()
+            .background(
+                Brush.radialGradient(
+                    colors = listOf(accent.copy(alpha = 0.035f), Color.Transparent),
+                    center = Offset(140f, 70f),
+                    radius = 380f,
+                )
+            )
+    )
+}
 
 private val BayShape = GenericShape { size, _ ->
     val c = minOf(size.width, size.height) * .16f
@@ -441,6 +593,7 @@ private fun NukeFloatingWing(
     callbacks: FloatingHudCallbacks,
 ) {
     MaterialTheme(colorScheme = NukeColorScheme, typography = com.neon.gametweak.ui.theme.Typography) {
+        val activeGameLabel = rememberActiveGameLabel(snapshot)
         var entered by remember { mutableStateOf(false) }
         var confirmEnd by rememberSaveable { mutableStateOf(false) }
         LaunchedEffect(Unit) { entered = true }
@@ -514,10 +667,10 @@ private fun NukeFloatingWing(
                     }
                     val bgGrad = Brush.linearGradient(
                         colorStops = arrayOf(
-                            0f to Color(0xFF020506),
-                            .30f to Color(0xFF060F0D),
-                            .70f to Color(0xFF0B1714),
-                            1f to Color(0xFF0F1E1A),
+                            0f to NukeVoid,
+                            .30f to NukePanel,
+                            .70f to NukePanelHigh,
+                            1f to NukePanelBright,
                         ),
                         start = edgeStart,
                         end = edgeEnd,
@@ -533,10 +686,24 @@ private fun NukeFloatingWing(
                         start = Offset(0f, 0f),
                         end = Offset(0f, size.height),
                     )
+
+                    val fullTrackPath = androidx.compose.ui.graphics.Path()
+                    val fillPath = androidx.compose.ui.graphics.Path()
+                    val paintTopLabel = android.graphics.Paint().apply {
+                        isAntiAlias = true
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+                    val paintBotValue = android.graphics.Paint().apply {
+                        isAntiAlias = true
+                        textAlign = android.graphics.Paint.Align.CENTER
+                        typeface = android.graphics.Typeface.DEFAULT_BOLD
+                    }
+
                     onDrawBehind {
                         drawRect(bgGrad)
-                        // Subtle scanlines for depth
-                        val lineSpacing = 18.dp.toPx()
+                        // Subtle scanlines for depth - sparse 32dp cadence
+                        val lineSpacing = 32.dp.toPx()
                         var scanY = 0f
                         while (scanY < size.height) {
                             drawLine(
@@ -587,7 +754,7 @@ private fun NukeFloatingWing(
 
                             // 1. Build the continuous curved path for the capsule progressbar
                             val pathSteps = 30
-                            val fullTrackPath = androidx.compose.ui.graphics.Path()
+                            fullTrackPath.rewind()
                             for (step in 0..pathSteps) {
                                 val t = tTop + (step.toFloat() / pathSteps) * (tBottom - tTop)
                                 val cx = if (isLeft) getEdgeX(t) - 15.dp.toPx() else getEdgeX(t) + 15.dp.toPx()
@@ -598,7 +765,7 @@ private fun NukeFloatingWing(
                             // 2. Draw outer slot / capsule track background
                             drawPath(
                                 path = fullTrackPath,
-                                color = Color(0xFF060E0C),
+                                color = Color(0xFF04100B),
                                 style = Stroke(width = trackW, cap = StrokeCap.Round),
                             )
                             // Outer hairline border for the slot
@@ -609,14 +776,14 @@ private fun NukeFloatingWing(
                             )
                             drawPath(
                                 path = fullTrackPath,
-                                color = Color(0xFF081411),
+                                color = Color(0xFF071A12),
                                 style = Stroke(width = trackW, cap = StrokeCap.Round),
                             )
 
                             // 3. Draw active progress bar fill inside the track
                             val fillFraction = (currentPercent / 100f).coerceIn(0.02f, 1f)
                             val fillTTop = tBottom - fillFraction * (tBottom - tTop)
-                            val fillPath = androidx.compose.ui.graphics.Path()
+                            fillPath.rewind()
                             val fillSteps = 24
                             for (step in 0..fillSteps) {
                                 val t = fillTTop + (step.toFloat() / fillSteps) * (tBottom - fillTTop)
@@ -677,20 +844,11 @@ private fun NukeFloatingWing(
                             val botCx = if (isLeft) getEdgeX(tBottom) - 15.dp.toPx() else getEdgeX(tBottom) + 15.dp.toPx()
                             val botCy = tBottom * size.height + (trackW / 2) + 12.dp.toPx()
 
-                            val paintTopLabel = android.graphics.Paint().apply {
-                                color = gaugeAccent.toArgb()
-                                textSize = 8.5.sp.toPx()
-                                isAntiAlias = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                            }
-                            val paintBotValue = android.graphics.Paint().apply {
-                                color = fillColor.toArgb()
-                                textSize = 8.5.sp.toPx()
-                                isAntiAlias = true
-                                textAlign = android.graphics.Paint.Align.CENTER
-                                typeface = android.graphics.Typeface.DEFAULT_BOLD
-                            }
+                            paintTopLabel.color = gaugeAccent.toArgb()
+                            paintTopLabel.textSize = 8.5.sp.toPx()
+
+                            paintBotValue.color = fillColor.toArgb()
+                            paintBotValue.textSize = 8.5.sp.toPx()
 
                             // Draw "CPU" or "RAM" above the progressbar
                             drawContext.canvas.nativeCanvas.drawText(gaugeLabel, topCx, topCy, paintTopLabel)
@@ -700,6 +858,7 @@ private fun NukeFloatingWing(
                     }
                 },
         ) {
+            ModeAmbientFx(NukeActiveMode, Modifier.fillMaxSize())
             Box(
                 Modifier
                     .fillMaxSize()
@@ -722,9 +881,9 @@ private fun NukeFloatingWing(
 }
 
 @Composable
-private fun TelemetryChip(label: String, value: String, tint: Color) {
+private fun TelemetryChip(label: String, value: String, tint: Color, modifier: Modifier = Modifier) {
     Row(
-        Modifier
+        modifier
             .height(28.dp)
             .clip(ControlShape)
             .background(tint.copy(alpha = 0.08f))
@@ -751,6 +910,7 @@ private fun NukePortraitCockpit(
         var selectedTab by rememberSaveable { mutableStateOf(0) } // 0: TOOLS, 1: CONTROLS, 2: PLUGINS
         var isCleaning by remember { mutableStateOf(false) }
         val scope = rememberCoroutineScope()
+        val activeGameLabel = rememberActiveGameLabel(snapshot)
 
         LaunchedEffect(Unit) { entered = true }
         val progress by animateFloatAsState(
@@ -783,9 +943,9 @@ private fun NukePortraitCockpit(
                 .background(
                     Brush.verticalGradient(
                         listOf(
-                            Color(0xFF030706),
-                            Color(0xFF0A1613),
-                            Color(0xFF08120F),
+                            NukeVoid,
+                            NukePanel,
+                            NukePanelHigh,
                         )
                     )
                 )
@@ -804,22 +964,59 @@ private fun NukePortraitCockpit(
                 )
                 .drawWithCache {
                     onDrawBehind {
-                        // Subtle scanlines
-                        val lineSpacing = 16.dp.toPx()
-                        var scanY = 0f
+                        // Static reactor-console backdrop: sparse grid + target rings + circuit traces.
+                        // No blur and no continuously-running animation, so the panel remains cheap to render.
+                        val grid = 32.dp.toPx()
+                        var scanY = grid
                         while (scanY < size.height) {
                             drawLine(
-                                color = NukeCyan.copy(alpha = 0.035f),
+                                color = NukeGreen.copy(alpha = 0.025f),
                                 start = Offset(0f, scanY),
                                 end = Offset(size.width, scanY),
-                                strokeWidth = 0.8.dp.toPx(),
+                                strokeWidth = 0.55.dp.toPx(),
                             )
-                            scanY += lineSpacing
+                            scanY += grid
                         }
+                        var gridX = grid
+                        while (gridX < size.width) {
+                            drawLine(
+                                color = NukeGreen.copy(alpha = 0.018f),
+                                start = Offset(gridX, 0f),
+                                end = Offset(gridX, size.height),
+                                strokeWidth = 0.5.dp.toPx(),
+                            )
+                            gridX += grid
+                        }
+                        val center = Offset(size.width * .82f, size.height * .16f)
+                        val ringStroke = .8.dp.toPx()
+                        var ringIndex = 0
+                        while (ringIndex < 3) {
+                            val radiusPx = when (ringIndex) {
+                                0 -> 44.dp.toPx()
+                                1 -> 70.dp.toPx()
+                                else -> 98.dp.toPx()
+                            }
+                            drawCircle(
+                                color = NukeGreen.copy(alpha = .045f - ringIndex * .009f),
+                                radius = radiusPx,
+                                center = center,
+                                style = Stroke(width = ringStroke),
+                            )
+                            ringIndex++
+                        }
+                        val traceColor = NukeCyan.copy(alpha = .10f)
+                        drawLine(traceColor, Offset(0f, size.height * .31f), Offset(size.width * .11f, size.height * .31f), .8.dp.toPx())
+                        drawLine(traceColor, Offset(size.width * .11f, size.height * .31f), Offset(size.width * .16f, size.height * .27f), .8.dp.toPx())
+                        drawLine(traceColor, Offset(size.width * .16f, size.height * .27f), Offset(size.width * .35f, size.height * .27f), .8.dp.toPx())
+                        drawCircle(NukeGreen.copy(alpha = .34f), 1.8.dp.toPx(), Offset(size.width * .11f, size.height * .31f))
+                        drawLine(traceColor, Offset(size.width, size.height * .72f), Offset(size.width * .89f, size.height * .72f), .8.dp.toPx())
+                        drawLine(traceColor, Offset(size.width * .89f, size.height * .72f), Offset(size.width * .84f, size.height * .76f), .8.dp.toPx())
+                        drawLine(traceColor, Offset(size.width * .84f, size.height * .76f), Offset(size.width * .66f, size.height * .76f), .8.dp.toPx())
                     }
                 }
                 .padding(horizontal = 9.dp, vertical = 8.dp),
         ) {
+            ModeAmbientFx(NukeActiveMode, Modifier.fillMaxSize())
             Column(Modifier.fillMaxSize()) {
                 // ── 1. Top Draggable Cyber Header ──────────────────────────
                 Row(
@@ -840,48 +1037,59 @@ private fun NukePortraitCockpit(
                 ) {
                     Box(
                         Modifier
-                            .size(20.dp)
-                            .clip(BayShape)
-                            .background(NukeGreen.copy(alpha = 0.18f))
-                            .border(0.8.dp, NukeGreen.copy(alpha = 0.60f), BayShape),
+                            .size(28.dp)
+                            .clip(RoundedCornerShape(7.dp))
+                            .background(NukeGreen.copy(alpha = 0.12f))
+                            .border(0.8.dp, NukeGreen.copy(alpha = 0.45f), RoundedCornerShape(7.dp)),
                         contentAlignment = Alignment.Center,
                     ) {
-                        ParticleGlyph(14.dp, NukeGreen)
+                        GameIconOrCore(snapshot, 22.dp)
                     }
-                    Spacer(Modifier.width(6.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                "GAME NUKE",
-                                color = NukeGreen,
-                                fontSize = 9.sp,
-                                fontWeight = FontWeight.Black,
-                                letterSpacing = 0.7.sp,
-                            )
-                            Spacer(Modifier.width(5.dp))
+                    Spacer(Modifier.width(8.dp))
+                    if (!snapshot.gamePackage.isNullOrBlank()) {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
                             Box(
                                 Modifier
-                                    .clip(RoundedCornerShape(3.dp))
-                                    .background(NukeCyan.copy(alpha = 0.20f))
-                                    .padding(horizontal = 4.dp, vertical = 1.dp)
-                            ) {
-                                Text(
-                                    snapshot.gameLabel.uppercase(),
-                                    color = NukeCyan,
-                                    fontSize = 5.8.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis,
-                                )
-                            }
+                                    .size(5.5.dp)
+                                    .clip(CircleShape)
+                                    .background(NukeGreen)
+                            )
+                            Spacer(Modifier.width(5.dp))
+                            Text(
+                                activeGameLabel.uppercase(),
+                                color = Color.White,
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f, fill = false),
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            ActiveModeChip(compact = true)
                         }
-                        Text(
-                            "DRAG TO REPOSITION • COCKPIT LIVE",
-                            color = NukeMuted,
-                            fontSize = 5.5.sp,
-                            fontWeight = FontWeight.SemiBold,
-                        )
+                    } else {
+                        Row(
+                            modifier = Modifier.weight(1f),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                "GAME NUKE // NEXUS",
+                                color = NukeGreen,
+                                fontSize = 9.5.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.8.sp,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                            )
+                            Spacer(Modifier.width(6.dp))
+                            ActiveModeChip(compact = true)
+                        }
                     }
+                    Spacer(Modifier.width(4.dp))
                     HeaderAction(Icons.Outlined.Close, "Minimize", NukeCyan, false, true, callbacks.onMinimize)
                     if (snapshot.remoteDefinition.showEndSession) {
                         Spacer(Modifier.width(4.dp))
@@ -902,49 +1110,24 @@ private fun NukePortraitCockpit(
                     Spacer(Modifier.height(5.dp))
                 }
 
-                // ── 2. Unified Live Telemetry Matrix ─────────────────────
-                Row(
-                    Modifier
-                        .fillMaxWidth()
-                        .height(28.dp)
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                // ── 2. Responsive Live Telemetry Matrix ─────────────────
+                Column(
+                    Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    TelemetryChip("FPS", snapshot.fps, NukeGreen)
-                    TelemetryChip("TCP", probeText(snapshot), probeColor(snapshot))
-                    TelemetryChip("°C", snapshot.temperature, NukeAmber)
-                    TelemetryChip("BAT", snapshot.battery, NukeCyan)
-                    Row(
-                        Modifier
-                            .height(28.dp)
-                            .clip(ControlShape)
-                            .background(NukeGreen.copy(alpha = 0.08f))
-                            .border(0.6.dp, NukeGreen.copy(alpha = 0.28f), ControlShape)
-                            .padding(horizontal = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text("CPU", color = NukeMuted, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(3.dp))
-                        Text("${animatedCpu.roundToInt()}%", color = NukeGreen, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TelemetryChip("FPS", snapshot.fps, NukeGreen, Modifier.weight(1f))
+                        TelemetryChip("PING", probeText(snapshot), probeColor(snapshot), Modifier.weight(1f))
+                        TelemetryChip("TEMP", snapshot.temperature, NukeAmber, Modifier.weight(1f))
                     }
-                    Row(
-                        Modifier
-                            .height(28.dp)
-                            .clip(ControlShape)
-                            .background(NukeCyan.copy(alpha = 0.08f))
-                            .border(0.6.dp, NukeCyan.copy(alpha = 0.28f), ControlShape)
-                            .padding(horizontal = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center,
-                    ) {
-                        Text("RAM", color = NukeMuted, fontSize = 6.5.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.width(3.dp))
-                        Text("${animatedRam.roundToInt()}%", color = NukeCyan, fontSize = 9.sp, fontWeight = FontWeight.Black)
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        TelemetryChip("CPU", "${animatedCpu.roundToInt()}%", NukeGreen, Modifier.weight(1f))
+                        TelemetryChip("RAM", "${animatedRam.roundToInt()}%", NukeCyan, Modifier.weight(1f))
+                        TelemetryChip("BAT", snapshot.battery, NukeCyan, Modifier.weight(1f))
                     }
                 }
 
-                Spacer(Modifier.height(5.dp))
+                Spacer(Modifier.height(6.dp))
 
                 // ── 3. Cyber Segment Tab Switcher ─────────────────────────
                 Row(
@@ -962,7 +1145,7 @@ private fun NukePortraitCockpit(
                         val isSelected = selectedTab == index
                         val tabTint = if (index == 0) NukeGreen else NukeCyan
                         val tabBg by animateColorAsState(
-                            if (isSelected) tabTint.copy(alpha = 0.22f) else Color(0xFF0F1B17),
+                            if (isSelected) tabTint.copy(alpha = 0.22f) else Color(0xFF0A1712),
                             tween(100), "tabBg$index"
                         )
                         val tabBorder by animateColorAsState(
@@ -1068,6 +1251,7 @@ private fun TacticalEnginesDeckView(
 ) {
     val subState by NukeSubscriptionManager.subscriptionState.collectAsState()
     val isVip = subState.isActive
+    val activeGameLabel = rememberActiveGameLabel(snapshot)
     val states = snapshot.quickToolStates
     val isGameOn = states["game_mode"] ?: false
     val isTouchOn = states["touch_response"] ?: false
@@ -1089,6 +1273,7 @@ private fun TacticalEnginesDeckView(
     val isMacroStudioOn = states["macro_studio"] ?: false
     val isCyberJukeboxOn = states["cyber_jukebox"] ?: false
     val isAntivirusOn = states["antivirus"] ?: false
+    val isAiAgentOn = states["ai_agent"] ?: false
 
     Column(Modifier.fillMaxSize()) {
         // ── Header: Logo + game name + close ─────────────────────────────
@@ -1109,30 +1294,60 @@ private fun TacticalEnginesDeckView(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Box(
-                Modifier.size(20.dp).clip(BayShape)
-                    .background(NukeGreen.copy(alpha = .18f))
-                    .border(.8.dp, NukeGreen.copy(alpha = .60f), BayShape),
+                Modifier
+                    .size(28.dp)
+                    .clip(RoundedCornerShape(7.dp))
+                    .background(NukeGreen.copy(alpha = 0.12f))
+                    .border(0.8.dp, NukeGreen.copy(alpha = 0.45f), RoundedCornerShape(7.dp)),
                 contentAlignment = Alignment.Center,
-            ) { ParticleGlyph(14.dp, NukeGreen) }
-            Spacer(Modifier.width(6.dp))
-            Column(Modifier.weight(1f)) {
-                Text(
-                    "GAME NUKE",
-                    color = NukeGreen,
-                    fontSize = 8.8.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = .7.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
-                Text(
-                    "TACTICAL ENGINES DECK",
-                    color = NukeMuted,
-                    fontSize = 5.5.sp,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
-                )
+            ) {
+                GameIconOrCore(snapshot, 22.dp)
             }
+            Spacer(Modifier.width(8.dp))
+            if (!snapshot.gamePackage.isNullOrBlank()) {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Box(
+                        Modifier
+                            .size(5.5.dp)
+                            .clip(CircleShape)
+                            .background(NukeGreen)
+                    )
+                    Spacer(Modifier.width(5.dp))
+                    Text(
+                        activeGameLabel.uppercase(),
+                        color = Color.White,
+                        fontSize = 10.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.5.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false),
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    ActiveModeChip(compact = true)
+                }
+            } else {
+                Row(
+                    modifier = Modifier.weight(1f),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text(
+                        "GAME NUKE // NEXUS",
+                        color = NukeGreen,
+                        fontSize = 9.5.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 0.8.sp,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    Spacer(Modifier.width(6.dp))
+                    ActiveModeChip(compact = true)
+                }
+            }
+            Spacer(Modifier.width(4.dp))
             HeaderAction(Icons.Outlined.Close, "Minimize", NukeCyan, false, true, callbacks.onMinimize)
         }
         Spacer(Modifier.height(4.dp))
@@ -1173,12 +1388,13 @@ private fun TacticalEnginesDeckView(
             SectionDivider("ADVANCED TOOLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
-                    icon = Icons.Outlined.Security,
-                    title = "TASK MANAGER",
-                    badgeText = "PROCESS",
-                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "MANAGE BACKGROUND APPS",
-                    isOpen = isTaskManagerOn,
-                    onClick = { callbacks.onQuickAction("task_manager") },
+                    icon = Icons.Rounded.SmartToy,
+                    title = "NEURAL CORE",
+                    badgeText = "AUTONOMOUS",
+                    statusText = if (isAiAgentOn) "ACTIVE • OPEN" else "NEURAL KERNEL AI",
+                    isOpen = isAiAgentOn,
+                    isVipGated = !isVip,
+                    onClick = { callbacks.onQuickAction("ai_agent") },
                     modifier = Modifier.weight(1f)
                 )
                 PanelLauncherCard(
@@ -1193,6 +1409,15 @@ private fun TacticalEnginesDeckView(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
+                    icon = Icons.Outlined.Security,
+                    title = "TASK MANAGER",
+                    badgeText = "PROCESS",
+                    statusText = if (isTaskManagerOn) "ACTIVE • OPEN" else "MANAGE BACKGROUND APPS",
+                    isOpen = isTaskManagerOn,
+                    onClick = { callbacks.onQuickAction("task_manager") },
+                    modifier = Modifier.weight(1f)
+                )
+                PanelLauncherCard(
                     icon = Icons.Outlined.TouchApp,
                     title = "TOUCH LISTENER",
                     badgeText = "STUDIO",
@@ -1202,6 +1427,8 @@ private fun TacticalEnginesDeckView(
                     onClick = { callbacks.onQuickAction("magic_touch") },
                     modifier = Modifier.weight(1f)
                 )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.SportsEsports,
                     title = "GPU TUNER",
@@ -1211,8 +1438,6 @@ private fun TacticalEnginesDeckView(
                     onClick = { callbacks.onQuickAction("gpu_tuner") },
                     modifier = Modifier.weight(1f)
                 )
-            }
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.Extension,
                     title = "MACRO STUDIO",
@@ -1223,6 +1448,8 @@ private fun TacticalEnginesDeckView(
                     onClick = { callbacks.onQuickAction("macro_studio") },
                     modifier = Modifier.weight(1f)
                 )
+            }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
                     icon = Icons.Outlined.HealthAndSafety,
                     title = "DEVICE HEALTH",
@@ -1662,7 +1889,7 @@ private fun PanelLauncherCard(
                     )
                     Text(
                         text = statusText,
-                        color = if (isOpen) accent.copy(alpha = 0.85f) else Color(0xFF64748B),
+                        color = if (isOpen) accent.copy(alpha = 0.85f) else Color(0xFF64778D),
                         fontSize = 6.sp,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
@@ -1837,11 +2064,11 @@ private fun SquareMiniCard(
     val effectiveAccent = if (isWarning && isActive) NukeAmber else accent
     val cardShape = RoundedCornerShape(6.dp)
     val bg by animateColorAsState(
-        if (isActive) (if (isWarning) Color(0xFF241A0E) else Color(0xFF0F261E)) else Color(0xFF0F2018),
+        if (isActive) (if (isWarning) Color(0xFF241A0E) else Color(0xFF0F261E)) else Color(0xFF111A26),
         tween(100), "sqBg",
     )
     val border by animateColorAsState(
-        if (isActive) effectiveAccent else Color(0xFF1D3528),
+        if (isActive) effectiveAccent else Color(0xFF243448),
         tween(100), "sqBorder",
     )
     Box(
@@ -1883,7 +2110,7 @@ private fun SquareMiniCard(
             }
             Text(
                 title,
-                color = if (!supported) Color(0xFF33463E) else if (isActive) Color.White else Color(0xFF9BB0A6),
+                color = if (!supported) Color(0xFF33463E) else if (isActive) Color.White else Color(0xFF9CAFC4),
                 fontSize = 6.3.sp,
                 fontWeight = FontWeight.Black,
                 letterSpacing = 0.15.sp,
@@ -1907,7 +2134,7 @@ private fun SquareMiniCard(
                 }
                 Text(
                     labelText,
-                    color = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF64748B),
+                    color = if (!supported) Color(0xFF33463E) else if (isActive) effectiveAccent else Color(0xFF64778D),
                     fontSize = if (isFloatingWindow) 5.3.sp else 5.6.sp,
                     fontWeight = FontWeight.Black,
                     letterSpacing = 0.15.sp,
@@ -2419,7 +2646,7 @@ private fun SectionDivider(title: String, accent: Color = NukeGreen) {
         Spacer(Modifier.width(5.dp))
         Text(
             title,
-            color = Color(0xFF9BB0A6),
+            color = Color(0xFF9CAFC4),
             fontSize = 6.4.sp,
             fontWeight = FontWeight.Black,
             letterSpacing = 1.sp
@@ -2896,6 +3123,7 @@ private fun CommandHeader(
     dense: Boolean,
     onRequestEnd: () -> Unit,
 ) {
+    val activeGameLabel = rememberActiveGameLabel(snapshot)
     Row(
         modifier = Modifier
             .fillMaxWidth()
@@ -2910,34 +3138,41 @@ private fun CommandHeader(
     ) {
         Box(
             modifier = Modifier
-                .size(if (dense) 22.dp else 24.dp)
-                .clip(BayShape)
+                .size(if (dense) 24.dp else 26.dp)
+                .clip(RoundedCornerShape(6.dp))
                 .background(NukeGreen.copy(alpha = .13f))
-                .border(.8.dp, NukeGreen.copy(alpha = .55f), BayShape),
+                .border(.8.dp, NukeGreen.copy(alpha = .55f), RoundedCornerShape(6.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            ParticleGlyph(if (dense) 15.dp else 17.dp, NukeGreen)
+            GameIconOrCore(snapshot, if (dense) 18.dp else 20.dp)
         }
-        Spacer(Modifier.width(7.dp))
-        Column(Modifier.weight(1f)) {
-            Text(
-                text = "GAME NUKE  /  ${snapshot.gameLabel.uppercase()}",
-                color = NukeText,
-                fontSize = if (dense) 8.5.sp else 9.5.sp,
-                lineHeight = 11.sp,
-                fontWeight = FontWeight.Black,
-                letterSpacing = .65.sp,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                HealthDot(snapshot.coreHealth)
-                Spacer(Modifier.width(4.dp))
+        Spacer(Modifier.width(8.dp))
+        Row(
+            modifier = Modifier.weight(1f),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (!snapshot.gamePackage.isNullOrBlank()) {
+                Box(Modifier.size(5.dp).clip(CircleShape).background(NukeGreen))
+                Spacer(Modifier.width(5.dp))
                 Text(
-                    snapshot.phaseLabel,
-                    color = NukeMuted,
-                    fontSize = if (dense) 7.sp else 7.8.sp,
-                    fontWeight = FontWeight.SemiBold,
+                    text = activeGameLabel.uppercase(),
+                    color = Color.White,
+                    fontSize = if (dense) 9.sp else 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .5.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                Spacer(Modifier.width(6.dp))
+                ActiveModeChip(compact = true)
+            } else {
+                Text(
+                    text = "GAME NUKE // NEXUS",
+                    color = NukeGreen,
+                    fontSize = if (dense) 9.sp else 10.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = .65.sp,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
@@ -3630,8 +3865,8 @@ private fun StatusRail(message: String, dense: Boolean) {
 
 private fun probeText(snapshot: FloatingHudSnapshot): String = if (snapshot.probeEnabled) snapshot.probeMs?.let { "${it}ms" } ?: "TIMEOUT" else snapshot.ping
 private fun probeColor(snapshot: FloatingHudSnapshot): Color = when {
-    !snapshot.probeEnabled || snapshot.probeMs == null -> Color(0xFF9BB0A6)
-    snapshot.probeMs < 50 -> Color(0xFF10B981)
-    snapshot.probeMs <= 120 -> Color(0xFFFFB830)
-    else -> Color(0xFFFF4D6A)
+    !snapshot.probeEnabled || snapshot.probeMs == null -> Color(0xFF9CAFC4)
+    snapshot.probeMs < 50 -> NukeGreen
+    snapshot.probeMs <= 120 -> Color(0xFFFFB84A)
+    else -> Color(0xFFFF5577)
 }

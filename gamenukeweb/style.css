@@ -3262,6 +3262,61 @@ summary:focus-visible {
   gap: 10px;
 }
 
+.download-safety-banner {
+  margin-top: 4px;
+  padding: 13px 15px;
+  border-radius: 12px;
+  background: rgba(245, 158, 11, 0.08);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  text-align: left;
+  animation: fadeInSafety 0.3s ease-out forwards;
+}
+
+@keyframes fadeInSafety {
+  from { opacity: 0; transform: translateY(-5px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.safety-icon {
+  width: 22px;
+  height: 22px;
+  color: #f59e0b;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.safety-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.safety-copy strong {
+  display: block;
+  font-size: 12px;
+  color: #fbbf24;
+  margin-bottom: 4px;
+  line-height: 1.4;
+}
+
+.safety-copy p {
+  margin: 0;
+  font-size: 11.5px;
+  line-height: 1.5;
+  color: #cbd5e1;
+}
+
+.safety-copy em {
+  font-style: normal;
+  color: #fde68a;
+  background: rgba(245, 158, 11, 0.2);
+  padding: 1px 5px;
+  border-radius: 4px;
+}
+
 .dl-cta-btn {
   font-size: 14px;
   justify-content: center;
@@ -4143,4 +4198,570 @@ summary:focus-visible {
     grid-template-columns: 1fr;
   }
 }
+
+/* ==========================================================================
+   DOWNLOAD SAFETY BANNER & VERIFICATION CALLOUT
+   ========================================================================== */
+.download-safety-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.08), rgba(6, 78, 59, 0.15));
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  margin-top: 18px;
+  text-align: left;
+  animation: pulseSafety 2s infinite ease-in-out;
+}
+
+@keyframes pulseSafety {
+  0%, 100% { border-color: rgba(16, 185, 129, 0.35); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  50% { border-color: rgba(16, 185, 129, 0.7); box-shadow: 0 0 20px rgba(16, 185, 129, 0.2); }
+}
+
+.download-safety-banner .safety-icon {
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  color: #10B981;
+}
+
+.download-safety-banner .safety-icon svg {
+  width: 100%;
+  height: 100%;
+  fill: currentColor;
+}
+
+.safety-copy strong {
+  display: block;
+  font-size: 13.5px;
+  color: #E2E8F0;
+  margin-bottom: 6px;
+}
+
+.safety-callout {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 8px 0;
+  padding: 10px 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border-radius: 8px;
+  border-left: 3px solid #10B981;
+}
+
+.safety-callout span {
+  font-size: 12px;
+  color: #94A3B8;
+}
+
+.safety-btn-mock {
+  font-family: 'JetBrains Mono', monospace;
+  font-weight: 700;
+  color: #10B981 !important;
+  font-size: 13px !important;
+}
+
+.safety-copy p {
+  margin: 6px 0 0;
+  font-size: 12px;
+  color: #94A3B8;
+  line-height: 1.5;
+}
+
+/* ==========================================================================
+   DOWNLOAD PORTAL RESPONSIVE COMMERCIAL SUITE
+   ========================================================================== */
+.dl-portal-body {
+  min-height: 100vh;
+  background: radial-gradient(circle at 50% 0%, rgba(16, 185, 129, 0.08) 0%, transparent 60%),
+              radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.05) 0%, transparent 50%),
+              var(--bg);
+  background-attachment: fixed;
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.dl-portal-nav {
+  height: 72px;
+  border-bottom: 1px solid var(--line);
+  background: rgba(5, 8, 7, 0.85);
+  backdrop-filter: blur(16px);
+  position: sticky;
+  top: 0;
+  z-index: 100;
+}
+
+.dl-portal-nav .nav-container {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 0 20px;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.dl-portal-nav .brand {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-decoration: none;
+}
+
+.dl-portal-nav .brand-mark img {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+}
+
+.dl-portal-nav .brand-copy strong {
+  display: block;
+  font-size: 16px;
+  letter-spacing: 0.04em;
+  color: #FFFFFF;
+}
+
+.dl-portal-nav .brand-copy span {
+  display: block;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.dl-portal-nav .nav-links {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.dl-portal-nav .nav-link {
+  font-size: 13px;
+  color: var(--muted);
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s;
+}
+
+.dl-portal-nav .nav-link:hover {
+  color: #6EFFAB;
+}
+
+.dl-portal-main {
+  max-width: 1140px;
+  margin: 0 auto;
+  padding: 44px 20px 80px;
+  position: relative;
+  z-index: 2;
+}
+
+.dl-portal-header {
+  margin-bottom: 36px;
+  text-align: center;
+}
+
+.dl-portal-header .status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  font-size: 11px;
+  font-weight: 700;
+  color: #6EFFAB;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  margin-bottom: 14px;
+}
+
+.dl-portal-header .status-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #10B981;
+  box-shadow: 0 0 10px #10B981;
+}
+
+.dl-portal-header h1 {
+  font-size: 34px;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  margin: 0 0 10px;
+  color: #FFFFFF;
+}
+
+.dl-portal-header p {
+  font-size: 15px;
+  color: var(--muted);
+  max-width: 640px;
+  margin: 0 auto;
+  line-height: 1.6;
+}
+
+.dl-portal-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 28px;
+  align-items: start;
+}
+
+.dl-card {
+  background: linear-gradient(145deg, rgba(13, 26, 19, 0.85), rgba(7, 14, 10, 0.95));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  padding: 28px;
+  box-shadow: 0 16px 50px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(20px);
+}
+
+.dl-card-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #FFFFFF;
+  margin-bottom: 18px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.dl-specs-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dl-specs-table tr {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.dl-specs-table tr:last-child {
+  border-bottom: none;
+}
+
+.dl-specs-table td {
+  padding: 12px 0;
+  font-size: 13.5px;
+}
+
+.dl-specs-table td:first-child {
+  color: var(--muted);
+  font-weight: 500;
+  width: 40%;
+}
+
+.dl-specs-table td:last-child {
+  color: #F1F5F9;
+  font-weight: 700;
+  text-align: right;
+}
+
+.dl-specs-table .mono {
+  font-family: var(--font-mono);
+}
+
+.dl-feature-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dl-feature-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+  color: #CBD5E1;
+}
+
+.dl-feature-item svg {
+  width: 16px;
+  height: 16px;
+  color: #6EFFAB;
+  flex-shrink: 0;
+}
+
+.dl-action-area {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.dl-cta-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 17px 24px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #FFFFFF;
+  font-size: 16px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 10px 30px rgba(16, 185, 129, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.dl-cta-btn::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transform: skewX(-20deg);
+  animation: shineCta 3.5s infinite ease-in-out;
+}
+
+.dl-cta-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 40px rgba(16, 185, 129, 0.5);
+}
+
+.dl-cta-btn .btn-badge {
+  background: rgba(0, 0, 0, 0.25);
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  font-family: var(--font-mono);
+  color: #E2E8F0;
+}
+
+.dl-subtext {
+  font-size: 12px;
+  color: var(--muted);
+  text-align: center;
+  line-height: 1.5;
+}
+
+/* Quick Installation Guide Card */
+.dl-steps-box {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.dl-steps-box .box-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  color: #94A3B8;
+  margin-bottom: 12px;
+  text-transform: uppercase;
+}
+
+.dl-steps-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.dl-step-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dl-step-item .step-badge {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(110, 255, 171, 0.12);
+  border: 1px solid rgba(110, 255, 171, 0.35);
+  color: #6EFFAB;
+  font-size: 11px;
+  font-weight: 800;
+  font-family: var(--font-mono);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.dl-step-item strong {
+  display: block;
+  font-size: 13px;
+  color: #F1F5F9;
+}
+
+.dl-step-item p {
+  margin: 2px 0 0;
+  font-size: 11.5px;
+  color: var(--muted);
+  line-height: 1.45;
+}
+
+/* Official Community Link Card */
+.dl-community-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  background: rgba(16, 185, 129, 0.06);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+  border-radius: 14px;
+  padding: 12px 16px;
+  margin-top: 18px;
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.dl-community-card:hover {
+  background: rgba(16, 185, 129, 0.12);
+  border-color: rgba(110, 255, 171, 0.4);
+  transform: translateY(-2px);
+}
+
+.dl-community-card .card-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.dl-community-card .card-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(37, 211, 102, 0.16);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #25D366;
+  flex-shrink: 0;
+}
+
+.dl-community-card .card-icon svg {
+  width: 16px;
+  height: 16px;
+  fill: currentColor;
+}
+
+.dl-community-card strong {
+  display: block;
+  font-size: 12.5px;
+  color: #F1F5F9;
+}
+
+.dl-community-card span {
+  font-size: 11px;
+  color: #94A3B8;
+}
+
+.dl-community-card .card-arrow {
+  color: #6EFFAB;
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.dl-portal-footer {
+  margin-top: 48px;
+  text-align: center;
+  font-size: 12px;
+  color: var(--muted-2);
+  border-top: 1px solid var(--line);
+  padding-top: 24px;
+}
+
+/* Progress card on final download page */
+.final-progress-card {
+  background: rgba(10, 22, 16, 0.75);
+  border: 1px solid rgba(110, 255, 171, 0.25);
+  border-radius: 16px;
+  padding: 18px;
+  margin: 16px 0;
+  text-align: center;
+}
+
+.final-progress-bar-wrap {
+  width: 100%;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  overflow: hidden;
+  margin: 12px 0 8px;
+}
+
+.final-progress-bar {
+  height: 100%;
+  width: 0%;
+  background: linear-gradient(90deg, #10B981, #6EFFAB, #38BDF8);
+  border-radius: 999px;
+  transition: width 0.15s ease-out;
+}
+
+.final-timer-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #6EFFAB;
+  font-family: var(--font-mono);
+}
+
+.final-hash-badge {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px dashed rgba(110, 255, 171, 0.25);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 11px;
+  color: #94A3B8;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 14px 0;
+  text-align: left;
+  word-break: break-all;
+}
+
+.final-hash-badge strong {
+  color: #E2E8F0;
+  font-size: 11.5px;
+}
+
+.final-copy-btn {
+  background: rgba(110, 255, 171, 0.12);
+  border: 1px solid rgba(110, 255, 171, 0.3);
+  color: #6EFFAB;
+  border-radius: 6px;
+  font-size: 11px;
+  padding: 4px 8px;
+  cursor: pointer;
+  align-self: flex-start;
+  margin-top: 4px;
+  font-weight: 700;
+}
+
+.final-copy-btn:hover {
+  background: rgba(110, 255, 171, 0.25);
+}
+
+@media (max-width: 860px) {
+  .dl-portal-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  .dl-portal-header h1 {
+    font-size: 26px;
+  }
+  .dl-card {
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+}
+
 

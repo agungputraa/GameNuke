@@ -35,8 +35,8 @@ android {
         applicationId = "com.neon.gametweak"
         minSdk = 30
         targetSdk = 36
-        versionCode = 27
-        versionName = "3.2.1-Spectra"
+        versionCode = 34
+        versionName = "3.4.0-Nexus"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         ndk {
