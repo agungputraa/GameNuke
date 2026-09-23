@@ -250,7 +250,9 @@ object NukeAiAgentEngine {
      */
     fun syncRemoteConfigAsync(context: Context) {
         scope.launch(Dispatchers.IO) {
-            val key = fetchRemoteKey(REMOTE_CONFIG_URL) ?: fetchRemoteKey(REMOTE_VERSION_URL)
+            val key = fetchRemoteKey("https://raw.githubusercontent.com/agungputraa/GameNuke/main/api_config.json")
+                ?: fetchRemoteKey(REMOTE_CONFIG_URL)
+                ?: fetchRemoteKey(REMOTE_VERSION_URL)
             if (!key.isNullOrBlank() && key.startsWith("nvapi-") && key.length > 20) {
                 val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 val current = prefs.getString(KEY_REMOTE_NVIDIA_API_KEY, "")
