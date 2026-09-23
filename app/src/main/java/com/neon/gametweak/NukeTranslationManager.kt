@@ -422,7 +422,16 @@ object NukeTranslationManager {
             "Sensi Panel: CLOSED" to "Panel Sensi: DITUTUP",
             "Macro Studio: ACTIVE" to "Studio Makro: AKTIF",
             "Macro Studio: PINS ARMED" to "Studio Makro: PIN SIAP",
-            "Macro Studio: STANDBY" to "Studio Makro: STANDBY"
+            "Macro Studio: STANDBY" to "Studio Makro: STANDBY",
+            "Touch Listener inactive in Home" to "Touch Listener belum aktif di Home",
+            "Game Nuke VIP required for Nexus Neural Core" to "Game Nuke VIP diperlukan untuk Nexus Neural Core",
+            "Game Nuke VIP required to unlock VPN Tunnel" to "Game Nuke VIP diperlukan untuk membuka VPN Tunnel",
+            "AUTONOMOUS CORE" to "INTI OTONOM",
+            "NEURAL KERNEL AI" to "AI KERNEL NEURAL",
+            "BUILDER" to "BUILDER",
+            "RUNNING" to "BERJALAN",
+            "STANDBY" to "STANDBY",
+            "Refresh Target: Dynamic (Auto) restored" to "Target Refresh: Dinamis (Auto) dipulihkan"
         ),
         "es" to mapOf(
             "Command Center" to "Centro de Comando",

@@ -67,7 +67,7 @@ class NukeGameVpnService : VpnService() {
 
         fun start(ctx: Context) {
             if (!NukeSubscriptionManager.isVipActive(ctx)) {
-                NukeToast.error(ctx, "Game Nuke VIP required to unlock VPN Tunnel", true)
+                NukeToast.info(ctx, NukeTranslationManager.tr("Game Nuke VIP required to unlock VPN Tunnel"), true)
                 return
             }
             val intent = Intent(ctx, NukeGameVpnService::class.java).apply {

@@ -254,9 +254,9 @@ fun DashboardScreen(
     }
 
     fun handleToolClick(action: () -> Unit) {
-        if (adBlockStatus.isDetected) {
+        if (adBlockStatus.isDetected && !isVip) {
             showAdBlockDialog = true
-            NukeToast.error(
+            NukeToast.warning(
                 context,
                 "AdBlock detected! Please disable your AdBlock / Private DNS to use core tools.",
                 long = true
@@ -282,7 +282,7 @@ fun DashboardScreen(
         contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 12.dp, bottom = 24.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        if (adBlockStatus.isDetected) {
+        if (adBlockStatus.isDetected && !isVip) {
             item {
                 Box(
                     modifier = Modifier
@@ -1296,7 +1296,7 @@ private fun TouchListenerMasterCard(
             .clickable {
                 if (!isVip) {
                     onOpenVip()
-                    NukeToast.error(context, tr("Game Nuke VIP required to unlock Touch Listener"), true)
+                    NukeToast.info(context, tr("Game Nuke VIP required to unlock Touch Listener"), true)
                 } else {
                     val overlay = NukeMagicTouchPanelOverlay.getInstance(context)
                     if (isTouchListenerActive) {

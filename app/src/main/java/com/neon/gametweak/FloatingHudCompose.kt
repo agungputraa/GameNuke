@@ -1393,8 +1393,8 @@ private fun TacticalEnginesDeckView(
                 PanelLauncherCard(
                     icon = Icons.Rounded.SmartToy,
                     title = "NEURAL CORE",
-                    badgeText = "AUTONOMOUS",
-                    statusText = if (isAiAgentOn) "ACTIVE • OPEN" else "NEURAL KERNEL AI",
+                    badgeText = if (isAiAgentOn) "ACTIVE" else "AUTONOMOUS",
+                    statusText = if (!isVip) "Game Nuke VIP required" else if (isAiAgentOn) "ACTIVE • RUNNING" else "NEURAL KERNEL AI",
                     isOpen = isAiAgentOn,
                     isVipGated = !isVip,
                     onClick = { callbacks.onQuickAction("ai_agent") },
@@ -1423,10 +1423,10 @@ private fun TacticalEnginesDeckView(
                 PanelLauncherCard(
                     icon = Icons.Outlined.Tune,
                     title = "SENSI PANEL",
-                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "LOCKED" else if (isMagicTouchOn) "OPEN" else "READY",
-                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Activate Touch Listener in app" else if (isMagicTouchOn) "ACTIVE \u2022 CONTROLS OPEN" else "TOUCH SENSITIVITY & CURVES",
+                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "STANDBY" else if (isMagicTouchOn) "OPEN" else "READY",
+                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Touch Listener inactive in Home" else if (isMagicTouchOn) "ACTIVE • CONTROLS OPEN" else "TOUCH SENSITIVITY & CURVES",
                     isOpen = isMagicTouchOn,
-                    isVipGated = !isVip || !isTouchListenerActive,
+                    isVipGated = !isVip,
                     onClick = { callbacks.onQuickAction("open_sensi_panel") },
                     modifier = Modifier.weight(1f)
                 )
@@ -1436,7 +1436,7 @@ private fun TacticalEnginesDeckView(
                     icon = Icons.Outlined.SportsEsports,
                     title = "GPU TUNER",
                     badgeText = "ENGINE",
-                    statusText = if (isGpuTunerOn) "ACTIVE \u2022 OPEN" else "GRAPHICS PIPELINE",
+                    statusText = if (isGpuTunerOn) "ACTIVE • OPEN" else "GRAPHICS PIPELINE",
                     isOpen = isGpuTunerOn,
                     onClick = { callbacks.onQuickAction("gpu_tuner") },
                     modifier = Modifier.weight(1f)
@@ -1444,10 +1444,10 @@ private fun TacticalEnginesDeckView(
                 PanelLauncherCard(
                     icon = Icons.Outlined.Extension,
                     title = "MACRO STUDIO",
-                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "LOCKED" else if (isMacroStudioOn) "RUNNING" else "BUILDER",
-                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Activate Touch Listener in app" else if (isMacroStudioOn) "ACTIVE \u2022 OPEN" else "GAME MACRO AUTOMATION",
+                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "STANDBY" else if (isMacroStudioOn) "RUNNING" else "BUILDER",
+                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Touch Listener inactive in Home" else if (isMacroStudioOn) "ACTIVE • OPEN" else "GAME MACRO AUTOMATION",
                     isOpen = isMacroStudioOn,
-                    isVipGated = !isVip || !isTouchListenerActive,
+                    isVipGated = !isVip,
                     onClick = { callbacks.onQuickAction("open_macro_studio") },
                     modifier = Modifier.weight(1f)
                 )
@@ -1535,7 +1535,16 @@ private fun TacticalEnginesDeckView(
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO BOOST", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(Icons.Outlined.NetworkCheck, "PACKET PRIO", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.Bolt, "VPN TUNNEL", "ACTIVE", "OFF", checked = isVpnOn, isVipGated = !isVip, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(
+                    Icons.Outlined.Bolt,
+                    "VPN TUNNEL",
+                    "ACTIVE",
+                    "OFF",
+                    checked = isVpnOn,
+                    isVipGated = !isVip,
+                    onToggle = { callbacks.onQuickAction("vpn_boost") },
+                    modifier = Modifier.weight(1f)
+                )
             }
         }
         Spacer(Modifier.height(4.dp))
@@ -1815,8 +1824,8 @@ private fun QuickActionsDeckView(
                 }
                 scope.launch {
                     NukeUniversalFpsLock.setTargetFps(context, targetHz)
-                    val msg = if (targetHz > 0) "Refresh Target: ${targetHz}Hz ($targetHz FPS) diterapkan" else "Refresh Target: DYNAMIC (Auto) dipulihkan"
-                    android.widget.Toast.makeText(context, msg, android.widget.Toast.LENGTH_SHORT).show()
+                    val msg = if (targetHz > 0) tr("Refresh Target: ${targetHz}Hz applied") else tr("Refresh Target: Dynamic (Auto) restored")
+                    NukeToast.success(context, msg)
                 }
             }
         )

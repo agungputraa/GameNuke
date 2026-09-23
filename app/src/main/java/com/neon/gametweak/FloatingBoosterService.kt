@@ -1339,7 +1339,7 @@ class FloatingBoosterService : Service() {
             "ai_agent" -> {
                 val isVip = NukeSubscriptionManager.isVipActive(applicationContext)
                 if (!isVip) {
-                    NukeToast.error(applicationContext, "Game Nuke VIP required for Nexus Neural Core", true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required for Nexus Neural Core"), true)
                     return
                 }
                 val overlay = NukeAiAgentFloatingOverlay.getInstance(applicationContext)
@@ -1357,11 +1357,11 @@ class FloatingBoosterService : Service() {
             }
             "magic_touch", "open_sensi_panel" -> {
                 if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
-                    NukeToast.error(applicationContext, tr("Game Nuke VIP required to unlock Sensi Panel"), true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required to unlock Sensi Panel"), true)
                     return
                 }
                 if (!NukeTouchTuningEngine.isDaemonTouchActive) {
-                    NukeToast.error(applicationContext, tr("Please activate Touch Listener in Game Nuke app first"), true)
+                    NukeToast.info(applicationContext, tr("Please activate Touch Listener in Game Nuke app first"), true)
                     return
                 }
                 NukeDynamicSessionRestoreManager.markTouchModified()
@@ -1373,11 +1373,11 @@ class FloatingBoosterService : Service() {
             }
             "open_macro_studio" -> {
                 if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
-                    NukeToast.error(applicationContext, tr("Game Nuke VIP required to unlock Macro Studio"), true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required to unlock Macro Studio"), true)
                     return
                 }
                 if (!NukeTouchTuningEngine.isDaemonTouchActive) {
-                    NukeToast.error(applicationContext, tr("Please activate Touch Listener in Game Nuke app first"), true)
+                    NukeToast.info(applicationContext, tr("Please activate Touch Listener in Game Nuke app first"), true)
                     return
                 }
                 NukeDynamicSessionRestoreManager.markMacroModified()
@@ -1503,7 +1503,7 @@ class FloatingBoosterService : Service() {
 
             "macro_studio" -> {
                 if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
-                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Macro Studio", true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required to unlock Macro Studio"), true)
                     return
                 }
                 NukeDynamicSessionRestoreManager.markMacroModified()
@@ -1526,7 +1526,7 @@ class FloatingBoosterService : Service() {
 
             "vpn_boost" -> {
                 if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
-                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock VPN Tunnel", true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required to unlock VPN Tunnel"), true)
                     return
                 }
                 NukeDynamicSessionRestoreManager.markVpnModified()
@@ -1963,24 +1963,37 @@ class FloatingBoosterService : Service() {
                 toastTimestamp = System.currentTimeMillis(),
             )
         }
-        showOverlayToast(text.take(180), long)
+        NukeToast.info(this, text, long)
     }
 
     private fun toastOutcome(message: String) {
         val normalized = userFacingStatus(message).trim().ifBlank { "Action completed" }
-        val prefix = when {
-            normalized.contains("UNSUPPORTED", true) || normalized.contains("UNAVAILABLE", true) ||
-                normalized.contains("REQUIRED", true) || normalized.contains("NOT AVAILABLE", true) ||
-                normalized.contains("NOT READY", true) || normalized.contains("NOT SUPPORTED", true) ||
-                normalized.contains("SKIPPED", true) || normalized.contains("NO SAFE", true) -> "UNSUPPORTED • "
-            normalized.contains("FAILED", true) || normalized.contains("REJECTED", true) ||
-                normalized.contains("ERROR", true) || normalized.contains("UNREADABLE", true) ||
-                normalized.contains("SELECT AT LEAST", true) || normalized.contains("COULD NOT", true) ||
-                normalized.contains("BLOCKED", true) || normalized.contains("PENDING", true) ||
-                normalized.contains("TIMEOUT", true) || normalized.contains("DENIED", true) -> "ERROR • "
-            else -> "SUCCESS • "
+        composeHudState.update {
+            it.copy(
+                statusMessage = normalized.take(132),
+                toastMessage = normalized.take(132),
+                toastTimestamp = System.currentTimeMillis(),
+            )
         }
-        toastStatus(prefix + normalized)
+        when {
+            normalized.contains("FAILED", true) || normalized.contains("REJECTED", true) ||
+                normalized.contains("ERROR", true) || normalized.contains("COULD NOT", true) ||
+                normalized.contains("TIMEOUT", true) || normalized.contains("DENIED", true) -> {
+                NukeToast.error(this, normalized)
+            }
+            normalized.contains("UNSUPPORTED", true) || normalized.contains("NOT AVAILABLE", true) ||
+                normalized.contains("NOT SUPPORTED", true) || normalized.contains("NO SAFE", true) -> {
+                NukeToast.unsupported(this, normalized)
+            }
+            normalized.contains("REQUIRED", true) || normalized.contains("ACTIVATE", true) ||
+                normalized.contains("STANDBY", true) || normalized.contains("PENDING", true) ||
+                normalized.contains("NOTICE", true) || normalized.contains("INFO", true) -> {
+                NukeToast.info(this, normalized)
+            }
+            else -> {
+                NukeToast.success(this, normalized)
+            }
+        }
     }
 
     private fun currentCapabilities(): NukeCapabilitySnapshot =

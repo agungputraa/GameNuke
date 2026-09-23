@@ -164,7 +164,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
             if (isShowing) return@post
 
             if (!NukeSubscriptionManager.isVipActive(context) || IntegrityGuard.isCompromised()) {
-                Toast.makeText(context, "VIP Exclusive: Active subscription required for AI Agent.", Toast.LENGTH_SHORT).show()
+                NukeToast.info(context, tr("Game Nuke VIP required for Nexus Neural Core"), true)
                 return@post
             }
 
