@@ -1277,10 +1277,6 @@ private fun TacticalEnginesDeckView(
     // Touch Listener active state (live from daemon + optimistic UI updates)
     val isTouchListenerActive = states["touch_listener_active"] ?: NukeTouchTuningEngine.isDaemonTouchActive
     // Controls whether setup screen is shown instead of main tool list
-    var showTouchListenerSetup by remember { mutableStateOf(states["touch_listener_setup"] ?: false) }
-    androidx.compose.runtime.LaunchedEffect(states["touch_listener_setup"]) {
-        showTouchListenerSetup = states["touch_listener_setup"] ?: false
-    }
 
     Column(Modifier.fillMaxSize()) {
         // ── Header: Logo + game name + close ─────────────────────────────
@@ -1387,130 +1383,10 @@ private fun TacticalEnginesDeckView(
         }
         Spacer(Modifier.height(4.dp))
 
-        // ── Touch Listener Setup Screen (full-panel overlay when user taps INPUT CONTROL HUB) ──
-        if (showTouchListenerSetup) {
-            Column(
-                modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(ControlShape)
-                        .background(NukePanelBright)
-                        .border(0.8.dp, NukeGreen.copy(0.3f), ControlShape)
-                        .clickable { showTouchListenerSetup = false; callbacks.onQuickAction("touch_listener_setup") }
-                        .padding(horizontal = 10.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Icon(Icons.Outlined.ArrowBack, "Back", tint = NukeCyan, modifier = Modifier.size(14.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text("INPUT CONTROL HUB", color = NukeCyan, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.6.sp)
-                    Spacer(Modifier.weight(1f))
-                    Text("TOUCH ENGINE", color = NukeMuted, fontSize = 7.5.sp, letterSpacing = 0.5.sp)
-                }
-                // Master switch card
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clip(ControlShape)
-                        .background(if (isTouchListenerActive) NukeGreen.copy(0.10f) else NukePanelBright)
-                        .border(1.dp, if (isTouchListenerActive) NukeGreen.copy(0.55f) else NukeHairline, ControlShape)
-                        .padding(horizontal = 12.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(Icons.Outlined.TouchApp, null, tint = if (isTouchListenerActive) NukeGreen else NukeMuted, modifier = Modifier.size(14.dp))
-                            Spacer(Modifier.width(6.dp))
-                            Text("TOUCH LISTENER ENGINE", color = if (isTouchListenerActive) NukeGreen else NukeText, fontSize = 10.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
-                        }
-                        Spacer(Modifier.height(3.dp))
-                        Text(
-                            if (isTouchListenerActive) "● ACTIVE — Sensi & Macro siap digunakan" else "○ STANDBY — Aktifkan untuk unlock Sensi & Macro",
-                            color = if (isTouchListenerActive) NukeGreen.copy(0.85f) else NukeMuted,
-                            fontSize = 8.sp,
-                        )
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Switch(
-                        checked = isTouchListenerActive,
-                        onCheckedChange = { callbacks.onQuickAction("touch_listener_toggle") },
-                        colors = androidx.compose.material3.SwitchDefaults.colors(
-                            checkedThumbColor = NukeVoid,
-                            checkedTrackColor = NukeGreen,
-                            uncheckedThumbColor = NukeMuted,
-                            uncheckedTrackColor = NukePanelBright,
-                        )
-                    )
-                }
-                // Info
-                Row(
-                    modifier = Modifier.fillMaxWidth().clip(ControlShape).background(NukeCyan.copy(0.04f)).border(0.6.dp, NukeCyan.copy(0.18f), ControlShape).padding(10.dp),
-                ) {
-                    Text(
-                        "Touch Listener adalah engine kernel-level yang mengontrol routing input hardware. " +
-                        "Wajib aktif sebelum menggunakan Sensi X/Y, Detection Zone, Response Curve, dan Macro Studio. Membutuhkan Shizuku atau ADB.",
-                        color = NukeMuted, fontSize = 8.sp, lineHeight = 12.sp,
-                    )
-                }
-                SectionDivider("KOMPONEN")
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-                    PanelLauncherCard(
-                        icon = Icons.Outlined.Tune, title = "SENSI PANEL",
-                        badgeText = if (isMagicTouchOn) "OPEN" else "CONTROLS",
-                        statusText = if (!isTouchListenerActive) "Aktifkan Touch Listener dulu" else if (isMagicTouchOn) "ACTIVE • OPEN" else "SENSI X, Y, AREA & CURVE",
-                        isOpen = isMagicTouchOn, isVipGated = !isVip || !isTouchListenerActive,
-                        onClick = { callbacks.onQuickAction(if (!isTouchListenerActive) "touch_listener_toggle" else "open_sensi_panel") },
-                        modifier = Modifier.weight(1f)
-                    )
-                    PanelLauncherCard(
-                        icon = Icons.Outlined.Extension, title = "MACRO STUDIO",
-                        badgeText = if (isMacroStudioOn) "RUNNING" else "BUILDER",
-                        statusText = if (!isTouchListenerActive) "Aktifkan Touch Listener dulu" else if (isMacroStudioOn) "ACTIVE • OPEN" else "GAME MACRO AUTOMATION",
-                        isOpen = isMacroStudioOn, isVipGated = !isVip || !isTouchListenerActive,
-                        onClick = { callbacks.onQuickAction(if (!isTouchListenerActive) "touch_listener_toggle" else "open_macro_studio") },
-                        modifier = Modifier.weight(1f)
-                    )
-                }
-            }
-            Spacer(Modifier.height(4.dp))
-            StatusRail(snapshot.statusMessage, true)
-        } else {
-
         Column(
             modifier = Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()),
             verticalArrangement = Arrangement.spacedBy(4.dp),
         ) {
-            // ── SESSION READINESS ────────────────────────────────────────────
-            SectionDivider("SESSION READINESS")
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(ControlShape)
-                    .background(if (isTouchListenerActive) NukeGreen.copy(0.08f) else NukePanelBright)
-                    .border(1.dp, if (isTouchListenerActive) NukeGreen.copy(0.5f) else NukeCyan.copy(0.25f), ControlShape)
-                    .clickable { callbacks.onQuickAction("magic_touch") }
-                    .padding(horizontal = 12.dp, vertical = 9.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Icon(Icons.Outlined.TouchApp, null, tint = if (isTouchListenerActive) NukeGreen else NukeCyan, modifier = Modifier.size(18.dp))
-                Spacer(Modifier.width(8.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("INPUT CONTROL HUB", color = if (isTouchListenerActive) NukeGreen else NukeText, fontSize = 10.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
-                    Text(if (isTouchListenerActive) "● ACTIVE — Sensi & Macro unlocked" else "○ STANDBY — Touch Listener, Sensi, Macro", color = if (isTouchListenerActive) NukeGreen.copy(0.8f) else NukeMuted, fontSize = 7.5.sp)
-                }
-                Spacer(Modifier.width(6.dp))
-                Box(
-                    modifier = Modifier.clip(RoundedCornerShape(6.dp))
-                        .background(if (isTouchListenerActive) NukeGreen.copy(0.18f) else NukePanelBright)
-                        .border(0.8.dp, if (isTouchListenerActive) NukeGreen.copy(0.45f) else NukeHairline, RoundedCornerShape(6.dp))
-                        .padding(horizontal = 7.dp, vertical = 4.dp),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    Text(if (isTouchListenerActive) "ACTIVE" else "SETUP", color = if (isTouchListenerActive) NukeGreen else NukeMuted, fontSize = 7.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
-                }
-            }
             // ── PRO TUNING ENGINES (EXPANDABLE) ────────────────────
             SectionDivider("ADVANCED TOOLS")
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -1545,13 +1421,13 @@ private fun TacticalEnginesDeckView(
                     modifier = Modifier.weight(1f)
                 )
                 PanelLauncherCard(
-                    icon = Icons.Outlined.TouchApp,
-                    title = "INPUT CONTROL HUB",
-                    badgeText = if (isTouchListenerActive) "ACTIVE" else "SETUP",
-                    statusText = if (isTouchListenerActive) "TL ACTIVE \u2022 SENSI & MACRO" else "TOUCH LISTENER, SENSI, MACRO",
-                    isOpen = isTouchListenerActive,
-                    isVipGated = !isVip,
-                    onClick = { callbacks.onQuickAction("magic_touch") },
+                    icon = Icons.Outlined.Tune,
+                    title = "SENSI PANEL",
+                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "LOCKED" else if (isMagicTouchOn) "OPEN" else "READY",
+                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Activate Touch Listener in app" else if (isMagicTouchOn) "ACTIVE \u2022 CONTROLS OPEN" else "TOUCH SENSITIVITY & CURVES",
+                    isOpen = isMagicTouchOn,
+                    isVipGated = !isVip || !isTouchListenerActive,
+                    onClick = { callbacks.onQuickAction("open_sensi_panel") },
                     modifier = Modifier.weight(1f)
                 )
             }
@@ -1568,8 +1444,8 @@ private fun TacticalEnginesDeckView(
                 PanelLauncherCard(
                     icon = Icons.Outlined.Extension,
                     title = "MACRO STUDIO",
-                    badgeText = if (!isTouchListenerActive) "LOCKED" else if (isMacroStudioOn) "RUNNING" else "BUILDER",
-                    statusText = if (!isTouchListenerActive) "Aktifkan Touch Listener dulu" else if (isMacroStudioOn) "ACTIVE \u2022 OPEN" else "GAME MACRO AUTOMATION",
+                    badgeText = if (!isVip) "VIP" else if (!isTouchListenerActive) "LOCKED" else if (isMacroStudioOn) "RUNNING" else "BUILDER",
+                    statusText = if (!isVip) "Game Nuke VIP required" else if (!isTouchListenerActive) "Activate Touch Listener in app" else if (isMacroStudioOn) "ACTIVE \u2022 OPEN" else "GAME MACRO AUTOMATION",
                     isOpen = isMacroStudioOn,
                     isVipGated = !isVip || !isTouchListenerActive,
                     onClick = { callbacks.onQuickAction("open_macro_studio") },
@@ -1662,7 +1538,6 @@ private fun TacticalEnginesDeckView(
                 TacticalHardwareCard(Icons.Outlined.Bolt, "VPN TUNNEL", "ACTIVE", "OFF", checked = isVpnOn, isVipGated = !isVip, onToggle = { callbacks.onQuickAction("vpn_boost") }, modifier = Modifier.weight(1f))
             }
         }
-        } // end else
         Spacer(Modifier.height(4.dp))
         StatusRail(snapshot.statusMessage, true)
     }

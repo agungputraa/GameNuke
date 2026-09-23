@@ -67,6 +67,12 @@ import androidx.compose.material.icons.rounded.Storage
 import androidx.compose.material.icons.rounded.Terminal
 import androidx.compose.material.icons.rounded.Thermostat
 import androidx.compose.material.icons.rounded.Tune
+import androidx.compose.material.icons.rounded.TouchApp
+import androidx.compose.material.icons.rounded.Lock
+import androidx.compose.runtime.collectAsState
+import com.neon.gametweak.NukeSubscriptionManager
+import com.neon.gametweak.NukeTouchTuningEngine
+import com.neon.gametweak.NukeMagicTouchPanelOverlay
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material.icons.rounded.Wifi
 import androidx.compose.material.icons.rounded.WifiTethering
@@ -163,9 +169,12 @@ fun DashboardScreen(
     onOpenCleaner: () -> Unit = {},
     onOpenMonitor: () -> Unit = {},
     onOpenSystemEditor: () -> Unit = {},
+    onOpenVip: () -> Unit = {},
 ) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
+    val subState by NukeSubscriptionManager.subscriptionState.collectAsState()
+    val isVip = subState.isActive
     val gateway = remember(adbManager) { NukeGamingShellGateway(adbManager) }
     var telemetry by remember { mutableStateOf(CommandCenterTelemetry()) }
     var showConnectionDialog by remember { mutableStateOf(false) }
@@ -355,6 +364,7 @@ fun DashboardScreen(
                     }
                     Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
+                        TouchListenerMasterCard(context, isVip, onOpenVip)
                         ReadinessDeck(
                             context = context,
                             telemetry = telemetry,
@@ -369,6 +379,7 @@ fun DashboardScreen(
                     DualGaugeDeck(telemetry)
                     TelemetryMatrix(telemetry)
                     SectionRail(tr("SESSION READINESS"), "$readyCount/5 ${tr("SYSTEM PATHS")}")
+                    TouchListenerMasterCard(context, isVip, onOpenVip)
                     ReadinessDeck(
                         context = context,
                         telemetry = telemetry,
@@ -1240,6 +1251,161 @@ private fun ConnectionMethodCard(
                     lineHeight = 14.sp
                 )
             }
+        }
+    }
+}
+
+
+@Composable
+private fun TouchListenerMasterCard(
+    context: Context,
+    isVip: Boolean,
+    onOpenVip: () -> Unit,
+) {
+    var isTouchListenerActive by remember {
+        mutableStateOf(NukeTouchTuningEngine.isDaemonTouchActive)
+    }
+
+    LaunchedEffect(Unit) {
+        while (true) {
+            isTouchListenerActive = NukeTouchTuningEngine.isDaemonTouchActive
+            delay(1_000L)
+        }
+    }
+
+    val accent = if (isTouchListenerActive) Neon.Accent else if (!isVip) Color(0xFFFFB84A) else Color(0xFF73E7D3)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(ReactorSmall)
+            .background(
+                Brush.verticalGradient(
+                    listOf(
+                        if (isTouchListenerActive) Neon.Accent.copy(alpha = 0.12f) else Color(0xFF08110E),
+                        Color(0xFF040A08)
+                    )
+                )
+            )
+            .border(
+                1.dp,
+                if (isTouchListenerActive) Neon.Accent.copy(alpha = 0.55f) else accent.copy(alpha = 0.28f),
+                ReactorSmall
+            )
+            .nukePressFeedback()
+            .clickable {
+                if (!isVip) {
+                    onOpenVip()
+                    NukeToast.error(context, tr("Game Nuke VIP required to unlock Touch Listener"), true)
+                } else {
+                    val overlay = NukeMagicTouchPanelOverlay.getInstance(context)
+                    if (isTouchListenerActive) {
+                        overlay.deactivateOnly {
+                            isTouchListenerActive = false
+                            NukeToast.success(context, tr("Touch Listener deactivated"))
+                        }
+                    } else {
+                        overlay.activateOnly { success ->
+                            isTouchListenerActive = success
+                            if (success) {
+                                NukeToast.success(context, tr("Touch Listener activated successfully"))
+                            } else {
+                                NukeToast.error(context, tr("Failed to activate Touch Listener. Please ensure Shizuku or Wireless ADB is connected."), true)
+                            }
+                        }
+                    }
+                }
+            }
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .size(36.dp)
+                .clip(ReactorSmall)
+                .background(accent.copy(alpha = 0.15f))
+                .border(0.8.dp, accent.copy(alpha = 0.45f), ReactorSmall),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                Icons.Rounded.TouchApp,
+                contentDescription = null,
+                tint = accent,
+                modifier = Modifier.size(20.dp)
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    tr("TOUCH LISTENER ENGINE"),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 0.4.sp
+                )
+                if (!isVip) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFFFFB84A).copy(alpha = 0.2f))
+                            .border(0.6.dp, Color(0xFFFFB84A), RoundedCornerShape(4.dp))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            tr("VIP ONLY"),
+                            color = Color(0xFFFFB84A),
+                            fontSize = 7.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            fontFamily = FontFamily.Monospace
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                if (isTouchListenerActive)
+                    tr("Active · Kernel touch routing enabled for Sensi & Macro")
+                else if (!isVip)
+                    tr("VIP required · Unlocks hardware touch routing for Sensi & Macro")
+                else
+                    tr("Tap to activate hardware touch routing for Sensi & Macro"),
+                color = Neon.TextDim,
+                fontSize = 8.5.sp,
+                lineHeight = 11.sp,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+        Box(
+            modifier = Modifier
+                .clip(RoundedCornerShape(6.dp))
+                .background(
+                    if (isTouchListenerActive) Neon.Accent.copy(alpha = 0.18f)
+                    else if (!isVip) Color(0xFFFFB84A).copy(alpha = 0.15f)
+                    else Color(0xFF1E3A30)
+                )
+                .border(
+                    0.8.dp,
+                    if (isTouchListenerActive) Neon.Accent.copy(alpha = 0.5f)
+                    else if (!isVip) Color(0xFFFFB84A).copy(alpha = 0.4f)
+                    else Color(0xFF2E5A4B),
+                    RoundedCornerShape(6.dp)
+                )
+                .padding(horizontal = 8.dp, vertical = 4.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                if (isTouchListenerActive) tr("ACTIVE")
+                else if (!isVip) tr("LOCKED")
+                else tr("ENABLE"),
+                color = if (isTouchListenerActive) Neon.Accent else if (!isVip) Color(0xFFFFB84A) else Color.White,
+                fontSize = 8.sp,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 0.6.sp,
+                fontFamily = FontFamily.Monospace
+            )
         }
     }
 }

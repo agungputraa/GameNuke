@@ -247,17 +247,17 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
 
     fun show() {
         if (!NukeSubscriptionManager.isVipActive(context)) {
-            NukeToast.error(context, "Game Nuke VIP required to unlock Macro Studio", true)
+            NukeToast.error(context, tr("Game Nuke VIP required to unlock Macro Studio"), true)
             return
         }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && !Settings.canDrawOverlays(context)) {
-            NukeToast.error(context, "Overlay permission required")
+            NukeToast.error(context, tr("Overlay permission required"))
             return
         }
-        // Touch Listener must be explicitly activated by the user from the Game Nuke dashboard
+        // Touch Listener must be explicitly activated by the user from the Game Nuke app
         // before Macro Studio can be used. This prevents accidental sensi activation.
         if (!NukeTouchTuningEngine.isDaemonTouchActive) {
-            NukeToast.error(context, "Aktifkan Touch Listener di Game Nuke Dashboard terlebih dahulu", true)
+            NukeToast.error(context, tr("Please activate Touch Listener in Game Nuke app first"), true)
             return
         }
 
@@ -281,11 +281,11 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
 
     fun openPanel() {
         if (!NukeSubscriptionManager.isVipActive(context)) {
-            NukeToast.error(context, "Game Nuke VIP required to unlock Macro Studio", true)
+            NukeToast.error(context, tr("Game Nuke VIP required to unlock Macro Studio"), true)
             return
         }
         if (!NukeTouchTuningEngine.isDaemonTouchActive) {
-            NukeToast.error(context, "Aktifkan Touch Listener di Game Nuke Dashboard terlebih dahulu", true)
+            NukeToast.error(context, tr("Please activate Touch Listener in Game Nuke app first"), true)
             return
         }
         isPanelHidden = false

@@ -1102,6 +1102,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 onOpenCleaner = { navigateWithAd("cleaner") },
                                 onOpenMonitor = { navigateWithAd("dashboard") },
                                 onOpenSystemEditor = { navigateWithAd("system_editor") },
+                                onOpenVip = { showVipSubscriptionDialog = true },
                             )
                             "system_editor" -> NukeSystemEditorScreen(adbManager)
                             "games" -> GameProfileScreen(adbManager)

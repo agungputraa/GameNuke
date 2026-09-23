@@ -135,12 +135,16 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     fun show() {
         if (!NukeSubscriptionManager.isVipActive(context)) {
-            NukeToast.error(context, "Game Nuke VIP required to unlock Touch Listener", true)
+            NukeToast.error(context, tr("Game Nuke VIP required to unlock Sensi Panel"), true)
+            return
+        }
+        if (!NukeTouchTuningEngine.isDaemonTouchActive) {
+            NukeToast.error(context, tr("Please activate Touch Listener in Game Nuke app first"), true)
             return
         }
         if (rootView != null) return
         if (!Settings.canDrawOverlays(context)) {
-            NukeToast.error(context, "Display over other apps permission required for Touch Listener")
+            NukeToast.error(context, tr("Display over other apps permission required for Sensi Panel"))
             return
         }
 
