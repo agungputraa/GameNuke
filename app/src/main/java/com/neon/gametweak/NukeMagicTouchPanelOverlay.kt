@@ -50,7 +50,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var rootParams: WindowManager.LayoutParams? = null
 
     // UI references
-    private var masterSwitch: Switch? = null
+    private var sensiSwitch: Switch? = null
     private var statusBadge: TextView? = null
     private var statusSubtext: TextView? = null
     private var xValBadge: TextView? = null
@@ -62,7 +62,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     private var macroStatusTv: TextView? = null
     private var isUpdatingSwitchProgrammatically: Boolean = false
 
-    // Live state values (Defaults to clean 1.00x 1:1 stock natural touch)
+    // Live state values (Defaults to clean 1.00x 1:1 stock natural touch, Sensi Boost OFF)
+    private var isSensiBoostEnabled: Boolean = false
     private var sensX: Float = 1.00f
     private var sensY: Float = 1.00f
     private var sensArea: Int = NukeTouchTuningEngine.AREA_ALL
@@ -100,34 +101,55 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
     }
 
     private fun loadPersistedState() {
+        isSensiBoostEnabled = prefs.getBoolean("touch_sens_boost_enabled", false)
         sensX = prefs.getFloat("touch_sens_x", 1.00f).coerceIn(0.50f, 2.50f)
         sensY = prefs.getFloat("touch_sens_y", 1.00f).coerceIn(0.50f, 4.00f)
         sensArea = prefs.getInt("touch_sens_area", NukeTouchTuningEngine.AREA_ALL)
         curveMode = prefs.getInt("touch_curve_mode", NukeTouchTuningEngine.CURVE_LINEAR)
 
-        // Sync to engine runtime (1:1 stock fast-path defaults)
-        NukeTouchTuningEngine.xMultiplier = sensX
-        NukeTouchTuningEngine.yMultiplier = sensY
-        NukeTouchTuningEngine.sensArea = sensArea
-        NukeTouchTuningEngine.curveMode = curveMode
-        NukeTouchTuningEngine.euroEnabled = false
-        NukeTouchTuningEngine.dragShotCurve = true
+        if (isSensiBoostEnabled) {
+            NukeTouchTuningEngine.xMultiplier = sensX
+            NukeTouchTuningEngine.yMultiplier = sensY
+            NukeTouchTuningEngine.sensArea = sensArea
+            NukeTouchTuningEngine.curveMode = curveMode
+            NukeTouchTuningEngine.euroEnabled = false
+            NukeTouchTuningEngine.dragShotCurve = (curveMode != NukeTouchTuningEngine.CURVE_LINEAR)
+        } else {
+            // Default 0 Sensi: pure natural 1:1 pass-through (screen is never slippery)
+            NukeTouchTuningEngine.xMultiplier = 1.00f
+            NukeTouchTuningEngine.yMultiplier = 1.00f
+            NukeTouchTuningEngine.sensArea = sensArea
+            NukeTouchTuningEngine.curveMode = NukeTouchTuningEngine.CURVE_LINEAR
+            NukeTouchTuningEngine.euroEnabled = false
+            NukeTouchTuningEngine.dragShotCurve = false
+        }
     }
 
     private fun persistState() {
         prefs.edit()
+            .putBoolean("touch_sens_boost_enabled", isSensiBoostEnabled)
             .putFloat("touch_sens_x", sensX)
             .putFloat("touch_sens_y", sensY)
             .putInt("touch_sens_area", sensArea)
             .putInt("touch_curve_mode", curveMode)
             .apply()
 
-        NukeTouchTuningEngine.xMultiplier = sensX
-        NukeTouchTuningEngine.yMultiplier = sensY
-        NukeTouchTuningEngine.sensArea = sensArea
-        NukeTouchTuningEngine.curveMode = curveMode
-        NukeTouchTuningEngine.euroEnabled = false
-        NukeTouchTuningEngine.dragShotCurve = true
+        if (isSensiBoostEnabled) {
+            NukeTouchTuningEngine.xMultiplier = sensX
+            NukeTouchTuningEngine.yMultiplier = sensY
+            NukeTouchTuningEngine.sensArea = sensArea
+            NukeTouchTuningEngine.curveMode = curveMode
+            NukeTouchTuningEngine.euroEnabled = false
+            NukeTouchTuningEngine.dragShotCurve = (curveMode != NukeTouchTuningEngine.CURVE_LINEAR)
+        } else {
+            // Default 0 Sensi: pure natural 1:1 pass-through (screen is never slippery)
+            NukeTouchTuningEngine.xMultiplier = 1.00f
+            NukeTouchTuningEngine.yMultiplier = 1.00f
+            NukeTouchTuningEngine.sensArea = sensArea
+            NukeTouchTuningEngine.curveMode = NukeTouchTuningEngine.CURVE_LINEAR
+            NukeTouchTuningEngine.euroEnabled = false
+            NukeTouchTuningEngine.dragShotCurve = false
+        }
 
         // Push live values to running daemon/service immediately
         NukeTouchTuningEngine.syncToDaemon(context)
@@ -251,34 +273,27 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
     private fun updateStatusUi() {
         mainHandler.post {
-            val isCoreActive = NukeTouchTuningEngine.isDaemonTouchActive
+            val isListenerActive = NukeTouchTuningEngine.isDaemonTouchActive
             isUpdatingSwitchProgrammatically = true
-            if (isCoreActive) {
-                statusBadge?.text = "● ACTIVE"
+            sensiSwitch?.isChecked = isSensiBoostEnabled
+
+            if (!isListenerActive) {
+                statusBadge?.text = "○ LISTENER OFF"
+                statusBadge?.setTextColor(Color.parseColor("#EF4444"))
+                statusSubtext?.text = "Touch Listener is inactive in Home. Activate it in Game Nuke Home first."
+                statusSubtext?.setTextColor(Color.parseColor("#EF4444"))
+            } else if (isSensiBoostEnabled) {
+                statusBadge?.text = "● BOOST ACTIVE"
                 statusBadge?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
-                statusSubtext?.text = "Touch Listener Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+                statusSubtext?.text = "Sensi Boost Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
                 statusSubtext?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
-                masterSwitch?.isChecked = true
             } else {
-                statusBadge?.text = "○ STANDBY"
-                statusBadge?.setTextColor(Color.parseColor("#64778D"))
-                statusSubtext?.text = "Standby — Tap toggle switch to activate"
+                statusBadge?.text = "● 0 SENSI"
+                statusBadge?.setTextColor(Color.parseColor("#38BDF8"))
+                statusSubtext?.text = "0 Sensi (Default) — Pure 1:1 pass-through. Screen is not slippery. Macro runs cleanly."
                 statusSubtext?.setTextColor(Color.parseColor("#9CB8AD"))
-                masterSwitch?.isChecked = false
             }
             isUpdatingSwitchProgrammatically = false
-
-            // Update Macro status
-            val isMacroOpen = runCatching {
-                NukeMacroStudioOverlay.getInstance(context).isShowing
-            }.getOrDefault(false)
-            if (isMacroOpen) {
-                macroStatusTv?.text = "● Macro Studio Active on Screen"
-                macroStatusTv?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
-            } else {
-                macroStatusTv?.text = "○ Macro Studio Ready to Use"
-                macroStatusTv?.setTextColor(Color.parseColor("#9CB8AD"))
-            }
         }
     }
 
@@ -322,8 +337,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             orientation = LinearLayout.VERTICAL
         }
 
-        // Section Cards (Strictly required components — Macro Studio accessed from Game Nuke Dashboard)
-        body.addView(buildMasterSwitchCard())
+        // Section Cards
+        body.addView(buildSensiBoostCard())
         body.addView(spacer(8))
         body.addView(buildSensitivityXCard())
         body.addView(spacer(8))
@@ -358,17 +373,18 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         titleRow.addView(TextView(context).apply {
-            text = "TOUCH LISTENER"
+            text = "SENSI PANEL"
             textSize = 13f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
         })
 
         statusBadge = TextView(context).apply {
-            text = if (NukeTouchTuningEngine.isDaemonTouchActive) "● ACTIVE" else "○ STANDBY"
+            val isListenerActive = NukeTouchTuningEngine.isDaemonTouchActive
+            text = if (!isListenerActive) "○ LISTENER OFF" else if (isSensiBoostEnabled) "● BOOST ACTIVE" else "● 0 SENSI"
             textSize = 9.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
-            setTextColor(if (NukeTouchTuningEngine.isDaemonTouchActive) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#64778D"))
+            setTextColor(if (!isListenerActive) Color.parseColor("#EF4444") else if (isSensiBoostEnabled) NukeCyberHudStyler.COLOR_CYAN_NEON else Color.parseColor("#38BDF8"))
             setPadding((8 * d).toInt(), (2 * d).toInt(), (8 * d).toInt(), (2 * d).toInt())
             background = GradientDrawable().apply {
                 setColor(Color.parseColor("#1500FF88"))
@@ -383,7 +399,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         titleCol.addView(titleRow)
 
         titleCol.addView(TextView(context).apply {
-            text = "Ultra-Precision Touch & Hardware Aim Engine"
+            text = "Hardware Sensitivity & Speed Curve Tuning Studio"
             textSize = 8.5f
             setTextColor(Color.parseColor("#64778D"))
         })
@@ -435,7 +451,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         return header
     }
 
-    private fun buildMasterSwitchCard(): View {
+    private fun buildSensiBoostCard(): View {
         val card = cardLayout()
 
         val row = LinearLayout(context).apply {
@@ -449,46 +465,61 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
 
         textCol.addView(TextView(context).apply {
-            text = "Touch Listener Engine"
+            text = "Sensi Boost Tuning"
             textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
             setTextColor(Color.parseColor("#F8FAFC"))
         })
 
         statusSubtext = TextView(context).apply {
-            text = if (NukeTouchTuningEngine.isDaemonTouchActive)
-                "Touch Listener Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
+            text = if (!NukeTouchTuningEngine.isDaemonTouchActive)
+                "Touch Listener is inactive in Home. Activate it in Game Nuke Home first."
+            else if (isSensiBoostEnabled)
+                "Sensi Boost Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
             else
-                "Standby — Tap toggle switch to activate"
+                "0 Sensi (Default) — Pure 1:1 pass-through. Screen is not slippery. Macro runs cleanly."
             textSize = 8.5f
-            setTextColor(Color.parseColor("#9CB8AD"))
+            setTextColor(if (!NukeTouchTuningEngine.isDaemonTouchActive) Color.parseColor("#EF4444") else Color.parseColor("#9CB8AD"))
         }
         textCol.addView(statusSubtext)
         row.addView(textCol)
 
-        masterSwitch = Switch(context).apply {
-            isChecked = NukeTouchTuningEngine.isDaemonTouchActive || prefs.getBoolean("touch_listener_active", false)
+        sensiSwitch = Switch(context).apply {
+            isChecked = isSensiBoostEnabled
             thumbTintList = ColorStateList.valueOf(NukeCyberHudStyler.COLOR_CYAN_NEON)
             trackTintList = ColorStateList.valueOf(Color.parseColor("#155E75"))
 
             setOnCheckedChangeListener { _, isChecked ->
                 if (isUpdatingSwitchProgrammatically) return@setOnCheckedChangeListener
-                setTouchListenerEnabled(isChecked)
+                setSensiBoostEnabled(isChecked)
             }
         }
-        row.addView(masterSwitch)
+        row.addView(sensiSwitch)
         card.addView(row)
 
         return card
     }
 
+    fun setSensiBoostEnabled(enabled: Boolean) {
+        if (enabled && !NukeTouchTuningEngine.isDaemonTouchActive) {
+            isUpdatingSwitchProgrammatically = true
+            sensiSwitch?.isChecked = false
+            isUpdatingSwitchProgrammatically = false
+            NukeToast.info(context, tr("Please activate Touch Listener in Game Nuke app first"), true)
+            return
+        }
+        isSensiBoostEnabled = enabled
+        persistState()
+        updateStatusUi()
+        if (enabled) {
+            NukeToast.success(context, tr("Sensi Boost: ACTIVE (${"%.2f".format(sensX)}x / ${"%.2f".format(sensY)}x)"))
+        } else {
+            NukeToast.info(context, tr("Sensi Boost: OFF (0 Sensi 1:1 Pass-Through)"))
+        }
+    }
+
     /**
-     * Programmatic & UI controller for Touch Listener activation.
-     * Guaranteed on-demand initialization:
-     * - Deploys fresh libwandev.so to /data/local/tmp on activation
-     * - Starts touch daemon/service with allowGrab=false (screen 100% free)
-     * - Applies hardware sensitivity registers immediately
-     * - Synchronizes UI switch state and preferences
+     * Programmatic controller for Touch Listener activation from Home / Dashboard.
      */
     fun setTouchListenerEnabled(enabled: Boolean, onComplete: ((Boolean) -> Unit)? = null) {
         prefs.edit().putBoolean("touch_listener_active", enabled).apply()
@@ -497,46 +528,17 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 .edit().putBoolean("touch_listener_active", enabled).apply()
         }
 
-        mainHandler.post {
-            isUpdatingSwitchProgrammatically = true
-            masterSwitch?.isChecked = enabled
-            isUpdatingSwitchProgrammatically = false
-
-            if (enabled) {
-                statusBadge?.text = "● STARTING..."
-                statusBadge?.setTextColor(Color.parseColor("#F59E0B"))
-                statusSubtext?.text = "⌛ Connecting to Touch Listener..."
-                statusSubtext?.setTextColor(Color.parseColor("#F59E0B"))
-            } else {
-                statusBadge?.text = "○ STANDBY"
-                statusBadge?.setTextColor(Color.parseColor("#64778D"))
-                statusSubtext?.text = "Touch Listener disabled (System default input active)"
-                statusSubtext?.setTextColor(Color.parseColor("#9CB8AD"))
-            }
-        }
-
         if (enabled) {
             NukeTouchTuningEngine.startDaemonTouchAsync(context) { ok ->
                 mainHandler.post {
-                    isUpdatingSwitchProgrammatically = true
-                    masterSwitch?.isChecked = ok
-                    isUpdatingSwitchProgrammatically = false
-
+                    updateStatusUi()
                     if (ok) {
-                        statusBadge?.text = "● ACTIVE"
-                        statusBadge?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
-                        statusSubtext?.text = "✓ Touch Listener Active — Sensi X: ${"%.2f".format(sensX)}x  Y: ${"%.2f".format(sensY)}x"
-                        statusSubtext?.setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
                         prefs.edit().putBoolean("touch_listener_active", true).apply()
                         runCatching {
                             context.getSharedPreferences("nuke_touch_panel_prefs", Context.MODE_PRIVATE)
                                 .edit().putBoolean("touch_listener_active", true).apply()
                         }
                     } else {
-                        statusBadge?.text = "⚠ STANDBY"
-                        statusBadge?.setTextColor(Color.parseColor("#EF4444"))
-                        statusSubtext?.text = "Failed to start Touch Listener. Connect Shizuku or ADB first."
-                        statusSubtext?.setTextColor(Color.parseColor("#EF4444"))
                         prefs.edit().putBoolean("touch_listener_active", false).apply()
                         runCatching {
                             context.getSharedPreferences("nuke_touch_panel_prefs", Context.MODE_PRIVATE)
@@ -549,6 +551,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         } else {
             NukeTouchTuningEngine.stopDaemonTouchAsync { ok ->
                 NukeTouchTuningEngine.resetToSystemDefaults(context)
+                mainHandler.post { updateStatusUi() }
                 onComplete?.invoke(ok)
             }
         }
@@ -612,8 +615,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 sensX = (sensX - 0.02f).coerceIn(0.50f, 2.50f)
                 updateXBadge()
                 xSeekBar?.progress = (((sensX - 0.50f) / 0.02f).toInt()).coerceIn(0, 100)
-                NukeTouchTuningEngine.xMultiplier = sensX
-                NukeTouchTuningEngine.syncToDaemon(context)
                 persistState()
             }
         }
@@ -633,8 +634,10 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     if (fromUser) {
                         sensX = (0.50f + (prog * 0.02f)).coerceIn(0.50f, 2.50f)
                         updateXBadge()
-                        NukeTouchTuningEngine.xMultiplier = sensX
-                        NukeTouchTuningEngine.syncToDaemon(context)
+                        if (isSensiBoostEnabled) {
+                            NukeTouchTuningEngine.xMultiplier = sensX
+                            NukeTouchTuningEngine.syncToDaemon(context)
+                        }
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -661,8 +664,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 sensX = (sensX + 0.02f).coerceIn(0.50f, 2.50f)
                 updateXBadge()
                 xSeekBar?.progress = (((sensX - 0.50f) / 0.02f).toInt()).coerceIn(0, 100)
-                NukeTouchTuningEngine.xMultiplier = sensX
-                NukeTouchTuningEngine.syncToDaemon(context)
                 persistState()
             }
         }
@@ -739,8 +740,10 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 sensY = (sensY - 0.05f).coerceIn(0.50f, 4.00f)
                 updateYBadge()
                 ySeekBar?.progress = (((sensY - 0.50f) / 0.035f).toInt()).coerceIn(0, 100)
-                NukeTouchTuningEngine.yMultiplier = sensY
-                NukeTouchTuningEngine.syncToDaemon(context)
+                if (isSensiBoostEnabled) {
+                    NukeTouchTuningEngine.yMultiplier = sensY
+                    NukeTouchTuningEngine.syncToDaemon(context)
+                }
                 persistState()
             }
         }
@@ -760,8 +763,10 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                     if (fromUser) {
                         sensY = (0.50f + (prog * 0.035f)).coerceIn(0.50f, 4.00f)
                         updateYBadge()
-                        NukeTouchTuningEngine.yMultiplier = sensY
-                        NukeTouchTuningEngine.syncToDaemon(context)
+                        if (isSensiBoostEnabled) {
+                            NukeTouchTuningEngine.yMultiplier = sensY
+                            NukeTouchTuningEngine.syncToDaemon(context)
+                        }
                     }
                 }
                 override fun onStartTrackingTouch(sb: SeekBar?) {}
@@ -788,8 +793,10 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 sensY = (sensY + 0.05f).coerceIn(0.50f, 4.00f)
                 updateYBadge()
                 ySeekBar?.progress = (((sensY - 0.50f) / 0.035f).toInt()).coerceIn(0, 100)
-                NukeTouchTuningEngine.yMultiplier = sensY
-                NukeTouchTuningEngine.syncToDaemon(context)
+                if (isSensiBoostEnabled) {
+                    NukeTouchTuningEngine.yMultiplier = sensY
+                    NukeTouchTuningEngine.syncToDaemon(context)
+                }
                 persistState()
             }
         }
@@ -800,7 +807,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         // Reset to Stock Normal Button
         card.addView(spacer(8))
         val resetBtn = TextView(context).apply {
-            text = "↺  Reset Screen to Native (1.00x / 1.00x Linear)"
+            text = "↺  Reset Screen to 0 Sensi (Native 1:1 Linear)"
             textSize = 9.5f
             typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
             setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
@@ -812,6 +819,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             setOnClickListener {
+                isSensiBoostEnabled = false
                 sensX = 1.00f
                 sensY = 1.00f
                 sensArea = NukeTouchTuningEngine.AREA_ALL
@@ -823,7 +831,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 updateAreaChips()
                 updateCurveChips()
                 persistState()
-                NukeToast.success(context, "Screen normalized 100% (Native 1:1 precision active)")
+                updateStatusUi()
+                NukeToast.success(context, tr("Screen reset to 0 Sensi (Pure 1:1 natural touch)"))
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT

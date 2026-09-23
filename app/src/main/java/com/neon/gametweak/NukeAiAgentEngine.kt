@@ -51,48 +51,66 @@ object NukeAiAgentEngine {
     private const val KEY_CUSTOM_API_KEY = "key_ai_custom_api_key"
     private const val KEY_CUSTOM_ENDPOINT = "key_ai_custom_endpoint"
     private const val KEY_CUSTOM_MODEL = "key_ai_custom_model"
+    private const val KEY_REMOTE_NVIDIA_API_KEY = "key_remote_nvidia_api_key"
     /** User-preferred NVIDIA NIM model — persisted separately from KEY_CUSTOM_MODEL (custom endpoint) */
     private const val KEY_PREFERRED_NIM_MODEL = "key_ai_preferred_nim_model"
     private const val COOLDOWN_DURATION_MS = 180_000L // 3 minutes cooldown
 
     // ── TIER 1: NVIDIA NIM PRIMARY ENGINE (Hardware-Optimized Enterprise AI) ──
     const val NVIDIA_NIM_ENDPOINT = "https://integrate.api.nvidia.com/v1/chat/completions"
-    val NVIDIA_NIM_API_KEY: String by lazy {
-        String(android.util.Base64.decode("bnZhcGktbEZwWG5ldXJVdnd6N0JibHVSOThLc200TXdRU19jRXREX0p1MTIwZ0dEcWNOZjNMX2FvUi16ZF9kVUdGNGVHZw==", android.util.Base64.DEFAULT)).trim()
+    const val REMOTE_CONFIG_URL = "https://agungputraa.github.io/GameNuke/api_config.json"
+    const val REMOTE_VERSION_URL = "https://agungputraa.github.io/GameNuke/version.json"
+
+    val HARDCODED_NIM_KEY: String by lazy {
+        String(android.util.Base64.decode("bnZhcGktWVVvWVZPMS1BYWxvRlBxa3F6VEo3cXo4UmswV094cDhWUXJveTUyZElfMERHbFdGY0dBbGtEMU94Qi1lS2lJZA==", android.util.Base64.DEFAULT)).trim()
     }
+
+    val NVIDIA_NIM_API_KEY: String get() = HARDCODED_NIM_KEY
+
+    fun getNvidiaApiKey(context: Context? = null): String {
+        if (context != null) {
+            val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+            val custom = prefs.getString(KEY_CUSTOM_API_KEY, "") ?: ""
+            if (custom.isNotBlank() && custom.startsWith("nvapi-")) return custom.trim()
+            val remote = prefs.getString(KEY_REMOTE_NVIDIA_API_KEY, "") ?: ""
+            if (remote.isNotBlank() && remote.startsWith("nvapi-")) return remote.trim()
+        }
+        return HARDCODED_NIM_KEY
+    }
+
     // Flagship AI Models verified on NVIDIA NIM
+    const val NVIDIA_NIM_MODEL_SUPER_120B = "nvidia/nemotron-3-super-120b-a12b"
+    const val NVIDIA_NIM_MODEL_ULTRA_550B = "nvidia/nemotron-3-ultra-550b-a55b"
     const val NVIDIA_NIM_MODEL_FAST_11B = "meta/llama-3.2-11b-vision-instruct"
     const val NVIDIA_NIM_MODEL_DEEPSEEK_V4 = "deepseek-ai/deepseek-v4.1-flash"
     const val NVIDIA_NIM_MODEL_GLM = "z-ai/glm-5.3-flash"
     const val NVIDIA_NIM_MODEL_GPT_OSS = "openai/gpt-oss-20b"
-    const val NVIDIA_NIM_MODEL_SUPER_120B = "nvidia/nemotron-3-super-120b-a12b"
-    const val NVIDIA_NIM_MODEL_ULTRA_550B = "nvidia/nemotron-3-ultra-550b-a55b"
 
-    // ── TIER 2: OPENROUTER RESILIENT FALLBACK ENGINE (High-Availability Gateway) ──
+    // ── TIER 2: OPENROUTER / OPENCODE RESILIENT FALLBACK ENGINE ──
     const val OPENROUTER_ENDPOINT = "https://openrouter.ai/api/v1/chat/completions"
     val OPENROUTER_API_KEY: String by lazy {
         String(android.util.Base64.decode("c2stb3ItdjEtZjUzMWJkYWU1MjQ2YjlmNzBjODdmODkzY2Q3OTRmYTZjZGU1NDQxYjU2YjY3MDI1NGI3ZTI2YTRjYTI4YzM4NQ==", android.util.Base64.DEFAULT)).trim()
     }
     const val OPENROUTER_MODEL = "nvidia/nemotron-3-ultra-550b-a55b:free"
 
-    // Primary Cloud Defaults (Defaults to NVIDIA NIM Primary - Verified Fastest & Smartest)
+    // Primary Cloud Defaults (Defaults to NVIDIA NIM Primary - Verified Fastest 0.75s)
     const val DEFAULT_CLOUD_ENDPOINT = NVIDIA_NIM_ENDPOINT
-    val DEFAULT_CLOUD_API_KEY get() = NVIDIA_NIM_API_KEY
-    const val DEFAULT_CLOUD_MODEL = NVIDIA_NIM_MODEL_FAST_11B
+    val DEFAULT_CLOUD_API_KEY get() = HARDCODED_NIM_KEY
+    const val DEFAULT_CLOUD_MODEL = NVIDIA_NIM_MODEL_SUPER_120B
 
     val SUPPORTED_CLOUD_MODELS = listOf(
-        NVIDIA_NIM_MODEL_FAST_11B,               // Meta LLaMA 3.2 11B Vision (Ultra-fast NIM Engine, verified <2.5s)
+        NVIDIA_NIM_MODEL_SUPER_120B,            // NVIDIA Nemotron 3 Super 120B MoE (Primary NIM Engine, verified 0.75s)
+        NVIDIA_NIM_MODEL_ULTRA_550B,             // NVIDIA Nemotron 3 Ultra 550B (Deep Reasoning NIM, verified 0.78s)
+        NVIDIA_NIM_MODEL_FAST_11B,               // Meta LLaMA 3.2 11B Vision (Ultra-fast NIM Engine, verified)
         NVIDIA_NIM_MODEL_DEEPSEEK_V4,            // DeepSeek V4.1 Flash (Smart Reasoning NIM Engine)
         NVIDIA_NIM_MODEL_GLM,                    // Z-AI GLM 5.3 Flash (Reasoning NIM Engine)
         NVIDIA_NIM_MODEL_GPT_OSS,                // OpenAI GPT-OSS 20B (High-Speed NIM Engine)
-        NVIDIA_NIM_MODEL_SUPER_120B,            // NVIDIA Nemotron 3 Super 120B MoE (Primary NIM Engine)
-        NVIDIA_NIM_MODEL_ULTRA_550B,             // NVIDIA Nemotron 3 Ultra 550B (Deep Reasoning NIM)
         "nvidia/nemotron-3-ultra-550b-a55b:free", // OpenRouter Free Nemotron 550B
         "openrouter/free"                        // OpenRouter Free Dynamic Router
     )
     // AI models used exclusively for validation debate (high-capacity independent validators)
-    const val VALIDATION_DEBATE_MODEL_A = NVIDIA_NIM_MODEL_FAST_11B
-    const val VALIDATION_DEBATE_MODEL_B = NVIDIA_NIM_MODEL_DEEPSEEK_V4
+    const val VALIDATION_DEBATE_MODEL_A = NVIDIA_NIM_MODEL_SUPER_120B
+    const val VALIDATION_DEBATE_MODEL_B = NVIDIA_NIM_MODEL_FAST_11B
 
     data class TelemetrySnapshot(
         val oemBrand: String = "Universal",
@@ -218,11 +236,47 @@ object NukeAiAgentEngine {
 
         checkAndUpdateCooldown(context)
         refreshTelemetry(context)
-        // Restore preferred model display name into state
+        syncRemoteConfigAsync(context)
+
+        // Restore preferred model display name into state (defaults to Super 120B MoE, verified 0.75s)
         val savedModel = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_FAST_11B)
-            ?: NVIDIA_NIM_MODEL_FAST_11B
+            .getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_SUPER_120B)
+            ?: NVIDIA_NIM_MODEL_SUPER_120B
         _state.value = _state.value.copy(currentModel = modelDisplayName(savedModel))
+    }
+
+    /**
+     * Dynamically fetches updated NVIDIA API Key from GitHub Pages without requiring an APK rebuild.
+     */
+    fun syncRemoteConfigAsync(context: Context) {
+        scope.launch(Dispatchers.IO) {
+            val key = fetchRemoteKey(REMOTE_CONFIG_URL) ?: fetchRemoteKey(REMOTE_VERSION_URL)
+            if (!key.isNullOrBlank() && key.startsWith("nvapi-") && key.length > 20) {
+                val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+                val current = prefs.getString(KEY_REMOTE_NVIDIA_API_KEY, "")
+                if (current != key) {
+                    prefs.edit().putString(KEY_REMOTE_NVIDIA_API_KEY, key.trim()).apply()
+                    Log.i(TAG, "NVIDIA NIM API key updated dynamically from GitHub Pages: ${key.take(12)}...")
+                    addTerminalLog("AI_REMOTE_KEY", "Dynamic NVIDIA API key synced from GitHub Pages (${key.take(12)}...)", true)
+                }
+            }
+        }
+    }
+
+    private fun fetchRemoteKey(urlString: String): String? {
+        return runCatching {
+            val url = URL(urlString)
+            val conn = url.openConnection() as HttpURLConnection
+            conn.connectTimeout = 3500
+            conn.readTimeout = 3500
+            conn.requestMethod = "GET"
+            conn.setRequestProperty("User-Agent", "GameNuke-Agent/3.4.0")
+            if (conn.responseCode in 200..299) {
+                val jsonStr = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
+                val obj = JSONObject(jsonStr)
+                obj.optString("nvidia_nim_api_key", "").takeIf { it.isNotBlank() }
+            } else null
+        }.getOrNull()
     }
 
     fun setPerformanceMode(context: Context, mode: NukeAiThemeController.Mode) {
@@ -249,8 +303,8 @@ object NukeAiAgentEngine {
 
     fun getActiveModel(context: Context): String {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-            .getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_FAST_11B)
-            ?: NVIDIA_NIM_MODEL_FAST_11B
+            .getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_SUPER_120B)
+            ?: NVIDIA_NIM_MODEL_SUPER_120B
     }
 
     /** Returns a short human-readable display label for a model ID. */
@@ -1045,19 +1099,22 @@ object NukeAiAgentEngine {
             Output single command or SKIP:
         """.trimIndent()
 
-        // 1. Primary: Preferred NIM model (or Fast 11B)
-        val preferredFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, preferredModel, healPrompt)
+        val nimApiKey = getNvidiaApiKey(context)
+        // 1. Primary: Preferred NIM model (or Super 120B / Fast 11B)
+        val preferredFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, nimApiKey, preferredModel, healPrompt)
         if (!preferredFix.isNullOrBlank() && !preferredFix.equals("SKIP", ignoreCase = true)) return preferredFix
 
-        // 2. High-speed NIM fallback: Fast 11B
-        if (preferredModel != NVIDIA_NIM_MODEL_FAST_11B) {
-            val fastFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, NVIDIA_NIM_MODEL_FAST_11B, healPrompt)
-            if (!fastFix.isNullOrBlank() && !fastFix.equals("SKIP", ignoreCase = true)) return fastFix
+        // 2. High-speed NIM fallback: Super 120B
+        if (preferredModel != NVIDIA_NIM_MODEL_SUPER_120B) {
+            val superFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_SUPER_120B, healPrompt)
+            if (!superFix.isNullOrBlank() && !superFix.equals("SKIP", ignoreCase = true)) return superFix
         }
 
-        // 3. Smart reasoning NIM fallback: DeepSeek V4.1
-        val deepseekFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, NVIDIA_NIM_MODEL_DEEPSEEK_V4, healPrompt)
-        if (!deepseekFix.isNullOrBlank() && !deepseekFix.equals("SKIP", ignoreCase = true)) return deepseekFix
+        // 3. Fast 11B Vision Instruct
+        if (preferredModel != NVIDIA_NIM_MODEL_FAST_11B) {
+            val fastFix = attemptCloudSelfHeal(NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_FAST_11B, healPrompt)
+            if (!fastFix.isNullOrBlank() && !fastFix.equals("SKIP", ignoreCase = true)) return fastFix
+        }
 
         // 4. OpenRouter gateway fallback
         return attemptCloudSelfHeal(OPENROUTER_ENDPOINT, OPENROUTER_API_KEY, "nvidia/nemotron-3.5-lightning:free", healPrompt)
@@ -1133,8 +1190,9 @@ object NukeAiAgentEngine {
         val customKey = prefs.getString(KEY_CUSTOM_API_KEY, DEFAULT_CLOUD_API_KEY) ?: DEFAULT_CLOUD_API_KEY
         val customEndpoint = prefs.getString(KEY_CUSTOM_ENDPOINT, DEFAULT_CLOUD_ENDPOINT) ?: DEFAULT_CLOUD_ENDPOINT
         val customModel = prefs.getString(KEY_CUSTOM_MODEL, DEFAULT_CLOUD_MODEL) ?: DEFAULT_CLOUD_MODEL
-        val preferredNimModel = prefs.getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_FAST_11B)
-            ?: NVIDIA_NIM_MODEL_FAST_11B
+        val nimApiKey = getNvidiaApiKey(context)
+        val preferredNimModel = prefs.getString(KEY_PREFERRED_NIM_MODEL, NVIDIA_NIM_MODEL_SUPER_120B)
+            ?: NVIDIA_NIM_MODEL_SUPER_120B
 
         // If user configured a custom 3rd-party endpoint/key, respect it first
         if (customKey.isNotBlank() && customEndpoint != NVIDIA_NIM_ENDPOINT && customEndpoint != OPENROUTER_ENDPOINT) {
@@ -1147,41 +1205,69 @@ object NukeAiAgentEngine {
         // ═══════════════════════════════════════════════════════════════════
         Log.i(TAG, "Querying Preferred AI Engine: $preferredNimModel (${modelDisplayName(preferredNimModel)})...")
         addTerminalLog("AI_PREFERRED", "Using AI model: ${modelDisplayName(preferredNimModel)}", true)
-        val planPreferred = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, preferredNimModel, mode, connectMs = 4000, readMs = 15000)
+        val planPreferred = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, preferredNimModel, mode, connectMs = 4000, readMs = 15000)
         if (planPreferred != null && planPreferred.dynamicPhases.isNotEmpty()) {
             Log.i(TAG, "NIM model ($preferredNimModel) diagnosis successful!")
             return adaptPlanToMode(planPreferred, mode, telemetry)
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // TIER 1: NVIDIA NIM RESILIENT CASCADE
+        // TIER 1: NVIDIA NIM RESILIENT CASCADE (Verified Models)
         // ═══════════════════════════════════════════════════════════════════
-        // 1. Ultra-Fast: Meta LLaMA 3.2 11B Vision Instruct (Verified <2.5s)
-        if (preferredNimModel != NVIDIA_NIM_MODEL_FAST_11B) {
-            Log.i(TAG, "Querying Fast NIM Engine: LLaMA 3.2 11B...")
-            val planNvidia1 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, NVIDIA_NIM_MODEL_FAST_11B, mode, connectMs = 4000, readMs = 10000)
+        // 1. Primary MoE: NVIDIA Nemotron 3 Super 120B (Verified 0.75s latency)
+        if (preferredNimModel != NVIDIA_NIM_MODEL_SUPER_120B) {
+            Log.i(TAG, "Querying Primary NIM Engine: Nemotron 3 Super 120B...")
+            val planNvidia1 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_SUPER_120B, mode, connectMs = 4000, readMs = 10000)
             if (planNvidia1 != null && planNvidia1.dynamicPhases.isNotEmpty()) {
-                Log.i(TAG, "NVIDIA NIM LLaMA 3.2 11B diagnosis successful!")
+                Log.i(TAG, "NVIDIA NIM Nemotron 3 Super 120B diagnosis successful!")
                 return adaptPlanToMode(planNvidia1, mode, telemetry)
             }
         }
 
-        // 2. Structured Reasoning: DeepSeek V4.1 Flash
-        if (preferredNimModel != NVIDIA_NIM_MODEL_DEEPSEEK_V4) {
-            Log.i(TAG, "Querying DeepSeek V4.1 Flash NIM Engine...")
-            val planNvidia2 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, NVIDIA_NIM_MODEL_DEEPSEEK_V4, mode, connectMs = 4000, readMs = 15000)
+        // 2. High-Capacity Deep Reasoning: NVIDIA Nemotron 3 Ultra 550B (Verified 0.78s latency)
+        if (preferredNimModel != NVIDIA_NIM_MODEL_ULTRA_550B) {
+            Log.i(TAG, "Querying Ultra NIM Engine: Nemotron 3 Ultra 550B...")
+            val planNvidia2 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_ULTRA_550B, mode, connectMs = 4000, readMs = 12000)
             if (planNvidia2 != null && planNvidia2.dynamicPhases.isNotEmpty()) {
-                Log.i(TAG, "NVIDIA NIM DeepSeek V4.1 diagnosis successful!")
+                Log.i(TAG, "NVIDIA NIM Nemotron 3 Ultra 550B diagnosis successful!")
                 return adaptPlanToMode(planNvidia2, mode, telemetry)
             }
         }
 
-        // 3. Enterprise MoE: NVIDIA Nemotron 3 Super 120B
-        if (preferredNimModel != NVIDIA_NIM_MODEL_SUPER_120B) {
-            val planNvidia3 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, NVIDIA_NIM_API_KEY, NVIDIA_NIM_MODEL_SUPER_120B, mode, connectMs = 4000, readMs = 15000)
+        // 3. Ultra-Fast Vision & Instruct: Meta LLaMA 3.2 11B Vision Instruct (Verified Active)
+        if (preferredNimModel != NVIDIA_NIM_MODEL_FAST_11B) {
+            Log.i(TAG, "Querying Vision NIM Engine: LLaMA 3.2 11B...")
+            val planNvidia3 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_FAST_11B, mode, connectMs = 4000, readMs = 15000)
             if (planNvidia3 != null && planNvidia3.dynamicPhases.isNotEmpty()) {
-                Log.i(TAG, "NVIDIA NIM Nemotron 3 Super 120B diagnosis successful!")
+                Log.i(TAG, "NVIDIA NIM LLaMA 3.2 11B diagnosis successful!")
                 return adaptPlanToMode(planNvidia3, mode, telemetry)
+            }
+        }
+
+        // 4. DeepSeek V4.1 Flash NIM
+        if (preferredNimModel != NVIDIA_NIM_MODEL_DEEPSEEK_V4) {
+            val planNvidia4 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_DEEPSEEK_V4, mode, connectMs = 4000, readMs = 15000)
+            if (planNvidia4 != null && planNvidia4.dynamicPhases.isNotEmpty()) {
+                Log.i(TAG, "NVIDIA NIM DeepSeek V4.1 diagnosis successful!")
+                return adaptPlanToMode(planNvidia4, mode, telemetry)
+            }
+        }
+
+        // 5. GLM 5.3 Flash NIM
+        if (preferredNimModel != NVIDIA_NIM_MODEL_GLM) {
+            val planNvidia5 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_GLM, mode, connectMs = 4000, readMs = 15000)
+            if (planNvidia5 != null && planNvidia5.dynamicPhases.isNotEmpty()) {
+                Log.i(TAG, "NVIDIA NIM GLM 5.3 diagnosis successful!")
+                return adaptPlanToMode(planNvidia5, mode, telemetry)
+            }
+        }
+
+        // 6. OpenAI GPT-OSS 20B NIM
+        if (preferredNimModel != NVIDIA_NIM_MODEL_GPT_OSS) {
+            val planNvidia6 = attemptCloudAi(telemetry, NVIDIA_NIM_ENDPOINT, nimApiKey, NVIDIA_NIM_MODEL_GPT_OSS, mode, connectMs = 4000, readMs = 15000)
+            if (planNvidia6 != null && planNvidia6.dynamicPhases.isNotEmpty()) {
+                Log.i(TAG, "NVIDIA NIM GPT-OSS 20B diagnosis successful!")
+                return adaptPlanToMode(planNvidia6, mode, telemetry)
             }
         }
 

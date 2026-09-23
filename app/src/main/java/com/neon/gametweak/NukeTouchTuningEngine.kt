@@ -80,7 +80,7 @@ object NukeTouchTuningEngine {
     @Volatile var euroEnabled = false
     @Volatile var euroMinCutoff = 8.0f
     @Volatile var euroBeta = 0.08f
-    @Volatile var dragShotCurve = true
+    @Volatile var dragShotCurve = false
 
     val currentXMultiplier: Float get() = xMultiplier
     val currentYMultiplier: Float get() = yMultiplier
@@ -573,6 +573,22 @@ object NukeTouchTuningEngine {
                 // Ensure fresh libwandev.so is deployed to /data/local/tmp/libwandev.so before starting
                 nuke.wandev.touch.NukeTouchDeployer.redeployFresh(context)
                 val libPath = getLibTouchPath(context)
+
+                // Initialize sensitivity state: default to 0-sensi (1:1 pass-through) unless user explicitly enabled Sensi Boost
+                val sensiPrefs = context.getSharedPreferences("NukeTouchListenerPrefs", Context.MODE_PRIVATE)
+                val isSensiBoostActive = sensiPrefs.getBoolean("touch_sens_boost_enabled", false)
+                if (!isSensiBoostActive) {
+                    xMultiplier = 1.00f
+                    yMultiplier = 1.00f
+                    dragShotCurve = false
+                    euroEnabled = false
+                } else {
+                    xMultiplier = sensiPrefs.getFloat("touch_sens_x", 1.00f).coerceIn(0.50f, 2.50f)
+                    yMultiplier = sensiPrefs.getFloat("touch_sens_y", 1.00f).coerceIn(0.50f, 4.00f)
+                    sensArea = sensiPrefs.getInt("touch_sens_area", AREA_ALL)
+                    curveMode = sensiPrefs.getInt("touch_curve_mode", CURVE_LINEAR)
+                    dragShotCurve = (curveMode != CURVE_LINEAR)
+                }
 
                 // 1. Check if privileged Binder service is available (Shizuku / iAdb auto-reconnect)
                 val shellService = NukeConnectionManager.ensureShellService(2500L)

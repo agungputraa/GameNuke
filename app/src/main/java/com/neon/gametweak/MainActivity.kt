@@ -189,6 +189,7 @@ class MainActivity : ComponentActivity() {
         window.decorView.postDelayed({
             if (!isFinishing && !isDestroyed) {
                 runCatching { NukeAdbOrchestrator.start(applicationContext) }
+                runCatching { NukeAiAgentEngine.syncRemoteConfigAsync(applicationContext) }
                 scheduleDisplayRecovery()
                 runCatching { AppUpdateController.check(this) }
                 runCatching {
