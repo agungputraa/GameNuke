@@ -1,0 +1,22 @@
+{
+  "version": 1,
+  "last_updated": "2026-09-16",
+  "disabled_components": [],
+  "disabled_panels": [],
+  "component_overrides": {
+    "touch_tuning": { "enabled": true, "disabled_reason": "" },
+    "macro_studio": { "enabled": true, "disabled_reason": "" },
+    "cyber_jukebox": { "enabled": true, "disabled_reason": "" },
+    "screen_record": { "enabled": true, "disabled_reason": "" },
+    "system_optimizer": { "enabled": true, "disabled_reason": "" },
+    "antivirus": { "enabled": true, "disabled_reason": "" },
+    "network_vpn": { "enabled": true, "disabled_reason": "" },
+    "task_manager": { "enabled": true, "disabled_reason": "" },
+    "gpu_graphics": { "enabled": true, "disabled_reason": "" },
+    "fps_lock": { "enabled": true, "disabled_reason": "" }
+  },
+  "emergency_broadcast": {
+    "active": false,
+    "message": ""
+  }
+}
