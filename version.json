@@ -1,0 +1,28 @@
+{
+  "versionCode": 34,
+  "versionName": "3.4.0-Nexus",
+  "appName": "Game Nuke Nexus Edition",
+  "publishedAt": "2026-09-23",
+  "minAndroidVersion": 11,
+  "targetSdk": 36,
+  "releaseNotes": [
+    "Nexus Multi-Touch & AI Engine: Full kernel alignment with low-latency touch translation, cognitive hardware tuning, and adaptive gaming pace.",
+    "Elevated Overlay HUD Toast: Dynamic top-level floating pill toast renders above all floating windows and games with distinct INFO (Cyan), SUCCESS (Green), NOTICE (Amber), and ERROR (Red) indicators.",
+    "Seamless VIP Experience: When VIP is active, all lock icons and VIP badges are completely removed across Neural Core, Sensi Panel, Macro Studio, and VPN Tunnel.",
+    "Centralized Home Touch Listener: Touch Listener activation is centralized in Home/Dashboard for VIP subscribers. Floating HUD provides direct Sensi Panel and Macro Studio cards.",
+    "100% English Global Default & Real-Time Dynamic Translation: Universal English default terminology across all components with full locale-aware translation.",
+    "Aesthetic Blurred Game Artwork: Game profiles display elegant, low-overhead GPU blurred backdrops matching each game's emblem.",
+    "Thermal & CPU Load Optimization: Throttled ADB background polling and zero-allocation Compose drawing to keep the device running cool.",
+    "Absolute Zero-Ghost Touch Protection: Hardware kernel BTN_TOUCH release detection guarantees instant pointer purge with zero phantom taps.",
+    "Ironclad Process Immunity Shield: Sentinel, Task Manager, and Autonomous AI Agent 100% protect Game Nuke, active games, and all OEM/3rd-party screen recorders.",
+    "Cross-Brand Android 11–16 Stability: Pre-flight injection capability tests ensure zero screen freeze across Samsung, Xiaomi/HyperOS, Oppo, Vivo, Asus ROG, Transsion, and Pixel."
+  ],
+  "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
+  "localApkUrl": "GameNuke-v3.4.0-Nexus.apk",
+  "apkSizeMb": "32.2",
+  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
+  "sha256": "F4E7FB014C4E82FBF26BBE0697FE88CC9A37976E2370240FE0293D1DD56A8C84",
+  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
+  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
+  "nvidia_nim_api_key": "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"
+}
