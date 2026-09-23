@@ -254,6 +254,12 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             NukeToast.error(context, "Overlay permission required")
             return
         }
+        // Touch Listener must be explicitly activated by the user from the Game Nuke dashboard
+        // before Macro Studio can be used. This prevents accidental sensi activation.
+        if (!NukeTouchTuningEngine.isDaemonTouchActive) {
+            NukeToast.error(context, "Aktifkan Touch Listener di Game Nuke Dashboard terlebih dahulu", true)
+            return
+        }
 
         loadProfiles()
         isPanelHidden = false
@@ -263,7 +269,7 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         isArmed = true
         selectedPinId = null
 
-        ensureDaemonTouch()
+        syncDaemonIfActive()
         NukeVolumeKeyTriggerManager.start(context)
         attachWindows()
         panelView?.visibility = View.VISIBLE
@@ -278,13 +284,17 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
             NukeToast.error(context, "Game Nuke VIP required to unlock Macro Studio", true)
             return
         }
+        if (!NukeTouchTuningEngine.isDaemonTouchActive) {
+            NukeToast.error(context, "Aktifkan Touch Listener di Game Nuke Dashboard terlebih dahulu", true)
+            return
+        }
         isPanelHidden = false
         isPanelOpen = true
         isMinimized = false
         if (!isShowing) {
             show()
         } else {
-            ensureDaemonTouch()
+            syncDaemonIfActive()
             panelView?.visibility = View.VISIBLE
             updateCanvasTouchability(touchable = isEditMode)
             notifyPanelLayoutChanged()
@@ -641,18 +651,20 @@ class NukeMacroStudioOverlay private constructor(private val context: Context) {
         }
     }
 
-    private fun ensureDaemonTouch() {
-        // Automatically activate Touch Listener switch and start daemon touch
-        val touchPanel = NukeMagicTouchPanelOverlay.getInstance(context)
-        touchPanel.setTouchListenerEnabled(true) { success ->
-            mainHandler.post {
-                isDaemonActive = success
-                if (success && isArmed) {
-                    persistAndSync()
-                }
-            }
+    /**
+     * Syncs macro pins to daemon if the Touch Listener daemon is already active.
+     * Does NOT automatically activate Touch Listener — user must do that explicitly
+     * from the Game Nuke Dashboard (SESSION READINESS section).
+     */
+    private fun syncDaemonIfActive() {
+        val isActive = NukeTouchTuningEngine.isDaemonTouchActive
+        isDaemonActive = isActive
+        if (isActive && isArmed) {
+            persistAndSync()
         }
     }
+
+    private fun ensureDaemonTouch() = syncDaemonIfActive()
 
     private fun cycleProfile() {
         if (profiles.isEmpty()) return

@@ -500,10 +500,11 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
             setPadding(0, (6 * d).toInt(), 0, (5 * d).toInt())
         }
         val availableModels = listOf(
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_FAST_11B, "LLAMA 11B", "Meta LLaMA 3.2 11B • Ultra-Fast Hardware Tuning (<2.5s)"),
             Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_DEEPSEEK_V4, "DEEPSEEK V4", "DeepSeek V4.1 Flash • Deep Reasoning & Structured Optimizer"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_SUPER_120B, "SUPER 120B", "Flagship MoE • Balanced Hardware Telemetry Reasoning"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_FAST_11B, "FAST 11B", "Ultra-Low Latency • Instant Kernel Synthesis (<2s)"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_ULTRA_550B, "ULTRA 550B", "Deep Multi-Cluster Reasoning • Heavy Neural MoE")
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_GLM, "GLM 5.3", "Z-AI GLM 5.3 Flash • Neural Reasoning Engine"),
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_GPT_OSS, "GPT-OSS 20B", "OpenAI GPT-OSS 20B • High-Speed Hardware Diagnostics"),
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_SUPER_120B, "SUPER 120B", "NVIDIA Nemotron 3 Super 120B • Enterprise MoE Engine")
         )
         modelButtons.clear()
         availableModels.forEach { (modelId, label, _) ->
@@ -969,10 +970,11 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
 
     private fun refreshModelUi(selectedModel: String) {
         val availableModels = listOf(
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_FAST_11B, "LLAMA 11B", "Meta LLaMA 3.2 11B • Ultra-Fast Hardware Tuning (<2.5s)"),
             Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_DEEPSEEK_V4, "DEEPSEEK V4", "DeepSeek V4.1 Flash • Deep Reasoning & Structured Optimizer"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_SUPER_120B, "SUPER 120B", "Flagship MoE • Balanced Hardware Telemetry Reasoning"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_FAST_11B, "FAST 11B", "Ultra-Low Latency • Instant Kernel Synthesis (<2s)"),
-            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_ULTRA_550B, "ULTRA 550B", "Deep Multi-Cluster Reasoning • Heavy Neural MoE")
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_GLM, "GLM 5.3", "Z-AI GLM 5.3 Flash • Neural Reasoning Engine"),
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_GPT_OSS, "GPT-OSS 20B", "OpenAI GPT-OSS 20B • High-Speed Hardware Diagnostics"),
+            Triple(NukeAiAgentEngine.NVIDIA_NIM_MODEL_SUPER_120B, "SUPER 120B", "NVIDIA Nemotron 3 Super 120B • Enterprise MoE Engine")
         )
         val selected = availableModels.firstOrNull { it.first == selectedModel } ?: availableModels.first()
 

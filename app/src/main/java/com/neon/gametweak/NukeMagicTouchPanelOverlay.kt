@@ -154,10 +154,10 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 minOf((440 * d).toInt(), (dm.widthPixels * 0.56f).toInt())
             }.coerceAtLeast(minOf((286 * d).toInt(), (dm.widthPixels * 0.80f).toInt()))
             val initialHeight = if (isPortrait) {
-                minOf((590 * d).toInt(), (dm.heightPixels * 0.84f).toInt())
+                minOf((490 * d).toInt(), (dm.heightPixels * 0.76f).toInt())
             } else {
-                minOf((430 * d).toInt(), (dm.heightPixels * 0.90f).toInt())
-            }.coerceAtLeast(minOf((286 * d).toInt(), (dm.heightPixels * 0.58f).toInt()))
+                minOf((380 * d).toInt(), (dm.heightPixels * 0.88f).toInt())
+            }.coerceAtLeast(minOf((286 * d).toInt(), (dm.heightPixels * 0.56f).toInt()))
             val initialX = maxOf((8 * d).toInt(), (dm.widthPixels - initialWidth) / 2)
             val initialY = if (isPortrait) (70 * d).toInt() else (20 * d).toInt()
 
@@ -191,6 +191,24 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             Log.e(TAG, "Failed to show Touch Listener overlay: ${e.message}", e)
         }
     }
+
+    /**
+     * Activates the Touch Listener daemon engine WITHOUT showing the floating panel UI.
+     * Called from the Game Nuke Dashboard SESSION READINESS master switch.
+     * The floating Sensi panel can then be opened separately by the user.
+     */
+    fun activateOnly(onComplete: ((Boolean) -> Unit)? = null) {
+        setTouchListenerEnabled(true, onComplete)
+    }
+
+    /**
+     * Deactivates the Touch Listener daemon WITHOUT closing the floating panel UI.
+     * Called from the Game Nuke Dashboard SESSION READINESS master switch.
+     */
+    fun deactivateOnly(onComplete: ((Boolean) -> Unit)? = null) {
+        setTouchListenerEnabled(false, onComplete)
+    }
+
 
     fun toggle() {
         if (isShowing) hide() else show()
@@ -300,7 +318,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             orientation = LinearLayout.VERTICAL
         }
 
-        // Section Cards (Strictly required components)
+        // Section Cards (Strictly required components — Macro Studio accessed from Game Nuke Dashboard)
         body.addView(buildMasterSwitchCard())
         body.addView(spacer(8))
         body.addView(buildSensitivityXCard())
@@ -310,8 +328,6 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         body.addView(buildDetectionAreaCard())
         body.addView(spacer(8))
         body.addView(buildResponseCurveCard())
-        body.addView(spacer(8))
-        body.addView(buildMacroStudioCard())
 
         scrollView.addView(body)
         container.addView(scrollView)

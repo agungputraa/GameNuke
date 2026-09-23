@@ -2,11 +2,13 @@
   "versionCode": 34,
   "versionName": "3.4.0-Nexus",
   "appName": "Game Nuke Nexus Edition",
-  "publishedAt": "2026-09-22",
+  "publishedAt": "2026-09-23",
   "minAndroidVersion": 11,
   "targetSdk": 36,
   "releaseNotes": [
     "Nexus Multi-Touch & AI Engine: Full kernel alignment with low-latency touch translation, cognitive hardware tuning, and adaptive gaming pace.",
+    "Independent Touch Listener Architecture: Separated Touch Listener initialization into Session Readiness / Input Control Hub. Macro Studio and Sensi Panel are decoupled and fully independent.",
+    "Safe Component Master Guard: Macro and Sensi panels are safely locked until Touch Listener is explicitly activated from the Game Nuke cockpit.",
     "Precision Linear HUD: Symmetrical linear alignment for active game title, session status, and cockpit controls.",
     "Aesthetic Blurred Game Artwork: Game profiles display elegant, low-overhead GPU blurred backdrops matching each game's emblem.",
     "Thermal & CPU Load Optimization: Throttled ADB background polling and zero-allocation Compose drawing to keep the device running cool.",
@@ -16,9 +18,9 @@
   ],
   "downloadUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
   "localApkUrl": "GameNuke-v3.4.0-Nexus.apk",
-  "apkSizeMb": "33.7",
+  "apkSizeMb": "32.2",
   "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v3.4.0-Nexus/GameNuke-v3.4.0-Nexus.apk",
-  "sha256": "1C92F8E4F5CA7089F4B672407B5A7A651E74BEFEC804EB25B3F19CF11C258B88",
+  "sha256": "EA49E3C241C4B85B9CD969FA87E231870BA91D1A348641BB8244E9ADA9652E3F",
   "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
   "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
 }

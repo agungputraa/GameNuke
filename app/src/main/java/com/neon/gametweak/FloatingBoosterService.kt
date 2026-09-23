@@ -901,6 +901,7 @@ class FloatingBoosterService : Service() {
                 "data_saver" to isDataSaverPref,
                 "phone_health" to NukePhoneHealthOverlay.getInstance(applicationContext).isShowing,
                 "magic_touch" to NukeMagicTouchPanelOverlay.getInstance(applicationContext).isShowing,
+                "touch_listener_active" to NukeTouchTuningEngine.isDaemonTouchActive,
                 "gpu_tuner" to NukeGpuGraphicsPanelOverlay.getInstance(applicationContext).isShowing,
                 "task_manager" to NukeTaskManagerPanelOverlay.getInstance(applicationContext).isShowing,
                 "ai_sentinel" to NukeAiSentinel.enabled.value,
@@ -1020,7 +1021,7 @@ class FloatingBoosterService : Service() {
             // Optimistic UI state update immediately (0ms visual feedback!)
             val currentActive = composeHudState.value.quickToolStates[action] ?: false
             val nextVal = !currentActive
-            if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor" && action != "cyber_jukebox" && action != "vol_trigger" && action != "aim_stabilizer" && action != "ai_agent") {
+            if (action !in setOf("touch_sequencer", "app_switch", "ping_monitor") && action != "deep_clean" && action != "vpn_boost" && action != "magic_touch" && action != "touch_listener_setup" && action != "touch_listener_toggle" && action != "open_sensi_panel" && action != "open_macro_studio" && action != "gpu_tuner" && action != "ai_sentinel" && action != "phone_health" && action != "task_manager" && action != "live_chat" && action != "terminal" && action != "game_dock" && action != "deep_cooling" && action != "antivirus" && action != "system_editor" && action != "cyber_jukebox" && action != "vol_trigger" && action != "aim_stabilizer" && action != "ai_agent") {
                 prefs.edit().putBoolean("nuke_quick_$action", nextVal).apply()
                 composeHudState.update { it.copy(quickToolStates = it.quickToolStates + (action to nextVal)) }
             }
@@ -1355,8 +1356,46 @@ class FloatingBoosterService : Service() {
                 toastOutcome(if (opening) "Task Manager: OPEN" else "Task Manager: CLOSED")
             }
             "magic_touch" -> {
+                // magic_touch now serves as INPUT CONTROL HUB — redirects to setup screen
                 if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
                     NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Touch Listener", true)
+                    return
+                }
+                // Open Touch Listener setup screen via HUD state
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("touch_listener_setup" to true)) }
+                toastOutcome("Input Control Hub: OPEN")
+            }
+            "touch_listener_setup" -> {
+                val current = composeHudState.value.quickToolStates["touch_listener_setup"] ?: false
+                composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("touch_listener_setup" to !current)) }
+            }
+            "touch_listener_toggle" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Touch Listener", true)
+                    return
+                }
+                val tl = NukeMagicTouchPanelOverlay.getInstance(applicationContext)
+                val isTlActive = NukeTouchTuningEngine.isDaemonTouchActive
+                NukeDynamicSessionRestoreManager.markTouchModified()
+                if (!isTlActive) {
+                    tl.activateOnly { ok ->
+                        composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("touch_listener_active" to ok)) }
+                        toastOutcome(if (ok) "Touch Listener: ACTIVE" else "Touch Listener: Gagal aktif — coba hubungkan Shizuku/ADB")
+                    }
+                } else {
+                    tl.deactivateOnly { ok ->
+                        composeHudState.update { it.copy(quickToolStates = it.quickToolStates + ("touch_listener_active" to false)) }
+                        toastOutcome("Touch Listener: DISABLED")
+                    }
+                }
+            }
+            "open_sensi_panel" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Sensi Panel", true)
+                    return
+                }
+                if (!NukeTouchTuningEngine.isDaemonTouchActive) {
+                    NukeToast.error(applicationContext, "Aktifkan Touch Listener terlebih dahulu", true)
                     return
                 }
                 NukeDynamicSessionRestoreManager.markTouchModified()
@@ -1364,7 +1403,33 @@ class FloatingBoosterService : Service() {
                 val opening = !overlay.isShowing
                 if (opening) prepareExclusivePanel("magic_touch") else clearExclusivePanel("magic_touch")
                 overlay.toggle()
-                toastOutcome(if (opening) "Touch Listener: OPEN" else "Touch Listener: CLOSED")
+                toastOutcome(if (opening) "Sensi Panel: OPEN" else "Sensi Panel: CLOSED")
+            }
+            "open_macro_studio" -> {
+                if (!NukeSubscriptionManager.isVipActive(applicationContext)) {
+                    NukeToast.error(applicationContext, "Game Nuke VIP required to unlock Macro Studio", true)
+                    return
+                }
+                if (!NukeTouchTuningEngine.isDaemonTouchActive) {
+                    NukeToast.error(applicationContext, "Aktifkan Touch Listener terlebih dahulu", true)
+                    return
+                }
+                NukeDynamicSessionRestoreManager.markMacroModified()
+                val studio = NukeMacroStudioOverlay.getInstance(applicationContext)
+                if (!studio.isShowing) {
+                    prepareExclusivePanel("macro_studio")
+                    studio.show()
+                } else if (studio.isPanelHidden || !studio.isPanelOpen) {
+                    prepareExclusivePanel("macro_studio")
+                    studio.openPanel()
+                } else {
+                    studio.closePanel(keepPinsActive = true)
+                    clearExclusivePanel("macro_studio")
+                }
+                val statusMsg = if (studio.isPanelOpen && !studio.isPanelHidden) "Macro Studio: ACTIVE"
+                    else if (studio.isShowing) "Macro Studio: PINS ARMED"
+                    else "Macro Studio: STANDBY"
+                toastOutcome(statusMsg)
             }
             "gpu_tuner" -> {
                 NukeDynamicSessionRestoreManager.markGpuTunerModified()

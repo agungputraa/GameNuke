@@ -18,7 +18,7 @@ object NukeModuleCatalog {
 
     val modules: List<Module> = listOf(
         Module("max_fps", "Performance", "Display & FPS Controls", "Uses supported display/game configuration paths and rendered-frame sampling where available."),
-        Module("magic_touch", "Tactical", "Touch Listener", "Kernel-level touch response controls, Android pointer speed, and calibrated in-game X/Y multipliers."),
+        Module("magic_touch", "Tactical", "Input Control Hub", "Kernel-level touch response controls, Android pointer speed, and calibrated in-game X/Y multipliers."),
         Module("gpu_tuner", "Performance", "GPU & Display Tuner", "Renderer preference, resolution profile and refresh target controls where supported by the device."),
         Module("phone_health", "System", "Device Health & Telemetry", "Battery, thermal, CPU frequency, RAM, zRAM and storage telemetry from available system sources."),
         Module("ai_sentinel", "Performance", "AI Sentinel", "Adaptive session monitoring with protected system, launcher, input method, dialer, Shizuku and active-game processes."),
