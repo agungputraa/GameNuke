@@ -34,20 +34,14 @@ android {
     defaultConfig {
         applicationId = "com.neon.gametweak"
         minSdk = 30
-        targetSdk = 36
-        versionCode = 34
-        versionName = "3.4.0-Nexus"
+        targetSdk = 35
+        versionCode = 36
+        versionName = "3.6.0-Apeiron"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables { useSupportLibrary = true }
         ndk {
             abiFilters.add("arm64-v8a")
             abiFilters.add("armeabi-v7a")
-        }
-    }
-
-    packaging {
-        jniLibs {
-            useLegacyPackaging = true
         }
     }
 
@@ -133,13 +127,19 @@ android {
 
     packaging {
         jniLibs {
-            useLegacyPackaging = false
+            useLegacyPackaging = true
         }
         resources {
             excludes += setOf(
                 "/META-INF/{AL2.0,LGPL2.1}",
                 "META-INF/INDEX.LIST",
-                "META-INF/DEPENDENCIES"
+                "META-INF/DEPENDENCIES",
+                "META-INF/*.version",
+                "META-INF/*.kotlin_module",
+                "META-INF/LICENSE*",
+                "META-INF/NOTICE*",
+                "META-INF/license.txt",
+                "META-INF/notice.txt"
             )
         }
     }

@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '3.4.0-Nexus',
+    versionName: '3.6.0-Apeiron',
     apkSizeMb: '33.7',
-    publishedAt: '2026-09-22',
+    publishedAt: '2026-10-06',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };
@@ -119,35 +119,30 @@
 
     const config = window.GAMENUKE_CONFIG || {};
     const reviewMode = config.adsenseReviewMode === true;
-    const sponsorDelay = Number(config.sponsorDelayMs) || 2000;
     const directLink = config.indexDirectlinkUrl || state.version.directlinkAdUrl || DEFAULT_VERSION.directlinkAdUrl;
+    const targetUrl = 'download.html';
 
-    const auth = `gn_sess_${Date.now()}_${Math.random().toString(36).slice(2,9)}`;
+    // 1. Open the next funnel page (download.html) in a new tab for seamless user experience
+    let newTab = null;
     try {
-      sessionStorage.setItem('gn_download_session', auth);
-      sessionStorage.setItem('gn_session_timestamp', Date.now().toString());
+      newTab = window.open(targetUrl, '_blank');
     } catch (_) {}
 
-    const downloadUrl = 'download.html';
-    let downloadTab = null;
-    try { downloadTab = window.open(downloadUrl, '_blank'); } catch (_) {}
-
-    // If the browser blocks the intentional new tab, keep the real download destination working.
-    if (!downloadTab) {
-      state.downloadTransitioning = false;
-      window.location.assign(downloadUrl);
-      return;
-    }
-
-    // Tab-under practice: The clean download portal opens in the foreground (new tab, focused),
-    // while this old tab navigates to the sponsor directlink behind it. The user never sees the ad.
+    // 2. Open sponsor directlink in the old tab (tab lama) if monetized, so user is not annoyed
     if (!reviewMode && directLink) {
-      setTimeout(() => {
-        window.location.assign(directLink);
-      }, 150);
+      if (newTab && !newTab.closed) {
+        window.location.href = directLink;
+      } else {
+        // Pop-up was blocked by browser, navigate current tab to download.html
+        window.location.href = targetUrl;
+      }
     } else {
-      window.setTimeout(() => { state.downloadTransitioning = false; }, 700);
+      if (!newTab || newTab.closed) {
+        window.location.href = targetUrl;
+      }
     }
+
+    setTimeout(() => { state.downloadTransitioning = false; }, 1000);
   }
 
   function initMobileActionbar() {

@@ -41,7 +41,7 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.FileDownload
 import androidx.compose.material.icons.rounded.FileUpload
 import androidx.compose.material.icons.rounded.History
-import androidx.compose.material.icons.rounded.MenuBook
+import androidx.compose.material.icons.automirrored.rounded.MenuBook
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Restore
 import androidx.compose.material.icons.rounded.Search
@@ -641,19 +641,19 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Warning, contentDescription = null, tint = StudioAmber)
                     Spacer(Modifier.width(8.dp))
-                    Text("RESTORE ALL DEFAULTS", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(tr("RESTORE ALL DEFAULTS"), color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
             },
             text = {
                 Column {
                     Text(
-                        "This will safely revert all $modifiedCount modified parameters back to their original factory values recorded in the journal.",
+                        "${tr("This will safely revert all")} $modifiedCount ${tr("modified parameters back to their original factory values recorded in the journal.")}",
                         color = StudioTextMuted,
                         fontSize = 12.sp
                     )
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Safety validation active: parameters will be restored cleanly.",
+                        tr("Safety validation active: parameters will be restored cleanly."),
                         color = StudioEmerald,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Medium
@@ -671,7 +671,7 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
                                 val summary = NukeSystemParamRepository.rollbackAll(context)
                                 NukeToast.success(
                                     context,
-                                    "Restored: ${summary.successCount} parameters back to stock.",
+                                    "${tr("Restored:")} ${summary.successCount} ${tr("parameters back to stock.")}",
                                     long = true
                                 )
                                 revision++
@@ -679,12 +679,12 @@ fun NukeSystemEditorScreen(adbManager: AdbManager) {
                         }
                         .padding(horizontal = 14.dp, vertical = 7.dp)
                 ) {
-                    Text("CONFIRM RESTORE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
+                    Text(tr("CONFIRM RESTORE"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 11.sp)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showRollbackConfirmDialog = false }) {
-                    Text("CANCEL", color = StudioTextMuted, fontSize = 11.sp)
+                    Text(tr("CANCEL"), color = StudioTextMuted, fontSize = 11.sp)
                 }
             }
         )
@@ -819,7 +819,7 @@ private fun ExecutiveHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Bolt, contentDescription = null, tint = StudioEmerald, modifier = Modifier.size(11.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("APPLY PRESETS", color = StudioEmerald, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("APPLY PRESETS"), color = StudioEmerald, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -837,7 +837,7 @@ private fun ExecutiveHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioTextMuted, modifier = Modifier.size(11.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("IMPORT JSON", color = StudioTextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("IMPORT JSON"), color = StudioTextMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -855,7 +855,7 @@ private fun ExecutiveHeader(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.FileUpload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(11.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("EXPORT JSON", color = StudioSky, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("EXPORT JSON"), color = StudioSky, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
 
@@ -871,9 +871,9 @@ private fun ExecutiveHeader(
                 contentAlignment = Alignment.Center
             ) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = StudioTextDim, modifier = Modifier.size(11.dp))
+                    Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = StudioTextDim, modifier = Modifier.size(11.dp))
                     Spacer(Modifier.width(2.dp))
-                    Text("GUIDE", color = StudioTextDim, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("GUIDE"), color = StudioTextDim, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1177,7 +1177,7 @@ private fun ExecutiveParamListItem(
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("PRESET:", color = StudioTextDim, fontSize = 7.5.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("PRESET:"), color = StudioTextDim, fontSize = 7.5.sp, fontWeight = FontWeight.Bold)
                     param.presets.forEach { pVal ->
                         val isCurrent = param.value == pVal
                         Box(
@@ -1227,7 +1227,7 @@ private fun ExecutiveEditDialog(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Rounded.Tune, contentDescription = null, tint = StudioEmerald)
                     Spacer(Modifier.width(8.dp))
-                    Text("Edit Parameter", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                    Text(tr("Edit Parameter"), color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
                 }
                 Spacer(Modifier.height(3.dp))
                 Text(
@@ -1255,10 +1255,10 @@ private fun ExecutiveEditDialog(
                         .padding(8.dp)
                 ) {
                     Column {
-                        Text("Current on phone: ${param.value}", color = StudioTextMuted, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
+                        Text("${tr("Current on phone")}: ${param.value}", color = StudioTextMuted, fontFamily = FontFamily.Monospace, fontSize = 10.sp)
                         if (!param.stockValue.isNullOrBlank()) {
                             Spacer(Modifier.height(2.dp))
-                            Text("Stock baseline: ${param.stockValue}", color = StudioEmerald, fontFamily = FontFamily.Monospace, fontSize = 9.5.sp)
+                            Text("${tr("Stock baseline")}: ${param.stockValue}", color = StudioEmerald, fontFamily = FontFamily.Monospace, fontSize = 9.5.sp)
                         }
                     }
                 }
@@ -1269,7 +1269,7 @@ private fun ExecutiveEditDialog(
                     value = inputValue,
                     onValueChange = { inputValue = it },
                     modifier = Modifier.fillMaxWidth(),
-                    label = { Text("New Value", fontSize = 11.sp) },
+                    label = { Text(tr("New Value"), fontSize = 11.sp) },
                     singleLine = true,
                     shape = RoundedCornerShape(8.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -1290,7 +1290,7 @@ private fun ExecutiveEditDialog(
                         Icon(Icons.Rounded.Warning, contentDescription = null, tint = StudioRose, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            validationResult.errorMessage ?: "Invalid value",
+                            validationResult.errorMessage ?: tr("Invalid value"),
                             color = StudioRose,
                             fontSize = 10.sp
                         )
@@ -1299,13 +1299,13 @@ private fun ExecutiveEditDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.CheckCircle, contentDescription = null, tint = StudioEmerald, modifier = Modifier.size(13.dp))
                         Spacer(Modifier.width(4.dp))
-                        Text("Anti-Bootloop Validation: SAFE", color = StudioEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("Anti-Bootloop Validation: SAFE"), color = StudioEmerald, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
                 if (param.presets.isNotEmpty()) {
                     Spacer(Modifier.height(8.dp))
-                    Text("Quick Presets:", color = StudioTextDim, fontSize = 9.5.sp)
+                    Text(tr("Quick Presets:"), color = StudioTextDim, fontSize = 9.5.sp)
                     Spacer(Modifier.height(3.dp))
                     Row(
                         modifier = Modifier.horizontalScroll(rememberScrollState()),
@@ -1331,7 +1331,7 @@ private fun ExecutiveEditDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 if (param.isModified) {
                     TextButton(onClick = onRevertStock) {
-                        Text("REVERT STOCK", color = StudioAmber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("REVERT STOCK"), color = StudioAmber, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                     }
                     Spacer(Modifier.width(4.dp))
                 }
@@ -1344,13 +1344,13 @@ private fun ExecutiveEditDialog(
                         }
                         .padding(horizontal = 12.dp, vertical = 6.dp)
                 ) {
-                    Text("APPLY SAFELY", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                    Text(tr("APPLY SAFELY"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = StudioTextMuted, fontSize = 10.5.sp)
+                Text(tr("CANCEL"), color = StudioTextMuted, fontSize = 10.5.sp)
             }
         }
     )
@@ -1401,13 +1401,13 @@ private fun ExecutiveModuleImportDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("IMPORT DEVICE PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(tr("IMPORT DEVICE PLUGIN"), color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Import developer/creator tuning modules (.json) for instant gaming optimization.",
+                    tr("Import developer/creator tuning modules (.json) for instant gaming optimization."),
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )
@@ -1432,7 +1432,7 @@ private fun ExecutiveModuleImportDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.Description, contentDescription = null, tint = if (selectedTab == 0) StudioSky else StudioTextDim, modifier = Modifier.size(13.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("FILE .JSON", color = if (selectedTab == 0) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("FILE .JSON"), color = if (selectedTab == 0) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -1449,7 +1449,7 @@ private fun ExecutiveModuleImportDialog(
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(Icons.Rounded.ContentPaste, contentDescription = null, tint = if (selectedTab == 1) StudioSky else StudioTextDim, modifier = Modifier.size(13.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("PASTE CODE", color = if (selectedTab == 1) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("PASTE CODE"), color = if (selectedTab == 1) StudioSky else StudioTextMuted, fontSize = 10.sp, fontWeight = FontWeight.Bold)
                         }
                     }
                 }
@@ -1471,14 +1471,14 @@ private fun ExecutiveModuleImportDialog(
                         Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Icon(Icons.Rounded.FileDownload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(24.dp))
                             Spacer(Modifier.height(6.dp))
-                            Text("SELECT .JSON PLUGIN FILE", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
-                            Text("Browse internal storage or downloads", color = StudioTextDim, fontSize = 9.sp)
+                            Text(tr("SELECT .JSON PLUGIN FILE"), color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 11.5.sp)
+                            Text(tr("Browse internal storage or downloads"), color = StudioTextDim, fontSize = 9.sp)
                         }
                     }
                 } else {
                     // Paste text field
                     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                        Text("PLUGIN JSON CODE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("PLUGIN JSON CODE:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                         TextButton(
                             onClick = {
                                 val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
@@ -1494,13 +1494,13 @@ private fun ExecutiveModuleImportDialog(
                                         parsedResult = null
                                     }
                                 } else {
-                                    NukeToast.error(context, "Clipboard is empty!")
+                                    NukeToast.error(context, tr("Clipboard is empty!"))
                                 }
                             }
                         ) {
                             Icon(Icons.Rounded.ContentPaste, contentDescription = null, tint = StudioSky, modifier = Modifier.size(12.dp))
                             Spacer(Modifier.width(3.dp))
-                            Text("PASTE FROM CLIPBOARD", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("PASTE FROM CLIPBOARD"), color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                         }
                     }
 
@@ -1613,7 +1613,7 @@ private fun ExecutiveModuleImportDialog(
                             }
 
                             Spacer(Modifier.height(8.dp))
-                            Text("PARAMETERS IN PLUGIN:", color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
+                            Text(tr("PARAMETERS IN PLUGIN:"), color = StudioTextDim, fontSize = 8.5.sp, fontWeight = FontWeight.Bold)
                             Spacer(Modifier.height(4.dp))
 
                             module.allItems.take(8).forEach { item ->
@@ -1629,7 +1629,7 @@ private fun ExecutiveModuleImportDialog(
                                     }
                                     Spacer(Modifier.width(6.dp))
                                     Text(
-                                        if (item.isAllowed) item.sanitizedValue else "BLOCKED",
+                                        if (item.isAllowed) item.sanitizedValue else tr("BLOCKED"),
                                         color = if (item.isAllowed) StudioEmerald else StudioRose,
                                         fontSize = 9.5.sp,
                                         fontWeight = FontWeight.Bold,
@@ -1639,7 +1639,7 @@ private fun ExecutiveModuleImportDialog(
                             }
 
                             if (module.allItems.size > 8) {
-                                Text("+ ${module.allItems.size - 8} additional parameters...", color = StudioTextDim, fontSize = 8.5.sp)
+                                Text("+ ${module.allItems.size - 8} ${tr("additional parameters...")}", color = StudioTextDim, fontSize = 8.5.sp)
                             }
                         }
                     }
@@ -1664,7 +1664,7 @@ private fun ExecutiveModuleImportDialog(
                         .padding(horizontal = 12.dp, vertical = 7.dp)
                 ) {
                     Text(
-                        if (isApplying) "APPLYING..." else "⚡ APPLY PLUGIN (${module.safeCount} PARAM)",
+                        if (isApplying) tr("APPLYING...") else "⚡ ${tr("APPLY PLUGIN")} (${module.safeCount} PARAM)",
                         color = Color.Black,
                         fontWeight = FontWeight.Bold,
                         fontSize = 10.5.sp
@@ -1674,7 +1674,7 @@ private fun ExecutiveModuleImportDialog(
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = StudioTextMuted, fontSize = 10.5.sp)
+                Text(tr("CANCEL"), color = StudioTextMuted, fontSize = 10.5.sp)
             }
         }
     )
@@ -1750,13 +1750,13 @@ private fun ExecutiveModuleExportDialog(
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Rounded.FileUpload, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("EXPORT PRESET PLUGIN", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(tr("EXPORT PRESET PLUGIN"), color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Export your tuned device settings and parameters to .json format to share with other gamers or your community.",
+                    tr("Export your tuned device settings and parameters to .json format to share with other gamers or your community."),
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )
@@ -1769,9 +1769,9 @@ private fun ExecutiveModuleExportDialog(
                     horizontalArrangement = Arrangement.spacedBy(5.dp)
                 ) {
                     val tabs = listOf(
-                        "MODIFIED (${modifiedParams.size})",
-                        "CURATED (${curatedParams.size})",
-                        "VIEW (${filteredParams.size})"
+                        "${tr("MODIFIED")} (${modifiedParams.size})",
+                        "${tr("CURATED")} (${curatedParams.size})",
+                        "${tr("VIEW")} (${filteredParams.size})"
                     )
                     tabs.forEachIndexed { index, label ->
                         val isSelected = exportTab == index
@@ -1798,7 +1798,7 @@ private fun ExecutiveModuleExportDialog(
                 Spacer(Modifier.height(10.dp))
 
                 // Module Metadata Inputs
-                Text("PRESET / PLUGIN NAME:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(tr("PRESET / PLUGIN NAME:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = moduleName,
@@ -1817,7 +1817,7 @@ private fun ExecutiveModuleExportDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Text("CREATOR / AUTHOR:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(tr("CREATOR / AUTHOR:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = author,
@@ -1836,7 +1836,7 @@ private fun ExecutiveModuleExportDialog(
 
                 Spacer(Modifier.height(8.dp))
 
-                Text("PLUGIN DESCRIPTION:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                Text(tr("PLUGIN DESCRIPTION:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 Spacer(Modifier.height(3.dp))
                 OutlinedTextField(
                     value = description,
@@ -1866,8 +1866,8 @@ private fun ExecutiveModuleExportDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("${activeParams.size} Parameters Included", color = StudioEmerald, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
-                    Text("Verified Safe Schema", color = StudioTextDim, fontSize = 9.5.sp)
+                    Text("${activeParams.size} ${tr("Parameters Included")}", color = StudioEmerald, fontSize = 10.5.sp, fontWeight = FontWeight.SemiBold)
+                    Text(tr("Verified Safe Schema"), color = StudioTextDim, fontSize = 9.5.sp)
                 }
 
                 Spacer(Modifier.height(10.dp))
@@ -1878,17 +1878,17 @@ private fun ExecutiveModuleExportDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text("PREVIEW .JSON FILE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("PREVIEW .JSON FILE:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                             cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Preset", generatedJson))
-                            NukeToast.success(context, "JSON code copied to clipboard!")
+                            NukeToast.success(context, tr("JSON code copied to clipboard!"))
                         }
                     ) {
                         Icon(Icons.Rounded.ContentCopy, contentDescription = null, tint = StudioSky, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("COPY JSON", color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("COPY JSON"), color = StudioSky, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -1931,7 +1931,7 @@ private fun ExecutiveModuleExportDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Share, contentDescription = null, tint = StudioSky, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("SHARE", color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                        Text(tr("SHARE"), color = StudioSky, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
                     }
                 }
 
@@ -1949,14 +1949,14 @@ private fun ExecutiveModuleExportDialog(
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.FileUpload, contentDescription = null, tint = Color.Black, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("SAVE FILE", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                        Text(tr("SAVE FILE"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
                     }
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", color = StudioTextMuted, fontSize = 10.5.sp)
+                Text(tr("CANCEL"), color = StudioTextMuted, fontSize = 10.5.sp)
             }
         }
     )
@@ -1974,15 +1974,15 @@ private fun ExecutiveCreatorGuideDialog(
         containerColor = StudioCard,
         title = {
             Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Rounded.MenuBook, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
+                Icon(Icons.AutoMirrored.Rounded.MenuBook, contentDescription = null, tint = StudioSky, modifier = Modifier.size(20.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("PLUGIN CREATOR GUIDE", color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                Text(tr("PLUGIN CREATOR GUIDE"), color = StudioTextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
             }
         },
         text = {
             Column(modifier = Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {
                 Text(
-                    "Create tuning modules (.json) to share with your community or teammates. Imported modules are strictly verified by Game Nuke security before being applied.",
+                    tr("Create tuning modules (.json) to share with your community or teammates. Imported modules are strictly verified by Game Nuke security before being applied."),
                     color = StudioTextMuted,
                     fontSize = 11.sp
                 )
@@ -1997,28 +1997,28 @@ private fun ExecutiveCreatorGuideDialog(
                     border = BorderStroke(1.dp, StudioBorderLight)
                 ) {
                     Column(modifier = Modifier.padding(10.dp)) {
-                        Text("SAFETY RULES & COMPLIANCE:", color = StudioEmerald, fontWeight = FontWeight.Bold, fontSize = 10.sp)
+                        Text(tr("SAFETY RULES & COMPLIANCE:"), color = StudioEmerald, fontWeight = FontWeight.Bold, fontSize = 10.sp)
                         Spacer(Modifier.height(4.dp))
-                        Text("1. Supported sources: 'SYSTEM', 'GLOBAL', 'SECURE', and 'PROP'.", color = StudioTextPrimary, fontSize = 9.5.sp)
-                        Text("2. Safe values: Integers, boolean flags (0/1), floats (e.g. 120.0).", color = StudioTextPrimary, fontSize = 9.5.sp)
-                        Text("3. Anti-Bootloop SafeGuard: High-risk parameters (e.g. lcd_density, bootloader, zygote flags) are strictly rejected to prevent bootloops.", color = StudioAmber, fontSize = 9.5.sp)
+                        Text(tr("1. Supported sources: 'SYSTEM', 'GLOBAL', 'SECURE', and 'PROP'."), color = StudioTextPrimary, fontSize = 9.5.sp)
+                        Text(tr("2. Safe values: Integers, boolean flags (0/1), floats (e.g. 120.0)."), color = StudioTextPrimary, fontSize = 9.5.sp)
+                        Text(tr("3. Anti-Bootloop SafeGuard: High-risk parameters (e.g. lcd_density, bootloader, zygote flags) are strictly rejected to prevent bootloops."), color = StudioAmber, fontSize = 9.5.sp)
                     }
                 }
 
                 Spacer(Modifier.height(10.dp))
 
                 Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-                    Text("READY-TO-USE JSON STRUCTURE:", color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("READY-TO-USE JSON STRUCTURE:"), color = StudioTextDim, fontSize = 9.sp, fontWeight = FontWeight.Bold)
                     TextButton(
                         onClick = {
                             val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                             cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Plugin Template", templateJson))
-                            NukeToast.success(context, "JSON template copied to clipboard!")
+                            NukeToast.success(context, tr("JSON template copied to clipboard!"))
                         }
                     ) {
                         Icon(Icons.Rounded.ContentCopy, contentDescription = null, tint = StudioEmerald, modifier = Modifier.size(12.dp))
                         Spacer(Modifier.width(3.dp))
-                        Text("COPY TEMPLATE", color = StudioEmerald, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
+                        Text(tr("COPY TEMPLATE"), color = StudioEmerald, fontSize = 9.5.sp, fontWeight = FontWeight.Bold)
                     }
                 }
 
@@ -2046,7 +2046,7 @@ private fun ExecutiveCreatorGuideDialog(
                     .clickable { onDismiss() }
                     .padding(horizontal = 14.dp, vertical = 7.dp)
             ) {
-                Text("GOT IT", color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
+                Text(tr("GOT IT"), color = Color.Black, fontWeight = FontWeight.Bold, fontSize = 10.5.sp)
             }
         }
     )

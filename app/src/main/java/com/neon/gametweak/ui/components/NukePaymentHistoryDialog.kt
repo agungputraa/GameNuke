@@ -332,10 +332,17 @@ private fun OrderItemCard(
     val remainingSeconds = (remainingMs / 1000) % 60
 
     val methodDisplay = when (order.paymentMethod.lowercase()) {
-        "bca_va" -> "BCA VA"
-        "mandiri_va" -> "MANDIRI VA"
         "bri_va" -> "BRI VA"
-        else -> "QRIS"
+        "bni_va" -> "BNI VA"
+        "cimb_va", "cimb_niaga_va" -> "CIMB Niaga VA"
+        "permata_va" -> "Permata VA"
+        "maybank_va" -> "Maybank VA"
+        "bnc_va" -> "BNC VA"
+        "artha_graha_va" -> "Artha Graha VA"
+        "sampoerna_va" -> "Sampoerna VA"
+        "payment_link" -> "Payment Link"
+        "qris" -> "QRIS"
+        else -> order.paymentMethod.uppercase().replace("_", " ")
     }
 
     Box(

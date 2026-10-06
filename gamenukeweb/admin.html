@@ -182,7 +182,7 @@
           <div>
             <div class="flex items-center gap-2">
               <h1 class="text-sm font-black tracking-wide text-white">GAME NUKE</h1>
-              <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">v3.4.0</span>
+              <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">v3.6.0-Apeiron</span>
             </div>
             <p class="text-[10px] font-mono text-slate-400">Enterprise Mission Control</p>
           </div>
@@ -391,6 +391,7 @@
                     <tr>
                       <th class="px-4 py-3">Hardware Fingerprint (HWID)</th>
                       <th class="px-4 py-3">Plan</th>
+                      <th class="px-4 py-3">Credits</th>
                       <th class="px-4 py-3">Status</th>
                       <th class="px-4 py-3">Expires At</th>
                       <th class="px-4 py-3 text-right">Actions</th>
@@ -409,6 +410,15 @@
                           <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px]" x-text="dev.planId || 'VIP'"></span>
                         </td>
                         <td class="px-4 py-3">
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition"
+                                  title="Manage Credits">
+                            <i class="fa-solid fa-gem text-[10px] text-amber-400"></i>
+                            <span x-text="dev.creditBalance || 0"></span>
+                            <span class="text-[9px] text-amber-400/80 font-normal">CRD</span>
+                          </button>
+                        </td>
+                        <td class="px-4 py-3">
                           <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
                                 :class="isVipActive(dev.expiresAt) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
                             <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? 'bg-emerald-400' : 'bg-slate-500'"></span>
@@ -417,8 +427,11 @@
                         </td>
                         <td class="px-4 py-3 text-slate-400" x-text="formatDate(dev.expiresAt)"></td>
                         <td class="px-4 py-3 text-right space-x-1">
-                          <button @click.stop="openGrantModal(dev.deviceId, 30)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-nuke-gold border border-nuke-border" title="Extend VIP">
-                            <i class="fa-solid fa-clock-rotate-left"></i>
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-cyan-400 border border-nuke-border" title="Manage Credits">
+                            <i class="fa-solid fa-gem"></i>
+                          </button>
+                          <button @click.stop="openGrantModal(dev.deviceId, 30)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-nuke-gold border border-nuke-border" title="Manage VIP">
+                            <i class="fa-solid fa-crown"></i>
                           </button>
                           <button @click="revokeDeviceVip(dev.deviceId)" class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Revoke VIP">
                             <i class="fa-solid fa-ban"></i>
@@ -435,7 +448,14 @@
                 <template x-for="dev in filteredDevices" :key="dev.deviceId">
                   <div class="p-4 space-y-2">
                     <div class="flex items-center justify-between">
-                      <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-mono" x-text="dev.planId || 'VIP'"></span>
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-mono" x-text="dev.planId || 'VIP'"></span>
+                        <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
+                          <i class="fa-solid fa-gem text-[9px] text-amber-400"></i>
+                          <span x-text="(dev.creditBalance || 0) + ' Credits'"></span>
+                        </button>
+                      </div>
                       <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
                             :class="isVipActive(dev.expiresAt) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
                         <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? 'bg-emerald-400' : 'bg-slate-500'"></span>
@@ -450,8 +470,13 @@
                       Expires: <span class="text-slate-200" x-text="formatDate(dev.expiresAt)"></span>
                     </div>
                     <div class="pt-2 flex items-center gap-2">
-                      <button @click.stop="openGrantModal(dev.deviceId, 30)" class="flex-1 py-1.5 rounded-lg bg-nuke-card text-nuke-gold border border-nuke-border text-xs font-bold">
-                        Extend +30D
+                      <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="flex-1 py-1.5 rounded-lg bg-nuke-card text-cyan-400 border border-nuke-border text-xs font-bold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-gem text-[10px]"></i>
+                        <span>Credits</span>
+                      </button>
+                      <button @click.stop="openGrantModal(dev.deviceId, 30)" class="flex-1 py-1.5 rounded-lg bg-nuke-card text-nuke-gold border border-nuke-border text-xs font-bold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-crown text-[10px]"></i>
+                        <span>VIP Plan</span>
                       </button>
                       <button @click="revokeDeviceVip(dev.deviceId)" class="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold">
                         Revoke
@@ -701,7 +726,7 @@
       </main>
 
       <!-- ═══════════════════════════════════════════════════════════════════ -->
-      <!-- MODAL: GRANT VIP PRIVILEGE (INSIDE ROOT DASHBOARD WRAPPER)          -->
+      <!-- MODAL: GRANT / MANAGE VIP PRIVILEGE                                 -->
       <!-- ═══════════════════════════════════════════════════════════════════ -->
       <div x-show="grantModalOpen"
            x-transition:enter="transition ease-out duration-200"
@@ -717,7 +742,7 @@
           <div class="flex items-center justify-between">
             <h3 class="text-sm font-bold text-white flex items-center gap-2">
               <i class="fa-solid fa-crown text-nuke-gold"></i>
-              <span>Grant VIP Access</span>
+              <span>Manage VIP Subscription</span>
             </h3>
             <button type="button" @click="grantModalOpen = false" class="text-slate-500 hover:text-white p-1">
               <i class="fa-solid fa-xmark"></i>
@@ -732,12 +757,36 @@
             </div>
 
             <div>
-              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Duration</label>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Action Mode</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" @click="grantForm.action = 'extend'"
+                        :class="grantForm.action === 'extend' ? 'bg-nuke-gold text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  + Extend
+                </button>
+                <button type="button" @click="grantForm.action = 'set'"
+                        :class="grantForm.action === 'set' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Set Exact
+                </button>
+                <button type="button" @click="grantForm.action = 'revoke'"
+                        :class="grantForm.action === 'revoke' ? 'bg-rose-500 text-white font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Revoke
+                </button>
+              </div>
+            </div>
+
+            <div x-show="grantForm.action !== 'revoke'">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Duration Preset</label>
               <select x-model="grantForm.days" class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-nuke-gold">
+                <option value="1">1 Day (24-Hour Pass)</option>
                 <option value="7">7 Days (Weekly VIP)</option>
                 <option value="30">30 Days (Monthly VIP)</option>
+                <option value="90">90 Days (Quarterly VIP)</option>
                 <option value="180">180 Days (Semi-Annual VIP)</option>
                 <option value="365">365 Days (1 Year VIP)</option>
+                <option value="9999">Lifetime VIP (Permanent)</option>
               </select>
             </div>
           </div>
@@ -748,7 +797,103 @@
             </button>
             <button type="button" @click="submitGrantVip()" :disabled="loading"
                     class="px-5 py-2 bg-nuke-gold hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow transition flex items-center gap-1.5">
-              <span x-show="!loading"><i class="fa-solid fa-shield-check mr-1"></i> Authorize VIP</span>
+              <span x-show="!loading"><i class="fa-solid fa-shield-check mr-1"></i> Apply Changes</span>
+              <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: MANAGE DEVICE CREDITS                                       -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <div x-show="creditModalOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+           x-cloak>
+        <div x-on:click.outside="creditModalOpen = false"
+             class="w-full max-w-md bg-nuke-card border border-nuke-border rounded-2xl p-6 space-y-4 glow-cyan relative shadow-2xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-gem text-cyan-400"></i>
+              <span>Manage Device Credits</span>
+            </h3>
+            <button type="button" @click="creditModalOpen = false" class="text-slate-500 hover:text-white p-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Target HWID / Device ID</label>
+              <input type="text" x-model="creditForm.deviceId" readonly
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-cyan-300 focus:outline-none">
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-nuke-void border border-nuke-border rounded-xl">
+              <span class="text-xs text-slate-400">Current Balance:</span>
+              <span class="text-sm font-mono font-black text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-gem text-xs"></i>
+                <span x-text="(creditForm.currentCredits || 0) + ' Credits'"></span>
+              </span>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Operation Mode</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" @click="creditForm.action = 'add'"
+                        :class="creditForm.action === 'add' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  + Add
+                </button>
+                <button type="button" @click="creditForm.action = 'set'"
+                        :class="creditForm.action === 'set' ? 'bg-nuke-gold text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Set Exact
+                </button>
+                <button type="button" @click="creditForm.action = 'deduct'"
+                        :class="creditForm.action === 'deduct' ? 'bg-rose-500 text-white font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  - Deduct
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Quick Presets</label>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" @click="creditForm.amount = 5; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+5 (Rp 3K)</button>
+                <button type="button" @click="creditForm.amount = 10; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+10 (Rp 5K)</button>
+                <button type="button" @click="creditForm.amount = 25; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+25 (Rp 10K)</button>
+                <button type="button" @click="creditForm.amount = 60; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+60 (Rp 20K)</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Credit Amount</label>
+              <input type="number" min="0" max="10000" x-model.number="creditForm.amount"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Reason / Admin Note</label>
+              <input type="text" x-model="creditForm.reason" placeholder="e.g. Loyalty bonus, Support compensation"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" @click="creditModalOpen = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+              Cancel
+            </button>
+            <button type="button" @click="submitAdjustCredits()" :disabled="loading"
+                    class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black rounded-xl shadow transition flex items-center gap-1.5">
+              <span x-show="!loading"><i class="fa-solid fa-check mr-1"></i> Apply Credits</span>
               <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...</span>
             </button>
           </div>
@@ -811,7 +956,17 @@
         grantModalOpen: false,
         grantForm: {
           deviceId: '',
-          days: 30
+          days: 30,
+          action: 'extend'
+        },
+
+        creditModalOpen: false,
+        creditForm: {
+          deviceId: '',
+          currentCredits: 0,
+          action: 'add',
+          amount: 5,
+          reason: ''
         },
 
         toasts: [],
@@ -1009,6 +1164,7 @@
         openGrantModal(deviceId = '', days = 30) {
           this.grantForm.deviceId = deviceId;
           this.grantForm.days = days;
+          this.grantForm.action = 'extend';
           this.grantModalOpen = true;
         },
 
@@ -1019,6 +1175,7 @@
             return;
           }
           const days = parseInt(this.grantForm.days, 10) || 30;
+          const action = (this.grantForm.action || 'extend').toLowerCase();
           this.loading = true;
           try {
             const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
@@ -1027,22 +1184,72 @@
               body: JSON.stringify({
                 deviceId,
                 days,
-                planId: days >= 365 ? '1_YEAR_ADMIN' : 'VIP_ADMIN'
+                action,
+                planId: days >= 999 ? 'VIP_LIFETIME' : (days >= 365 ? '1_YEAR_ADMIN' : 'VIP_ADMIN')
               })
             });
             if (this.handleAuthError(resp)) return;
             const data = await resp.json();
             if (data.success) {
-              this.showToast(`VIP granted to ${deviceId} (${days} days)`, 'success');
+              this.showToast(`VIP updated for ${deviceId} (${action} ${days} days)`, 'success');
               this.grantModalOpen = false;
               this.grantForm.deviceId = '';
               this.fetchDevices();
               this.fetchOverview();
             } else {
-              this.showToast(data.error || 'Failed to grant VIP', 'error');
+              this.showToast(data.error || 'Failed to update VIP', 'error');
             }
           } catch (e) {
-            this.showToast('Network error during VIP grant', 'error');
+            this.showToast('Network error during VIP update', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        openCreditModal(deviceId = '', currentCredits = 0) {
+          this.creditForm.deviceId = deviceId;
+          this.creditForm.currentCredits = currentCredits;
+          this.creditForm.action = 'add';
+          this.creditForm.amount = 5;
+          this.creditForm.reason = '';
+          this.creditModalOpen = true;
+        },
+
+        async submitAdjustCredits() {
+          const deviceId = (this.creditForm.deviceId || '').trim();
+          if (!deviceId) {
+            this.showToast('Target HWID / Device ID required', 'warning');
+            return;
+          }
+          const amount = parseInt(this.creditForm.amount, 10);
+          if (isNaN(amount) || amount < 0) {
+            this.showToast('Valid credit amount required', 'warning');
+            return;
+          }
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices/credits`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                action: this.creditForm.action,
+                amount,
+                reason: this.creditForm.reason || 'Admin Credit Management'
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Credits updated for ${deviceId}: ${data.creditBalance} Credits`, 'success');
+              this.creditModalOpen = false;
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to update credits', 'error');
+            }
+          } catch (e) {
+            this.showToast('Network error during credit adjustment', 'error');
           } finally {
             this.loading = false;
           }
@@ -1051,9 +1258,13 @@
         async revokeDeviceVip(deviceId) {
           if (!confirm(`Revoke VIP access for ${deviceId}?`)) return;
           try {
-            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices?deviceId=${encodeURIComponent(deviceId)}`, {
-              method: 'DELETE',
-              headers: this.getAuthHeaders()
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                action: 'revoke'
+              })
             });
             if (this.handleAuthError(resp)) return;
             const data = await resp.json();
@@ -1174,7 +1385,7 @@
             const data = await resp.json();
             if (data.success) {
               const p = data.pakasirData;
-              const tx = p.transaction || p.payment || p;
+              const tx = p.data || p.transaction || p.payment || p;
               const status = tx.status || 'unknown';
               const amt = Number(tx.amount || tx.total_payment || 0).toLocaleString('id-ID');
               const method = tx.payment_method || tx.method || 'N/A';

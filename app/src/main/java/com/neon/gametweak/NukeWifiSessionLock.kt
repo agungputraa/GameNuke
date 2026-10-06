@@ -15,13 +15,26 @@ class NukeWifiSessionLock(context: Context) {
     private var highPerf: WifiManager.WifiLock? = null
     private var lowLatency: WifiManager.WifiLock? = null
 
-    data class Result(val held: Boolean, val detail: String)
+    private var previousScanAlwaysEnabled: String? = null
+
+    data class LockResult(val held: Boolean, val detail: String)
 
     @Suppress("DEPRECATION")
-    fun acquire(): Result {
-        val manager = wifiManager ?: return Result(false, "Wi-Fi service unavailable")
-        return runCatching {
-            // Android Q+ low-latency lock is the preferred gaming mode. Do not hold two Wi-Fi
+    fun acquire(): LockResult {
+        val manager = wifiManager ?: return LockResult(false, "Wi-Fi service unavailable")
+        return try {
+            // 1. Privileged 802.11 Anti-Jitter: Disable periodic background Wi-Fi scan spikes (30-sec lag spike)
+            if (NukeConnectionManager.isConnected()) {
+                val currentScan = runCatching {
+                    NukeConnectionManager.executeCommand("settings get global wifi_scan_always_enabled", 2000L, 512)?.output?.trim()
+                }.getOrNull()
+                if (!currentScan.isNullOrBlank() && currentScan != "null") {
+                    previousScanAlwaysEnabled = currentScan
+                    NukeConnectionManager.executeCommand("settings put global wifi_scan_always_enabled 0", 2000L, 512)
+                }
+            }
+
+            // 2. Android Q+ low-latency lock is the preferred gaming mode. Do not hold two Wi-Fi
             // locks simultaneously; use high-performance only as a fallback.
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 if (lowLatency == null) {
@@ -30,7 +43,7 @@ class NukeWifiSessionLock(context: Context) {
                     }
                 }
                 if (lowLatency?.isHeld != true) lowLatency?.acquire()
-                if (lowLatency?.isHeld == true) return@runCatching Result(true, "Wi-Fi low-latency lock acquired")
+                if (lowLatency?.isHeld == true) return LockResult(true, "Wi-Fi 802.11 Zero-Jitter active")
             }
             if (highPerf == null) {
                 highPerf = manager.createWifiLock(WifiManager.WIFI_MODE_FULL_HIGH_PERF, "GameNuke:HighPerf").apply {
@@ -38,8 +51,10 @@ class NukeWifiSessionLock(context: Context) {
                 }
             }
             if (highPerf?.isHeld != true) highPerf?.acquire()
-            Result(highPerf?.isHeld == true, if (highPerf?.isHeld == true) "Wi-Fi high-performance lock acquired" else "Wi-Fi lock rejected")
-        }.getOrElse { Result(false, it.message ?: "Wi-Fi lock rejected") }
+            LockResult(highPerf?.isHeld == true, if (highPerf?.isHeld == true) "Wi-Fi high-performance active" else "Wi-Fi lock rejected")
+        } catch (e: Throwable) {
+            LockResult(false, e.message ?: "Wi-Fi lock rejected")
+        }
     }
 
     fun release() {
@@ -47,6 +62,14 @@ class NukeWifiSessionLock(context: Context) {
         runCatching { if (highPerf?.isHeld == true) highPerf?.release() }
         lowLatency = null
         highPerf = null
+
+        // Restore original Wi-Fi scan setting if changed
+        previousScanAlwaysEnabled?.let { prev ->
+            if (NukeConnectionManager.isConnected()) {
+                NukeConnectionManager.executeCommand("settings put global wifi_scan_always_enabled $prev", 2000L, 512)
+            }
+            previousScanAlwaysEnabled = null
+        }
     }
 
     fun isHeld(): Boolean = runCatching {

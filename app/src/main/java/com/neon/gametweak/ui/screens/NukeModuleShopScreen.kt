@@ -1,5 +1,6 @@
 package com.neon.gametweak.ui.screens
 
+import com.neon.gametweak.tr
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -106,8 +107,8 @@ fun NukeModuleShopScreen() {
                     Icon(Icons.Rounded.Extension, null, tint = Neon.Accent)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("PLUGIN CENTER", color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.6.sp)
-                        Text("$enabledCount/${NukeModuleCatalog.modules.size} ACTIVE • HUD SYNC", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
+                        Text(tr("PLUGIN CENTER"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.6.sp)
+                        Text("$enabledCount/${NukeModuleCatalog.modules.size} ${tr("ACTIVE • HUD SYNC")}", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 9.sp)
                     }
                 }
                 Spacer(Modifier.height(10.dp))
@@ -115,7 +116,7 @@ fun NukeModuleShopScreen() {
                     Icon(Icons.Rounded.Security, null, tint = Color(0xFFFFB84A))
                     Spacer(Modifier.width(8.dp))
                     Text(
-                        ("Built-in Game Nuke plugins are packaged tools and profiles managed from this screen."),
+                        tr("Built-in Game Nuke plugins are packaged tools and profiles managed from this screen."),
                         color = Color(0xFFBACBC5), fontSize = 10.sp, lineHeight = 14.sp,
                     )
                 }
@@ -129,8 +130,8 @@ fun NukeModuleShopScreen() {
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true,
                 leadingIcon = { Icon(Icons.Rounded.Search, null, tint = Neon.Accent) },
-                placeholder = { Text("Search plugin / tool", color = Neon.TextDim, fontSize = 10.sp) },
-                label = { Text("PLUGIN SEARCH", fontSize = 8.sp) },
+                placeholder = { Text(tr("Search plugin / tool"), color = Neon.TextDim, fontSize = 10.sp) },
+                label = { Text(tr("PLUGIN SEARCH"), fontSize = 8.sp) },
             )
         }
 
@@ -272,15 +273,15 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Text("CROSSHAIR OVERLAY SETUP", color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.sp)
-                Text("SYNCED WITH THE FLOATING HUD", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
+                Text(tr("CROSSHAIR OVERLAY SETUP"), color = Color.White, fontWeight = FontWeight.Black, fontSize = 12.sp, letterSpacing = 1.sp)
+                Text(tr("SYNCED WITH THE FLOATING HUD"), color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
             }
             Switch(
                 checked = enabled,
                 onCheckedChange = {
                     enabled = it
                     prefs.edit().putBoolean("cross_en", it).apply()
-                    NukeToast.success(context, if (it) ("Crosshair enabled") else ("Crosshair disabled"))
+                    NukeToast.success(context, if (it) tr("Crosshair enabled") else tr("Crosshair disabled"))
                 },
                 colors = SwitchDefaults.colors(checkedTrackColor = Neon.Accent),
             )
@@ -296,7 +297,7 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                         .clickable {
                             style = index
                             prefs.edit().putInt("cross_type", index).apply()
-                            NukeToast.success(context, ("Crosshair style set to $name"))
+                            NukeToast.success(context, "${tr("Crosshair style set to")} $name")
                         }
                         .padding(vertical = 8.dp),
                     contentAlignment = Alignment.Center,
@@ -306,23 +307,23 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
             }
         }
         Spacer(Modifier.height(10.dp))
-        Text("SIZE  ${size.toInt()}", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
+        Text("${tr("SIZE")}  ${size.toInt()}", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
         Slider(
             value = size,
             onValueChange = { size = it },
             onValueChangeFinished = {
                 prefs.edit().putInt("cross_size", size.toInt()).apply()
-                NukeToast.success(context, ("Crosshair size set to ${size.toInt()}"))
+                NukeToast.success(context, "${tr("Crosshair size set to")} ${size.toInt()}")
             },
             valueRange = 8f..64f,
         )
-        Text("OPACITY  ${opacity.toInt()}%", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
+        Text("${tr("OPACITY")}  ${opacity.toInt()}%", color = Neon.TextDim, fontFamily = FontFamily.Monospace, fontSize = 8.sp)
         Slider(
             value = opacity,
             onValueChange = { opacity = it },
             onValueChangeFinished = {
                 prefs.edit().putInt("cross_opacity", opacity.toInt()).apply()
-                NukeToast.success(context, ("Crosshair opacity set to ${opacity.toInt()}%"))
+                NukeToast.success(context, "${tr("Crosshair opacity set to")} ${opacity.toInt()}%")
             },
             valueRange = 20f..100f,
         )
@@ -332,10 +333,10 @@ private fun CrosshairQuickSetup(prefs: android.content.SharedPreferences, revisi
                 onCheckedChange = {
                     dot = it
                     prefs.edit().putBoolean("cross_dot", it).apply()
-                    NukeToast.success(context, if (it) ("Crosshair center dot enabled") else ("Crosshair center dot disabled"))
+                    NukeToast.success(context, if (it) tr("Crosshair center dot enabled") else tr("Crosshair center dot disabled"))
                 },
             )
-            Text("CENTER DOT", color = Color(0xFFCEDBD6), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+            Text(tr("CENTER DOT"), color = Color(0xFFCEDBD6), fontSize = 9.sp, fontWeight = FontWeight.Bold)
         }
     }
 }

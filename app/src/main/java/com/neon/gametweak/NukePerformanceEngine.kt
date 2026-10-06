@@ -1282,6 +1282,17 @@ class NukePerformanceEngine(
 
             // Network Boost is also explicit; do not hide an OEM Wi-Fi mutation inside activation.
 
+            // Maximum Sustained Clocks Engine (Android AOSP Fixed Performance Mode)
+            if (shell.supportsFixedPerformanceMode()) {
+                val fpmRes = shell.setFixedPerformanceMode(true)
+                if (fpmRes.isSuccess) {
+                    applied += "SUSTAINED_CLOCKS"
+                }
+            }
+
+            // Safe Game Priority Elevation (Renice -20)
+            shell.elevateGamePriority(targetPackage)
+
             val memoryPressure = readMemoryStatus()
             if ((memoryPressure.lowMemory ||
                     memoryPressure.available < memoryPressure.threshold + memoryPressure.threshold / 4L) &&
@@ -1417,6 +1428,9 @@ class NukePerformanceEngine(
             }
             if (forcedWifiShellOwned || prefs.safeBoolean(K_WIFI_SHELL_OWNED, false)) {
                 shell.forceWifiLowLatency(false)
+            }
+            if (shell.supportsFixedPerformanceMode()) {
+                shell.setFixedPerformanceMode(false)
             }
         }
 

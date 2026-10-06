@@ -43,7 +43,7 @@ if ($BuildGradle -match 'versionCode\s*=\s*(\d+)') {
 if ($BuildGradle -match 'versionName\s*=\s*"([^"]+)"') {
     $VersionName = $matches[1]
 }
-$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-Vortex", "").Replace("-Hypernova", "").Replace("-Zenith", "").Replace("-Orion", "").Replace("-Spectra", "").Replace("-Hyperion", "").Replace("-Nexus", "").Replace("-prem", "")
+$CleanVersion = $VersionName.Replace("-Void", "").Replace("-Quasar", "").Replace("-Vortex", "").Replace("-Hypernova", "").Replace("-Zenith", "").Replace("-Orion", "").Replace("-Spectra", "").Replace("-Hyperion", "").Replace("-Nexus", "").Replace("-Eternity", "").Replace("-prem", "")
 
 Write-Host "[1/6] Detected target version: v$VersionName (Code: $VersionCode)" -ForegroundColor Cyan
 
@@ -125,7 +125,7 @@ try {
     }
 
     git add .
-    $commitMsg = "feat(release): Game Nuke Nexus Edition Web Portal v$VersionName"
+    $commitMsg = "feat(release): Game Nuke Eternity Edition Web Portal v$VersionName"
     git commit -m $commitMsg -q
 
     # Push to origin 'gh-pages' (Edge CDN serving)
@@ -146,16 +146,16 @@ $Headers = @{
 
 $Tag = "v$VersionName"
 $lines = @(
-    "Game Nuke Nexus Edition v$VersionName",
+    "Game Nuke Eternity Edition v$VersionName",
     "",
-    "Official Enterprise Release with NukeTouch Hardware-Synchronized Macro Engine, Zero-Ghost-Touch Touch Calibrator, and Nexus Neural AI Governor.",
+    "Official Enterprise Release with NukeTouch Hardware-Synchronized Macro Engine, Zero-Ghost-Touch Touch Calibrator, and Eternity Neural AI Governor.",
     "",
     "Highlights:",
     "- NukeTouch Multi-Pin Macro Studio: Fully integrated multi-pin macro system with real-time per-pointer lifecycle, hardware coordinate translation, and zero input drop.",
-    "- Enhanced Sensi Y & Drag Shot Curve: Calibrated vertical sensitivity with landscape aspect compensation and generous virtual bounds for silky-smooth, responsive vertical aiming in Free Fire and FPS shooters.",
+    "- Professional eSports Sensi Panel: Calibrated hardware touch calibration with custom response curves and 1.00x pure linear pass-through without cheat presets.",
     "- Zero Ghost Touch & Freeze Elimination: Added BTN_TOUCH == 0 hardware signal purge ensuring all synthetic pointer sessions are instantly terminated when physical fingers leave the screen.",
     "- Universal Brand Compatibility: Fully audited and validated across HyperOS/MIUI (Xiaomi/POCO), One UI (Samsung), ColorOS/OxygenOS (Oppo/Realme/OnePlus), FuntouchOS (Vivo/iQOO), ROG UI (ASUS), and Stock AOSP (Google Pixel) on Android 11 through Android 16.",
-    "- Nexus Neural AI Agent: Deep device parameter telemetry governor optimizing CPU, GPU, RAM, and FPS pacing with zero risk of stopping active games, screen recorders, or Game Nuke services.",
+    "- Eternity Neural AI Agent: Deep device parameter telemetry governor optimizing CPU, GPU, RAM, and FPS pacing with zero risk of stopping active games, screen recorders, or Game Nuke services.",
     "- Optimized Download Experience: Enhanced download portal with instant safety guidance for Chrome/Android 'harmful file' security alerts without disrupting download stream.",
     "- Payment Security & Session Teardown: Server-to-server transaction inquiry verification against official Pakasir gateway API, ghost order auto-cancellation, and clean driver lifecycle teardown.",
     "",
@@ -169,7 +169,7 @@ $ReleaseBody = $lines -join "`n"
 $ReleasePayload = @{
     tag_name         = $Tag
     target_commitish = "main"
-    name             = "Game Nuke Nexus Edition v$VersionName"
+    name             = "Game Nuke Eternity Edition v$VersionName"
     body             = $ReleaseBody
     draft            = $false
     prerelease       = $false
@@ -223,7 +223,7 @@ Write-Host "   Binary uploaded successfully!" -ForegroundColor Green
 # 8. Final Status Report
 Write-Host "[6/6] Verifying Live Endpoints..." -ForegroundColor Yellow
 Write-Host "==========================================================" -ForegroundColor Green
-Write-Host "   SUCCESS! GAME NUKE NEXUS ECOSYSTEM IS ONLINE" -ForegroundColor Green
+Write-Host "   SUCCESS! GAME NUKE ETERNITY ECOSYSTEM IS ONLINE" -ForegroundColor Green
 Write-Host "==========================================================" -ForegroundColor Green
 Write-Host "   Landing Page : https://$Owner.github.io/$Repo/" -ForegroundColor Cyan
 Write-Host "   Metadata API : https://$Owner.github.io/$Repo/version.json" -ForegroundColor Cyan

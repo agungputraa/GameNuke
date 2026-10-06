@@ -274,7 +274,7 @@ class FloatingBoosterService : Service() {
             return START_NOT_STICKY
         }
 
-        val revealDelay = intent?.getLongExtra(EXTRA_REVEAL_DELAY_MS, 0L)?.coerceIn(0L, 2_000L) ?: 0L
+        val revealDelay = intent.getLongExtra(EXTRA_REVEAL_DELAY_MS, 0L).coerceIn(0L, 2_000L)
         switchJob?.cancel()
         switchJob = scope.launch {
             try {
@@ -527,7 +527,7 @@ class FloatingBoosterService : Service() {
             EdgeDock.valueOf(prefs.safeString(K_EDGE_DOCK, EdgeDock.LEFT.name))
         }.getOrDefault(EdgeDock.LEFT)
         val view = LayoutInflater.from(this).inflate(R.layout.nuke_hud_edge, null)
-        val edgeSize = remoteHud.edgeSizeDp.coerceIn(36, 56)
+        val edgeSize = remoteHud.edgeSizeDp.coerceIn(28, 36)
         val width = minOf(dp(edgeSize), (screenWidth() * .94f).roundToInt())
         val height = minOf(dp(edgeSize), (screenHeight() * .86f).roundToInt())
         val safe = safeBounds()
@@ -762,6 +762,7 @@ class FloatingBoosterService : Service() {
         windows.keys.filter { it.startsWith("hub_") }.forEach(::removeWindow)
     }
 
+    @Suppress("DEPRECATION")
     private fun setHubImeFocus(focused: Boolean) {
         val slots = listOfNotNull(windows["hub_right"], windows["hub_bottom"], windows["hub_left"], windows["hub_top"])
         if (slots.isEmpty()) return
@@ -1081,15 +1082,15 @@ class FloatingBoosterService : Service() {
                 if (local != null) {
                     scope.launch {
                         local.setNetworkBoost(nextVal)
-                        toastOutcome(if (nextVal) "Net Performance Lock: ACTIVE" else "Net Performance Lock: DISABLED")
+                        toastOutcome(if (nextVal) "Net Lock: ACTIVE (Wi-Fi 802.11 Zero-Jitter)" else "Net Lock: DISABLED")
                     }
                 } else {
                     scope.launch(Dispatchers.IO) {
                         val adb = AdbManager.getInstance(applicationContext)
-                        val script = "setprop net.tcp.delack ${if (nextVal) 0 else 1} 2>/dev/null ; sysctl -w net.ipv4.tcp_low_latency=${if (nextVal) 1 else 0} 2>/dev/null"
+                        val script = "setprop net.tcp.delack ${if (nextVal) 0 else 1} 2>/dev/null ; sysctl -w net.ipv4.tcp_low_latency=${if (nextVal) 1 else 0} 2>/dev/null ; settings put global wifi_scan_always_enabled ${if (nextVal) 0 else 1} 2>/dev/null"
                         adb.executeCommand(script, "/", 3_000L)
                         withContext(Dispatchers.Main.immediate) {
-                            toastOutcome(if (nextVal) "Net Performance Lock: ACTIVE" else "Net Performance Lock: DISABLED")
+                            toastOutcome(if (nextVal) "Net Lock: ACTIVE (Wi-Fi 802.11 Zero-Jitter)" else "Net Lock: DISABLED")
                         }
                     }
                 }
@@ -1275,6 +1276,7 @@ class FloatingBoosterService : Service() {
                     executePrivilegedScript(script, 3_000L)
                     runCatching {
                         val audio = getSystemService(Context.AUDIO_SERVICE) as? android.media.AudioManager
+                        @Suppress("DEPRECATION")
                         audio?.setVibrateSetting(android.media.AudioManager.VIBRATE_TYPE_RINGER,
                             if (nextVal) android.media.AudioManager.VIBRATE_SETTING_ON else android.media.AudioManager.VIBRATE_SETTING_OFF)
                     }
@@ -1339,14 +1341,14 @@ class FloatingBoosterService : Service() {
             "ai_agent" -> {
                 val isVip = NukeSubscriptionManager.isVipActive(applicationContext)
                 if (!isVip) {
-                    NukeToast.info(applicationContext, tr("Game Nuke VIP required for Nexus Neural Core"), true)
+                    NukeToast.info(applicationContext, tr("Game Nuke VIP required for Apeiron Neural Core"), true)
                     return
                 }
                 val overlay = NukeAiAgentFloatingOverlay.getInstance(applicationContext)
                 val opening = !overlay.isShowing
                 if (opening) prepareExclusivePanel("ai_agent") else clearExclusivePanel("ai_agent")
                 overlay.toggle()
-                toastOutcome(if (opening) "Nexus Neural Core: OPEN" else "Nexus Neural Core: CLOSED")
+                toastOutcome(if (opening) "Apeiron Neural Core: OPEN" else "Apeiron Neural Core: CLOSED")
             }
             "task_manager" -> {
                 val overlay = NukeTaskManagerPanelOverlay.getInstance(applicationContext)
@@ -1676,7 +1678,7 @@ class FloatingBoosterService : Service() {
         }
         NukeConnectionManager.executeCommand(script, 2_500L)?.isSuccess == true || run {
             val adb = AdbManager.getInstance(applicationContext)
-            if (adb.isConnected()) adb.executeCommand(script, "/", 2_500L)?.isSuccess == true else false
+            if (adb.isConnected()) adb.executeCommand(script, "/", 2_500L).isSuccess else false
         }
     }
 
@@ -1768,19 +1770,30 @@ class FloatingBoosterService : Service() {
             prefs.edit().putBoolean(K_ADAPTIVE_OWN_NETWORK, ownNetwork).putBoolean(K_ADAPTIVE_OWN_OEM, ownOem).apply()
             scope.launch(Dispatchers.IO) {
                 val adb = AdbManager.getInstance(applicationContext)
-                val turboScript = """
-                    for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > ${'$'}g 2>/dev/null; done
-                    for g in /sys/class/kgsl/kgsl-3d0/devfreq/governor /sys/class/devfreq/*gpu*/governor; do echo performance > ${'$'}g 2>/dev/null; done
-                    cmd power set-fixed-performance-mode-enabled true 2>/dev/null
-                    setprop debug.sf.latch_unsignaled 1 2>/dev/null
-                    setprop debug.renderengine.backend skiagl 2>/dev/null
-                    setprop debug.sf.disable_backpressure 1 2>/dev/null
-                    setprop persist.sys.game.mode 1 2>/dev/null
-                    settings put global restricted_networking_mode 0 2>/dev/null
-                    settings put system pointer_speed 0 2>/dev/null
-                    sysctl -w net.ipv4.tcp_low_latency=1 2>/dev/null
-                    setprop net.tcp.delack 0 2>/dev/null
-                """.trimIndent()
+                val pkg = targetPackage ?: ""
+                val turboScript = buildString {
+                    appendLine("for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo performance > \$g 2>/dev/null; done")
+                    appendLine("for g in /sys/class/kgsl/kgsl-3d0/devfreq/governor /sys/class/devfreq/*gpu*/governor; do echo performance > \$g 2>/dev/null; done")
+                    appendLine("cmd power set-fixed-performance-mode-enabled true 2>/dev/null")
+                    if (pkg.isNotBlank()) {
+                        appendLine("cmd game set --fps 120 $pkg 2>/dev/null")
+                        appendLine("device_config put game_overlay $pkg mode=2,fps=120 2>/dev/null")
+                        appendLine("cmd device_config put game_overlay $pkg mode=2,fps=120 2>/dev/null")
+                    }
+                    appendLine("settings put global wifi_scan_always_enabled 0 2>/dev/null")
+                    appendLine("setprop debug.sf.latch_unsignaled 1 2>/dev/null")
+                    appendLine("setprop debug.renderengine.backend skiagl 2>/dev/null")
+                    appendLine("setprop debug.sf.disable_backpressure 1 2>/dev/null")
+                    appendLine("setprop persist.sys.game.mode 1 2>/dev/null")
+                    appendLine("settings put global restricted_networking_mode 0 2>/dev/null")
+                    appendLine("settings put system pointer_speed 0 2>/dev/null")
+                    appendLine("sysctl -w net.ipv4.tcp_low_latency=1 2>/dev/null")
+                    appendLine("setprop net.tcp.delack 0 2>/dev/null")
+                    if (pkg.isNotBlank()) {
+                        appendLine("pid=\$(pidof $pkg 2>/dev/null)")
+                        appendLine("if [ -n \"\$pid\" ]; then renice -n -20 -p \$pid 2>/dev/null; fi")
+                    }
+                }
                 adb.executeCommand(turboScript, "/", 4_000L)
             }
         } else {
@@ -1797,11 +1810,18 @@ class FloatingBoosterService : Service() {
                 .remove(K_ADAPTIVE_OWN_AWAKE).remove(K_ADAPTIVE_OWN_NETWORK).remove(K_ADAPTIVE_OWN_OEM).apply()
             scope.launch(Dispatchers.IO) {
                 val adb = AdbManager.getInstance(applicationContext)
-                val resetScript = """
-                    for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > ${'$'}g 2>/dev/null; done
-                    cmd power set-fixed-performance-mode-enabled false 2>/dev/null
-                    setprop persist.sys.game.mode 0 2>/dev/null
-                """.trimIndent()
+                val pkg = targetPackage ?: ""
+                val resetScript = buildString {
+                    appendLine("for g in /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor; do echo schedutil > \$g 2>/dev/null; done")
+                    appendLine("cmd power set-fixed-performance-mode-enabled false 2>/dev/null")
+                    if (pkg.isNotBlank()) {
+                        appendLine("cmd game reset $pkg 2>/dev/null")
+                        appendLine("device_config delete game_overlay $pkg 2>/dev/null")
+                        appendLine("cmd device_config delete game_overlay $pkg 2>/dev/null")
+                    }
+                    appendLine("settings put global wifi_scan_always_enabled 1 2>/dev/null")
+                    appendLine("setprop persist.sys.game.mode 0 2>/dev/null")
+                }
                 adb.executeCommand(resetScript, "/", 3_000L)
             }
         }
@@ -3704,7 +3724,7 @@ class FloatingBoosterService : Service() {
         removeAllWindowsImmediate()
         val displayRestore = restoreDisplayWithRetry(applicationContext)
         runCatching { local?.releaseLocalResources() }
-        displayRestore?.let { result ->
+        displayRestore.let { result ->
             if (result.outcome == NukeDisplayProfileController.Outcome.ERROR || result.outcome == NukeDisplayProfileController.Outcome.DEFERRED) {
                 NukeToast.error(applicationContext, result.message, true)
             }

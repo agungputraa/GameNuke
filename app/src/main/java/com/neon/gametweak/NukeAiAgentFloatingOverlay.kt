@@ -164,7 +164,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
             if (isShowing) return@post
 
             if (!NukeSubscriptionManager.isVipActive(context) || IntegrityGuard.isCompromised()) {
-                NukeToast.info(context, tr("Game Nuke VIP required for Nexus Neural Core"), true)
+                NukeToast.info(context, tr("Game Nuke VIP required for Apeiron Neural Core"), true)
                 return@post
             }
 
@@ -291,7 +291,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
         }
 
         val title = TextView(context).apply {
-            text = "⚡ NEXUS NEURAL CORE"
+            text = "⚡ APEIRON NEURAL CORE"
             setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
             textSize = 11.5f
             typeface = Typeface.DEFAULT_BOLD
@@ -806,7 +806,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
 
         // ── 5. Minimalist Diagnosis Capsule ────────────────────────────────
         diagnosisTv = TextView(context).apply {
-            text = "⚡ Nexus Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin cognitive hardware analysis."
+            text = "⚡ Apeiron Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin cognitive hardware analysis."
             setTextColor(NukeCyberHudStyler.COLOR_TEXT_MUTED)
             textSize = 9.5f
             background = GradientDrawable().apply {
@@ -980,7 +980,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
 
         modelActiveTv?.text = selected.second
         modelDescriptionTv?.text = selected.third
-        titleTv?.text = "⚡ NEXUS NEURAL CORE • ${selected.second}"
+        titleTv?.text = "⚡ APEIRON NEURAL CORE • ${selected.second}"
 
         modelButtons.forEach { (modelId, btn) ->
             val isSelected = modelId == selected.first
@@ -1191,7 +1191,7 @@ class NukeAiAgentFloatingOverlay private constructor(private val context: Contex
                             cornerRadius = 10 * d
                         }
                         statusTv?.text = if (s.executionSuccess) {
-                            "● SYSTEM NOMINAL — Nexus Neural Optimization Active"
+                            "● SYSTEM NOMINAL — Apeiron Neural Optimization Active"
                         } else {
                             s.progressText
                         }

@@ -357,7 +357,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             }
         }
 
-        addActionBtn("📤 Export Preset") {
+        addActionBtn(tr("📤 Export Preset")) {
             scope.launch {
                 val json = NukeSystemParamRepository.exportParametersToJson(
                     context = context,
@@ -368,12 +368,12 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 val cb = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                 cb?.setPrimaryClip(ClipData.newPlainText("GameNuke Preset", json))
                 withContext(Dispatchers.Main) {
-                    NukeToast.success(context, "Preset JSON disalin ke clipboard!", long = true)
+                    NukeToast.success(context, tr("Preset JSON copied to clipboard!"), long = true)
                 }
             }
         }
 
-        addActionBtn("🔄 Refresh") {
+        addActionBtn(tr("🔄 Refresh")) {
             refreshList()
         }
 
@@ -417,7 +417,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
         searchBox.addView(searchPrefixTv)
 
         searchEt = EditText(context).apply {
-            hint = "Cari parameter atau flags sistem..."
+            hint = tr("Search system parameters or flags...")
             setHintTextColor(Color.parseColor(TEXT_DIM))
             setTextColor(Color.parseColor(TEXT_PRIMARY))
             textSize = 10f
@@ -605,7 +605,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
         if (filtered.isEmpty()) {
             val emptyTv = TextView(context).apply {
-                text = if (query.isNotEmpty()) "No parameters match '$query'" else "No parameters in this category"
+                text = if (query.isNotEmpty()) tr("No parameters match query") else tr("No parameters in this category")
                 setTextColor(Color.parseColor(TEXT_DIM))
                 textSize = 10f
                 typeface = Typeface.MONOSPACE
@@ -721,7 +721,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
             // Action Pill Button (Edit / Close / Lock)
             if (!isBlocked) {
                 val actionBtn = TextView(context).apply {
-                    text = if (isExpanded) "Close" else "Edit"
+                    text = if (isExpanded) tr("Close") else tr("Edit")
                     setTextColor(
                         if (isExpanded) NukeCyberHudStyler.COLOR_CYAN_NEON
                         else Color.parseColor(TEXT_SECONDARY)
@@ -742,7 +742,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 topRow.addView(actionBtn)
             } else {
                 val lockBadge = TextView(context).apply {
-                    text = "🔒 Lock"
+                    text = tr("🔒 Lock")
                     setTextColor(Color.parseColor(ROSE))
                     textSize = 8f
                     setPadding(dp(4f), dp(2f), dp(4f), dp(2f))
@@ -773,7 +773,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                     setPadding(0, dp(4f), 0, 0)
                 }
                 val presetLabel = TextView(context).apply {
-                    text = "Preset:"
+                    text = tr("Preset:")
                     setTextColor(Color.parseColor(TEXT_DIM))
                     textSize = 7.5f
                     typeface = Typeface.MONOSPACE
@@ -870,7 +870,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 inputRow.addView(editField)
 
                 val applyBtn = TextView(context).apply {
-                    text = "APPLY"
+                    text = tr("APPLY")
                     setTextColor(Color.parseColor("#FF020705"))
                     textSize = 9f
                     typeface = Typeface.DEFAULT_BOLD
@@ -902,7 +902,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                 inputRow.addView(applyBtn)
 
                 val cancelBtn = TextView(context).apply {
-                    text = "CANCEL"
+                    text = tr("CANCEL")
                     setTextColor(Color.parseColor(TEXT_DIM))
                     textSize = 8.5f
                     typeface = Typeface.DEFAULT_BOLD
@@ -923,7 +923,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
                         setPadding(0, dp(6f), 0, 0)
                     }
                     revertRow.addView(TextView(context).apply {
-                        text = "↩ Revert to original value (Stock)"
+                        text = tr("↩ Revert to original value (Stock)")
                         setTextColor(Color.parseColor(AMBER))
                         textSize = 8.5f
                         typeface = Typeface.DEFAULT_BOLD
@@ -943,7 +943,7 @@ class NukeSystemEditorFloatingOverlay private constructor(private val context: C
 
                 // Security footer
                 editPanel.addView(TextView(context).apply {
-                    text = "🛡 SafeGuard Active · Automatic backup created prior to modification"
+                    text = tr("🛡 SafeGuard Active · Automatic backup created prior to modification")
                     setTextColor(Color.parseColor(TEXT_DIM))
                     textSize = 7.5f
                     typeface = Typeface.MONOSPACE

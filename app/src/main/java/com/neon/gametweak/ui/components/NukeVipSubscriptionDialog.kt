@@ -41,12 +41,14 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.AccountBalance
+import androidx.compose.material.icons.rounded.Bolt
 import androidx.compose.material.icons.rounded.CheckCircle
 import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.ContentCopy
 import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.HourglassDisabled
 import androidx.compose.material.icons.rounded.Info
+import androidx.compose.material.icons.rounded.OpenInBrowser
 import androidx.compose.material.icons.rounded.QrCode
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.WarningAmber
@@ -73,6 +75,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -101,6 +104,11 @@ private enum class DialogStep {
     SUCCESS
 }
 
+private enum class PurchaseMode {
+    SUBSCRIPTION,
+    CREDITS
+}
+
 data class PaymentOption(
     val id: String,
     val method: String,
@@ -109,11 +117,17 @@ data class PaymentOption(
     val subtitle: String
 )
 
+// Payment options exactly matching Pakasir API v2 supported methods.
+// NOTE: All methods are for Indonesia (IDR). No international payment gateway.
 val AVAILABLE_PAYMENT_OPTIONS = listOf(
-    PaymentOption("qris", "qris", "all", "QRIS", "All E-Wallets & Banks"),
-    PaymentOption("bca_va", "va", "bca", "BCA VA", "Bank Central Asia"),
-    PaymentOption("mandiri_va", "va", "mandiri", "Mandiri VA", "Bank Mandiri"),
-    PaymentOption("bri_va", "va", "bri", "BRI VA", "Bank Rakyat Indonesia")
+    PaymentOption("payment_link", "payment_link", "", "Payment Link", "Choose method on checkout page"),
+    PaymentOption("qris", "qris", "all", "QRIS", "GoPay, OVO, Dana, ShopeePay, etc."),
+    PaymentOption("bri_va", "va", "bri", "BRI VA", "Bank Rakyat Indonesia"),
+    PaymentOption("bni_va", "va", "bni", "BNI VA", "Bank Negara Indonesia"),
+    PaymentOption("cimb_va", "va", "cimb", "CIMB Niaga VA", "CIMB Niaga"),
+    PaymentOption("permata_va", "va", "permata", "Permata VA", "Bank Permata"),
+    PaymentOption("maybank_va", "va", "maybank", "Maybank VA", "Maybank"),
+    PaymentOption("bnc_va", "va", "bnc", "BNC VA", "Bank Neo Commerce")
 )
 
 /**
@@ -134,8 +148,13 @@ fun NukeVipSubscriptionDialog(
     var currentStep by remember {
         mutableStateOf(if (initialOrder != null) DialogStep.PAYMENT else DialogStep.SELECT_PLAN)
     }
+    var purchaseMode by remember {
+        mutableStateOf(if (initialOrder?.planId?.startsWith("credits_") == true) PurchaseMode.CREDITS else PurchaseMode.SUBSCRIPTION)
+    }
     var plans by remember { mutableStateOf<List<NukeSubscriptionManager.Plan>>(emptyList()) }
-    var selectedPlanId by remember { mutableStateOf(initialOrder?.planId ?: "1_month") }
+    var creditPacks by remember { mutableStateOf<List<NukeSubscriptionManager.CreditPack>>(emptyList()) }
+    var selectedPlanId by remember { mutableStateOf(if (initialOrder?.planId?.startsWith("credits_") != true) initialOrder?.planId ?: "1_month" else "1_month") }
+    var selectedCreditPackId by remember { mutableStateOf(if (initialOrder?.planId?.startsWith("credits_") == true) initialOrder.planId else "credits_10") }
     var selectedPaymentOptionId by remember {
         mutableStateOf(initialOrder?.paymentMethod?.takeIf { it.isNotBlank() } ?: "qris")
     }
@@ -154,6 +173,7 @@ fun NukeVipSubscriptionDialog(
                     qrisString = it.qrisString,
                     vaNumber = it.vaNumber,
                     vaBank = it.vaBank,
+                    paymentLink = it.paymentLink,
                     expiredAt = null
                 )
             }
@@ -179,13 +199,18 @@ fun NukeVipSubscriptionDialog(
     val subStatus by NukeSubscriptionManager.subscriptionState.collectAsState()
     val isAlreadyVip = subStatus.isActive
     val remainingDays = subStatus.remainingDays
+    val creditBalance = subStatus.creditBalance
 
     LaunchedEffect(Unit) {
         NukeSubscriptionManager.syncStatusIfNeeded(context, force = true)
-        NukeSubscriptionManager.fetchPlansAsync { fetched ->
-            plans = fetched
-            if (fetched.isNotEmpty() && fetched.none { it.id == selectedPlanId }) {
-                selectedPlanId = fetched.first().id
+        NukeSubscriptionManager.fetchPlansAndCreditsAsync { result ->
+            plans = result.plans
+            creditPacks = result.creditPacks
+            if (result.plans.isNotEmpty() && result.plans.none { it.id == selectedPlanId }) {
+                selectedPlanId = result.plans.first().id
+            }
+            if (result.creditPacks.isNotEmpty() && result.creditPacks.none { it.id == selectedCreditPackId }) {
+                selectedCreditPackId = result.creditPacks.first().id
             }
         }
     }
@@ -318,7 +343,7 @@ fun NukeVipSubscriptionDialog(
 
                 when (currentStep) {
                     DialogStep.SELECT_PLAN -> {
-                        // Clean 2x2 Value Proposition Chips (Never cram or wrap)
+                        // Clean 2x2 Value Proposition Chips
                         Row(
                             modifier = Modifier.fillMaxWidth(),
                             horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -337,6 +362,7 @@ fun NukeVipSubscriptionDialog(
 
                         Spacer(Modifier.height(10.dp))
 
+                        // Active VIP Card (if subscribed)
                         if (isAlreadyVip) {
                             Box(
                                 modifier = Modifier
@@ -412,7 +438,7 @@ fun NukeVipSubscriptionDialog(
                                             Icon(Icons.Rounded.Info, null, tint = Color(0xFF68F59A), modifier = Modifier.size(14.dp))
                                             Spacer(Modifier.width(6.dp))
                                             Text(
-                                                tr("Extend or Upgrade: Purchasing any tier below will ADD extra days directly on top of your remaining days. Zero days are lost!"),
+                                                tr("Purchasing any tier below will ADD extra days directly on top of your remaining days. Zero days are lost!"),
                                                 color = Color(0xFFD1FAE5),
                                                 fontSize = 8.5.sp,
                                                 lineHeight = 11.5.sp
@@ -424,60 +450,275 @@ fun NukeVipSubscriptionDialog(
                             Spacer(Modifier.height(10.dp))
                         }
 
-                        // Plan Selector
-                        Text(
-                            tr("SELECT SUBSCRIPTION TIER"),
-                            color = Color.White,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-
-                        Spacer(Modifier.height(6.dp))
-
-                        if (plans.isEmpty()) {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(70.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(
-                                    color = Color(0xFFF59E0B),
-                                    modifier = Modifier.size(20.dp),
-                                    strokeWidth = 2.dp
+                        // VIP Credit Wallet Card
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .background(Color(0xFF081820))
+                                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                                .padding(10.dp)
+                        ) {
+                            Column {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Box(
+                                            modifier = Modifier
+                                                .size(26.dp)
+                                                .clip(CircleShape)
+                                                .background(Color(0xFF00E5FF).copy(alpha = 0.2f)),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Rounded.Bolt,
+                                                contentDescription = null,
+                                                tint = Color(0xFF00E5FF),
+                                                modifier = Modifier.size(16.dp)
+                                            )
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Column {
+                                            Text(
+                                                tr("VIP CREDIT WALLET"),
+                                                color = Color(0xFF00E5FF),
+                                                fontSize = 11.sp,
+                                                fontWeight = FontWeight.Black,
+                                                letterSpacing = 0.5.sp
+                                            )
+                                            Text(
+                                                "$creditBalance ${tr("Credits Available")}",
+                                                color = Color(0xFFE0F7FA),
+                                                fontSize = 9.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                    if (creditBalance > 0) {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color(0xFF00E5FF).copy(alpha = 0.15f), RoundedCornerShape(8.dp))
+                                                .border(1.dp, Color(0xFF00E5FF).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 10.dp, vertical = 6.dp)
+                                        ) {
+                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(6.dp)
+                                                        .background(Color(0xFF00E5FF), CircleShape)
+                                                )
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(
+                                                    "$creditBalance ${tr("VIP CREDITS ACTIVE")}",
+                                                    color = Color(0xFF00E5FF),
+                                                    fontSize = 9.sp,
+                                                    fontWeight = FontWeight.Black,
+                                                    letterSpacing = 0.5.sp
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Box(
+                                            modifier = Modifier
+                                                .background(Color(0xFF1E293B), RoundedCornerShape(8.dp))
+                                                .border(1.dp, Color(0xFF334155), RoundedCornerShape(8.dp))
+                                                .padding(horizontal = 8.dp, vertical = 5.dp)
+                                        ) {
+                                            Text(
+                                                tr("READY TO TOP-UP"),
+                                                color = Color(0xFF94A3B8),
+                                                fontSize = 8.5.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(5.dp))
+                                Text(
+                                    tr("VIP Credits are permanent and tied to your device HWID. All VIP features are fully unlocked while you hold credits."),
+                                    color = Color(0xFF80DEEA),
+                                    fontSize = 8.sp,
+                                    lineHeight = 11.sp
                                 )
                             }
-                        } else {
-                            Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
-                                plans.forEach { plan ->
-                                    val isSelected = plan.id == selectedPlanId
-                                    PlanCardCompact(
-                                        plan = plan,
-                                        isSelected = isSelected,
-                                        onClick = { selectedPlanId = plan.id }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Segmented Tab Switcher (Subscription vs Credits)
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(Color(0xFF0A1412))
+                                .border(1.dp, Color(0xFF1A2E28), RoundedCornerShape(8.dp))
+                                .padding(3.dp)
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (purchaseMode == PurchaseMode.SUBSCRIPTION) Color(0xFFF59E0B) else Color.Transparent)
+                                    .clickable { purchaseMode = PurchaseMode.SUBSCRIPTION }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    tr("VIP PASS (SUBSCRIPTION)"),
+                                    color = if (purchaseMode == PurchaseMode.SUBSCRIPTION) Color.Black else Color(0xFF9CB8AD),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .clip(RoundedCornerShape(6.dp))
+                                    .background(if (purchaseMode == PurchaseMode.CREDITS) Color(0xFF00E5FF) else Color.Transparent)
+                                    .clickable { purchaseMode = PurchaseMode.CREDITS }
+                                    .padding(vertical = 6.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    tr("VIP CREDITS (MICRO-PACK)"),
+                                    color = if (purchaseMode == PurchaseMode.CREDITS) Color.Black else Color(0xFF9CB8AD),
+                                    fontSize = 9.sp,
+                                    fontWeight = FontWeight.Black
+                                )
+                            }
+                        }
+
+                        Spacer(Modifier.height(10.dp))
+
+                        // Content according to selected tab
+                        if (purchaseMode == PurchaseMode.SUBSCRIPTION) {
+                            Text(
+                                tr("SELECT SUBSCRIPTION TIER"),
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(Modifier.height(6.dp))
+
+                            if (plans.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(70.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = Color(0xFFF59E0B),
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
                                     )
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    plans.forEach { plan ->
+                                        val isSelected = plan.id == selectedPlanId
+                                        PlanCardCompact(
+                                            plan = plan,
+                                            isSelected = isSelected,
+                                            onClick = { selectedPlanId = plan.id }
+                                        )
+                                    }
+                                }
+                            }
+                        } else {
+                            Text(
+                                tr("SELECT VIP CREDIT PACK (START FROM RP 3.000)"),
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(Modifier.height(6.dp))
+
+                            if (creditPacks.isEmpty()) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(70.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(
+                                        color = Color(0xFF00E5FF),
+                                        modifier = Modifier.size(20.dp),
+                                        strokeWidth = 2.dp
+                                    )
+                                }
+                            } else {
+                                Column(verticalArrangement = Arrangement.spacedBy(5.dp)) {
+                                    creditPacks.forEach { pack ->
+                                        val isSelected = pack.id == selectedCreditPackId
+                                        CreditPackCardCompact(
+                                            pack = pack,
+                                            isSelected = isSelected,
+                                            onClick = { selectedCreditPackId = pack.id }
+                                        )
+                                    }
                                 }
                             }
                         }
 
                         Spacer(Modifier.height(10.dp))
 
-                        // Payment Method Selector
-                        Text(
-                            tr("SELECT PAYMENT METHOD"),
-                            color = Color.White,
-                            fontSize = 10.5.sp,
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp,
-                            modifier = Modifier.fillMaxWidth()
-                        )
+                        // Payment Method Selector with Pakasir v2 compliance
+                        val currentPrice = if (purchaseMode == PurchaseMode.SUBSCRIPTION) {
+                            plans.firstOrNull { it.id == selectedPlanId }?.price ?: 20000L
+                        } else {
+                            creditPacks.firstOrNull { it.id == selectedCreditPackId }?.price ?: 3000L
+                        }
+
+                        // Pakasir v2 rule: Virtual Account minimum is Rp 10.000.
+                        // For purchases < 10.000 (such as 3k & 5k credits), filter to QRIS & Payment Link only.
+                        val effectivePaymentOptions = if (currentPrice < 10000L) {
+                            AVAILABLE_PAYMENT_OPTIONS.filter { it.method != "va" }
+                        } else {
+                            AVAILABLE_PAYMENT_OPTIONS
+                        }
+
+                        LaunchedEffect(effectivePaymentOptions, selectedPaymentOptionId) {
+                            if (effectivePaymentOptions.none { it.id == selectedPaymentOptionId }) {
+                                selectedPaymentOptionId = "qris"
+                            }
+                        }
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                tr("SELECT PAYMENT METHOD"),
+                                color = Color.White,
+                                fontSize = 10.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                letterSpacing = 0.5.sp
+                            )
+                            if (currentPrice < 10000L) {
+                                Text(
+                                    tr("QRIS Only (< Rp 10k)"),
+                                    color = Color(0xFF00E5FF),
+                                    fontSize = 8.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
 
                         Spacer(Modifier.height(6.dp))
 
-                        // Responsive 2x2 Payment Method Grid (Generous width per option, prevents text wrapping)
-                        val paymentOptionChunks = AVAILABLE_PAYMENT_OPTIONS.chunked(2)
+                        // Responsive 2x2 Payment Method Grid
+                        val paymentOptionChunks = effectivePaymentOptions.chunked(2)
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             paymentOptionChunks.forEach { rowOpts ->
                                 Row(
@@ -514,7 +755,7 @@ fun NukeVipSubscriptionDialog(
                                                 Spacer(Modifier.width(6.dp))
                                                 Column {
                                                     Text(
-                                                        opt.label,
+                                                        tr(opt.label),
                                                         color = if (isSelected) Color.White else Color(0xFFCBD5E1),
                                                         fontSize = 9.5.sp,
                                                         fontWeight = if (isSelected) FontWeight.Black else FontWeight.Bold,
@@ -594,14 +835,17 @@ fun NukeVipSubscriptionDialog(
 
                         Spacer(Modifier.height(10.dp))
 
+                        val activePlanIdToOrder = if (purchaseMode == PurchaseMode.SUBSCRIPTION) selectedPlanId else selectedCreditPackId
+                        val canProceed = if (purchaseMode == PurchaseMode.SUBSCRIPTION) plans.isNotEmpty() else creditPacks.isNotEmpty()
+
                         Button(
                             onClick = {
-                                val selectedOpt = AVAILABLE_PAYMENT_OPTIONS.firstOrNull { it.id == selectedPaymentOptionId }
-                                    ?: AVAILABLE_PAYMENT_OPTIONS.first()
+                                val selectedOpt = effectivePaymentOptions.firstOrNull { it.id == selectedPaymentOptionId }
+                                    ?: effectivePaymentOptions.firstOrNull() ?: AVAILABLE_PAYMENT_OPTIONS.first()
                                 isLoading = true
                                 NukeSubscriptionManager.createOrderAsync(
                                     context = context,
-                                    planId = selectedPlanId,
+                                    planId = activePlanIdToOrder,
                                     paymentMethod = selectedOpt.id,
                                     bank = selectedOpt.bank
                                 ) { res ->
@@ -616,9 +860,9 @@ fun NukeVipSubscriptionDialog(
                                     }
                                 }
                             },
-                            enabled = !isLoading && plans.isNotEmpty(),
+                            enabled = !isLoading && canProceed,
                             colors = ButtonDefaults.buttonColors(
-                                containerColor = Color(0xFFF59E0B),
+                                containerColor = if (purchaseMode == PurchaseMode.SUBSCRIPTION) Color(0xFFF59E0B) else Color(0xFF00E5FF),
                                 contentColor = Color.Black
                             ),
                             shape = RoundedCornerShape(8.dp),
@@ -634,8 +878,14 @@ fun NukeVipSubscriptionDialog(
                                     strokeWidth = 2.dp
                                 )
                             } else {
+                                val buttonLabel = if (purchaseMode == PurchaseMode.SUBSCRIPTION) {
+                                    if (isAlreadyVip) tr("EXTEND / UPGRADE SUBSCRIPTION") else tr("CONTINUE TO PAYMENT")
+                                } else {
+                                    val selPack = creditPacks.firstOrNull { it.id == selectedCreditPackId }
+                                    if (selPack != null) "BUY ${selPack.credits} CREDITS (${formatRupiah(selPack.price)})" else tr("BUY CREDITS")
+                                }
                                 Text(
-                                    if (isAlreadyVip) tr("EXTEND / UPGRADE SUBSCRIPTION") else tr("CONTINUE TO PAYMENT"),
+                                    buttonLabel,
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Black,
                                     letterSpacing = 0.5.sp
@@ -664,8 +914,10 @@ fun NukeVipSubscriptionDialog(
                     DialogStep.PAYMENT -> {
                         val res = orderResult
                         if (res != null) {
+                            val uriHandler = LocalUriHandler.current
                             val formattedTotal = formatRupiah(res.totalPayment)
                             val isQrPayment = res.paymentMethod.equals("qris", ignoreCase = true)
+                            val isPaymentLink = res.paymentMethod.equals("payment_link", ignoreCase = true)
                             val isExpired = countdownSeconds <= 0
 
                             if (isExpired) {
@@ -751,7 +1003,7 @@ fun NukeVipSubscriptionDialog(
                                             .background(Color.White)
                                             .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.4f), RoundedCornerShape(8.dp))
                                             .clickable {
-                                                val ok = saveQrisToGallery(context, res.qrisString ?: "", res.orderId ?: "", res.totalPayment.toLong())
+                                                val ok = saveQrisToGallery(context, res.qrisString ?: "", res.orderId ?: "", res.totalPayment)
                                                 if (ok) {
                                                     Toast.makeText(context, tr("QRIS image saved to Gallery! Open your e-wallet to scan from photo."), Toast.LENGTH_LONG).show()
                                                 } else {
@@ -785,7 +1037,7 @@ fun NukeVipSubscriptionDialog(
                                             .background(Color(0xFF10231D))
                                             .border(1.dp, Color(0xFFF59E0B).copy(alpha = 0.6f), RoundedCornerShape(8.dp))
                                             .clickable {
-                                                val ok = saveQrisToGallery(context, res.qrisString ?: "", res.orderId ?: "", res.totalPayment.toLong())
+                                                val ok = saveQrisToGallery(context, res.qrisString ?: "", res.orderId ?: "", res.totalPayment)
                                                 if (ok) {
                                                     Toast.makeText(context, tr("QRIS image saved to Gallery! Open your e-wallet to scan from photo."), Toast.LENGTH_LONG).show()
                                                 } else {
@@ -814,8 +1066,82 @@ fun NukeVipSubscriptionDialog(
                                         textAlign = TextAlign.Center,
                                         lineHeight = 11.sp
                                     )
+                                } else if (isPaymentLink) {
+                                    // ── PAYMENT LINK CARD ──
+                                    val linkUrl = res.paymentLink
+                                    Box(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .clip(RoundedCornerShape(8.dp))
+                                            .background(Color(0xFF0E1922))
+                                            .border(1.dp, Color(0xFF7C3AED).copy(alpha = 0.5f), RoundedCornerShape(8.dp))
+                                            .padding(12.dp)
+                                    ) {
+                                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                            Text(
+                                                "PAYMENT LINK",
+                                                color = Color(0xFFA78BFA),
+                                                fontSize = 10.sp,
+                                                fontWeight = FontWeight.Bold
+                                            )
+                                            Spacer(Modifier.height(6.dp))
+                                            Text(
+                                                tr("Click the button below to open the Pakasir payment page. You can choose any payment method there (QRIS, VA, etc.)."),
+                                                color = Color(0xFF9CB8AD),
+                                                fontSize = 8.5.sp,
+                                                textAlign = TextAlign.Center,
+                                                lineHeight = 12.sp
+                                            )
+                                            Spacer(Modifier.height(8.dp))
+                                            Button(
+                                                onClick = {
+                                                    if (!linkUrl.isNullOrBlank()) {
+                                                        try {
+                                                            uriHandler.openUri(linkUrl)
+                                                        } catch (e: Exception) {
+                                                            NukeToast.error(context, tr("Cannot open payment link. Copy it manually."))
+                                                        }
+                                                    } else {
+                                                        NukeToast.error(context, tr("Payment link not available. Please create a new order."))
+                                                    }
+                                                },
+                                                colors = ButtonDefaults.buttonColors(
+                                                    containerColor = Color(0xFF7C3AED),
+                                                    contentColor = Color.White
+                                                ),
+                                                shape = RoundedCornerShape(8.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(38.dp)
+                                                    .nukePressFeedback()
+                                            ) {
+                                                Icon(Icons.Rounded.OpenInBrowser, null, modifier = Modifier.size(16.dp))
+                                                Spacer(Modifier.width(6.dp))
+                                                Text(tr("OPEN PAYMENT PAGE"), fontSize = 10.5.sp, fontWeight = FontWeight.Black)
+                                            }
+                                            if (!linkUrl.isNullOrBlank()) {
+                                                Spacer(Modifier.height(5.dp))
+                                                Row(
+                                                    modifier = Modifier
+                                                        .clip(RoundedCornerShape(5.dp))
+                                                        .nukePressFeedback()
+                                                        .clickable {
+                                                            val cm = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                                                            cm.setPrimaryClip(ClipData.newPlainText("Payment Link", linkUrl))
+                                                            NukeToast.success(context, tr("Payment link copied!"))
+                                                        }
+                                                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                                                    verticalAlignment = Alignment.CenterVertically
+                                                ) {
+                                                    Icon(Icons.Rounded.ContentCopy, null, tint = Color(0xFF668679), modifier = Modifier.size(11.dp))
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text(tr("Copy Link"), color = Color(0xFF668679), fontSize = 8.sp)
+                                                }
+                                            }
+                                        }
+                                    }
                                 } else {
-                                    // Virtual Account Card (Compact)
+                                    // ── VIRTUAL ACCOUNT CARD ──
                                     val bankName = res.vaBank ?: "VIRTUAL ACCOUNT"
                                     val vaNumber = res.vaNumber ?: "88908${(res.amount % 90000) + 10000}"
 
@@ -872,7 +1198,7 @@ fun NukeVipSubscriptionDialog(
 
                                 Spacer(Modifier.height(10.dp))
 
-                                // Exact Fee & Total (Compact)
+                                // ── PRICE SUMMARY ──
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -883,7 +1209,9 @@ fun NukeVipSubscriptionDialog(
                                 ) {
                                     Column(verticalArrangement = Arrangement.spacedBy(3.dp)) {
                                         PriceRowCompact(tr("Subtotal (Plan)"), formatRupiah(res.amount))
-                                        if (res.fee > 0) {
+                                        if (isPaymentLink) {
+                                            PriceRowCompact(tr("Gateway Fee"), tr("Varies by method"))
+                                        } else if (res.fee > 0) {
                                             PriceRowCompact(
                                                 "${tr("Gateway Fee")} (${if (isQrPayment) "QRIS" else "VA"})",
                                                 formatRupiah(res.fee)
@@ -896,7 +1224,7 @@ fun NukeVipSubscriptionDialog(
                                             verticalAlignment = Alignment.CenterVertically
                                         ) {
                                             Text(
-                                                tr("EXACT TOTAL TO PAY"),
+                                                if (isPaymentLink) tr("PLAN PRICE") else tr("EXACT TOTAL TO PAY"),
                                                 color = Color.White,
                                                 fontSize = 10.5.sp,
                                                 fontWeight = FontWeight.Black
@@ -926,7 +1254,7 @@ fun NukeVipSubscriptionDialog(
 
                                 Spacer(Modifier.height(8.dp))
 
-                                // Compact Notice
+                                // ── NOTICE (context-aware) ──
                                 Box(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -944,13 +1272,17 @@ fun NukeVipSubscriptionDialog(
                                         )
                                         Spacer(Modifier.width(6.dp))
                                         Text(
-                                            tr("IMPORTANT: You must transfer the EXACT total amount above (including fees / unique digits). Any difference will cause payment gateway verification to fail."),
+                                            if (isPaymentLink)
+                                                tr("IMPORTANT: Open the payment page and complete your payment there. Gateway fee depends on the method you pick. After paying, tap 'Check Payment Status' below.")
+                                            else
+                                                tr("IMPORTANT: You must transfer the EXACT total amount above (including fees / unique digits). Any difference will cause payment gateway verification to fail."),
                                             color = Color(0xFFFDE68A),
                                             fontSize = 8.sp,
                                             lineHeight = 11.sp
                                         )
                                     }
                                 }
+
 
                                 Spacer(Modifier.height(10.dp))
 
@@ -1189,6 +1521,77 @@ private fun PlanCardCompact(
 }
 
 @Composable
+private fun CreditPackCardCompact(
+    pack: NukeSubscriptionManager.CreditPack,
+    isSelected: Boolean,
+    onClick: () -> Unit
+) {
+    val borderColor = if (isSelected) Color(0xFF00E5FF) else Color(0xFF10231D)
+    val bgColor = if (isSelected) Color(0xFF0B2228) else Color(0xFF07100D)
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(8.dp))
+            .background(bgColor)
+            .border(1.dp, borderColor, RoundedCornerShape(8.dp))
+            .nukePressFeedback()
+            .clickable(onClick = onClick)
+            .padding(horizontal = 10.dp, vertical = 7.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f, fill = true)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    tr(pack.name),
+                    color = Color.White,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                if (pack.badge.isNotBlank()) {
+                    Spacer(Modifier.width(6.dp))
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(4.dp))
+                            .background(Color(0xFF00E5FF).copy(alpha = 0.2f))
+                            .padding(horizontal = 5.dp, vertical = 1.dp)
+                    ) {
+                        Text(
+                            tr(pack.badge),
+                            color = Color(0xFF00E5FF),
+                            fontSize = 7.5.sp,
+                            fontWeight = FontWeight.Bold,
+                            maxLines = 1
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(2.dp))
+            Text(
+                tr(pack.description),
+                color = Color(0xFF668679),
+                fontSize = 8.5.sp,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+
+        Spacer(Modifier.width(8.dp))
+
+        Text(
+            formatRupiah(pack.price),
+            color = if (isSelected) Color(0xFF00E5FF) else Color(0xFFE2E8F0),
+            fontSize = 12.sp,
+            fontWeight = FontWeight.Black,
+            textAlign = TextAlign.End
+        )
+    }
+}
+
+@Composable
 private fun PriceRowCompact(label: String, value: String) {
     Row(
         modifier = Modifier.fillMaxWidth(),
@@ -1201,7 +1604,7 @@ private fun PriceRowCompact(label: String, value: String) {
 }
 
 private fun formatRupiah(amount: Long): String {
-    val format = NumberFormat.getCurrencyInstance(Locale("in", "ID"))
+    val format = NumberFormat.getCurrencyInstance(Locale.forLanguageTag("id-ID"))
     format.maximumFractionDigits = 0
     return format.format(amount)
 }

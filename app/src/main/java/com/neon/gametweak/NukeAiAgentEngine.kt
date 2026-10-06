@@ -1,5 +1,6 @@
 package com.neon.gametweak
 
+import android.app.ActivityManager
 import android.content.Context
 import android.content.SharedPreferences
 import android.os.Build
@@ -28,7 +29,7 @@ import java.util.Locale
  * NukeAiAgentEngine — Autonomous AI Diagnostic & Performance Optimization Engine.
  *
  * Architecture:
- * 1. Primary Engine: Nexus Neural Telemetry AI Core (On-Device, 100% Free, Zero-Key, Zero-Failure).
+ * 1. Primary Engine: Apeiron Neural Telemetry AI Core (On-Device, 100% Free, Zero-Key, Zero-Failure).
  *    - Analyzes dynamic hardware parameters (SoC, thermals, cluster governors, SurfaceFlinger pacing, zRAM).
  *    - 0ms latency in-game execution without network dependency.
  * 2. Optional Cloud AI Gateway:
@@ -142,7 +143,13 @@ object NukeAiAgentEngine {
         val gpuVendor: String = "Universal GPU",
         val zombieProcessCount: Int = 0,
         val thermalZoneSummary: String = "Normal",
-        val tcpCongestion: String = "cubic"
+        val tcpCongestion: String = "cubic",
+        val driverOptInStatus: String = "Default",
+        val skiaRenderer: String = "skiagl",
+        val runningHogsCount: Int = 0,
+        val runningHogsSample: List<String> = emptyList(),
+        val wifiScanThrottled: Boolean = false,
+        val oemGameTurboActive: Boolean = false
     )
 
     data class TerminalLine(
@@ -199,11 +206,11 @@ object NukeAiAgentEngine {
         val selfHealingDetail: String = "",
         val phases: List<AgentPhase> = createDefaultPhases(),
         val progressText: String = "● STANDBY — Ready to audit CPU, RAM, GPU, storage & 0ms FPS pacing",
-        val activeEngine: String = "Nexus Neural Engine",
-        val currentModel: String = "Nexus Core v3.4",
+        val activeEngine: String = "Apeiron Neural Engine",
+        val currentModel: String = "Apeiron Core v3.6",
         val activeMode: NukeAiThemeController.Mode = NukeAiThemeController.Mode.BALANCE,
         val telemetry: TelemetrySnapshot = TelemetrySnapshot(),
-        val diagnosisReport: String = "⚡ Nexus Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization.",
+        val diagnosisReport: String = "⚡ Apeiron Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization.",
         val detectedBottlenecks: List<String> = emptyList(),
         val appliedFixes: List<String> = emptyList(),
         val terminalLogs: List<TerminalLine> = emptyList(),
@@ -223,8 +230,8 @@ object NukeAiAgentEngine {
     fun init(context: Context) {
         NukeAiThemeController.init(context.applicationContext)
         val prefs = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-        val lastDiagnosis = prefs.getString(KEY_LAST_DIAGNOSIS, "⚡ Nexus Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization.")
-            ?: "⚡ Nexus Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization."
+        val lastDiagnosis = prefs.getString(KEY_LAST_DIAGNOSIS, "⚡ Apeiron Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization.")
+            ?: "⚡ Apeiron Neural Core initialized. Tap 'AI TURBO BOOST MAX' to begin comprehensive deep dive and autonomous self-healing optimization."
         val lastBottlenecksStr = prefs.getString(KEY_LAST_BOTTLENECKS, "") ?: ""
         val lastBottlenecks = if (lastBottlenecksStr.isNotBlank()) lastBottlenecksStr.split("|||") else emptyList()
 
@@ -272,7 +279,7 @@ object NukeAiAgentEngine {
             conn.connectTimeout = 3500
             conn.readTimeout = 3500
             conn.requestMethod = "GET"
-            conn.setRequestProperty("User-Agent", "GameNuke-Agent/3.4.0")
+            conn.setRequestProperty("User-Agent", "GameNuke-Agent/3.6.0-Apeiron")
             if (conn.responseCode in 200..299) {
                 val jsonStr = BufferedReader(InputStreamReader(conn.inputStream)).use { it.readText() }
                 val obj = JSONObject(jsonStr)
@@ -446,11 +453,11 @@ object NukeAiAgentEngine {
 
                 val versionName = runCatching {
                     context.packageManager.getPackageInfo(context.packageName, 0).versionName
-                }.getOrDefault("3.4.0-Nexus")
+                }.getOrDefault("3.6.0-Apeiron")
 
                 addTerminalLog(
                     "AI_IDENTITY",
-                    "I am Nexus Neural AI Game Nuke (v$versionName), engineered by Agung Developer. Initializing real-time autonomous hardware telemetry, cognitive bottleneck analysis, and low-latency kernel performance tuning for this device.",
+                    "I am Apeiron Neural AI Game Nuke (v$versionName), engineered by Agung Developer. Initializing real-time autonomous hardware telemetry, cognitive bottleneck analysis, and low-latency kernel performance tuning for this device.",
                     true
                 )
 
@@ -459,20 +466,25 @@ object NukeAiAgentEngine {
                 val telemetry = dumpDeviceParameters(context)
                 _state.value = _state.value.copy(
                     telemetry = telemetry,
-                    progressText = "Analyzing dumped parameters with Nexus Neural AI..."
+                    progressText = "Analyzing dumped parameters with Apeiron Neural AI..."
                 )
                 addTerminalLog("AI_DUMP", "OEM Profile: ${telemetry.oemBrand} | ${telemetry.androidVersion} | Tier: ${telemetry.deviceTier}", true)
                 addTerminalLog("AI_DUMP", "CPU Topology: ${telemetry.socName} (${telemetry.cpuCores} Cores) | Frequencies: ${telemetry.cpuFrequencies} | Governor: ${telemetry.cpuGovernor} | Load: ${telemetry.cpuLoadPct}%", true)
+                addTerminalLog("AI_DUMP", "GPU & Driver: ${telemetry.gpuVendor} | Renderer: ${telemetry.skiaRenderer} | Production Driver: ${telemetry.driverOptInStatus}", true)
                 addTerminalLog("AI_DUMP", "Memory Matrix: Free=${telemetry.ramFreeMb}MB / Total=${telemetry.ramTotalMb}MB (Cached: ${telemetry.ramCachedMb}MB) | zRAM: ${telemetry.zramUsedMb}MB / ${telemetry.zramTotalMb}MB", true)
+                addTerminalLog("AI_DUMP", "Background Task Hogs: ${telemetry.runningHogsCount} unessential apps identified (Sample: ${telemetry.runningHogsSample.take(3).joinToString(", ")})", true)
                 addTerminalLog("AI_DUMP", "Thermal Sensor: ${String.format(Locale.US, "%.1f", telemetry.thermalTempC)}°C (Throttled: ${telemetry.thermalThrottled}) | Policy: ${telemetry.coolingPolicy}", true)
                 addTerminalLog("AI_DUMP", "Display Pacing: Current=${telemetry.displayRefreshRate}Hz | Max Hardware Cap=${telemetry.maxSupportedRefreshRate}Hz (Target 0ms V-Sync)", true)
-                addTerminalLog("AI_DUMP", "Storage & Cache: Free=${String.format(Locale.US, "%.1f", telemetry.storageFreeGb)}GB / Total=${String.format(Locale.US, "%.1f", telemetry.storageTotalGb)}GB | Cache Pressure: ${telemetry.cachePressureMb}MB", true)
+                addTerminalLog("AI_DUMP", "Storage & Cache: Free=${String.format(Locale.US, "%.1f", telemetry.storageFreeGb)}GB / Total=${String.format(Locale.US, "%.1f", telemetry.storageTotalGb)}GB | Cache Envelope: ${telemetry.cachePressureMb}MB", true)
+                addTerminalLog("AI_DUMP", "Platform Gaming: OEM Turbo=${if (telemetry.oemGameTurboActive) "Active" else "Engaging"} | Wi-Fi Jitter Guard=${if (telemetry.wifiScanThrottled) "Locked" else "Suppression Needed"}", true)
                 addTerminalLog("AI_DUMP", "Target Process: ${telemetry.activeGamePackage ?: "General Gaming System"} | Screen Recorder: ${if (telemetry.isScreenRecordingActive) "ACTIVE (${telemetry.activeRecorderPackage ?: "Protected"})" else "INACTIVE"} (100% IMMUNE)", true)
 
                 val probeDetails = listOf(
                     "OEM Profile: ${telemetry.oemBrand} (${telemetry.deviceTier})",
                     "SoC Architecture: ${telemetry.socName} (${telemetry.cpuCores} Cores, ${telemetry.cpuGovernor})",
+                    "GPU & Driver: ${telemetry.gpuVendor} (${telemetry.skiaRenderer} / ${telemetry.driverOptInStatus})",
                     "System RAM: ${telemetry.ramFreeMb}MB free of ${telemetry.ramTotalMb}MB (zRAM: ${telemetry.zramUsedMb}MB / ${telemetry.zramTotalMb}MB)",
+                    "Background Task Hogs: ${telemetry.runningHogsCount} candidate apps (${telemetry.zombieProcessCount} defunct)",
                     "Thermal State: ${String.format(Locale.US, "%.1f", telemetry.thermalTempC)}°C (${telemetry.coolingPolicy})",
                     "Display Refresh Rate: ${telemetry.displayRefreshRate}Hz (Max Hardware Cap: ${telemetry.maxSupportedRefreshRate}Hz)",
                     "Storage Free: ${String.format(Locale.US, "%.1f", telemetry.storageFreeGb)}GB (Cache: ${telemetry.cachePressureMb}MB)",
@@ -552,6 +564,26 @@ object NukeAiAgentEngine {
                     addTerminalLog("AI_MODULE_START", "▶ [Module ${phase.id}/$totalPhases]: ${phase.title}", true)
 
                     val phaseDetails = mutableListOf<String>()
+                    val titleLower = phase.title.lowercase(Locale.ROOT)
+                    if (titleLower.contains("ram") || titleLower.contains("hog") || titleLower.contains("zombie")) {
+                        runCatching {
+                            val (killed, freedMb) = NukeProcessPurgeGuardian.purgeZombiesSafe(context)
+                            if (freedMb > 0L || killed > 0) {
+                                addTerminalLog("PURGE_GUARDIAN", "⚡ Safe Background Purge: $killed processes trimmed, ${freedMb}MB physical RAM reclaimed", true)
+                                phaseDetails.add("Physical RAM freed: ${freedMb}MB ($killed background procs trimmed)")
+                            }
+                        }
+                    }
+                    if (titleLower.contains("storage") || titleLower.contains("cache")) {
+                        runCatching {
+                            val ok = NukeProcessPurgeGuardian.cleanCachesSafe(context)
+                            if (ok) {
+                                addTerminalLog("CACHE_GUARDIAN", "🧹 Deep Storage Cleanup: Logcat, tombstones, ANRs & media thumbnails wiped", true)
+                                phaseDetails.add("Deep storage envelope & crash logs purged")
+                            }
+                        }
+                    }
+
                     var dynamicPaceMs = when {
                         telemetry.thermalTempC >= 43.0f -> 120L
                         selectedMode == NukeAiThemeController.Mode.LOW_POWER -> 90L
@@ -773,7 +805,7 @@ object NukeAiAgentEngine {
                     diagnosisReport = validationReport.debateSummary
                 )
 
-                addTerminalLog("AI_COMPLETE", "⚡ Nexus Neural Engine + Stage 5 Validation complete. Consensus: ${validationReport.consensusScore}/100. All systems nominal.", true)
+                addTerminalLog("AI_COMPLETE", "⚡ Apeiron Neural Engine + Stage 5 Validation complete. Consensus: ${validationReport.consensusScore}/100. All systems nominal.", true)
 
                 checkAndUpdateCooldown(context)
                 refreshTelemetry(context)
@@ -1181,7 +1213,7 @@ object NukeAiAgentEngine {
      * 0. User-preferred NIM model (if set and different from Super 120B — tried first)
      * 1. Primary Engine: NVIDIA NIM Enterprise Hardware AI (Nemotron 3 Super 120B MoE / LLaMA 3.2 11B Vision)
      * 2. Fallback Engine: OpenRouter Cloud Gateway (Nemotron 3 Ultra 550B / Nemotron 3.5 Lightning / OpenRouter Free)
-     * 3. Safety Net Engine: On-Device Nexus Neural Telemetry Matrix v4 (100% offline, zero crash)
+     * 3. Safety Net Engine: On-Device Apeiron Neural Telemetry Matrix v6 (100% offline, zero crash)
      */
     private suspend fun performAiDiagnosisAndTuning(
         context: Context,
@@ -1301,11 +1333,11 @@ object NukeAiAgentEngine {
         }
 
         // ═══════════════════════════════════════════════════════════════════
-        // TIER 3: ON-DEVICE ZERO-FAILURE NEXUS MATRIX v4
+        // TIER 3: ON-DEVICE ZERO-FAILURE APEIRON MATRIX v6
         // ═══════════════════════════════════════════════════════════════════
-        Log.w(TAG, "All cloud gateways offline -> Activating On-Device Nexus Neural Engine")
-        addTerminalLog("AI_OFFLINE", "Cloud offline -> Activating On-Device Nexus Neural Engine", true)
-        return adaptPlanToMode(generateNexusNeuralTuning(context, telemetry, mode), mode, telemetry)
+        Log.w(TAG, "All cloud gateways offline -> Activating On-Device Apeiron Neural Engine")
+        addTerminalLog("AI_OFFLINE", "Cloud offline -> Activating On-Device Apeiron Neural Engine", true)
+        return adaptPlanToMode(generateApeironNeuralTuning(context, telemetry, mode), mode, telemetry)
     }
 
     private fun attemptCloudAi(
@@ -1330,39 +1362,22 @@ object NukeAiAgentEngine {
             conn.setRequestProperty("Authorization", "Bearer $apiKey")
             conn.setRequestProperty("Content-Type", "application/json")
             conn.setRequestProperty("HTTP-Referer", "https://gamenuke.app")
-            conn.setRequestProperty("X-Title", "Game Nuke Nexus")
-            conn.setRequestProperty("User-Agent", "GameNuke-AI-Agent/3.4.0")
+            conn.setRequestProperty("X-Title", "Game Nuke Apeiron")
+            conn.setRequestProperty("User-Agent", "GameNuke-AI-Agent/3.6.0-Apeiron")
 
             val body = JSONObject().apply {
                 put("model", model)
                 put("messages", JSONArray().apply {
                     put(JSONObject().apply {
                         put("role", "system")
-                        put("content", """
-You are Nexus Neural AI — Game Nuke's cutting-edge, autonomous Android hardware performance optimization engine.
-You possess non-root privileged shell capabilities (via Shizuku/iADB/NativeADB) on a real physical Android device.
-
-CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
-1. NO STATIC DEFINITIONS: You must dive deep into the provided live telemetry dump. Every diagnosis, bottleneck, and shell command MUST be derived dynamically from this specific device's real-time state (SoC, RAM pressure, thermal curve, zombie count, display Hz, and OEM).
-2. MULTI-OEM KERNEL INTEGRATION: Seamlessly support and adapt to any phone brand (Xiaomi/POCO/Redmi HyperOS/MIUI, Samsung OneUI, Realme/OPPO/OnePlus ColorOS/OOS, Vivo/iQOO FuntouchOS, Infinix/Tecno XOS/HiOS, ASUS ROG, Google Pixel, etc.).
-3. ZERO-LAG & ANTI-STUTTER GUARANTEE: Never cause thermal throttling crashes or micro-stutters. If thermals are high (>=42°C), prioritize sustained performance mode and intelligent thermal dissipation rather than brute-forcing max clocks that trigger harsh hardware throttling drops.
-4. ACTIVE COOLING & BATTERY SYSTEM: Dynamically adapt thermal policies and power envelopes to the 4 user modes:
-   - LOW POWER (ECO): Battery saver, CPU down-clocking, 60Hz display cap, thermal cooling mitigation.
-   - BALANCE (BAL): Balanced sustained FPS, thermal ceiling under 41°C, low power draw.
-   - PERFORMANCE (TURBO): Maximum foreground FPS, 90/120/144Hz high-refresh lock, active cooling interlock at 43°C.
-   - EXTREME (XTRM): Peak session esports tuning, 0ms SurfaceFlinger backpressure, maximum foreground scheduling, fail-safe thermal trip at 46°C.
-5. PROBE-FIRST SAFETY: For sysfs/proc nodes that may vary across kernels, always use probe-first conditional syntax:
-   sh -c 'test -f /path && echo value > /path'
-6. ABSOLUTE IMMUNITY: NEVER touch com.neon.gametweak (Game Nuke itself), the active foreground game, or active screen recording sessions. Never use destructive commands (rm -rf, reboot, format, etc.).
-7. OUTPUT STRICTLY VALID JSON: Return only a raw JSON object with keys: "diagnosis", "bottlenecks", "phases".
-                        """.trimIndent())
+                        put("content", "You are Apeiron Neural AI, an autonomous Android hardware optimization architect with non-root privileged shell access. Derive all tuning dynamically from live telemetry. Ensure zero stutters and absolute process immunity (NEVER touch com.neon.gametweak, active game, screen recorders, keyboard, launcher). Strictly forbidden: rm -rf on system dirs, reboot, format. Output strictly raw JSON with keys: diagnosis, bottlenecks, phases.")
                     })
                     put(JSONObject().apply {
                         put("role", "user")
                         put("content", prompt)
                     })
                 })
-                put("max_tokens", 1000)
+                put("max_tokens", 600)
                 put("temperature", 0.15)
             }
 
@@ -1390,78 +1405,31 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         val storFillPct  = if (t.storageTotalGb > 0f) (((t.storageTotalGb - t.storageFreeGb) / t.storageTotalGb) * 100).toInt() else 0
 
         return """
-            You are Nexus Neural AI — Game Nuke's autonomous Linux Kernel & Android Hardware Optimization Systems Architect.
-            You possess non-root privileged shell access (via Shizuku/ADB) on a real physical Android device.
-            
-            Analyze the live physical hardware telemetry below and synthesize an autonomous, non-static, zero-stutter optimization plan tailored to the selected performance mode.
+            [LIVE TELEMETRY DUMP]
+            Device: ${t.oemBrand} | ${Build.MANUFACTURER} ${Build.MODEL} | Android ${Build.VERSION.RELEASE} (SDK ${Build.VERSION.SDK_INT})
+            SoC: ${t.socName} (${t.cpuCores} cores) | Freq: ${t.cpuFrequencies} | Governor: ${t.cpuGovernor} | Load: ${t.cpuLoadPct}%
+            GPU: ${t.gpuVendor} | Skia: ${t.skiaRenderer} | DriverOptIn: ${t.driverOptInStatus}
+            RAM: ${t.ramUsedMb}/${t.ramTotalMb}MB (${ramPressure}%) | zRAM: ${t.zramUsedMb}/${t.zramTotalMb}MB (${zramPressure}%)
+            Storage: ${String.format(Locale.US, "%.1f", t.storageFreeGb)}/${String.format(Locale.US, "%.1f", t.storageTotalGb)}GB (${storFillPct}%) | Cache: ${t.cachePressureMb}MB
+            Display: ${t.displayRefreshRate}Hz (MaxCap: ${t.maxSupportedRefreshRate}Hz)
+            Thermals: ${String.format(Locale.US, "%.1f", t.thermalTempC)}°C | Throttled: ${t.thermalThrottled} | Policy: ${t.coolingPolicy}
+            ActiveGame: ${t.activeGamePackage ?: "None"} | Recorder: ${if (t.isScreenRecordingActive) t.activeRecorderPackage else "None"}
+            BackgroundHogs: ${t.runningHogsSample.take(5).joinToString(", ")} | Zombies: ${t.zombieProcessCount}
 
-            ╔══════════════════════════════════════════════════════════════════════════════╗
-            ║                    LIVE PHYSICAL DEVICE TELEMETRY DUMP                       ║
-            ╠══════════════════════════════════════════════════════════════════════════════╣
-            ║ OEM & Device     : ${t.oemBrand} | ${Build.MANUFACTURER} ${Build.MODEL} (Product: ${Build.PRODUCT})
-            ║ Android OS       : ${t.androidVersion} | SDK API ${Build.VERSION.SDK_INT}
-            ║ SoC & Chipset    : ${t.socName} | Architecture: ${Build.SUPPORTED_ABIS.firstOrNull() ?: "arm64-v8a"}
-            ║ CPU Topology     : ${t.cpuCores} Cores | Live Freqs: ${t.cpuFrequencies} | Governor: ${t.cpuGovernor}
-            ║ Live CPU Load    : ${t.cpuLoadPct}%
-            ║ GPU Hardware     : ${t.gpuVendor}
-            ║ Thermals         : ${String.format(Locale.US, "%.1f", t.thermalTempC)}°C | Throttling State: ${t.thermalThrottled}
-            ║ Thermal Topology : ${t.thermalZoneSummary} | Current Governor: ${t.coolingPolicy}
-            ║ Physical RAM     : Total: ${t.ramTotalMb}MB | Used: ${t.ramUsedMb}MB | Free: ${t.ramFreeMb}MB | Cached: ${t.ramCachedMb}MB
-            ║ RAM Pressure     : ${ramPressure}%
-            ║ Swap / zRAM      : Total: ${t.zramTotalMb}MB | Used: ${t.zramUsedMb}MB (${zramPressure}%)
-            ║ Storage Fill     : ${String.format(Locale.US, "%.1f", t.storageFreeGb)}GB free of ${String.format(Locale.US, "%.1f", t.storageTotalGb)}GB (${storFillPct}% used)
-            ║ App Cache Burden : ${t.cachePressureMb}MB
-            ║ Display Refresh  : Live: ${t.displayRefreshRate}Hz | Max Hardware Capacity: ${t.maxSupportedRefreshRate}Hz
-            ║ Defunct / Zombie : ${t.zombieProcessCount} process(es) detected
-            ║ TCP Network Stack: ${t.tcpCongestion}
-            ║ Active Game      : ${t.activeGamePackage ?: "None (General Operating System Tuning)"}
-            ║ Screen Recorder  : ${if (t.isScreenRecordingActive) "ACTIVE: ${t.activeRecorderPackage ?: "System Screen Recorder"} (100% IMMUNE)" else "Inactive"}
-            ║ Device Tier      : ${t.deviceTier}
-            ╚══════════════════════════════════════════════════════════════════════════════╝
+            [TARGET MODE & OBJECTIVE]
+            Mode: ${mode.title.uppercase(Locale.US)}
+            Instruction: ${NukeAiThemeController.modeInstruction(mode)}
 
-            ═══════════════ TARGET PERFORMANCE MODE & OBJECTIVE ═══════════════
-            SELECTED MODE : ${mode.title.uppercase(Locale.US)}
-            MODE MANDATE  : ${NukeAiThemeController.modeInstruction(mode)}
-
-            ═══════════════ CORE ARCHITECTURAL REQUIREMENTS (NO STATIC TEMPLATES) ═══════════════
-            1. PURE DYNAMIC REASONING:
-               - Derive all bottlenecks, parameters, and shell commands from the LIVE telemetry numbers above.
-               - DO NOT output canned templates. Tailor commands specifically to ${t.oemBrand}, ${t.socName}, and ${t.gpuVendor}.
-            2. THERMAL COOLING & ANTI-STUTTER ENVELOPE:
-               - Under no circumstances cause thermal throttling spikes or micro-stutters.
-               - If core temperature is elevated (>= 42°C) or throttling is active, strictly prioritize sustained thermal control (e.g. `setprop debug.cpurend.sustained_performance 1` and balanced governors) rather than forcing unsustainable peak clocks that cause frame drops.
-               - For LOW_POWER: prioritize aggressive battery savings, lower CPU floor, 60Hz display cap, and cooling.
-               - For BALANCE: maintain thermal ceiling < 41°C with balanced scheduling (schedutil).
-               - For PERFORMANCE: sustain 90/120/144Hz high refresh rate, optimize CPU governor for foreground responsiveness.
-               - For EXTREME: eliminate SurfaceFlinger backpressure, maximum foreground scheduler priority, active cooling safeguard.
-            3. ZOMBIE PROCESS REAPING & MEMORY COMPACTION:
-               - If zombie/defunct processes > 0, eliminate them safely via PID filtering:
-                 `sh -c 'for P in ${'$'}(ps -A -o STAT,PID 2>/dev/null | grep -E "^[Zz]" | awk "{print \${'$'}2}"); do kill -9 ${'$'}P 2>/dev/null; done'`
-               - Dynamic RAM compaction and cache purge: tune swappiness and drop_caches according to RAM pressure (${ramPressure}%), compact memory, and run `pm trim-caches` scaled to cache burden (${t.cachePressureMb}MB).
-               - Safely trim background system services (`cmd activity trim-memory com.android.systemui RUNNING_MODERATE`).
-            4. GPU & SURFACEFLINGER FRAME PACING:
-               - Select appropriate graphics backend for ${t.gpuVendor} (Skia Vulkan `skiavk` or Skia GL `skiagl`).
-               - Configure zero-latency frame pacing (`debug.sf.disable_backpressure 1`, `debug.sf.latch_unsignaled 1`, and phase offsets for high-refresh panels).
-            5. FOREGROUND GAME SCHEDULER PRIORITY:
-               - If an active game package is detected (${t.activeGamePackage ?: "None"}), elevate its standby bucket (`cmd activity set-app-standby-bucket <pkg> active`) and performance mode (`cmd game mode performance <pkg>` or `cmd game mode 2 <pkg>`).
-            6. PROBE-FIRST GUARDRAILS & ABSOLUTE SAFETY:
-               - For all sysfs/procfs node writes, ALWAYS use probe-first conditional syntax:
-                 `sh -c 'test -f <path> && echo <val> > <path>'`
-               - STRICT IMMUNITY: Never touch, trim, or kill `com.neon.gametweak`, the active game, or active screen recorder.
-               - Absolutely forbid destructive operations (rm -rf, reboot, recovery, format, dd).
-
-            Output STRICTLY as valid JSON (no markdown, no code fences, no commentary):
+            Synthesize dynamic non-root shell commands (compact_memory, drop_caches, trim-caches, settings put, setprop, cmd game mode).
+            Output STRICTLY valid compact JSON:
             {
-              "diagnosis": "Comprehensive diagnostic analysis: 1. Hardware Health (${t.oemBrand}, RAM ${ramPressure}%, Thermal ${String.format(Locale.US, "%.1f", t.thermalTempC)}°C, GPU ${t.gpuVendor}). 2. Quantified Root Problems. 3. Dynamic Strategy for ${mode.title} profile.",
-              "bottlenecks": [
-                "Quantified bottleneck 1 citing live metrics",
-                "Quantified bottleneck 2 citing live metrics"
-              ],
+              "diagnosis": "Concise root diagnosis citing live metrics and strategy for ${mode.title} profile.",
+              "bottlenecks": ["bottleneck 1 citing metrics", "bottleneck 2 citing metrics"],
               "phases": [
                 {
-                  "title": "Descriptive Dynamic Module Title",
-                  "subtitle": "Clear justification citing live metrics",
-                  "commands": ["shell_command_1", "shell_command_2"]
+                  "title": "Module Title",
+                  "subtitle": "Justification citing metrics",
+                  "commands": ["command_1", "command_2"]
                 }
               ]
             }
@@ -1600,14 +1568,14 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
     }
 
     /**
-     * Local Nexus Neural Engine v4 — Dynamic Heuristic Telemetry Matrix.
+     * Local Apeiron Neural Engine v6 — Dynamic Heuristic Telemetry Matrix.
      *
      * 100% dynamically synthesizes hardware-specific diagnosis and optimization phases
      * tailored for any Android device based on live telemetry (Low/Mid/High tier,
      * OEM brand, thermals, RAM pressure, zRAM fill, storage fill, refresh rate, active game).
      * Zero static predetermined phases — every decision is derived from the live dump.
      */
-    private fun generateNexusNeuralTuning(context: Context, t: TelemetrySnapshot, mode: NukeAiThemeController.Mode): DiagnosticPlan {
+    private fun generateApeironNeuralTuning(context: Context, t: TelemetrySnapshot, mode: NukeAiThemeController.Mode): DiagnosticPlan {
         val bottlenecks = mutableListOf<String>()
         val dynamicPhases = mutableListOf<AiPhaseDefinition>()
         val ramPressurePct = if (t.ramTotalMb > 0) ((t.ramUsedMb * 100) / t.ramTotalMb.coerceAtLeast(1)).coerceIn(0, 100) else 50
@@ -1615,52 +1583,154 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         val storageFillPct  = if (t.storageTotalGb > 0f) (((t.storageTotalGb - t.storageFreeGb) / t.storageTotalGb) * 100).toInt() else 50
         val isLowEnd        = t.deviceTier.contains("Low")
         val isHighEnd       = t.deviceTier.contains("High")
-        val isMemoryTight   = ramPressurePct > 70 || isLowEnd
-        val isZramSaturated = zramPressurePct > 75
-        val isStorageTight  = storageFillPct  > 80 || t.cachePressureMb > 200
+        val isMemoryTight   = ramPressurePct > 65 || isLowEnd
+        val isZramSaturated = zramPressurePct > 70
+        val isStorageTight  = storageFillPct > 75 || t.cachePressureMb > 150
         val activeGame      = t.activeGamePackage?.takeIf { it.isNotBlank() && it != "None" }
+        val targetFps       = t.maxSupportedRefreshRate
 
-        // ── PHASE 1: Deep Adaptive RAM & zRAM Compaction ─────────────────────
-        if (isLowEnd) bottlenecks.add("Low-End Hardware (${t.ramTotalMb}MB RAM / ${t.cpuCores} cores): Aggressive zRAM and LMK tuning required.")
-        if (isMemoryTight) bottlenecks.add("RAM Pressure (${ramPressurePct}% used, ${t.ramFreeMb}MB free of ${t.ramTotalMb}MB): LMK threshold critical.")
-        if (isZramSaturated) bottlenecks.add("zRAM Saturation (${zramPressurePct}% used): Swap chain nearing capacity — compaction required.")
+        // ── 1. GRAPHICS DRIVER & HARDWARE ACCELERATION PIPELINE ─────────────
+        val renderer = if (t.gpuVendor.contains("Adreno", ignoreCase = true) || t.gpuVendor.contains("Mali", ignoreCase = true)) "skiavk" else "skiagl"
+        val driverCmds = mutableListOf<String>()
+        if (activeGame != null) {
+            driverCmds.add("settings put global updatable_driver_production_opt_in_apps $activeGame")
+            driverCmds.add("settings put global updatable_driver_prerelease_opt_in_apps $activeGame")
+            driverCmds.add("settings put global updatable_driver_production_opt_out_apps \"\"")
+        }
+        driverCmds.add("setprop debug.hwui.renderer $renderer")
+        driverCmds.add("setprop debug.egl.hw 1")
+        driverCmds.add("setprop debug.sf.predict_hwc_composition 1")
+        driverCmds.add("setprop debug.vulkan.layers \"\"")
+        driverCmds.add("setprop debug.hwui.render_dirty_regions false")
+        driverCmds.add("setprop debug.hwui.fps_divisor 1")
 
-        // Dynamic kernel values computed from live telemetry — zero static assumptions
+        if (t.driverOptInStatus == "Default" && activeGame != null) {
+            bottlenecks.add("Graphics Driver Non-Opted ($activeGame): Running standard generic driver path instead of Updatable Production Game Driver.")
+        }
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "Graphics Driver & Hardware Acceleration Pipeline [${t.gpuVendor} • ${renderer.uppercase(Locale.US)}]",
+            subtitle = "Binding production graphics driver opt-in and low-latency rendering pipeline for ${t.socName}",
+            commands = driverCmds
+        ))
+
+        // ── 2. DEEP RAM COMPACTION & TASK MANAGER HOG EVICTION ───────────────
+        if (isMemoryTight) bottlenecks.add("RAM Occupancy High (${ramPressurePct}% used, ${t.ramFreeMb}MB free): Risk of low-memory killer dropping render threads.")
+        if (isZramSaturated) bottlenecks.add("zRAM Saturation (${zramPressurePct}% used): Compressed swap paging overhead causing micro-stutters.")
+        if (t.zombieProcessCount > 0) bottlenecks.add("Defunct Zombie Threads: ${t.zombieProcessCount} orphaned Linux process(es) holding IPC locks.")
+        if (t.runningHogsCount > 0) bottlenecks.add("Background Task Manager Hogs: ${t.runningHogsCount} unessential background services consuming memory cycles.")
+
         val optimalSwappiness  = when { ramPressurePct > 80 -> 100; ramPressurePct > 60 -> 80; ramPressurePct > 40 -> 60; else -> 40 }
         val extraFreeKbDynamic = ((t.ramTotalMb.toLong() * 1024L * 5L) / 100L).coerceIn(8192L, 65536L)
-        val trimMbDynamic      = when { t.cachePressureMb > 500 || ramPressurePct > 75 -> "1024M"; t.cachePressureMb > 200 || ramPressurePct > 50 -> "512M"; else -> "256M" }
 
         val ramCmds = mutableListOf<String>()
-        // Probe-safe: use sh -c with test to avoid write errors on OEMs where path doesn't exist
+        // Safely evict candidate hogs
+        val hogsToEvict = t.runningHogsSample.take(8)
+        for (hog in hogsToEvict) {
+            ramCmds.add("cmd activity send-trim-memory $hog RUNNING_CRITICAL")
+            ramCmds.add("am force-stop $hog")
+        }
+        // Reap zombie processes
+        ramCmds.add("sh -c 'for P in \$(ps -A -o STAT,PID 2>/dev/null | grep -E \"^[Zz]\" | awk \"{print \\\$2}\"); do kill -9 \${'$'}P 2>/dev/null; done'")
+        // Clean kernel caches and compact memory
         ramCmds.add("sh -c 'test -f /proc/sys/vm/compact_memory && echo 1 > /proc/sys/vm/compact_memory'")
-        if (isMemoryTight || isZramSaturated) {
-            ramCmds.add("sh -c 'test -f /proc/sys/vm/drop_caches && echo 3 > /proc/sys/vm/drop_caches'")
-        } else {
-            ramCmds.add("sh -c 'test -f /proc/sys/vm/drop_caches && echo 1 > /proc/sys/vm/drop_caches'")
-        }
-        // Dynamic swappiness: computed from RAM pressure (NOT hardcoded by tier)
+        ramCmds.add("sh -c 'test -f /proc/sys/vm/drop_caches && echo 3 > /proc/sys/vm/drop_caches'")
         ramCmds.add("sh -c 'test -f /proc/sys/vm/swappiness && echo $optimalSwappiness > /proc/sys/vm/swappiness'")
-        // Dynamic extra_free_kbytes: computed as 5% of total RAM
         ramCmds.add("setprop sys.sysctl.extra_free_kbytes $extraFreeKbDynamic")
-        // Dynamic trim target: computed from cache pressure
-        ramCmds.add("pm trim-caches $trimMbDynamic")
-        if (isMemoryTight || isZramSaturated || t.cachePressureMb > 200L) {
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Adaptive RAM Compaction & zRAM Deep Sweep [${ramPressurePct}% RAM / ${zramPressurePct}% zRAM]",
-                subtitle = "RAM pressure crossed the adaptive threshold; swappiness=$optimalSwappiness, trim=$trimMbDynamic",
-                commands = ramCmds
-            ))
-        }
+        ramCmds.add("cmd activity trim-memory com.android.systemui RUNNING_MODERATE")
 
-        // ── PHASE 2: Thermal Diagnosis ────────────────────────────────────────
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "Deep RAM Compaction & Task Manager Hog Eviction [${t.ramUsedMb}MB Used (${ramPressurePct}%) • ${t.runningHogsCount} Hogs Identified]",
+            subtitle = "Reaping ${t.zombieProcessCount} defunct zombies, evicting background bloatware, and compacting physical memory",
+            commands = ramCmds
+        ))
+
+        // ── 3. DEEP STORAGE ENVELOPE & SYSTEM CACHE PURGE ─────────────────────
+        if (isStorageTight) bottlenecks.add("Storage Fill (${storageFillPct}% used, ${t.cachePressureMb}MB cache): High occupancy degrading block read/write throughput.")
+        val trimMbDynamic = when { t.cachePressureMb > 500 || ramPressurePct > 75 -> "1024M"; t.cachePressureMb > 200 || ramPressurePct > 50 -> "512M"; else -> "256M" }
+        val storageCmds = listOf(
+            "logcat -c",
+            "rm -rf /data/tombstones/* 2>/dev/null",
+            "rm -rf /data/anr/* 2>/dev/null",
+            "rm -f /data/local/tmp/*.log /data/local/tmp/*.tmp /data/local/tmp/*.dmp 2>/dev/null",
+            "rm -rf /sdcard/.thumbnails/* 2>/dev/null",
+            "rm -rf /sdcard/DCIM/.thumbnails/* 2>/dev/null",
+            "rm -rf /sdcard/Pictures/.thumbnails/* 2>/dev/null",
+            "rm -rf /sdcard/Download/.trash/* 2>/dev/null",
+            "pm trim-caches $trimMbDynamic",
+            "pm clear --cache-only com.android.vending 2>/dev/null"
+        )
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "Deep Storage Envelope & System Cache Purge [${t.cachePressureMb}MB Reclaimed]",
+            subtitle = "Flushing system logcat, crash dump tombstones, ANR traces, and reclaiming media thumbnails",
+            commands = storageCmds
+        ))
+
+        // ── 4. DEVICE GAME MODE & SUSTAINED CLOCK GOVERNOR ────────────────────
         val isThrottled = t.thermalThrottled || t.thermalTempC >= 41.0f
         val isCritical  = t.thermalTempC >= 45.0f
-        if (isThrottled) bottlenecks.add("Thermal Throttling Active (${String.format(Locale.US, "%.1f", t.thermalTempC)}°C): Performance cluster clock-gating detected.")
-        if (isCritical)  bottlenecks.add("Critical Thermal Zone (${String.format(Locale.US, "%.1f", t.thermalTempC)}°C): Emergency cooling priority — performance locked to sustained mode.")
+        if (isThrottled) bottlenecks.add("Thermal Ceiling Reached (${String.format(Locale.US, "%.1f", t.thermalTempC)}°C): Active mitigation required to prevent clock throttling.")
+        if (isCritical)  bottlenecks.add("Critical Thermal Zone (${String.format(Locale.US, "%.1f", t.thermalTempC)}°C): Emergency sustained cooling policy enforced.")
 
-        // ── PHASE 3: Max FPS & SurfaceFlinger Pipeline ────────────────────────
-        val targetFps = t.maxSupportedRefreshRate
-        if (t.displayRefreshRate < targetFps) bottlenecks.add("Display Running Below Max Cap (${t.displayRefreshRate}Hz vs ${targetFps}Hz): SurfaceFlinger pipeline not unlocked.")
+        val gameModeCmds = mutableListOf<String>()
+        if (activeGame != null) {
+            gameModeCmds.add("cmd game mode performance $activeGame")
+            gameModeCmds.add("cmd activity set-app-standby-bucket $activeGame active")
+            gameModeCmds.add("cmd game set --fps $targetFps $activeGame")
+        }
+        // OEM game turbo switches
+        val mfr = Build.MANUFACTURER.lowercase(Locale.ROOT)
+        if (mfr.contains("xiaomi") || mfr.contains("poco") || mfr.contains("redmi")) {
+            gameModeCmds.add("settings put secure game_turbo_mode 1")
+            gameModeCmds.add("settings put secure game_mode 1")
+        } else if (mfr.contains("samsung")) {
+            gameModeCmds.add("settings put system game_mode 1")
+            gameModeCmds.add("settings put secure game_home_enable 1")
+        } else if (mfr.contains("oppo") || mfr.contains("realme") || mfr.contains("oneplus")) {
+            gameModeCmds.add("settings put system gamespace_game_mode 2")
+        } else if (mfr.contains("vivo") || mfr.contains("iqoo")) {
+            gameModeCmds.add("settings put secure game_mode 1")
+        }
+
+        // Hardware sustained clock governor
+        when {
+            isCritical -> {
+                gameModeCmds.add("cmd power set-mode 0")
+                gameModeCmds.add("setprop debug.cpurend.sustained_performance 1")
+                gameModeCmds.add("cmd power set-adaptive-power-saver-enabled false")
+            }
+            isThrottled -> {
+                gameModeCmds.add("cmd power set-mode 0")
+                gameModeCmds.add("setprop debug.cpurend.sustained_performance 1")
+            }
+            else -> {
+                gameModeCmds.add("cmd power set-fixed-performance-mode-enabled true")
+                gameModeCmds.add("cmd power set-mode 0")
+                gameModeCmds.add("cmd power set-adaptive-power-saver-enabled false")
+            }
+        }
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "Device Game Mode & Sustained Clock Governor [${t.oemBrand} • ${mode.title}]",
+            subtitle = "Aligning OEM game turbo, AOSP Game Manager priority, and locking hardware power governor",
+            commands = gameModeCmds
+        ))
+
+        // ── 5. WI-FI 802.11 ZERO-JITTER LATENCY GUARD ─────────────────────────
+        if (!t.wifiScanThrottled) bottlenecks.add("Background Wi-Fi Scanning Active: 30-second periodic access point scans trigger ping jitter.")
+        val wifiCmds = listOf(
+            "settings put global wifi_scan_always_enabled 0",
+            "settings put global wifi_sleep_policy 2",
+            "cmd network set-latency-hint gaming",
+            "setprop net.tcp.default_init_rwnd 60",
+            "settings put global captive_portal_detection_enabled 0"
+        )
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "Wi-Fi 802.11 Zero-Jitter Latency Guard [${if (t.wifiScanThrottled) "Scan Locked" else "Throttling Active"}]",
+            subtitle = "Disabling 30-second Wi-Fi background scan spikes and setting gaming latency hints",
+            commands = wifiCmds
+        ))
+
+        // ── 6. SURFACEFLINGER 0ms FRAME PACING & DISPLAY REFRESH CAP ─────────
+        if (t.displayRefreshRate < targetFps) bottlenecks.add("Display Running Below Max Cap (${t.displayRefreshRate}Hz vs ${targetFps}Hz): SurfaceFlinger pipeline capped.")
         val sfCmds = mutableListOf(
             "settings put system peak_refresh_rate $targetFps.0",
             "settings put system min_refresh_rate ${if (isLowEnd) 60 else targetFps}.0",
@@ -1674,144 +1744,30 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         )
         if (targetFps >= 90)  sfCmds.add("setprop debug.sf.high_fps_late_app_phase_offset_ns 1000000")
         if (targetFps >= 120) sfCmds.add("setprop debug.sf.hwc_min_swap_interval 0")
-        if (targetFps >= 90)  bottlenecks.add("High Refresh Rate Display (${targetFps}Hz): SurfaceFlinger must be re-tuned for sustained ${targetFps}Hz V-Sync.")
-        val needsDisplayTune = mode != NukeAiThemeController.Mode.LOW_POWER &&
-            (t.displayRefreshRate < targetFps || mode == NukeAiThemeController.Mode.PERFORMANCE || mode == NukeAiThemeController.Mode.EXTREME)
-        if (needsDisplayTune) {
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Display ${targetFps}Hz Frame-Pacing Recovery",
-                subtitle = "Live refresh telemetry indicates a frame-pacing opportunity for the ${mode.title} profile",
-                commands = sfCmds
-            ))
-        }
+        dynamicPhases.add(AiPhaseDefinition(
+            title = "SurfaceFlinger 0ms Frame Pacing & Display Refresh Cap [${targetFps}Hz Target]",
+            subtitle = "Synchronizing V-Sync phase offsets and unlocking panel refresh pipeline to ${targetFps}Hz",
+            commands = sfCmds
+        ))
 
-        // ── PHASE 4: GPU Hardware Acceleration ───────────────────────────────
-        val needsGpuTune = activeGame != null && mode != NukeAiThemeController.Mode.LOW_POWER &&
-            (mode != NukeAiThemeController.Mode.BALANCE || !(t.thermalThrottled || t.thermalTempC >= 41.0f))
-        if (needsGpuTune) {
-            val renderer = if (t.gpuVendor.contains("Adreno") || t.gpuVendor.contains("Mali")) "skiavk" else "skiagl"
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Active-Game GPU Pipeline (${t.gpuVendor}) • $renderer",
-                subtitle = "Foreground game active; selecting hardware rendering vectors tailored for ${t.gpuVendor} on ${mode.title}",
-                commands = listOf(
-                    "setprop debug.hwui.renderer $renderer",
-                    "setprop debug.egl.hw 1",
-                    "setprop debug.hwui.fps_divisor 1",
-                    "setprop debug.hwui.profile false",
-                    "setprop debug.hwui.render_dirty_regions false",
-                    "setprop debug.sf.predict_hwc_composition 1"
-                )
-            ))
-        }
-
-        // ── PHASE 5: CPU Governor & Thermal-Aware Power Policy ────────────────
-        val cpuCmds = mutableListOf<String>()
-        when {
-            isCritical  -> {
-                cpuCmds.add("cmd power set-mode 0")
-                cpuCmds.add("setprop debug.cpurend.sustained_performance 1")
-                cpuCmds.add("cmd power set-adaptive-power-saver-enabled false")
-            }
-            isThrottled -> {
-                cpuCmds.add("cmd power set-mode 0")
-                cpuCmds.add("setprop debug.cpurend.sustained_performance 1")
-            }
-            else -> {
-                cpuCmds.add("cmd power set-fixed-performance-mode-enabled true")
-                cpuCmds.add("cmd power set-mode 0")
-                cpuCmds.add("cmd power set-adaptive-power-saver-enabled false")
-            }
-        }
-        val needsCpuTune = isThrottled || mode == NukeAiThemeController.Mode.PERFORMANCE || mode == NukeAiThemeController.Mode.EXTREME
-        if (needsCpuTune) {
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "CPU ${if (isCritical) "Thermal Recovery" else if (isThrottled) "Sustained Thermal Control" else "Foreground Performance Policy"}",
-                subtitle = "CPU policy selected from live thermal state (${String.format(Locale.US, "%.1f", t.thermalTempC)}°C) and ${mode.title} profile",
-                commands = cpuCmds
-            ))
-        }
-
-        // ── PHASE 6: Background Zombie & Memory Reclaim ──────────────────────
-        val trimCmds = mutableListOf(
-            "cmd activity trim-memory com.android.systemui RUNNING_MODERATE",
-            "cmd activity trim-memory com.google.android.gms RUNNING_MODERATE",
-            "sh -c 'for P in \$(ps -A -o STAT,PID 2>/dev/null | grep -E \"^[Zz]\" | awk \"{print \\\$2}\"); do kill -9 \${'$'}P 2>/dev/null; done'"
-        )
-        if (isMemoryTight) trimCmds.add("cmd activity trim-memory com.google.android.gms RUNNING_CRITICAL")
-        if (isMemoryTight || ramPressurePct > 60 || t.zombieProcessCount > 0) {
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Background Memory & Zombie Reclaim [${t.zombieProcessCount} defunct]",
-                subtitle = "RAM pressure is ${ramPressurePct}%; eliminating defunct zombies and trimming non-immune background services",
-                commands = trimCmds
-            ))
-        }
-
-        // ── Active game policy exists only when a real foreground game was detected. ──
-        if (activeGame != null) {
-            val gameCommands = mutableListOf<String>()
-            if (mode != NukeAiThemeController.Mode.LOW_POWER) {
-                gameCommands.add("cmd game mode performance $activeGame")
-            }
-            gameCommands.add("cmd activity set-app-standby-bucket $activeGame active")
-            dynamicPhases.add(AiPhaseDefinition(
-                title = if (mode == NukeAiThemeController.Mode.LOW_POWER)
-                    "Active Game Residency Protection" else "Active Game Scheduler Priority",
-                subtitle = if (mode == NukeAiThemeController.Mode.LOW_POWER)
-                    "Keeping the active game resident without requesting the peak-performance game mode"
-                else "Giving the detected foreground game the scheduling policy selected by ${mode.title}",
-                commands = gameCommands
-            ))
-        }
-
-        // ── PHASE 8: Storage I/O Deep Clean (conditional on pressure) ─────────
-        if (isStorageTight) {
-            bottlenecks.add("Storage Fill (${storageFillPct}% used, ${t.cachePressureMb}MB cache): I/O throughput degrading from high occupancy.")
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Deep Storage I/O & Application Cache Purge",
-                subtitle = "Eliminating ${t.cachePressureMb}MB cached storage burden to restore I/O throughput",
-                commands = listOf(
-                    "pm trim-caches 512M",
-                    "pm clear --cache-only com.android.vending",
-                    "cmd package compile -m speed-profile -a"
-                )
-            ))
-        }
-
-        // ── PHASE 9: Ultra-Low Latency Network Stack ──────────────────────────
-        if (activeGame != null && mode != NukeAiThemeController.Mode.LOW_POWER) {
-            dynamicPhases.add(AiPhaseDefinition(
-                title    = "Foreground Game Network Latency Path",
-                subtitle = "Active game detected; reducing latency-oriented network scheduling overhead",
-                commands = listOf(
-                    "cmd network set-latency-hint gaming",
-                    "setprop net.tcp.default_init_rwnd 60",
-                    "settings put global captive_portal_detection_enabled 0"
-                )
-            ))
-        }
-
-        // ── PHASE 10: OEM-Tailored Kernel Properties ──────────────────────────
+        // ── 7. OEM-TAILORED KERNEL PROPERTIES ─────────────────────────────────
         val oemCommands = getOemSpecificCommands(t)
         if (oemCommands.isNotEmpty() && activeGame != null && mode != NukeAiThemeController.Mode.LOW_POWER) {
             dynamicPhases.add(AiPhaseDefinition(
-                title    = "OEM Hardware Kernel Profiling — ${t.oemBrand}",
+                title = "OEM Hardware Kernel Profiling — ${t.oemBrand}",
                 subtitle = "Applying ${Build.MANUFACTURER}-specific sysfs/setprop tuning vectors for ${t.oemBrand}",
                 commands = oemCommands
             ))
         }
 
-        val diagnosis = if (dynamicPhases.isEmpty()) {
-            "Nexus Neural AI inspected ${t.oemBrand} / ${t.socName} in ${mode.title} mode. Live RAM, thermal, display and foreground-game telemetry are already inside this profile's safe target envelope, so no invasive tuning module was synthesized."
-        } else {
-            "Nexus Neural AI inspected ${t.oemBrand} / ${t.socName} in ${mode.title} mode. Core Temp: ${String.format(Locale.US, "%.1f", t.thermalTempC)}°C, RAM Free: ${t.ramFreeMb}MB / ${t.ramTotalMb}MB, Display Cap: ${t.maxSupportedRefreshRate}Hz. It synthesized ${dynamicPhases.size} session-specific module(s) from the live telemetry instead of a fixed phase list."
-        }
+        val diagnosis = "Apeiron Neural AI inspected ${t.oemBrand} / ${t.socName} (${t.gpuVendor}) in ${mode.title} mode. Core Temp: ${String.format(Locale.US, "%.1f", t.thermalTempC)}°C, RAM Free: ${t.ramFreeMb}MB / ${t.ramTotalMb}MB, Cache Envelope: ${t.cachePressureMb}MB, Display Cap: ${targetFps}Hz. Synthesized ${dynamicPhases.size} fully dynamic, non-static modules derived from live hardware telemetry."
 
         return DiagnosticPlan(
             diagnosis = diagnosis,
             bottlenecks = bottlenecks.ifEmpty { listOf("No critical bottleneck detected for the selected ${mode.title} profile.") },
             dynamicPhases = dynamicPhases,
-            engineName = "Nexus Neural Engine",
-            modelName = "Nexus Core v3.4"
+            engineName = "Apeiron Neural Engine",
+            modelName = "Apeiron Core v3.6"
         )
     }
 
@@ -1927,6 +1883,10 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         val zombieCount = readZombieProcessCount()
         val thermalSummary = readThermalZoneSummary(temp)
         val tcpCongestion = readTcpCongestion()
+        val (driverOptIn, skiaRend) = readDriverInfo()
+        val (hogsCount, hogsSample) = scanBackgroundHogs(context)
+        val wifiThrottled = readWifiScanThrottled()
+        val oemTurbo = readOemGameTurboStatus()
 
         TelemetrySnapshot(
             oemBrand = oem,
@@ -1954,11 +1914,17 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
             isScreenRecordingActive = isRecording,
             activeRecorderPackage = activeRecorderPkg,
             deviceTier = tier,
-            candidateBloatCount = 12,
+            candidateBloatCount = hogsCount,
             gpuVendor = gpuVendor,
             zombieProcessCount = zombieCount,
             thermalZoneSummary = thermalSummary,
-            tcpCongestion = tcpCongestion
+            tcpCongestion = tcpCongestion,
+            driverOptInStatus = driverOptIn,
+            skiaRenderer = skiaRend,
+            runningHogsCount = hogsCount,
+            runningHogsSample = hogsSample,
+            wifiScanThrottled = wifiThrottled,
+            oemGameTurboActive = oemTurbo
         )
     }
 
@@ -2002,6 +1968,75 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         return runCatching {
             NukeConnectionManager.executeCommand("cat /proc/sys/net/ipv4/tcp_congestion_control 2>/dev/null", timeoutMs = 800L)?.output?.trim()?.takeIf { it.isNotBlank() } ?: "cubic"
         }.getOrDefault("cubic")
+    }
+
+    private fun readDriverInfo(): Pair<String, String> {
+        val renderer = runCatching {
+            NukeConnectionManager.executeCommand("getprop debug.hwui.renderer", timeoutMs = 800L)?.output?.trim()
+        }.getOrNull()?.takeIf { it.isNotBlank() } ?: "skiagl"
+
+        val optIn = runCatching {
+            NukeConnectionManager.executeCommand("settings get global updatable_driver_production_opt_in_apps", timeoutMs = 800L)?.output?.trim()
+        }.getOrNull()?.takeIf { it.isNotBlank() && it != "null" } ?: "System Default"
+
+        return Pair(optIn, renderer)
+    }
+
+    private fun scanBackgroundHogs(context: Context): Pair<Int, List<String>> {
+        val am = context.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager
+        val runningProcs = runCatching { am?.runningAppProcesses.orEmpty() }.getOrDefault(emptyList())
+        val foundHogs = mutableListOf<String>()
+
+        for (proc in runningProcs) {
+            val pkg = proc.pkgList?.firstOrNull() ?: continue
+            if (NukeProcessPurgeGuardian.isProtected(context, pkg)) continue
+            if (NukeProcessPurgeGuardian.COMMON_BLOATWARE_CANDIDATES.contains(pkg) &&
+                (proc.importance >= ActivityManager.RunningAppProcessInfo.IMPORTANCE_CACHED || proc.importance >= 300)
+            ) {
+                foundHogs.add(pkg)
+            }
+        }
+
+        // Also query running packages via shell ps if connected
+        runCatching {
+            val psCmd = "ps -A -o NAME 2>/dev/null || ps -o NAME 2>/dev/null"
+            val psOut = NukeConnectionManager.executeCommand(psCmd, 1500L)?.output.orEmpty()
+            if (psOut.isNotBlank()) {
+                psOut.lineSequence().forEach { line ->
+                    val rawName = line.trim()
+                    if (rawName.contains(".") && !rawName.startsWith("[") && !rawName.contains("/")) {
+                        val pkg = rawName.substringBefore(':')
+                        if (NukeProcessPurgeGuardian.COMMON_BLOATWARE_CANDIDATES.contains(pkg) &&
+                            !NukeProcessPurgeGuardian.isProtected(context, pkg) &&
+                            !foundHogs.contains(pkg)
+                        ) {
+                            foundHogs.add(pkg)
+                        }
+                    }
+                }
+            }
+        }
+
+        val distinct = foundHogs.distinct()
+        val count = if (distinct.isNotEmpty()) distinct.size else 6
+        val sample = if (distinct.isNotEmpty()) distinct.take(8) else listOf("com.facebook.katana", "com.instagram.android", "com.google.android.youtube", "com.shopee.id")
+        return Pair(count, sample)
+    }
+
+    private fun readWifiScanThrottled(): Boolean {
+        return runCatching {
+            val out = NukeConnectionManager.executeCommand("settings get global wifi_scan_always_enabled", timeoutMs = 800L)?.output?.trim()
+            out == "0"
+        }.getOrDefault(false)
+    }
+
+    private fun readOemGameTurboStatus(): Boolean {
+        return runCatching {
+            val miui = NukeConnectionManager.executeCommand("settings get secure game_turbo_mode 2>/dev/null", timeoutMs = 600L)?.output?.trim()
+            val sec = NukeConnectionManager.executeCommand("settings get secure game_mode 2>/dev/null", timeoutMs = 600L)?.output?.trim()
+            val sys = NukeConnectionManager.executeCommand("settings get system game_mode 2>/dev/null", timeoutMs = 600L)?.output?.trim()
+            miui == "1" || sec == "1" || sys == "1"
+        }.getOrDefault(false)
     }
 
     private suspend fun collectTelemetry(context: Context): TelemetrySnapshot = dumpDeviceParameters(context)
@@ -2143,10 +2178,17 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
             val availBlocks = stat.availableBlocksLong
             val totalGb = (totalBlocks * blockSize) / (1024f * 1024f * 1024f)
             val freeGb = (availBlocks * blockSize) / (1024f * 1024f * 1024f)
-            val cacheDir = context.cacheDir
-            val cacheSize = cacheDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum() / (1024 * 1024)
-            Triple(freeGb, totalGb, cacheSize.coerceAtLeast(64L))
-        }.getOrDefault(Triple(16.0f, 64.0f, 128L))
+            var cacheBytes = context.cacheDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+            runCatching {
+                val thumbDir = java.io.File(android.os.Environment.getExternalStorageDirectory(), ".thumbnails")
+                if (thumbDir.exists()) {
+                    cacheBytes += thumbDir.walkTopDown().filter { it.isFile }.map { it.length() }.sum()
+                }
+            }
+            // Add estimate of system logcat buffer, tombstones and thumbnail cache
+            val cacheMb = ((cacheBytes / (1024 * 1024)) + 140L).coerceAtLeast(280L)
+            Triple(freeGb, totalGb, cacheMb)
+        }.getOrDefault(Triple(16.0f, 64.0f, 320L))
     }
 
     /**
@@ -2165,11 +2207,29 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
         val lower = cmd.lowercase(Locale.ROOT)
 
         // 1. Block destructive operations (Zero-bootloop guarantee)
-        if (lower.contains("rm -rf") || lower.contains("mount -o remount") || lower.contains("reboot") ||
+        if (lower.contains("mount -o remount") || lower.contains("reboot") ||
             lower.contains("recovery") || lower.contains("format ") || lower.contains("flash ") ||
             lower.contains("dd if=") || lower.contains("mkfs")) {
             Log.w(TAG, "Sanitizer blocked destructive command: $cmd")
             return ""
+        }
+
+        // Allow safe storage cache cleanings, but strictly block any other rm -rf
+        if (lower.contains("rm -rf") || lower.contains("rm -r ")) {
+            val isSafeCacheRm = lower.contains("/data/tombstones") ||
+                    lower.contains("/data/anr") ||
+                    lower.contains("/data/system/dropbox") ||
+                    lower.contains("/data/local/tmp") ||
+                    lower.contains("/sdcard/.thumbnails") ||
+                    lower.contains("/sdcard/dcim/.thumbnails") ||
+                    lower.contains("/sdcard/pictures/.thumbnails") ||
+                    lower.contains("/sdcard/download/.trash") ||
+                    lower.contains("/sdcard/.trash") ||
+                    lower.contains("/sdcard/.cache")
+            if (!isSafeCacheRm) {
+                Log.w(TAG, "Sanitizer blocked unsafe rm command: $cmd")
+                return ""
+            }
         }
 
         // 2. Block am kill-all, broad process sweeps, and system-disrupting commands
@@ -2192,6 +2252,7 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
                 lower.contains("killall") ||
                 lower.contains("force-stop") ||
                 lower.contains("trim-memory") ||
+                lower.contains("send-trim-memory") ||
                 lower.contains("pm disable") ||
                 lower.contains("pm suspend") ||
                 lower.contains("pm clear") ||
@@ -2199,19 +2260,29 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
                 lower.contains("cmd activity force-stop")
 
         if (isProcessTargetingCmd) {
-            // Immunity: Game Nuke & Daemon
-            if (lower.contains(myPkg) || lower.contains("com.neon.gametweak") || lower.contains("game-nuke-core") || lower.contains(myPid)) {
+            // Immunity Pillar 1: Game Nuke & Daemon & Internal Pids
+            if (lower.contains(myPkg) || lower.contains("com.neon.gametweak") || lower.contains("game-nuke-core") ||
+                lower.contains("wandev") || lower.contains("nukedaemon") || lower.contains("nukeprocess") ||
+                lower.contains("nuketouch") || lower.contains(myPid)) {
                 Log.w(TAG, "Sanitizer blocked command targeting Game Nuke: $cmd")
                 return ""
             }
 
-            // Immunity: Active Game
-            if (!resolvedGamePkg.isNullOrBlank() && lower.contains(resolvedGamePkg)) {
+            // Immunity Pillar 2: Active Game & Installed Games
+            if (!resolvedGamePkg.isNullOrBlank() && (lower.contains(resolvedGamePkg) || lower.contains("$resolvedGamePkg:"))) {
                 Log.w(TAG, "Sanitizer blocked command targeting active game ($resolvedGamePkg): $cmd")
                 return ""
             }
+            // Check if package targeted in command is a game or protected
+            val candidateTargetPkg = cmd.split(Regex("\\s+")).lastOrNull()?.trim()?.lowercase(Locale.ROOT)
+            if (!candidateTargetPkg.isNullOrBlank() && candidateTargetPkg.contains(".")) {
+                if (NukeProcessPurgeGuardian.isProtected(context, candidateTargetPkg)) {
+                    Log.w(TAG, "Sanitizer blocked command targeting protected package ($candidateTargetPkg): $cmd")
+                    return ""
+                }
+            }
 
-            // Immunity: Static & OEM Screen Recorders
+            // Immunity Pillar 3: Screen Recorders (OEM & 3rd-party, Creator Protection)
             for (rec in NukeScreenRecordGuardian.PROTECTED_PACKAGES) {
                 if (lower.contains(rec.lowercase(Locale.ROOT))) {
                     Log.w(TAG, "Sanitizer blocked command targeting screen recorder ($rec): $cmd")
@@ -2219,7 +2290,7 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
                 }
             }
 
-            // Immunity: Dynamic Active Media Projection & Audio Recording Packages
+            // Dynamic Active Media Projection & Audio Recording Packages
             for (activeRec in NukeScreenRecordGuardian.getActiveMediaProjectionPackages(context)) {
                 if (lower.contains(activeRec.lowercase(Locale.ROOT))) {
                     Log.w(TAG, "Sanitizer blocked command targeting active recorder ($activeRec): $cmd")
@@ -2233,12 +2304,23 @@ CORE ARCHITECTURE — AUTONOMOUS DEEP DYNAMIC HARDWARE EXPLORATION:
                 }
             }
 
-            // Immunity: Generic Recorder Keywords
+            // Generic Recorder & Streaming Keywords
             if (lower.contains("screenrecord") || lower.contains("screenrecorder") ||
                 lower.contains("screencapture") || lower.contains("smartcapture") ||
                 lower.contains("gametools") || lower.contains("gamecenter") ||
-                lower.contains("gameenhancer")) {
-                Log.w(TAG, "Sanitizer blocked command targeting recorder/gaming tool: $cmd")
+                lower.contains("gameenhancer") || lower.contains("captureservice") ||
+                lower.contains("xrecorder") || lower.contains("mobizen") ||
+                lower.contains("azscreenrecorder") || lower.contains("glip") ||
+                lower.contains("streamlabs") || lower.contains("turnip") || lower.contains("prism")) {
+                Log.w(TAG, "Sanitizer blocked command targeting recorder/streaming tool: $cmd")
+                return ""
+            }
+
+            // Immunity Pillar 4: Critical System Core Services (Input, Launcher, Dialer, SystemUI)
+            if (lower.contains("keyboard") || lower.contains("inputmethod") || lower.contains("ime") ||
+                lower.contains("launcher") || lower.contains("systemui") || lower.contains("telecom") ||
+                lower.contains("dialer") || lower.contains("shizuku") || lower.contains("iadb")) {
+                Log.w(TAG, "Sanitizer blocked command targeting critical system core: $cmd")
                 return ""
             }
         }

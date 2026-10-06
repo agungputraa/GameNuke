@@ -28,7 +28,7 @@ object NukeProcessPurgeGuardian {
     private const val TAG = "NukePurgeGuardian"
 
     // Bloatware, background trackers, and social apps that can be safely stopped in background if NOT active or recording
-    private val COMMON_BLOATWARE_CANDIDATES = listOf(
+    val COMMON_BLOATWARE_CANDIDATES = listOf(
         // High-memory background consumers
         "com.android.vending",
         "com.android.settings",

@@ -27,6 +27,9 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
+import androidx.compose.material.icons.automirrored.rounded.LibraryBooks
+import androidx.compose.material.icons.automirrored.rounded.ReceiptLong
+import androidx.compose.material.icons.automirrored.rounded.Sort
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -159,7 +162,7 @@ class MainActivity : ComponentActivity() {
     private var integrityCheckScheduled = false
     private val notificationPermissionLauncher = registerForActivityResult(
         ActivityResultContracts.RequestPermission()
-    ) { isGranted ->
+    ) { _ ->
         NukeLiveChatNotifier.ensureChannel(applicationContext)
     }
 
@@ -829,7 +832,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                             showVipSubscriptionDialog = true
                             coroutineScope.launch { drawerState.close() }
                         }
-                        DrawerItem(Icons.Rounded.ReceiptLong, tr("Payment History")) {
+                        DrawerItem(Icons.AutoMirrored.Rounded.ReceiptLong, tr("Payment History")) {
                             showPaymentHistoryDialog = true
                             coroutineScope.launch { drawerState.close() }
                         }
@@ -876,7 +879,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                                 }
                             }
                         }
-                        DrawerItem(Icons.Rounded.LibraryBooks, tr("Documentation")) {
+                        DrawerItem(Icons.AutoMirrored.Rounded.LibraryBooks, tr("Documentation")) {
                             navigateWithAd("tutorial")
                             coroutineScope.launch { drawerState.close() }
                         }
@@ -1027,7 +1030,7 @@ fun MainAppHost(adbManager: AdbManager, onOpenDevOptions: () -> Unit) {
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF020705)),
                     navigationIcon = {
                         IconButton(onClick = { coroutineScope.launch { drawerState.open() } }, modifier = androidx.compose.ui.Modifier.nukePressFeedback()) {
-                            Icon(Icons.Rounded.Sort, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(28.dp))
+                            Icon(Icons.AutoMirrored.Rounded.Sort, contentDescription = "Menu", tint = Color.White, modifier = Modifier.size(28.dp))
                         }
                     },
                 )

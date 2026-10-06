@@ -301,6 +301,72 @@ class NukeGamingShellGateway(private val adb: AdbManager) {
         return adb.executeCommand("cmd game mode $safeMode $pkg", "/", 8_000L, 16_384)
     }
 
+    /**
+     * Fixed Performance Mode (Android 11+ AOSP).
+     * Locks CPU & GPU clocks to consistent high levels to prevent thermal rollercoaster drops.
+     */
+    fun setFixedPerformanceMode(enabled: Boolean): NukeCommandResult = adb.executeCommand(
+        "cmd power set-fixed-performance-mode-enabled ${if (enabled) "true" else "false"}",
+        "/", 6_000L, 8_192
+    )
+
+    fun supportsFixedPerformanceMode(): Boolean = cachedSupport("fixed_performance") {
+        val probe = adb.executeCommand("cmd power help", "/", 5_000L, 16_384)
+        probe.isSuccess && !isUnsupportedOutput(probe.output.lowercase()) &&
+            probe.output.contains("set-fixed-performance-mode-enabled", ignoreCase = true)
+    }
+
+    /**
+     * Official AOSP Game Manager FPS & Downscale Intervention (Android 12+).
+     * Supported on Samsung, Xiaomi, Vivo, Oppo, Realme, Asus, Pixel, etc.
+     */
+    fun setGameFpsIntervention(packageName: String, fps: Int, downscale: Float? = null): NukeCommandResult {
+        val pkg = safePackage(packageName) ?: return denied("Invalid package")
+        val safeFps = fps.coerceIn(30, 240)
+        val downscaleArg = downscale?.let { "--downscale ${String.format(java.util.Locale.US, "%.2f", it)}" }.orEmpty()
+        val cmd = "cmd game set --fps $safeFps $downscaleArg $pkg"
+        val res = adb.executeCommand(cmd, "/", 8_000L, 16_384)
+        
+        // Also configure device_config game_overlay for dual-layer reliability
+        val overlayConfig = if (downscale != null) {
+            "mode=2,fps=$safeFps,downscaleFactor=${String.format(java.util.Locale.US, "%.2f", downscale)}"
+        } else {
+            "mode=2,fps=$safeFps"
+        }
+        adb.executeCommand("device_config put game_overlay $pkg $overlayConfig", "/", 6_000L, 8_192)
+        return res
+    }
+
+    fun resetGameFpsIntervention(packageName: String): NukeCommandResult {
+        val pkg = safePackage(packageName) ?: return denied("Invalid package")
+        adb.executeCommand("cmd game reset $pkg", "/", 8_000L, 16_384)
+        return adb.executeCommand("device_config delete game_overlay $pkg", "/", 6_000L, 8_192)
+    }
+
+    /**
+     * Disables periodic background Wi-Fi AP scan throttling that causes 200ms+ ping spikes in games.
+     */
+    fun setWifiScanThrottlingForGame(disableScan: Boolean): NukeCommandResult = adb.executeCommand(
+        "settings put global wifi_scan_always_enabled ${if (disableScan) "0" else "1"}",
+        "/", 5_000L, 8_192
+    )
+
+    /**
+     * Elevates game process priority to highest priority (-20) if permitted by current environment.
+     */
+    fun elevateGamePriority(packageName: String): NukeCommandResult {
+        val pkg = safePackage(packageName) ?: return denied("Invalid package")
+        return adb.executeCommand(
+            """
+                pid=$(pidof $pkg 2>/dev/null | awk '{print $1}')
+                if [ -n "${'$'}pid" ]; then
+                    renice -n -20 -p ${'$'}pid 2>/dev/null || true
+                fi
+            """.trimIndent(),
+            "/", 5_000L, 8_192
+        )
+    }
+
 
 
     fun readGameMode(packageName: String): String? {

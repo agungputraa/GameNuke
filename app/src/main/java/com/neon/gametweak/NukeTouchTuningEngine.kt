@@ -48,10 +48,11 @@ object NukeTouchTuningEngine {
     const val CURVE_LINEAR = 0
     const val CURVE_ACCELERATE = 1
     const val CURVE_DECELERATE = 2
+    const val CURVE_ASYM_DRAG = 3
 
-    const val AREA_LEFT = -1
     const val AREA_ALL = 0
     const val AREA_RIGHT = 1
+    const val AREA_LEFT = 2
 
     const val PREFS_TOUCH_MAPPING = "touch_mapping_prefs"
     const val KEY_USE_MAPPING = "use_mapping"
@@ -220,8 +221,16 @@ object NukeTouchTuningEngine {
         }
 
         val curve = calculateCurveFactor(dx, dy, screenWidth)
-        var resX = dx * xMultiplier * curve
-        var resY = dy * yMultiplier * curve
+        val curveX = if (curveMode == CURVE_ASYM_DRAG) 1.0f else curve
+        val curveY = if (curveMode == CURVE_ASYM_DRAG) {
+            if (dy < 0f && screenWidth > 0f) {
+                val speedNorm = (kotlin.math.abs(dy) / (screenWidth * 0.04f)).coerceIn(0f, 1f)
+                1.0f + (speedNorm * 0.65f)
+            } else 1.0f
+        } else curve
+
+        var resX = dx * xMultiplier * curveX
+        var resY = dy * yMultiplier * curveY
 
         if (euroEnabled) {
             resX = filterX.filter(resX)

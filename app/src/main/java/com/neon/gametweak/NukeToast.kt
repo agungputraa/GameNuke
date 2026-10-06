@@ -65,12 +65,13 @@ object NukeToast {
         val cleanMsg = message.trim().ifBlank {
             if (outcome == Outcome.SUCCESS) "Action completed" else "Action could not be completed"
         }.take(180)
+        val translatedMsg = tr(cleanMsg)
 
         val action = {
             if (Settings.canDrawOverlays(app)) {
-                showOverlayToast(app, outcome, cleanMsg, long)
+                showOverlayToast(app, outcome, translatedMsg, long)
             } else {
-                val fallbackText = "${outcome.label} • $cleanMsg"
+                val fallbackText = "${tr(outcome.label)} • $translatedMsg"
                 Toast.makeText(app, fallbackText, if (long) Toast.LENGTH_LONG else Toast.LENGTH_SHORT).show()
             }
         }

@@ -53,7 +53,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.AcUnit
 import androidx.compose.material.icons.outlined.AirplanemodeActive
-import androidx.compose.material.icons.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.AutoAwesome
 import androidx.compose.material.icons.outlined.BatterySaver
 import androidx.compose.material.icons.outlined.Bluetooth
@@ -72,8 +72,7 @@ import androidx.compose.material.icons.outlined.GpsFixed
 import androidx.compose.material.icons.outlined.HealthAndSafety
 import androidx.compose.material.icons.outlined.HourglassEmpty
 import androidx.compose.material.icons.outlined.KeyboardArrowDown
-import androidx.compose.material.icons.outlined.MenuBook
-import androidx.compose.material.icons.outlined.Mic
+import androidx.compose.material.icons.automirrored.outlined.MenuBook
 import androidx.compose.material.icons.outlined.MonitorHeart
 import androidx.compose.material.icons.outlined.NetworkCheck
 import androidx.compose.material.icons.outlined.Nightlight
@@ -90,7 +89,7 @@ import androidx.compose.material.icons.outlined.SportsEsports
 import androidx.compose.material.icons.outlined.SwapHoriz
 import androidx.compose.material.icons.outlined.TouchApp
 import androidx.compose.material.icons.outlined.Tune
-import androidx.compose.material.icons.outlined.VolumeOff
+import androidx.compose.material.icons.automirrored.outlined.VolumeOff
 import androidx.compose.material.icons.outlined.Widgets
 import androidx.compose.material.icons.outlined.WifiTethering
 import androidx.compose.material.icons.rounded.SmartToy
@@ -457,13 +456,13 @@ private val BayShape = GenericShape { size, _ ->
     val c = minOf(size.width, size.height) * .16f
     moveTo(c * .75f, 0f)
     lineTo(size.width - c * .28f, 0f)
-    quadraticBezierTo(size.width, 0f, size.width, c * .72f)
+    quadraticTo(size.width, 0f, size.width, c * .72f)
     lineTo(size.width, size.height - c * .55f)
-    quadraticBezierTo(size.width, size.height, size.width - c, size.height)
+    quadraticTo(size.width, size.height, size.width - c, size.height)
     lineTo(c * .35f, size.height)
-    quadraticBezierTo(0f, size.height, 0f, size.height - c * .70f)
+    quadraticTo(0f, size.height, 0f, size.height - c * .70f)
     lineTo(0f, c * .72f)
-    quadraticBezierTo(0f, 0f, c * .75f, 0f)
+    quadraticTo(0f, 0f, c * .75f, 0f)
     close()
 }
 
@@ -473,13 +472,13 @@ private val LeftWingShape = GenericShape { size, _ ->
     val r = size.height * .08f        // corner radius equivalent
     val inset = size.width * .14f     // how far the inner edge tapers at mid-point
     moveTo(0f, r)
-    quadraticBezierTo(0f, 0f, r, 0f)
+    quadraticTo(0f, 0f, r, 0f)
     // top of inner edge – slight diagonal down
     lineTo(size.width - inset * .3f, 0f)
     // inner saber curve: concave sweep inward then back out
-    quadraticBezierTo(size.width + inset * .18f, size.height * .5f, size.width - inset * .3f, size.height)
+    quadraticTo(size.width + inset * .18f, size.height * .5f, size.width - inset * .3f, size.height)
     lineTo(r, size.height)
-    quadraticBezierTo(0f, size.height, 0f, size.height - r)
+    quadraticTo(0f, size.height, 0f, size.height - r)
     close()
 }
 
@@ -488,12 +487,12 @@ private val RightWingShape = GenericShape { size, _ ->
     val r = size.height * .08f
     val inset = size.width * .14f
     moveTo(size.width - r, 0f)
-    quadraticBezierTo(size.width, 0f, size.width, r)
+    quadraticTo(size.width, 0f, size.width, r)
     lineTo(size.width, size.height - r)
-    quadraticBezierTo(size.width, size.height, size.width - r, size.height)
+    quadraticTo(size.width, size.height, size.width - r, size.height)
     lineTo(inset * .3f, size.height)
     // inner saber curve
-    quadraticBezierTo(-inset * .18f, size.height * .5f, inset * .3f, 0f)
+    quadraticTo(-inset * .18f, size.height * .5f, inset * .3f, 0f)
     close()
 }
 
@@ -503,12 +502,12 @@ private val TopTrapezoidShape = GenericShape { size, _ ->
     val scoop = size.height * .18f
     moveTo(r, 0f)
     lineTo(size.width - r, 0f)
-    quadraticBezierTo(size.width, 0f, size.width, r)
+    quadraticTo(size.width, 0f, size.width, r)
     lineTo(size.width, size.height - scoop)
-    quadraticBezierTo(size.width * .75f, size.height + scoop * .4f, size.width * .5f, size.height)
-    quadraticBezierTo(size.width * .25f, size.height + scoop * .4f, 0f, size.height - scoop)
+    quadraticTo(size.width * .75f, size.height + scoop * .4f, size.width * .5f, size.height)
+    quadraticTo(size.width * .25f, size.height + scoop * .4f, 0f, size.height - scoop)
     lineTo(0f, r)
-    quadraticBezierTo(0f, 0f, r, 0f)
+    quadraticTo(0f, 0f, r, 0f)
     close()
 }
 
@@ -517,12 +516,12 @@ private val BottomTrapezoidShape = GenericShape { size, _ ->
     val r = size.width * .04f
     val scoop = size.height * .18f
     moveTo(0f, scoop)
-    quadraticBezierTo(size.width * .25f, -scoop * .4f, size.width * .5f, 0f)
-    quadraticBezierTo(size.width * .75f, -scoop * .4f, size.width, scoop)
+    quadraticTo(size.width * .25f, -scoop * .4f, size.width * .5f, 0f)
+    quadraticTo(size.width * .75f, -scoop * .4f, size.width, scoop)
     lineTo(size.width, size.height - r)
-    quadraticBezierTo(size.width, size.height, size.width - r, size.height)
+    quadraticTo(size.width, size.height, size.width - r, size.height)
     lineTo(r, size.height)
-    quadraticBezierTo(0f, size.height, 0f, size.height - r)
+    quadraticTo(0f, size.height, 0f, size.height - r)
     close()
 }
 
@@ -1077,7 +1076,7 @@ private fun NukePortraitCockpit(
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
                             Text(
-                                "GAME NUKE // NEXUS",
+                                "GAME NUKE // APEIRON",
                                 color = NukeGreen,
                                 fontSize = 9.5.sp,
                                 fontWeight = FontWeight.Black,
@@ -1338,7 +1337,7 @@ private fun TacticalEnginesDeckView(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Text(
-                        "GAME NUKE // NEXUS",
+                        "GAME NUKE // APEIRON",
                         color = NukeGreen,
                         fontSize = 9.5.sp,
                         fontWeight = FontWeight.Black,
@@ -1465,7 +1464,7 @@ private fun TacticalEnginesDeckView(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 PanelLauncherCard(
-                    icon = Icons.Outlined.MenuBook,
+                    icon = Icons.AutoMirrored.Outlined.MenuBook,
                     title = "WIKI PIP",
                     badgeText = "GUIDE",
                     statusText = if (isWikiOn) "ACTIVE \u2022 OPEN" else "HERO & META COUNTER",
@@ -1534,9 +1533,9 @@ private fun TacticalEnginesDeckView(
             }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 TacticalHardwareCard(Icons.Outlined.Tune, "AUDIO BOOST", "ACTIVE", "STD", checked = isFootstepOn, onToggle = { callbacks.onQuickAction("footstep_boost") }, modifier = Modifier.weight(1f))
-                TacticalHardwareCard(Icons.Outlined.NetworkCheck, "PACKET PRIO", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
+                TacticalHardwareCard(Icons.Outlined.Bolt, "NET LOCK", "ACTIVE", "STD", checked = isNetOn, onToggle = { callbacks.onQuickAction("net_boost") }, modifier = Modifier.weight(1f))
                 TacticalHardwareCard(
-                    Icons.Outlined.Bolt,
+                    Icons.Outlined.Security,
                     "VPN TUNNEL",
                     "ACTIVE",
                     "OFF",
@@ -1792,7 +1791,7 @@ private fun QuickActionsDeckView(
                     SquareMiniCard(Icons.Outlined.DoNotDisturbOn, "DND MODE", "MUTED", "OFF", checked = isDndOn, onToggle = { callbacks.onQuickAction("dnd") }, modifier = Modifier.weight(1f), isWarning = true)
                     SquareMiniCard(Icons.Outlined.HourglassEmpty, "TIMEOUT", "+30M", "1M", checked = isScreenTimeoutOn, onToggle = { callbacks.onQuickAction("screen_timeout_extend") }, modifier = Modifier.weight(1f))
                     SquareMiniCard(Icons.Outlined.BatterySaver, "BATTERY", "SAVE", "OFF", checked = isBatteryOn, onToggle = { callbacks.onQuickAction("battery_saver") }, modifier = Modifier.weight(1f))
-                    SquareMiniCard(Icons.Outlined.VolumeOff, "SILENT", "MUTED", "SOUND", checked = isSilentOn, onToggle = { callbacks.onQuickAction("silent_mode") }, modifier = Modifier.weight(1f), isWarning = true)
+                    SquareMiniCard(Icons.AutoMirrored.Outlined.VolumeOff, "SILENT", "MUTED", "SOUND", checked = isSilentOn, onToggle = { callbacks.onQuickAction("silent_mode") }, modifier = Modifier.weight(1f), isWarning = true)
                 }
                 Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                     SquareMiniCard(Icons.Outlined.WifiTethering, "HOTSPOT", "ON", "OFF", checked = isHotspotOn, onToggle = { callbacks.onQuickAction("hotspot") }, modifier = Modifier.weight(1f))
@@ -2179,7 +2178,7 @@ private fun BrightnessSliderCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Brightness6, null, tint = NukeGreen, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("SCREEN BRIGHTNESS", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
+                    Text(tr("SCREEN BRIGHTNESS"), color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
                 }
                 Box(
                     Modifier
@@ -2251,7 +2250,7 @@ private fun DensityStepperCard(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, null, tint = NukeGreen, modifier = Modifier.size(13.dp))
                     Spacer(Modifier.width(5.dp))
-                    Text("MINIMUM WIDTH / DPI (DISPLAY SCALE)", color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
+                    Text(tr("MINIMUM WIDTH / DPI (DISPLAY SCALE)"), color = Color.White, fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.4.sp)
                 }
                 Box(
                     Modifier
@@ -2725,7 +2724,7 @@ private fun ModuleShopFullView(
                 .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            HeaderAction(Icons.Outlined.ArrowBack, "Back to deck", NukeCyan, false, true) {
+            HeaderAction(Icons.AutoMirrored.Outlined.ArrowBack, "Back to deck", NukeCyan, false, true) {
                 keyboard?.hide()
                 focusManager.clearFocus()
                 callbacks.onSearchFocusChanged(false)
@@ -2733,9 +2732,9 @@ private fun ModuleShopFullView(
             }
             Spacer(Modifier.width(6.dp))
             Column(Modifier.weight(1f)) {
-                Text("PLUGIN LIBRARY", color = NukeCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                Text(tr("PLUGIN LIBRARY"), color = NukeCyan, fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                 Text(
-                    if (state.catalogTrusted) "${state.modules.size} PLUGINS AVAILABLE" else "CATALOG READY",
+                    if (state.catalogTrusted) "${state.modules.size} ${tr("PLUGINS AVAILABLE")}" else tr("CATALOG READY"),
                     color = if (state.catalogTrusted) NukeGreen else NukeAmber,
                     fontSize = 7.sp,
                     maxLines = 1,
@@ -2870,7 +2869,7 @@ private fun ModuleShopFullView(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     CircularProgressIndicator(Modifier.size(26.dp), color = NukeCyan, strokeWidth = 2.dp)
                     Spacer(Modifier.height(6.dp))
-                    Text("LOADING CATALOG", color = NukeMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("LOADING CATALOG"), color = NukeMuted, fontSize = 8.sp, fontWeight = FontWeight.Bold)
                 }
             }
         } else {
@@ -3034,15 +3033,15 @@ private fun CompactEndSessionGate(onCancel: () -> Unit, onConfirm: () -> Unit) {
         Modifier.fillMaxWidth().clip(BayShape).background(NukeRed.copy(alpha = .11f))
             .border(.8.dp, NukeRed.copy(alpha = .55f), BayShape).padding(10.dp),
     ) {
-        Text("END GAME NUKE SESSION?", color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .55.sp)
-        Text("Active plugins are restored in reverse activation order before the overlay ends.", color = NukeMuted, fontSize = 7.5.sp, lineHeight = 9.sp)
+        Text(tr("END GAME NUKE SESSION?"), color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .55.sp)
+        Text(tr("Active plugins are restored in reverse activation order before the overlay ends."), color = NukeMuted, fontSize = 7.5.sp, lineHeight = 9.sp)
         Spacer(Modifier.height(8.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
             Surface(Modifier.weight(1f).height(48.dp).nukePressFeedback().clickable(onClick = onCancel), color = NukePanelHigh, border = BorderStroke(.7.dp, NukeHairline), shape = ControlShape) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("CANCEL", color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("CANCEL"), color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) }
             }
             Surface(Modifier.weight(1f).height(48.dp).nukePressFeedback().clickable(onClick = onConfirm), color = NukeRed.copy(alpha = .17f), border = BorderStroke(.8.dp, NukeRed.copy(alpha = .70f)), shape = ControlShape) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("END NOW", color = NukeRed, fontSize = 8.sp, fontWeight = FontWeight.Black) }
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("END NOW"), color = NukeRed, fontSize = 8.sp, fontWeight = FontWeight.Black) }
             }
         }
     }
@@ -3180,7 +3179,7 @@ private fun CommandHeader(
                 ActiveModeChip(compact = true)
             } else {
                 Text(
-                    text = "GAME NUKE // NEXUS",
+                    text = "GAME NUKE // APEIRON",
                     color = NukeGreen,
                     fontSize = if (dense) 9.sp else 10.sp,
                     fontWeight = FontWeight.Black,
@@ -3211,21 +3210,21 @@ private fun EndSessionGate(dense: Boolean, onCancel: () -> Unit, onConfirm: () -
             .padding(horizontal = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("END SESSION?", color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
+        Text(tr("END SESSION?"), color = NukeRed, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
         Spacer(Modifier.weight(1f))
         Surface(
             modifier = Modifier.height(48.dp).widthIn(min = 70.dp).nukePressFeedback().clickable(onClick = onCancel),
             shape = ControlShape,
             color = NukePanelHigh,
             border = BorderStroke(.7.dp, NukeHairline),
-        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("CANCEL", color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) } }
+        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("CANCEL"), color = NukeText, fontSize = 8.sp, fontWeight = FontWeight.Bold) } }
         Spacer(Modifier.width(6.dp))
         Surface(
             modifier = Modifier.height(48.dp).widthIn(min = 86.dp).nukePressFeedback().clickable(onClick = onConfirm),
             shape = ControlShape,
             color = NukeRed.copy(alpha = .18f),
             border = BorderStroke(.8.dp, NukeRed.copy(alpha = .72f)),
-        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text("END NOW", color = NukeRed, fontSize = 8.sp, fontWeight = FontWeight.Black) } }
+        ) { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Text(tr("END NOW"), color = NukeRed, fontSize = 8.sp, fontWeight = FontWeight.Black) } }
     }
 }
 
@@ -3428,7 +3427,7 @@ private fun WingToolDeck(
                 ) { onTool(visual.tool) }
             }
             if (tools.isEmpty()) {
-                Text("NO VERIFIED PLUGIN", color = NukeMuted, fontSize = 8.sp, modifier = Modifier.padding(8.dp))
+                Text(tr("NO VERIFIED PLUGIN"), color = NukeMuted, fontSize = 8.sp, modifier = Modifier.padding(8.dp))
             }
         }
     }
@@ -3506,7 +3505,7 @@ private fun ReactorBay(
                     Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
                         ReactorGlyph(snapshot.coreHealth, coreSize)
                         if (showDetail && !narrow) {
-                            Text("NUKE CORE", color = NukeText, fontSize = if (dense) 9.sp else 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
+                            Text(tr("NUKE CORE"), color = NukeText, fontSize = if (dense) 9.sp else 10.sp, fontWeight = FontWeight.Black, letterSpacing = 1.sp)
                             Text(snapshot.ramDetail, color = NukeMuted, fontSize = 8.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
                     }
@@ -3635,7 +3634,7 @@ private fun CommandDeck(
                 Row(Modifier.height(25.dp), verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Outlined.Tune, null, tint = NukeCyan, modifier = Modifier.size(15.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("MISSION PLUGINS", color = NukeCyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
+                    Text(tr("MISSION PLUGINS"), color = NukeCyan, fontSize = 9.sp, fontWeight = FontWeight.Black, letterSpacing = .8.sp)
                     Spacer(Modifier.weight(1f))
                     Text(
                         if (compactRail) "${tools.size} TOOLS  /  SWIPE" else "ALL ${tools.size} VISIBLE",
@@ -3871,7 +3870,7 @@ private fun StatusRail(message: String, dense: Boolean) {
             drawCircle(NukeGreen, radius = 1.7.dp.toPx(), center = Offset(size.width * .82f, size.height * .5f))
         }
         Text(text = message, modifier = Modifier.weight(1f), color = NukeMuted, fontSize = if (dense) 8.sp else 8.5.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Start)
-        Text("LIVE", color = NukeGreenDim, fontSize = 7.5.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
+        Text(tr("LIVE"), color = NukeGreenDim, fontSize = 7.5.sp, fontWeight = FontWeight.Black, letterSpacing = .7.sp)
     }
 }
 

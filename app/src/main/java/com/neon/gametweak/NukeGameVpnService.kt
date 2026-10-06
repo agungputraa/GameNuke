@@ -156,9 +156,16 @@ class NukeGameVpnService : VpnService() {
             stopSelf()
             return
         }
-        vpnInterface = pfd
-
-        startForeground(NOTIF_ID, buildNotification())
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            androidx.core.app.ServiceCompat.startForeground(
+                this,
+                NOTIF_ID,
+                buildNotification(),
+                android.content.pm.ServiceInfo.FOREGROUND_SERVICE_TYPE_SPECIAL_USE
+            )
+        } else {
+            startForeground(NOTIF_ID, buildNotification())
+        }
 
         try {
             // Configure native Go tunnel exactly as AG reference app DnsVpnService

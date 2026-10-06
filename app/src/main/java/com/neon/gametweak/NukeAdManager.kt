@@ -420,10 +420,11 @@ object NukeAdManager {
     }
 
     /**
-     * Booster Rewarded Ad Gate:
-     * - If VIP pass is active: skips ad and immediately launches game
-     * - If ad plays successfully: grants 30-min VIP pass & launches game
-     * - If ad fails, errors, or is not ready: NEVER BLOCKS USER; fails open gracefully & launches game!
+     * Booster Rewarded Ad Gate (Hardened Anti-AdBlock & Anti-Bypass Armor):
+     * - If VIP pass is active: skips ad and immediately launches game with full VIP power.
+     * - If ad plays successfully and reward is earned: grants booster VIP pass & launches game.
+     * - If ad fails, errors, blocked by DNS/adblock, or not ready: launches game in safe standard mode
+     *   WITHOUT granting VIP access (unlockedVip = false)!
      */
     fun showBoosterRewarded(
         activity: Activity,
@@ -431,23 +432,22 @@ object NukeAdManager {
     ) {
         val context = activity.applicationContext
         if (isBoosterVipActive(context)) {
-            Log.d(TAG, "Booster VIP active, using a separate path around ad")
+            Log.d(TAG, "Booster VIP active, bypassing ad with full privileges")
             onProceedToGame(true)
             return
         }
 
         if (activity.isFinishing || activity.isDestroyed) {
-            Log.w(TAG, "Activity finishing or destroyed, skipping rewarded ad")
-            onProceedToGame(true)
+            Log.w(TAG, "Activity finishing or destroyed, launching standard session")
+            onProceedToGame(false)
             return
         }
 
         val ad = rewardedAd
         if (ad == null || !ad.canPlayAd()) {
-            Log.d(TAG, "Rewarded ad not ready, proceeding gracefully without blocking user")
+            Log.d(TAG, "Rewarded ad not ready or blocked by network, proceeding with standard free session")
             loadRewardedInternal(context)
-            grantBoosterVipPass(context, 10L * 60L * 1000L)
-            onProceedToGame(true)
+            onProceedToGame(false)
             return
         }
 
@@ -481,21 +481,20 @@ object NukeAdManager {
             override fun onAdFailedToPlay(baseAd: BaseAd, error: VungleError) {
                 isShowingFullScreen = false
                 loadRewardedInternal(appCtx)
-                grantBoosterVipPass(appCtx, 10L * 60L * 1000L)
+                Log.w(TAG, "Rewarded ad failed to play (adblock or network). Free session granted without VIP.")
                 mainHandler.post {
-                    runCatching { onProceedToGame(true) }
+                    runCatching { onProceedToGame(false) }
                 }
             }
         }
         runCatching {
             ad.play(activity)
         }.onFailure {
-            Log.w(TAG, "Rewarded play threw, continuing to game", it)
+            Log.w(TAG, "Rewarded play threw, launching standard session without VIP", it)
             isShowingFullScreen = false
             loadRewardedInternal(activity.applicationContext)
-            grantBoosterVipPass(appCtx, 10L * 60L * 1000L)
             mainHandler.post {
-                runCatching { onProceedToGame(true) }
+                runCatching { onProceedToGame(false) }
             }
         }
     }

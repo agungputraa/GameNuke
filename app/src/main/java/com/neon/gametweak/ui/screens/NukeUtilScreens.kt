@@ -1,6 +1,7 @@
 package com.neon.gametweak.ui.screens
 
 import com.neon.gametweak.nukePressFeedback
+import com.neon.gametweak.NukeSubscriptionManager
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ApplicationInfo
@@ -37,6 +38,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -663,7 +665,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Rounded.Close, contentDescription = null, tint = Color(0xFFF43F5E), modifier = Modifier.size(13.dp))
                                     Spacer(Modifier.width(3.dp))
-                                    Text("END TASK", color = Color(0xFFF43F5E), fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.6.sp)
+                                    Text(tr("END TASK"), color = Color(0xFFF43F5E), fontSize = 8.5.sp, fontWeight = FontWeight.Black, letterSpacing = 0.6.sp)
                                 }
                             }
                         } else {
@@ -682,7 +684,7 @@ fun ProcessManagerScreen(adbManager: AdbManager) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Rounded.Lock, contentDescription = null, tint = Color(0xFF9CB8AD), modifier = Modifier.size(11.dp))
                                     Spacer(Modifier.width(3.dp))
-                                    Text("SAFE", color = Color(0xFF9CB8AD), fontSize = 8.sp, fontWeight = FontWeight.Bold)
+                                    Text(tr("SAFE"), color = Color(0xFF9CB8AD), fontSize = 8.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
@@ -854,7 +856,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("CORE API SERVICE", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                        Text(tr("CORE API SERVICE"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                         Text(
                             text = if (isApiRunning) "RUNNING · port ${webServer.apiPort}" else "OFFLINE",
                             color = if (isApiRunning) accent else textDim,
@@ -905,7 +907,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
                             .background(bgInset).padding(10.dp),
                     ) {
                         Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                            Text("BASE URL", color = textDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                            Text(tr("BASE URL"), color = textDim, fontSize = 11.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
                             SelectionContainer {
                                 Text(baseUrl, color = accent, fontSize = 12.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
                             }
@@ -937,7 +939,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
                     }
                     Spacer(Modifier.width(12.dp))
                     Column(Modifier.weight(1f)) {
-                        Text("STATIC WEB SERVER", color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
+                        Text(tr("STATIC WEB SERVER"), color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Black, letterSpacing = 1.5.sp)
                         Text(
                             text = if (isWebRunning) "RUNNING · port ${webServer.webPort}" else "OFFLINE",
                             color = if (isWebRunning) accent else textDim,
@@ -1007,12 +1009,12 @@ fun WebUiScreen(webServer: LocalWebServer) {
             ) {
                 Box(modifier = Modifier.size(4.dp).background(accent))
                 Spacer(Modifier.width(8.dp))
-                Text("API ENDPOINTS · v1", color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
+                Text(tr("API ENDPOINTS · v1"), color = Color.White, fontSize = 12.sp, fontWeight = FontWeight.Black, letterSpacing = 2.sp)
                 Spacer(Modifier.width(8.dp))
                 Text("${buildEndpointSpecs().size} routes", color = textDim, fontSize = 10.sp, fontFamily = FontFamily.Monospace)
                 Spacer(Modifier.weight(1f))
                 if (!isApiRunning) {
-                    Text(("START SERVER TO TEST"), color = Color(0xFFFFB300), fontSize = 9.sp, fontWeight = FontWeight.Bold)
+                    Text(tr("START SERVER TO TEST"), color = Color(0xFFFFB300), fontSize = 9.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }
@@ -1037,7 +1039,7 @@ fun WebUiScreen(webServer: LocalWebServer) {
                     .padding(14.dp),
             ) {
                 Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                    Text("USAGE FROM EXTERNAL CLIENT", color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                    Text(tr("USAGE FROM EXTERNAL CLIENT"), color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
                     Text(
                         "Server binds to 127.0.0.1 loopback for secure local IPC. " +
                             "Third-party apps, overlays, automation tools, or PC utilities (via 'adb forward tcp:8080 tcp:8080') can interact with all endpoints.",
@@ -1314,7 +1316,7 @@ fun ApiEndpointCard(
 
             Column(modifier = Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
                 if (spec.params.isNotEmpty()) {
-                    Text("PARAMETERS", color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                    Text(tr("PARAMETERS"), color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
                     spec.params.forEach { (name, typeHint) ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(name, color = accent, fontSize = 11.sp, fontFamily = FontFamily.Monospace, fontWeight = FontWeight.Bold)
@@ -1323,12 +1325,12 @@ fun ApiEndpointCard(
                                 Text(typeHint, color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace)
                             }
                             Spacer(Modifier.width(6.dp))
-                            Text("required", color = Color(0xFFFFB300), fontSize = 9.sp, fontFamily = FontFamily.Monospace)
+                            Text(tr("required"), color = Color(0xFFFFB300), fontSize = 9.sp, fontFamily = FontFamily.Monospace)
                         }
                     }
                 }
 
-                Text("SAMPLE RESPONSE", color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                Text(tr("SAMPLE RESPONSE"), color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
                 SelectionContainer {
                     Box(
                         modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(6.dp))
@@ -1341,7 +1343,7 @@ fun ApiEndpointCard(
                 }
 
                 if (spec.testable) {
-                    Text("TRY IT", color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
+                    Text(tr("TRY IT"), color = textDim, fontSize = 9.sp, fontFamily = FontFamily.Monospace, letterSpacing = 1.5.sp)
 
                     if (spec.requiresQuery) {
                         OutlinedTextField(
@@ -2042,18 +2044,43 @@ fun GameProfileScreen(adbManager: AdbManager) {
             }
 
             var showVipDialog by remember { mutableStateOf(false) }
+            val subStatus by NukeSubscriptionManager.subscriptionState.collectAsState()
+            val creditBalance = subStatus.creditBalance
+            var isConsumingCredit by remember { mutableStateOf(false) }
 
             NukeBoosterRewardDialog(
                 gameName = targetGame.name,
+                creditBalance = creditBalance,
+                isConsumingCredit = isConsumingCredit,
                 onDismiss = {
                     pendingGameToLaunch = null
                     launchingPackage = null
                 },
+                onUseCreditAndBoost = if (creditBalance > 0) {
+                    {
+                        if (!isConsumingCredit) {
+                            isConsumingCredit = true
+                            NukeToast.success(context, "Activating 90-Min VIP Boost Session...")
+                            NukeSubscriptionManager.consumeCreditsAsync(context, "boost_session") { res ->
+                                isConsumingCredit = false
+                                if (res.success) {
+                                    // Server sudah menetapkan expiresAt dan memotong kredit.
+                                    // State lokal sudah diupdate oleh consumeCreditsAsync dari response server.
+                                    // Langsung lanjutkan ke game.
+                                    pendingGameToLaunch = null
+                                    proceedDirectly()
+                                } else {
+                                    NukeToast.error(context, res.errorMessage ?: "Kredit tidak mencukupi.")
+                                }
+                            }
+                        }
+                    }
+                } else null,
                 onWatchAdAndBoost = {
                     pendingGameToLaunch = null
                     val act = context.findActivity()
                     if (act != null) {
-                        NukeToast.success(context, ("Loading Sponsor Video..."))
+                        NukeToast.success(context, ("Initializing Boost Session..."))
                         NukeAdManager.showBoosterRewarded(act) { _ ->
                             proceedDirectly()
                         }
@@ -2091,7 +2118,10 @@ fun GameProfileScreen(adbManager: AdbManager) {
 @Composable
 fun NukeBoosterRewardDialog(
     gameName: String,
+    creditBalance: Int = 0,
+    isConsumingCredit: Boolean = false,
     onDismiss: () -> Unit,
+    onUseCreditAndBoost: (() -> Unit)? = null,
     onWatchAdAndBoost: () -> Unit,
     onUpgradeToVip: () -> Unit,
 ) {
@@ -2150,37 +2180,77 @@ fun NukeBoosterRewardDialog(
                 }
                 Spacer(Modifier.height(14.dp))
                 Text(
-                    ("Watch 1 short sponsor video or upgrade to VIP to unlock an ad-free gaming session and access all features."),
+                    ("Select how you want to start this session: use 1 credit for 90-min VIP, watch 1 video boost, or get VIP pass."),
                     color = Color(0xFF9CB8AD),
                     fontSize = 9.5.sp,
                     textAlign = TextAlign.Center,
                     lineHeight = 13.sp
                 )
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(14.dp))
+
+                // Option 1: Credit Boost (if user has credits)
+                if (creditBalance > 0 && onUseCreditAndBoost != null) {
+                    Button(
+                        onClick = onUseCreditAndBoost,
+                        enabled = !isConsumingCredit,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF00E5FF), contentColor = Color.Black),
+                        shape = RoundedCornerShape(10.dp),
+                        modifier = Modifier.fillMaxWidth().height(44.dp).nukePressFeedback()
+                    ) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Rounded.Bolt, null, tint = Color.Black, modifier = Modifier.size(18.dp))
+                            Spacer(Modifier.width(6.dp))
+                            Text(
+                                if (isConsumingCredit) "ACTIVATING..." else "USE 1 CREDIT (Balance: $creditBalance)",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 0.5.sp
+                            )
+                        }
+                    }
+                    Text(
+                        "⚡ 90-Min Ad-Free VIP Session · No Ads",
+                        color = Color(0xFF00E5FF),
+                        fontSize = 8.5.sp,
+                        fontWeight = FontWeight.SemiBold,
+                        modifier = Modifier.padding(top = 2.dp, bottom = 6.dp)
+                    )
+                }
+
+                // Option 2: Free Watch Ad
                 Button(
                     onClick = onWatchAdAndBoost,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFFB84A), contentColor = Color.Black),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = (Modifier.fillMaxWidth().height(44.dp)).nukePressFeedback()) {
+                    modifier = (Modifier.fillMaxWidth().height(42.dp)).nukePressFeedback()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.PlayArrow, null, tint = Color.Black, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(("WATCH & START"), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Text(("FREE BOOST (WATCH VIDEO)"), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+
+                // Option 3: Upgrade to VIP / Buy Credits
                 Button(
                     onClick = onUpgradeToVip,
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF55F5B0), contentColor = Color.Black),
                     shape = RoundedCornerShape(10.dp),
-                    modifier = (Modifier.fillMaxWidth().height(44.dp)).nukePressFeedback()) {
+                    modifier = (Modifier.fillMaxWidth().height(42.dp)).nukePressFeedback()) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Icon(Icons.Rounded.Star, null, tint = Color.Black, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text(("UPGRADE TO VIP (NO ADS)"), fontSize = 11.sp, fontWeight = FontWeight.Black, letterSpacing = 0.5.sp)
+                        Text(
+                            if (creditBalance == 0) "GET VIP / BUY CREDITS (Rp 3.000)" else "VIP PASS / BUY MORE CREDITS",
+                            fontSize = 10.5.sp,
+                            fontWeight = FontWeight.Black,
+                            letterSpacing = 0.5.sp
+                        )
                     }
                 }
                 Spacer(Modifier.height(8.dp))
+
+                // Option 4: Cancel
                 OutlinedButton(
                     onClick = onDismiss,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFF9CB8AD)),

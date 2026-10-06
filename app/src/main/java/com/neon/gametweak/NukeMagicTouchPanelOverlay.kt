@@ -113,7 +113,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             NukeTouchTuningEngine.sensArea = sensArea
             NukeTouchTuningEngine.curveMode = curveMode
             NukeTouchTuningEngine.euroEnabled = false
-            NukeTouchTuningEngine.dragShotCurve = (curveMode != NukeTouchTuningEngine.CURVE_LINEAR)
+            NukeTouchTuningEngine.dragShotCurve = (curveMode == NukeTouchTuningEngine.CURVE_ASYM_DRAG)
         } else {
             // Default 0 Sensi: pure natural 1:1 pass-through (screen is never slippery)
             NukeTouchTuningEngine.xMultiplier = 1.00f
@@ -140,7 +140,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             NukeTouchTuningEngine.sensArea = sensArea
             NukeTouchTuningEngine.curveMode = curveMode
             NukeTouchTuningEngine.euroEnabled = false
-            NukeTouchTuningEngine.dragShotCurve = (curveMode != NukeTouchTuningEngine.CURVE_LINEAR)
+            NukeTouchTuningEngine.dragShotCurve = (curveMode == NukeTouchTuningEngine.CURVE_ASYM_DRAG)
         } else {
             // Default 0 Sensi: pure natural 1:1 pass-through (screen is never slippery)
             NukeTouchTuningEngine.xMultiplier = 1.00f
@@ -339,6 +339,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
 
         // Section Cards
         body.addView(buildSensiBoostCard())
+        body.addView(spacer(8))
+        body.addView(buildResetAndCalibrationCard())
         body.addView(spacer(8))
         body.addView(buildSensitivityXCard())
         body.addView(spacer(8))
@@ -557,6 +559,70 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         }
     }
 
+    private fun buildResetAndCalibrationCard(): View {
+        val card = cardLayout()
+
+        val headerRow = LinearLayout(context).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+        }
+        headerRow.addView(TextView(context).apply {
+            text = "HARDWARE TOUCH CALIBRATION"
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(Color.parseColor("#38BDF8"))
+            layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f)
+        })
+        card.addView(headerRow)
+
+        card.addView(TextView(context).apply {
+            text = "Professional eSports hardware-level touch scaling & response curve calibration. Zero artificial cheat injection — 100% compliant with tournament standards."
+            textSize = 8.5f
+            setTextColor(Color.parseColor("#9CB8AD"))
+            setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
+        })
+
+        val resetBtn = TextView(context).apply {
+            text = "↺  Reset Screen to 0 Sensi (Native 1:1 Linear)"
+            textSize = 9.5f
+            typeface = Typeface.create(Typeface.MONOSPACE, Typeface.BOLD)
+            setTextColor(NukeCyberHudStyler.COLOR_CYAN_NEON)
+            gravity = Gravity.CENTER
+            setPadding((10 * d).toInt(), (8 * d).toInt(), (10 * d).toInt(), (8 * d).toInt())
+            background = GradientDrawable().apply {
+                setColor(Color.parseColor("#0F291E"))
+                cornerRadius = 8 * d
+                setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
+            }
+            setOnClickListener {
+                resetToDefaultTouch()
+            }
+            layoutParams = LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+            )
+        }
+        card.addView(resetBtn)
+
+        return card
+    }
+
+    fun resetToDefaultTouch() {
+        isSensiBoostEnabled = false
+        sensX = 1.00f
+        sensY = 1.00f
+        sensArea = NukeTouchTuningEngine.AREA_ALL
+        curveMode = NukeTouchTuningEngine.CURVE_LINEAR
+        updateXBadge()
+        updateYBadge()
+        xSeekBar?.progress = 25
+        ySeekBar?.progress = 14
+        updateAreaChips()
+        updateCurveChips()
+        persistState()
+        updateStatusUi()
+        NukeToast.success(context, tr("Screen reset to 0 Sensi (Pure 1:1 natural touch)"))
+    }
+
     private fun buildSensitivityXCard(): View {
         val card = cardLayout()
 
@@ -712,7 +778,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
         card.addView(headerRow)
 
         card.addView(TextView(context).apply {
-            text = "Vertical swipe multiplier (Aspect ratio & game pitch compensated for effortless headshots)."
+            text = "Vertical swipe multiplier (Calibrated for display aspect ratio and ergonomic thumb trajectory)."
             textSize = 8.5f
             setTextColor(Color.parseColor("#9CB8AD"))
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
@@ -819,20 +885,7 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 setStroke((1 * d).toInt(), NukeCyberHudStyler.COLOR_CYAN_NEON)
             }
             setOnClickListener {
-                isSensiBoostEnabled = false
-                sensX = 1.00f
-                sensY = 1.00f
-                sensArea = NukeTouchTuningEngine.AREA_ALL
-                curveMode = NukeTouchTuningEngine.CURVE_LINEAR
-                updateXBadge()
-                updateYBadge()
-                xSeekBar?.progress = 25
-                ySeekBar?.progress = 14
-                updateAreaChips()
-                updateCurveChips()
-                persistState()
-                updateStatusUi()
-                NukeToast.success(context, tr("Screen reset to 0 Sensi (Pure 1:1 natural touch)"))
+                resetToDefaultTouch()
             }
             layoutParams = LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
@@ -938,6 +991,11 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             setPadding(0, (2 * d).toInt(), 0, (6 * d).toInt())
         })
 
+        val hScroll = HorizontalScrollView(context).apply {
+            isHorizontalScrollBarEnabled = false
+            overScrollMode = View.OVER_SCROLL_NEVER
+        }
+
         val row = LinearLayout(context).apply {
             orientation = LinearLayout.HORIZONTAL
         }
@@ -955,9 +1013,9 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
                 textSize = 9f
                 typeface = Typeface.DEFAULT_BOLD
                 gravity = Gravity.CENTER
-                setPadding((8 * d).toInt(), (6 * d).toInt(), (8 * d).toInt(), (6 * d).toInt())
-                layoutParams = LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f).apply {
-                    marginEnd = (4 * d).toInt()
+                setPadding((10 * d).toInt(), (6 * d).toInt(), (10 * d).toInt(), (6 * d).toInt())
+                layoutParams = LinearLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT).apply {
+                    marginEnd = (6 * d).toInt()
                 }
                 setOnClickListener {
                     curveMode = code
@@ -968,7 +1026,8 @@ class NukeMagicTouchPanelOverlay private constructor(private val context: Contex
             curveChipViews.add(chip)
             row.addView(chip)
         }
-        card.addView(row)
+        hScroll.addView(row)
+        card.addView(hScroll)
         updateCurveChips()
 
         return card

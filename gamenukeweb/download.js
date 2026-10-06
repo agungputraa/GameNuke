@@ -2,7 +2,7 @@
   'use strict';
 
   const DEFAULTS = {
-    versionName: '3.4.0-Nexus',
+    versionName: '3.6.0-Apeiron',
     apkSizeMb: '33.7',
     downloadDirectlinkUrl: 'https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990'
   };
@@ -45,32 +45,29 @@
         const config = window.GAMENUKE_CONFIG || {};
         const directlink = config.downloadDirectlinkUrl || state.downloadDirectlinkUrl || DEFAULTS.downloadDirectlinkUrl;
         const reviewMode = config.adsenseReviewMode === true;
+        const targetUrl = 'final-download.html';
 
-        if (statusPill) statusPill.textContent = 'Membuka Server Unduhan Resmi…';
-        if (btnText) btnText.textContent = 'Menyiapkan Halaman Unduhan…';
+        if (statusPill) statusPill.textContent = 'Membuka Halaman Unduhan…';
+        if (btnText) btnText.textContent = 'Membuka Berkas Unduhan…';
 
-        const finalUrl = 'final-download.html';
-
-        // 1. Open the clean, ad-free final-download.html in a fresh foreground tab
-        let directTab = null;
+        // 1. Open final download page (final-download.html) in a new tab
+        let newTab = null;
         try {
-          directTab = window.open(finalUrl, '_blank');
-          if (directTab) {
-            try { directTab.focus(); } catch (_) {}
-          }
+          newTab = window.open(targetUrl, '_blank');
         } catch (_) {}
 
-        // Fallback: If popup blocker prevented new tab, navigate directly so user is never stuck
-        if (!directTab || directTab.closed || typeof directTab.closed === 'undefined') {
-          window.location.assign(finalUrl);
-          return;
-        }
-
-        // 2. Tab-under: Redirect the old tab to sponsor directlink in the background
+        // 2. Open sponsor directlink in the old tab (tab lama) if monetized, so user is not annoyed
         if (!reviewMode && directlink) {
-          setTimeout(() => {
+          if (newTab && !newTab.closed) {
             window.location.href = directlink;
-          }, 150);
+          } else {
+            // Pop-up was blocked by browser, navigate current tab to final-download.html
+            window.location.href = targetUrl;
+          }
+        } else {
+          if (!newTab || newTab.closed) {
+            window.location.href = targetUrl;
+          }
         }
       });
     }

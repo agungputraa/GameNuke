@@ -69,7 +69,12 @@ object NukeVolumeKeyTriggerManager {
             }
 
             val filter = IntentFilter("android.media.VOLUME_CHANGED_ACTION")
-            ctx.registerReceiver(receiver, filter)
+            androidx.core.content.ContextCompat.registerReceiver(
+                ctx,
+                receiver,
+                filter,
+                androidx.core.content.ContextCompat.RECEIVER_EXPORTED
+            )
             volumeReceiver = receiver
             isListening = true
             Log.i(TAG, "Volume key trigger active via system audio broadcast — zero window overhead")
