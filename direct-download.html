@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <title>Pengalihan ke Unduhan Final — Game Nuke Triton Edition</title>
+  <link rel="canonical" href="https://gamenukeofficial.com/final-download.html">
+  <script>
+    (function () {
+      try {
+        var sess = sessionStorage.getItem('gn_download_session');
+        var local = localStorage.getItem('gn_download_session');
+        var hasCookie = document.cookie.indexOf('gn_download_session') !== -1;
+        var valid = false;
+        var now = Date.now();
+        var MAX_AGE = 30 * 60 * 1000;
+
+        if (sess) {
+          var d = JSON.parse(sess);
+          if (d && d.timestamp && (now - d.timestamp) < MAX_AGE) valid = true;
+        }
+        if (!valid && local) {
+          var ld = JSON.parse(local);
+          if (ld && ld.timestamp && (now - ld.timestamp) < MAX_AGE) valid = true;
+        }
+        if (!valid && hasCookie) valid = true;
+
+        if (valid) {
+          window.location.replace('final-download.html');
+        } else {
+          window.location.replace('index.html?ref=no_session');
+        }
+      } catch (_) {
+        window.location.replace('index.html?ref=session_error');
+      }
+    })();
+  </script>
+</head>
+<body style="background:#050807;color:#F1F5F9;font-family:sans-serif;text-align:center;padding:50px;">
+  <p>Mengarahkan ke halaman unduhan resmi...</p>
+</body>
+</html>
