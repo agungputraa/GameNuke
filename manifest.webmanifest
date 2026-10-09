@@ -1,0 +1,22 @@
+{
+  "name": "Game Nuke Official",
+  "short_name": "Game Nuke",
+  "description": "Official Game Nuke Android gaming performance utility portal.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#050807",
+  "theme_color": "#050807",
+  "icons": [
+    {
+      "src": "/assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

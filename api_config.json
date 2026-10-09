@@ -1,0 +1,6 @@
+{
+  "nvidia_nim_api_key": "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",
+  "primary_model": "nvidia/nemotron-3-super-120b-a12b",
+  "fallback_model": "meta/llama-3.2-11b-vision-instruct",
+  "updated_at": "2026-09-23T12:40:00+08:00"
+}

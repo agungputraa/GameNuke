@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="robots" content="noindex,follow">
+  <link rel="stylesheet" href="style.css?v=enterprise-mobile-2">
+  <title>Pengalihan ke Unduhan Final — Game Nuke Triton Edition</title>
+  <link rel="canonical" href="https://gamenukeofficial.com/final-download.html">
+  <script>
+    (function () {
+      try {
+        var sess = sessionStorage.getItem('gn_download_session');
+        var local = localStorage.getItem('gn_download_session');
+        var hasCookie = document.cookie.indexOf('gn_download_session') !== -1;
+        var valid = false;
+        var now = Date.now();
+        var MAX_AGE = 30 * 60 * 1000;
+
+        if (sess) {
+          var d = JSON.parse(sess);
+          if (d && d.timestamp && (now - d.timestamp) < MAX_AGE) valid = true;
+        }
+        if (!valid && local) {
+          var ld = JSON.parse(local);
+          if (ld && ld.timestamp && (now - ld.timestamp) < MAX_AGE) valid = true;
+        }
+        if (!valid && hasCookie) valid = true;
+
+        if (valid) {
+          window.location.replace('final-download.html');
+        } else {
+          window.location.replace('index.html?ref=no_session');
+        }
+      } catch (_) {
+        window.location.replace('index.html?ref=session_error');
+      }
+    })();
+  </script>
+</head>
+<body class="redirect-body"><main>
+  <p>Mengarahkan ke halaman unduhan resmi...</p>
+  <noscript><p>JavaScript diperlukan untuk memeriksa sesi unduhan.</p><a class="button button-primary" href="index.html">Kembali ke portal</a></noscript>
+</main></body>
+</html>
