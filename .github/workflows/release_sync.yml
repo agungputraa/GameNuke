@@ -1,0 +1,99 @@
+name: Automatic Release & Web Sync
+
+on:
+  release:
+    types: [published, edited]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  sync-release-metadata:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - name: Extract Release Metadata & Update version.json
+        run: |
+          TAG_NAME="${{ github.event.release.tag_name }}"
+          if [ -z "$TAG_NAME" ]; then
+            TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v3.3.0-Hyperion")
+          fi
+          CLEAN_VERSION="${TAG_NAME#v}"
+          
+          echo "Processing Release Tag: $TAG_NAME (Version: $CLEAN_VERSION)"
+          
+          ASSET_NAME=""
+          DOWNLOAD_URL=""
+          ASSET_SIZE_BYTES=""
+          
+          if [ -f "$GITHUB_EVENT_PATH" ]; then
+            ASSET_NAME=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .name' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+            DOWNLOAD_URL=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .browser_download_url' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+            ASSET_SIZE_BYTES=$(jq -r '.release.assets[]? | select(.name | endswith(".apk")) | .size' "$GITHUB_EVENT_PATH" 2>/dev/null | head -n 1)
+          fi
+          
+          if [ -z "$ASSET_NAME" ] || [ "$ASSET_NAME" = "null" ]; then
+            ASSET_NAME="GameNuke-v${CLEAN_VERSION}.apk"
+            DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${ASSET_NAME}"
+            SIZE_MB="32.1"
+          else
+            SIZE_MB=$(echo "scale=1; $ASSET_SIZE_BYTES / 1048576" | bc 2>/dev/null || echo "32.1")
+          fi
+
+          PUB_DATE=$(date -u +"%Y-%m-%d")
+
+          # Locate version.json dynamically
+          if [ -f "version.json" ]; then
+            TARGET_FILE="version.json"
+          elif [ -f "gamenukeweb/version.json" ]; then
+            TARGET_FILE="gamenukeweb/version.json"
+          else
+            echo "Error: version.json not found in repository root or gamenukeweb/!"
+            exit 1
+          fi
+
+          EDITION_NAME="${CLEAN_VERSION##*-}"
+          if [ -z "$EDITION_NAME" ] || [ "$EDITION_NAME" = "$CLEAN_VERSION" ]; then
+            EDITION_NAME="Hyperion"
+          fi
+
+          # Update version.json safely
+          jq --arg ver "$CLEAN_VERSION" \
+             --arg dl "$DOWNLOAD_URL" \
+             --arg sz "$SIZE_MB" \
+             --arg dt "$PUB_DATE" \
+             --arg name "Game Nuke $EDITION_NAME Edition" \
+             --arg asset "$ASSET_NAME" \
+             '.versionName = $ver | .downloadUrl = $dl | .githubReleaseUrl = $dl | .localApkUrl = $asset | .appName = $name | .apkSizeMb = $sz | .publishedAt = $dt' \
+             "$TARGET_FILE" > "${TARGET_FILE}.tmp" && mv "${TARGET_FILE}.tmp" "$TARGET_FILE"
+
+          echo "Updated $TARGET_FILE successfully:"
+          cat "$TARGET_FILE"
+
+      - name: Commit and Push Updated version.json
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -u
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-sync version.json for release ${{ github.event.release.tag_name }} [skip ci]"
+            git push origin main
+          else
+            echo "No changes in version.json to commit."
+          fi
+
+      - name: Deploy to gh-pages Branch
+        run: |
+          git checkout -B gh-pages
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -m "Auto-deploy Edge CDN metadata for ${{ github.event.release.tag_name }} [skip ci]"
+          fi
+          git push origin gh-pages --force

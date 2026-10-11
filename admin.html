@@ -1,0 +1,3145 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <title>Game Nuke — Enterprise VIP Admin Command Center</title>
+  
+  <!-- Google Fonts: Plus Jakarta Sans & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            nuke: {
+              void: '#070A0E',
+              surface: '#0B1118',
+              card: '#101824',
+              cardHover: '#142030',
+              border: '#1B2636',
+              borderLight: '#2A3B52',
+              emerald: '#10B981',
+              cyan: '#06B6D4',
+              gold: '#F59E0B',
+              rose: '#F43F5E'
+            }
+          },
+          fontFamily: {
+            sans: ['"Plus Jakarta Sans"', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Font Awesome CDN -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+  <!-- Alpine.js CDN (defer) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.13.5/dist/cdn.min.js"></script>
+
+  <style>
+    [x-cloak] { display: none !important; }
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: #070A0E; }
+    ::-webkit-scrollbar-thumb { background: #1B2636; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #F59E0B; }
+    .glow-gold { box-shadow: 0 0 25px -5px rgba(245, 158, 11, 0.2); }
+    .glow-emerald { box-shadow: 0 0 25px -5px rgba(16, 185, 129, 0.2); }
+    .glow-cyan { box-shadow: 0 0 25px -5px rgba(6, 182, 212, 0.2); }
+  </style>
+</head>
+
+<body class="bg-nuke-void text-slate-100 font-sans min-h-screen antialiased selection:bg-nuke-gold selection:text-black flex flex-col"
+      x-data="adminApp()" x-init="initApp()" x-cloak>
+
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <!-- TOAST NOTIFICATIONS                                                       -->
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <div class="fixed top-5 right-5 z-50 flex flex-col gap-2 pointer-events-none">
+    <template x-for="toast in toasts" :key="toast.id">
+      <div class="pointer-events-auto flex items-center gap-3 px-4 py-3 rounded-xl border shadow-2xl backdrop-blur-md transition-all duration-300 transform translate-y-0"
+           :class="{
+             'bg-emerald-950/90 border-emerald-500/50 text-emerald-200': toast.type === 'success',
+             'bg-rose-950/90 border-rose-500/50 text-rose-200': toast.type === 'error',
+             'bg-amber-950/90 border-amber-500/50 text-amber-200': toast.type === 'warning',
+             'bg-cyan-950/90 border-cyan-500/50 text-cyan-200': toast.type === 'info'
+           }">
+        <i class="fa-solid text-sm"
+           :class="{
+             'fa-circle-check text-emerald-400': toast.type === 'success',
+             'fa-circle-xmark text-rose-400': toast.type === 'error',
+             'fa-triangle-exclamation text-amber-400': toast.type === 'warning',
+             'fa-circle-info text-cyan-400': toast.type === 'info'
+           }"></i>
+        <span class="text-xs font-semibold" x-text="toast.message"></span>
+      </div>
+    </template>
+  </div>
+
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <!-- LOGIN VIEW (SHOWN WHEN NOT AUTHENTICATED)                                -->
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <template x-if="!isLoggedIn">
+    <div class="min-h-screen flex items-center justify-center p-4 bg-gradient-to-b from-nuke-void to-nuke-surface">
+      <div class="w-full max-w-md bg-nuke-card border border-nuke-border rounded-2xl p-8 glow-gold relative overflow-hidden">
+        <div class="absolute -top-12 -right-12 w-32 h-32 bg-nuke-gold/10 rounded-full blur-3xl"></div>
+        <div class="absolute -bottom-12 -left-12 w-32 h-32 bg-nuke-cyan/10 rounded-full blur-3xl"></div>
+        
+        <div class="flex items-center gap-3.5 mb-6">
+          <div class="w-12 h-12 rounded-xl bg-nuke-gold/15 border border-nuke-gold/30 flex items-center justify-center text-nuke-gold text-xl">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h1 class="text-lg font-black tracking-wider text-white">GAME NUKE VIP</h1>
+            <p class="text-[10.5px] font-mono tracking-widest text-nuke-gold uppercase">VIP Control Center</p>
+          </div>
+        </div>
+
+        <!-- Lockout Notice Banner -->
+        <div x-show="lockoutSeconds > 0" class="p-3 mb-4 bg-rose-500/15 border border-rose-500/30 rounded-xl flex items-center gap-3 text-rose-400 text-xs font-mono" x-cloak>
+          <i class="fa-solid fa-shield-halved text-lg animate-pulse text-rose-400"></i>
+          <div>
+            <div class="font-bold text-white uppercase tracking-wider">Akses Terkunci Sementara</div>
+            <div class="text-[11px] text-rose-300">Terlalu banyak percobaan gagal. Cooldown: <span class="font-black text-amber-400" x-text="lockoutSeconds"></span> detik</div>
+          </div>
+        </div>
+
+        <form @submit.prevent="login()" class="space-y-4">
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Admin Username</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm">
+                <i class="fa-solid fa-user"></i>
+              </span>
+              <input type="text" x-model="loginForm.username" required :disabled="lockoutSeconds > 0"
+                     class="w-full pl-10 pr-4 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-nuke-gold transition disabled:opacity-50">
+            </div>
+          </div>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-2">Password</label>
+            <div class="relative">
+              <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm">
+                <i class="fa-solid fa-lock"></i>
+              </span>
+              <input :type="showPassword ? 'text' : 'password'" x-model="loginForm.password" required :disabled="lockoutSeconds > 0"
+                     placeholder="Enter admin password"
+                     class="w-full pl-10 pr-10 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-sm font-mono text-white placeholder-slate-600 focus:outline-none focus:border-nuke-gold transition disabled:opacity-50">
+              <button type="button" @click="showPassword = !showPassword"
+                      class="absolute inset-y-0 right-0 pr-3.5 flex items-center text-slate-500 hover:text-slate-300 text-sm">
+                <i class="fa-solid" :class="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </div>
+          </div>
+
+          <button type="submit" :disabled="loading || lockoutSeconds > 0"
+                  class="w-full mt-2 py-3 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 disabled:opacity-40 disabled:cursor-not-allowed text-slate-950 font-black text-sm tracking-wide rounded-xl shadow-lg transition flex items-center justify-center gap-2">
+            <span x-show="!loading && lockoutSeconds === 0">AUTHORIZE SESSION</span>
+            <span x-show="lockoutSeconds > 0"><i class="fa-solid fa-lock mr-1"></i> LOCKED (<span x-text="lockoutSeconds"></span>s)</span>
+            <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> VERIFYING...</span>
+          </button>
+        </form>
+      </div>
+    </div>
+  </template>
+
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <!-- MAIN ENTERPRISE DASHBOARD VIEW                                            -->
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <template x-if="isLoggedIn">
+    <div class="min-h-screen flex flex-col md:flex-row bg-nuke-void">
+
+      <!-- MOBILE TOPBAR -->
+      <div class="md:hidden flex items-center justify-between p-4 bg-nuke-surface border-b border-nuke-border sticky top-0 z-30 shadow-md">
+        <div class="flex items-center gap-2.5">
+          <div class="w-8 h-8 rounded-lg bg-nuke-gold/15 border border-nuke-gold/30 flex items-center justify-center text-nuke-gold text-sm shadow">
+            <i class="fa-solid fa-shield-halved"></i>
+          </div>
+          <div>
+            <h1 class="text-sm font-black text-white tracking-wide">GAME NUKE</h1>
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-mono text-nuke-gold font-bold uppercase" x-text="getActiveTabTitle()"></span>
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button @click="refreshCurrentTab()" class="p-2 rounded-xl bg-nuke-card text-slate-400 hover:text-white border border-nuke-border shadow-sm active:scale-95 transition" title="Refresh Data">
+            <i class="fa-solid fa-arrows-rotate text-xs" :class="{'fa-spin': loading}"></i>
+          </button>
+          <button @click="mobileMenuOpen = !mobileMenuOpen" class="p-2 rounded-xl bg-nuke-card text-slate-400 hover:text-white border border-nuke-border shadow-sm active:scale-95 transition" title="Menu Navigation">
+            <i class="fa-solid text-sm" :class="mobileMenuOpen ? 'fa-xmark' : 'fa-bars'"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- MOBILE BACKDROP OVERLAY -->
+      <div x-show="mobileMenuOpen"
+           x-transition:enter="transition-opacity ease-linear duration-200"
+           x-transition:enter-start="opacity-0"
+           x-transition:enter-end="opacity-100"
+           x-transition:leave="transition-opacity ease-linear duration-200"
+           x-transition:leave-start="opacity-100"
+           x-transition:leave-end="opacity-0"
+           @click="mobileMenuOpen = false"
+           class="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden"
+           x-cloak></div>
+
+      <!-- SIDEBAR (DESKTOP STATIC / MOBILE SLIDE-OVER DRAWER) -->
+      <aside class="fixed md:static inset-y-0 left-0 w-72 md:w-64 max-w-[85vw] bg-nuke-surface border-r border-nuke-border flex flex-col transition-transform duration-300 z-50 md:z-20 md:translate-x-0"
+             :class="mobileMenuOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full md:translate-x-0'">
+        
+        <!-- Brand Header -->
+        <div class="flex items-center justify-between p-5 border-b border-nuke-border">
+          <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-nuke-gold/15 border border-nuke-gold/30 flex items-center justify-center text-nuke-gold text-lg shadow">
+              <i class="fa-solid fa-shield-halved"></i>
+            </div>
+            <div>
+              <div class="flex items-center gap-2">
+                <h1 class="text-sm font-black tracking-wide text-white">GAME NUKE</h1>
+                <span class="px-1.5 py-0.5 text-[9px] font-mono font-bold uppercase rounded bg-amber-500/10 text-amber-400 border border-amber-500/30">v3.7.0</span>
+              </div>
+              <p class="text-[10px] font-mono text-slate-400">Enterprise Control</p>
+            </div>
+          </div>
+          <button @click="mobileMenuOpen = false" class="md:hidden text-slate-400 hover:text-white p-1">
+            <i class="fa-solid fa-xmark text-lg"></i>
+          </button>
+        </div>
+
+        <!-- Navigation Links -->
+        <nav class="p-4 space-y-1.5 flex-1 overflow-y-auto">
+          <button @click="switchTab('overview')"
+                  :class="activeTab === 'overview' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-chart-pie w-4 text-center"></i>
+            <span>Overview &amp; Telemetry</span>
+          </button>
+
+          <button @click="switchTab('devices')"
+                  :class="activeTab === 'devices' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-mobile-screen w-4 text-center"></i>
+            <span>Devices &amp; VIP CRUD</span>
+          </button>
+
+          <button @click="switchTab('booster')"
+                  :class="activeTab === 'booster' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-sliders w-4 text-center"></i>
+            <span>Booster Maintenance</span>
+          </button>
+
+          <button @click="switchTab('orders')"
+                  :class="activeTab === 'orders' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-receipt w-4 text-center"></i>
+            <span>Orders &amp; Invoices</span>
+          </button>
+
+          <button @click="switchTab('catalog')"
+                  :class="activeTab === 'catalog' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-tags w-4 text-center"></i>
+            <span>Catalog &amp; Pricing</span>
+          </button>
+
+          <button @click="switchTab('settings')"
+                  :class="activeTab === 'settings' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-card'"
+                  class="w-full px-3.5 py-2.5 rounded-xl transition flex items-center gap-3 text-xs font-semibold">
+            <i class="fa-solid fa-gear w-4 text-center"></i>
+            <span>Gateway &amp; Settings</span>
+          </button>
+        </nav>
+
+        <!-- Live Server Status Bar in Sidebar -->
+        <div class="p-4 border-t border-nuke-border text-[11px] font-mono space-y-2">
+          <div class="flex items-center justify-between text-slate-400">
+            <span>Edge Status:</span>
+            <span class="inline-flex items-center gap-1.5 text-emerald-400 font-bold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span> ONLINE
+            </span>
+          </div>
+          <div class="flex items-center justify-between text-slate-400">
+            <span>Ping Latency:</span>
+            <span class="text-slate-200" x-text="edgePing + 'ms'"></span>
+          </div>
+          <button @click="logout()" class="w-full mt-2 py-2 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 text-xs font-bold transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+            <span>Logout Session</span>
+          </button>
+        </div>
+      </aside>
+
+      <!-- MOBILE BOTTOM QUICK BAR (THUMB NAVIGATION) -->
+      <nav class="md:hidden fixed bottom-0 inset-x-0 bg-nuke-surface/95 backdrop-blur-md border-t border-nuke-border z-30 flex items-center justify-around py-2 px-1 shadow-2xl">
+        <button @click="switchTab('overview')"
+                :class="activeTab === 'overview' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'"
+                class="flex flex-col items-center gap-1 text-[10px] py-1 px-2.5 rounded-lg transition">
+          <i class="fa-solid fa-chart-pie text-sm"></i>
+          <span>Overview</span>
+        </button>
+        <button @click="switchTab('devices')"
+                :class="activeTab === 'devices' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'"
+                class="flex flex-col items-center gap-1 text-[10px] py-1 px-2.5 rounded-lg transition">
+          <i class="fa-solid fa-mobile-screen text-sm"></i>
+          <span>Devices</span>
+        </button>
+        <button @click="switchTab('orders')"
+                :class="activeTab === 'orders' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'"
+                class="flex flex-col items-center gap-1 text-[10px] py-1 px-2.5 rounded-lg transition relative">
+          <i class="fa-solid fa-receipt text-sm"></i>
+          <span>Orders</span>
+          <span x-show="pendingOrdersCount > 0" class="absolute top-0 right-1 w-2 h-2 bg-amber-400 rounded-full animate-ping"></span>
+        </button>
+        <button @click="switchTab('catalog')"
+                :class="activeTab === 'catalog' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'"
+                class="flex flex-col items-center gap-1 text-[10px] py-1 px-2.5 rounded-lg transition">
+          <i class="fa-solid fa-tags text-sm"></i>
+          <span>Catalog</span>
+        </button>
+        <button @click="switchTab('settings')"
+                :class="activeTab === 'settings' ? 'text-amber-400 font-bold' : 'text-slate-400 hover:text-white'"
+                class="flex flex-col items-center gap-1 text-[10px] py-1 px-2.5 rounded-lg transition">
+          <i class="fa-solid fa-gear text-sm"></i>
+          <span>Settings</span>
+        </button>
+      </nav>
+
+      <!-- MAIN CONTENT WRAPPER -->
+      <main class="flex-1 flex flex-col overflow-y-auto pb-16 md:pb-0">
+        
+        <!-- Desktop Header Bar -->
+        <header class="hidden md:flex items-center justify-between px-8 py-4 bg-nuke-surface/60 backdrop-blur-md border-b border-nuke-border sticky top-0 z-10">
+          <div>
+            <h2 class="text-base font-bold text-white uppercase tracking-wider" x-text="getActiveTabTitle()"></h2>
+            <p class="text-xs font-mono text-slate-400">Enterprise High-Density Management Console</p>
+          </div>
+          <div class="flex items-center gap-3">
+            <button @click="refreshCurrentTab()" class="px-3 py-1.5 rounded-xl bg-nuke-card hover:bg-nuke-cardHover text-slate-300 hover:text-white border border-nuke-border text-xs font-semibold transition flex items-center gap-2">
+              <i class="fa-solid fa-arrows-rotate" :class="{'fa-spin': loading}"></i>
+              <span>Refresh Edge</span>
+            </button>
+            <div class="h-6 w-px bg-nuke-border"></div>
+            <div class="flex items-center gap-2 text-xs font-mono text-slate-400">
+              <i class="fa-solid fa-circle-user text-nuke-gold"></i>
+              <span x-text="adminUsername"></span>
+            </div>
+          </div>
+        </header>
+
+        <!-- Dynamic Body Container -->
+        <div class="p-4 md:p-8 space-y-6 flex-1">
+
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB 1: OVERVIEW & TELEMETRY                                       -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'overview'" class="space-y-6">
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+              <!-- Stat 1 -->
+              <div class="p-5 bg-nuke-surface border border-nuke-border rounded-2xl glow-emerald relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <span>Active VIP Licenses</span>
+                  <i class="fa-solid fa-crown text-nuke-emerald text-sm"></i>
+                </div>
+                <div class="text-3xl font-mono font-black text-nuke-emerald mt-3" x-text="stats.activeVip || 0"></div>
+                <p class="text-[11px] text-slate-400 mt-1 font-mono">Unexpired subscribers in KV</p>
+              </div>
+
+              <!-- Stat 2 -->
+              <div class="p-5 bg-nuke-surface border border-nuke-border rounded-2xl glow-cyan relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <span>Registered HWIDs</span>
+                  <i class="fa-solid fa-mobile-screen text-cyan-400 text-sm"></i>
+                </div>
+                <div class="text-3xl font-mono font-black text-cyan-400 mt-3" x-text="stats.totalDevices || 0"></div>
+                <p class="text-[11px] text-slate-400 mt-1 font-mono">Unique hardware fingerprints</p>
+              </div>
+
+              <!-- Stat 3: Settled Revenue -->
+              <div class="p-5 bg-nuke-surface border border-nuke-border rounded-2xl glow-gold relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <span>Gross Settled Revenue</span>
+                  <i class="fa-solid fa-money-bill-wave text-nuke-gold text-sm"></i>
+                </div>
+                <div class="text-2xl font-mono font-black text-nuke-gold mt-3" x-text="'Rp ' + Number(stats.totalRevenue || 0).toLocaleString('id-ID')"></div>
+                <p class="text-[11px] text-slate-400 mt-1 font-mono" x-text="(stats.completedOrders || 0) + ' completed transactions'"></p>
+              </div>
+
+              <!-- Stat 4: Invoices & Gateway -->
+              <div class="p-5 bg-nuke-surface border border-nuke-border rounded-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-xs font-semibold uppercase tracking-wider">
+                  <span>Invoices &amp; Gateway</span>
+                  <i class="fa-solid fa-shield-check text-slate-400 text-sm"></i>
+                </div>
+                <div class="mt-3 flex items-center justify-between">
+                  <span class="text-xl font-mono font-bold text-white" x-text="(stats.totalOrders || 0) + ' total'"></span>
+                  <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase font-mono"
+                        :class="stats.gatewayMode === 'production' ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/40' : 'bg-amber-500/15 text-amber-400 border border-amber-500/40'">
+                    <span class="w-1.5 h-1.5 rounded-full" :class="stats.gatewayMode === 'production' ? 'bg-emerald-400 animate-pulse' : 'bg-amber-400 animate-pulse'"></span>
+                    <span x-text="stats.gatewayMode || 'production'"></span>
+                  </span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">
+                  <span class="text-amber-400" x-text="(stats.pendingOrders || 0) + ' pending'"></span> • 
+                  <span class="text-slate-400" x-text="(stats.expiredOrders || 0) + ' expired'"></span>
+                </p>
+              </div>
+            </div>
+
+            <!-- Quick Action Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div class="p-6 bg-nuke-surface border border-nuke-border rounded-2xl space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-user-plus text-nuke-gold"></i>
+                  <span>Instant VIP Privilege Grant</span>
+                </h3>
+                <p class="text-xs text-slate-400">Instantly activate or extend VIP for any Android HWID without payment.</p>
+                <div class="flex flex-wrap gap-2 pt-2">
+                  <button @click.stop="openGrantModal('', 30)" class="px-3.5 py-2 bg-nuke-card hover:bg-nuke-cardHover text-slate-200 border border-nuke-border rounded-xl text-xs font-semibold transition">
+                    +30 Days VIP
+                  </button>
+                  <button @click.stop="openGrantModal('', 365)" class="px-3.5 py-2 bg-nuke-card hover:bg-nuke-cardHover text-slate-200 border border-nuke-border rounded-xl text-xs font-semibold transition">
+                    +1 Year VIP
+                  </button>
+                  <button @click.stop="openGrantModal('', 180)" class="px-3.5 py-2 bg-nuke-card hover:bg-nuke-cardHover text-slate-200 border border-nuke-border rounded-xl text-xs font-semibold transition">
+                    +180 Days VIP
+                  </button>
+                </div>
+              </div>
+
+              <div class="p-6 bg-nuke-surface border border-nuke-border rounded-2xl space-y-3">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-sliders text-cyan-400"></i>
+                  <span>Booster Emergency Switch</span>
+                </h3>
+                <p class="text-xs text-slate-400">Disable high-risk modules remotely across all active floating game overlays.</p>
+                <div class="flex flex-wrap gap-2 pt-2">
+                  <button @click="activeTab = 'booster'; fetchBoosterFeatures()" class="px-3.5 py-2 bg-cyan-500/15 text-cyan-400 border border-cyan-500/40 hover:bg-cyan-500/25 rounded-xl text-xs font-bold transition">
+                    Open Booster Maintenance Controls
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+                    <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB 2: ENTERPRISE DEVICES & USER MANAGEMENT                       -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'devices'" class="space-y-6">
+
+            <!-- ── DEVICE TELEMETRY SUMMARY KPI CARDS ───────────────────────── -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+              <div class="p-4 bg-nuke-surface border border-nuke-border rounded-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
+                  <span>Total Users / HWIDs</span>
+                  <i class="fa-solid fa-mobile-screen text-cyan-400 text-xs"></i>
+                </div>
+                <div class="text-2xl font-mono font-black text-white mt-2" x-text="devices.length || 0"></div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">Registered hardware devices</p>
+              </div>
+
+              <div class="p-4 bg-nuke-surface border border-nuke-border rounded-2xl relative overflow-hidden glow-emerald">
+                <div class="flex items-center justify-between text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
+                  <span>Active VIP Licenses</span>
+                  <i class="fa-solid fa-crown text-nuke-emerald text-xs"></i>
+                </div>
+                <div class="text-2xl font-mono font-black text-nuke-emerald mt-2" x-text="activeVipCount"></div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">Unexpired active subscribers</p>
+              </div>
+
+              <div class="p-4 bg-nuke-surface border border-nuke-border rounded-2xl relative overflow-hidden glow-cyan">
+                <div class="flex items-center justify-between text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
+                  <span>Holding Credits</span>
+                  <i class="fa-solid fa-gem text-cyan-400 text-xs"></i>
+                </div>
+                <div class="text-2xl font-mono font-black text-cyan-400 mt-2" x-text="totalHoldingCredits + ' CRD'"></div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono" x-text="creditHoldingCount + ' users hold credits'"></p>
+              </div>
+
+              <div class="p-4 bg-nuke-surface border border-nuke-border rounded-2xl relative overflow-hidden">
+                <div class="flex items-center justify-between text-slate-400 text-[11px] font-semibold uppercase tracking-wider">
+                  <span>Expired / Free Tier</span>
+                  <i class="fa-solid fa-user-clock text-slate-400 text-xs"></i>
+                </div>
+                <div class="text-2xl font-mono font-black text-slate-400 mt-2" x-text="expiredDevicesCount"></div>
+                <p class="text-[10px] text-slate-400 mt-1 font-mono">Without active VIP license</p>
+              </div>
+            </div>
+
+            <!-- ── DIRECT TARGET DEVICE MANAGER & QUICK TOP-UP STATION ──────── -->
+            <div class="bg-nuke-surface border border-nuke-borderLight rounded-2xl p-5 space-y-4 shadow-xl relative overflow-hidden">
+              <div class="absolute -top-16 -right-16 w-36 h-36 bg-amber-500/10 rounded-full blur-3xl pointer-events-none"></div>
+              <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-nuke-border pb-3.5">
+                <div>
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-400"></i>
+                    <span>Quick Device Inspector &amp; Top-Up Station</span>
+                  </h3>
+                  <p class="text-xs text-slate-400 mt-0.5">
+                    Lookup any Android HWID to inspect licenses, orders, and consumption history or grant privileges instantly.
+                  </p>
+                </div>
+                <div class="inline-flex items-center gap-2 text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-lg border border-emerald-500/20">
+                  <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+                  <span>Instant Edge KV Direct Access</span>
+                </div>
+              </div>
+
+              <!-- Input HWID Bar -->
+              <div class="flex flex-col sm:flex-row gap-2.5">
+                <div class="relative flex-1">
+                  <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-xs">
+                    <i class="fa-solid fa-fingerprint"></i>
+                  </span>
+                  <input type="text" x-model="targetDeviceId" @keydown.enter.prevent="openDeviceInspector(targetDeviceId)"
+                         placeholder="Enter or paste Android Hardware ID (e.g. 10f0d86a4a8f1d17 or ad79c453...)"
+                         class="w-full pl-10 pr-24 py-2.5 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-amber-300 placeholder-slate-500 focus:outline-none focus:border-amber-400 transition">
+                  <button type="button" @click="pasteTargetDeviceId()"
+                          class="absolute inset-y-1 right-1 px-3 bg-nuke-surface hover:bg-slate-800 text-slate-300 text-[11px] font-mono rounded-lg border border-nuke-border transition flex items-center gap-1.5">
+                    <i class="fa-regular fa-paste text-[10px]"></i>
+                    <span>Paste</span>
+                  </button>
+                </div>
+                <button type="button" @click="openDeviceInspector(targetDeviceId)" :disabled="lookupLoading || !targetDeviceId.trim()"
+                        class="px-5 py-2.5 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                  <span x-show="!lookupLoading"><i class="fa-solid fa-magnifying-glass"></i> Inspect User Profile</span>
+                  <span x-show="lookupLoading"><i class="fa-solid fa-spinner fa-spin"></i> Loading...</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ── SEARCH, FILTER & TOOLBAR CONTROLS ────────────────────────── -->
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              <!-- Search Bar -->
+              <div class="relative flex-1 max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 text-xs">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" x-model="deviceSearch" placeholder="Filter HWID, plan name, or tier..."
+                       class="w-full pl-9 pr-4 py-2 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-nuke-gold">
+              </div>
+
+              <!-- Filter Chips & Sorting & Exports -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Filter Chips -->
+                <div class="inline-flex rounded-xl bg-nuke-card border border-nuke-border p-1 text-[11px] font-mono">
+                  <button @click="deviceFilter = 'all'" :class="deviceFilter === 'all' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition">
+                    All (<span x-text="devices.length"></span>)
+                  </button>
+                  <button @click="deviceFilter = 'active'" :class="deviceFilter === 'active' ? 'bg-emerald-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition">
+                    Active VIP (<span x-text="activeVipCount"></span>)
+                  </button>
+                  <button @click="deviceFilter = 'credits'" :class="deviceFilter === 'credits' ? 'bg-cyan-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition">
+                    Credits &gt; 0 (<span x-text="creditHoldingCount"></span>)
+                  </button>
+                  <button @click="deviceFilter = 'expired'" :class="deviceFilter === 'expired' ? 'bg-slate-700 text-white font-bold' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition">
+                    Free / Expired (<span x-text="expiredDevicesCount"></span>)
+                  </button>
+                </div>
+
+                <!-- Sorting Dropdown -->
+                <div class="relative">
+                  <select x-model="deviceSort" class="px-3 py-1.5 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-slate-300 focus:outline-none focus:border-nuke-gold">
+                    <option value="updated">Sort: Last Active</option>
+                    <option value="credits">Sort: Highest Credits</option>
+                    <option value="expiry">Sort: Longest VIP</option>
+                    <option value="id">Sort: Hardware ID (A-Z)</option>
+                  </select>
+                </div>
+
+                <!-- Export CSV & JSON -->
+                <button @click="exportDevicesCsv()" class="px-2.5 py-1.5 rounded-xl bg-nuke-card hover:bg-slate-800 text-slate-300 border border-nuke-border text-xs font-mono transition flex items-center gap-1.5" title="Export current list to CSV">
+                  <i class="fa-solid fa-file-csv text-emerald-400"></i>
+                  <span>CSV</span>
+                </button>
+                <button @click="exportDevicesJson()" class="px-2.5 py-1.5 rounded-xl bg-nuke-card hover:bg-slate-800 text-slate-300 border border-nuke-border text-xs font-mono transition flex items-center gap-1.5" title="Export current list to JSON">
+                  <i class="fa-solid fa-code text-cyan-400"></i>
+                  <span>JSON</span>
+                </button>
+
+                <!-- Action Triggers -->
+                <button @click.stop="openCreditModal('', 0)" class="px-3 py-1.5 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-gem text-[10px]"></i>
+                  <span>Adjust Credits</span>
+                </button>
+                <button @click.stop="openGrantModal('', 30)" class="px-3 py-1.5 bg-nuke-gold hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-1.5">
+                  <i class="fa-solid fa-crown text-[10px]"></i>
+                  <span>Grant VIP</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ── HIGH-DENSITY ENTERPRISE DEVICE TABLE ──────────────────────── -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl overflow-hidden shadow-xl">
+              <!-- Desktop Table -->
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-nuke-card text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-nuke-border">
+                    <tr>
+                      <th class="px-4 py-3">Hardware ID (HWID)</th>
+                      <th class="px-4 py-3">Plan / Tier</th>
+                      <th class="px-4 py-3">Wallet Credits</th>
+                      <th class="px-4 py-3">VIP Status &amp; Time Left</th>
+                      <th class="px-4 py-3">Expiry Date</th>
+                      <th class="px-4 py-3">Last Active</th>
+                      <th class="px-4 py-3 text-right">Quick Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-nuke-border font-mono">
+                    <template x-for="dev in filteredDevices" :key="dev.deviceId">
+                      <tr class="hover:bg-nuke-cardHover/60 transition group cursor-pointer" @click="openDeviceInspector(dev.deviceId)">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full" :class="isVipActive(dev.expiresAt) ? 'bg-emerald-400 animate-pulse' : 'bg-slate-600'"></span>
+                            <span class="text-white font-bold group-hover:text-amber-400 transition" x-text="dev.deviceId"></span>
+                            <button @click.stop="copyText(dev.deviceId)" class="text-slate-500 hover:text-slate-300" title="Copy HWID"><i class="fa-regular fa-copy"></i></button>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-bold uppercase"
+                                x-text="dev.planName || dev.planId || 'Free User'"></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-cyan-500/10 hover:bg-cyan-500/20 text-cyan-300 border border-cyan-500/30 text-xs font-bold transition"
+                                  title="Manage User Wallet">
+                            <i class="fa-solid fa-gem text-[10px] text-cyan-400"></i>
+                            <span x-text="dev.creditBalance || 0"></span>
+                            <span class="text-[9px] text-cyan-400/80 font-normal">CRD</span>
+                          </button>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded text-[10px] font-bold uppercase"
+                                :class="isVipActive(dev.expiresAt) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? 'bg-emerald-400' : 'bg-slate-500'"></span>
+                            <span x-text="formatRemainingDays(dev.expiresAt)"></span>
+                          </span>
+                        </td>
+                        <td class="px-4 py-3 text-slate-400" x-text="formatDate(dev.expiresAt)"></td>
+                        <td class="px-4 py-3 text-slate-500 text-[11px]" x-text="formatRelativeTime(dev.updatedAt)"></td>
+                        <td class="px-4 py-3 text-right space-x-1" @click.stop>
+                          <button @click.stop="openDeviceInspector(dev.deviceId)" class="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30" title="Inspect Full Profile, Orders &amp; Usage">
+                            <i class="fa-solid fa-magnifying-glass-chart"></i>
+                          </button>
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-cyan-400 border border-nuke-border" title="Adjust Credits">
+                            <i class="fa-solid fa-gem"></i>
+                          </button>
+                          <button @click.stop="openGrantModal(dev.deviceId, 30)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-nuke-gold border border-nuke-border" title="Grant/Extend VIP">
+                            <i class="fa-solid fa-crown"></i>
+                          </button>
+                          <button @click.stop="revokeDeviceVip(dev.deviceId)" class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Revoke VIP Access">
+                            <i class="fa-solid fa-ban"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Mobile Card Stack -->
+              <div class="md:hidden divide-y divide-nuke-border">
+                <template x-for="dev in filteredDevices" :key="dev.deviceId">
+                  <div class="p-4 space-y-2.5">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-mono font-bold uppercase" x-text="dev.planName || dev.planId || 'Free User'"></span>
+                        <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold">
+                          <i class="fa-solid fa-gem text-[9px] text-cyan-400"></i>
+                          <span x-text="(dev.creditBalance || 0) + ' Credits'"></span>
+                        </button>
+                      </div>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                            :class="isVipActive(dev.expiresAt) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? 'bg-emerald-400' : 'bg-slate-500'"></span>
+                        <span x-text="formatRemainingDays(dev.expiresAt)"></span>
+                      </span>
+                    </div>
+
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-2 truncate">
+                        <span class="text-white font-mono font-bold text-xs truncate" x-text="dev.deviceId"></span>
+                        <button @click.stop="copyText(dev.deviceId)" class="text-slate-500 hover:text-slate-300 text-xs"><i class="fa-regular fa-copy"></i></button>
+                      </div>
+                      <span class="text-[10px] text-slate-500 font-mono" x-text="formatRelativeTime(dev.updatedAt)"></span>
+                    </div>
+
+                    <div class="text-[11px] font-mono text-slate-400">
+                      Expiry: <span class="text-slate-200" x-text="formatDate(dev.expiresAt)"></span>
+                    </div>
+
+                    <div class="pt-2 grid grid-cols-4 gap-1.5">
+                      <button @click.stop="openDeviceInspector(dev.deviceId)" class="py-1.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-magnifying-glass-chart text-[10px]"></i>
+                        <span>Inspect</span>
+                      </button>
+                      <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="py-1.5 rounded-lg bg-nuke-card text-cyan-400 border border-nuke-border text-xs font-bold flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-gem text-[10px]"></i>
+                        <span>Credits</span>
+                      </button>
+                      <button @click.stop="openGrantModal(dev.deviceId, 30)" class="py-1.5 rounded-lg bg-nuke-card text-nuke-gold border border-nuke-border text-xs font-bold flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-crown text-[10px]"></i>
+                        <span>VIP</span>
+                      </button>
+                      <button @click.stop="revokeDeviceVip(dev.deviceId)" class="py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold flex items-center justify-center">
+                        Revoke
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <div x-show="filteredDevices.length === 0" class="p-12 text-center text-slate-500 text-xs">
+                <i class="fa-solid fa-mobile-screen text-2xl text-slate-600 mb-2"></i>
+                <p>No matching devices found in Edge KV matching your filter criteria.</p>
+              </div>
+            </div>
+          </div>
+
+                  <!-- 2-Column Action Panels -->
+                  <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                    <!-- Panel A: Adjust Credits -->
+                    <div class="p-4 bg-nuke-surface border border-cyan-500/30 rounded-xl space-y-3">
+                      <div class="flex items-center justify-between border-b border-nuke-border pb-2">
+                        <h4 class="text-xs font-bold text-cyan-300 flex items-center gap-2">
+                          <i class="fa-solid fa-gem text-cyan-400"></i>
+                          <span>1. Add or Set Credits</span>
+                        </h4>
+                        <span class="text-[10px] font-mono text-cyan-400/80">Session and Booster Credits</span>
+                      </div>
+
+                      <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">Quick Presets</label>
+                        <div class="flex flex-wrap gap-1.5">
+                          <button type="button" @click="directCreditAmount = 5; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+5 (Rp 3K)</button>
+                          <button type="button" @click="directCreditAmount = 10; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+10 (Rp 5K)</button>
+                          <button type="button" @click="directCreditAmount = 25; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+25 (Rp 10K)</button>
+                          <button type="button" @click="directCreditAmount = 60; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+60 (Rp 20K)</button>
+                          <button type="button" @click="directCreditAmount = 100; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+100</button>
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Mode Operasi</label>
+                          <select x-model="directCreditAction" class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+                            <option value="add">+ Tambah (Add)</option>
+                            <option value="set">= Setel Persis (Set)</option>
+                            <option value="deduct">- Potong (Deduct)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Credit Amount</label>
+                          <input type="number" min="1" max="10000" x-model.number="directCreditAmount"
+                                 class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+                        </div>
+                      </div>
+
+                      <button type="button" @click="submitDirectCredit()" :disabled="loading"
+                              class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                        <span x-show="!loading"><i class="fa-solid fa-bolt mr-1"></i> Apply Credits to Device</span>
+                        <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...</span>
+                      </button>
+                    </div>
+
+                    <!-- Panel B: Grant VIP Pass -->
+                    <div class="p-4 bg-nuke-surface border border-amber-500/30 rounded-xl space-y-3">
+                      <div class="flex items-center justify-between border-b border-nuke-border pb-2">
+                        <h4 class="text-xs font-bold text-amber-300 flex items-center gap-2">
+                          <i class="fa-solid fa-crown text-amber-400"></i>
+                          <span>2. Grant or Extend VIP Pass</span>
+                        </h4>
+                        <span class="text-[10px] font-mono text-amber-400/80">Akses Tanpa Iklan</span>
+                      </div>
+
+                      <div>
+                        <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">Quick Presets</label>
+                        <div class="flex flex-wrap gap-1.5">
+                          <button type="button" @click="directVipDays = 7; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+7 Hari (1 Ming)</button>
+                          <button type="button" @click="directVipDays = 30; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+30 Hari (1 Bln)</button>
+                          <button type="button" @click="directVipDays = 90; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+90 Hari</button>
+                          <button type="button" @click="directVipDays = 180; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+180 Hari</button>
+                          <button type="button" @click="directVipDays = 365; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+1 Tahun</button>
+                        </div>
+                      </div>
+
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Mode Operasi</label>
+                          <select x-model="directVipAction" class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                            <option value="extend">+ Perpanjang (Extend)</option>
+                            <option value="set">= Setel Ulang (Reset &amp; Set)</option>
+                            <option value="revoke">X Cabut VIP (Revoke)</option>
+                          </select>
+                        </div>
+                        <div>
+                          <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Durasi (Hari)</label>
+                          <input type="number" min="1" max="3650" x-model.number="directVipDays"
+                                 class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                        </div>
+                      </div>
+
+                      <button type="button" @click="submitDirectVip()" :disabled="loading"
+                              class="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                        <span x-show="!loading"><i class="fa-solid fa-crown mr-1"></i> Terapkan VIP ke Device</span>
+                        <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Menyimpan...</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Search and Action Bar -->
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+              <div class="relative flex-1 max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3 flex items-center text-slate-500 text-xs">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" x-model="deviceSearch" placeholder="Search HWID or Plan..."
+                       class="w-full pl-9 pr-4 py-2 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-nuke-gold">
+              </div>
+              <div class="flex items-center gap-2">
+                <button @click.stop="openCreditModal('', 0)"
+                        class="px-4 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-gem"></i>
+                  <span>Adjust Credits</span>
+                </button>
+                <button @click.stop="openGrantModal('', 30)"
+                        class="px-4 py-2 bg-nuke-gold hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                  <i class="fa-solid fa-crown"></i>
+                  <span>Grant VIP Access</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Responsive Card Layout (Mobile) & High-Density Table (Desktop) -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl overflow-hidden">
+              <!-- Desktop Table -->
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-nuke-card text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-nuke-border">
+                    <tr>
+                      <th class="px-4 py-3">Hardware Fingerprint (HWID)</th>
+                      <th class="px-4 py-3">Plan</th>
+                      <th class="px-4 py-3">Credits</th>
+                      <th class="px-4 py-3">Status</th>
+                      <th class="px-4 py-3">Expires At</th>
+                      <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-nuke-border font-mono">
+                    <template x-for="dev in filteredDevices" :key="dev.deviceId">
+                      <tr class="hover:bg-nuke-cardHover/50 transition">
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-2">
+                            <span class="text-white font-bold" x-text="dev.deviceId"></span>
+                            <button @click="copyText(dev.deviceId)" class="text-slate-500 hover:text-slate-300"><i class="fa-regular fa-copy"></i></button>
+                          </div>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px]" x-text="dev.planId || 'VIP'"></span>
+                        </td>
+                        <td class="px-4 py-3">
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-300 border border-amber-500/30 text-xs font-bold transition"
+                                  title="Manage Credits">
+                            <i class="fa-solid fa-gem text-[10px] text-amber-400"></i>
+                            <span x-text="dev.creditBalance || 0"></span>
+                            <span class="text-[9px] text-amber-400/80 font-normal">CRD</span>
+                          </button>
+                        </td>
+                        <td class="px-4 py-3">
+                          <span class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                                :class="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30') : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
+                            <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'bg-cyan-400' : 'bg-emerald-400') : 'bg-slate-500'"></span>
+                            <span x-text="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'SESSION' : 'VIP ACTIVE') : 'EXPIRED'"></span>
+                          </span>
+                          <div class="text-[10px] font-mono text-slate-400 mt-0.5" x-text="formatRemainingDays(dev.expiresAt)"></div>
+                        </td>
+                        <td class="px-4 py-3 text-slate-400 text-xs font-mono" x-text="formatDate(dev.expiresAt)"></td>
+                        <td class="px-4 py-3 text-right space-x-1">
+                          <button @click.stop="targetDeviceId = dev.deviceId; lookupDevice(dev.deviceId); window.scrollTo({top: 0, behavior: 'smooth'});" class="p-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/30" title="Direct Manager & Manual Top-Up">
+                            <i class="fa-solid fa-wand-magic-sparkles"></i>
+                          </button>
+                          <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-cyan-400 border border-nuke-border" title="Manage Credits">
+                            <i class="fa-solid fa-gem"></i>
+                          </button>
+                          <button @click.stop="openGrantModal(dev.deviceId, 30)" class="p-1.5 rounded-lg bg-nuke-card hover:bg-nuke-cardHover text-nuke-gold border border-nuke-border" title="Manage VIP">
+                            <i class="fa-solid fa-crown"></i>
+                          </button>
+                          <button @click="revokeDeviceVip(dev.deviceId)" class="p-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30" title="Revoke VIP">
+                            <i class="fa-solid fa-ban"></i>
+                          </button>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Mobile Card Stack -->
+              <div class="md:hidden divide-y divide-nuke-border">
+                <template x-for="dev in filteredDevices" :key="dev.deviceId">
+                  <div class="p-4 space-y-2">
+                    <div class="flex items-center justify-between">
+                      <div class="flex items-center gap-1.5">
+                        <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-200 border border-slate-700 text-[10px] font-mono" x-text="dev.planId || 'VIP'"></span>
+                        <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30 text-[10px] font-mono font-bold">
+                          <i class="fa-solid fa-gem text-[9px] text-amber-400"></i>
+                          <span x-text="(dev.creditBalance || 0) + ' Credits'"></span>
+                        </button>
+                      </div>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                            :class="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'bg-cyan-500/15 text-cyan-400 border border-cyan-500/30' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30') : 'bg-slate-700/30 text-slate-400 border border-slate-700'">
+                        <span class="w-1.5 h-1.5 rounded-full" :class="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'bg-cyan-400' : 'bg-emerald-400') : 'bg-slate-500'"></span>
+                        <span x-text="isVipActive(dev.expiresAt) ? (isSessionActive(dev) ? 'SESSION' : 'VIP ACTIVE') : 'EXPIRED'"></span>
+                      </span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                      <span class="text-white font-mono font-bold text-xs truncate" x-text="dev.deviceId"></span>
+                      <button @click="copyText(dev.deviceId)" class="text-slate-500 hover:text-slate-300 text-xs"><i class="fa-regular fa-copy"></i></button>
+                    </div>
+                    <div class="text-[11px] font-mono text-slate-400 flex items-center justify-between">
+                      <span>Expires: <span class="text-slate-200" x-text="formatDate(dev.expiresAt)"></span></span>
+                      <span class="text-cyan-400 font-bold" x-text="formatRemainingDays(dev.expiresAt)"></span>
+                    </div>
+                    <div class="pt-2 flex items-center gap-2">
+                      <button @click.stop="targetDeviceId = dev.deviceId; lookupDevice(dev.deviceId); window.scrollTo({top: 0, behavior: 'smooth'});" class="px-2.5 py-1.5 rounded-lg bg-amber-500/15 text-amber-300 border border-amber-500/30 text-xs font-bold flex items-center justify-center gap-1">
+                        <i class="fa-solid fa-wand-magic-sparkles text-[10px]"></i>
+                        <span>Direct</span>
+                      </button>
+                      <button @click.stop="openCreditModal(dev.deviceId, dev.creditBalance || 0)" class="flex-1 py-1.5 rounded-lg bg-nuke-card text-cyan-400 border border-nuke-border text-xs font-bold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-gem text-[10px]"></i>
+                        <span>Credits</span>
+                      </button>
+                      <button @click.stop="openGrantModal(dev.deviceId, 30)" class="flex-1 py-1.5 rounded-lg bg-nuke-card text-nuke-gold border border-nuke-border text-xs font-bold flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-crown text-[10px]"></i>
+                        <span>VIP Plan</span>
+                      </button>
+                      <button @click="revokeDeviceVip(dev.deviceId)" class="px-3 py-1.5 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 text-xs font-bold">
+                        Revoke
+                      </button>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <div x-show="filteredDevices.length === 0" class="p-8 text-center text-slate-500 text-xs">
+                No matching devices found in Edge KV.
+              </div>
+            </div>
+          </div>
+
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB 3: BOOSTER MAINTENANCE & COMPONENT OVERRIDES                 -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'booster'" class="space-y-6">
+            
+            <!-- Architecture Notice Banner -->
+            <div class="p-4 bg-nuke-surface border border-nuke-borderLight rounded-2xl flex items-start gap-3.5">
+              <i class="fa-solid fa-circle-info text-nuke-gold text-lg mt-0.5"></i>
+              <div class="text-xs space-y-1">
+                <h4 class="font-bold text-white uppercase tracking-wider">Dynamic Edge Configuration Architecture</h4>
+                <p class="text-slate-300 leading-relaxed">
+                  Toggling components below writes directly to <code class="text-nuke-gold font-mono bg-nuke-card px-1.5 py-0.5 rounded">config:features</code> inside Cloudflare Worker KV.
+                  Game Nuke Android clients poll this endpoint dynamically. (GitHub Pages serves static repository backups and cannot be modified directly via browser client requests).
+                </p>
+              </div>
+            </div>
+
+            <!-- Emergency Broadcast Controller -->
+            <div class="p-6 bg-nuke-surface border border-nuke-border rounded-2xl space-y-4">
+              <div class="flex items-center justify-between">
+                <div>
+                  <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                    <i class="fa-solid fa-bullhorn text-amber-400"></i>
+                    <span>Emergency Global Broadcast</span>
+                  </h3>
+                  <p class="text-xs text-slate-400">Display instant high-priority banner inside floating HUD on all active devices.</p>
+                </div>
+                <label class="relative inline-flex items-center cursor-pointer">
+                  <input type="checkbox" x-model="boosterData.emergency_broadcast.active" class="sr-only peer">
+                  <div class="w-11 h-6 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                </label>
+              </div>
+
+              <div x-show="boosterData.emergency_broadcast.active">
+                <input type="text" x-model="boosterData.emergency_broadcast.message" placeholder="e.g., Server maintenance in progress. High-frequency aim boosters temporarily restricted."
+                       class="w-full px-4 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-nuke-gold">
+              </div>
+            </div>
+
+            <!-- Component Toggles Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <template x-for="(comp, key) in boosterData.component_overrides" :key="key">
+                <div class="p-5 bg-nuke-surface border border-nuke-border rounded-2xl space-y-3 transition hover:border-nuke-borderLight">
+                  <div class="flex items-center justify-between">
+                    <div>
+                      <h4 class="text-xs font-bold text-white font-mono uppercase" x-text="key.replace('_', ' ')"></h4>
+                      <p class="text-[10px] text-slate-400" x-text="comp.enabled ? 'Component Active across HUD' : 'Disabled / Maintenance'"></p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" x-model="comp.enabled" class="sr-only peer">
+                      <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-nuke-emerald"></div>
+                    </label>
+                  </div>
+
+                  <div x-show="!comp.enabled">
+                    <input type="text" x-model="comp.disabled_reason" placeholder="Reason (e.g. Under Maintenance)"
+                           class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-[11px] text-slate-300 placeholder-slate-600 focus:outline-none focus:border-nuke-gold">
+                  </div>
+                </div>
+              </template>
+            </div>
+
+            <!-- Save Button -->
+            <div class="flex justify-end">
+              <button @click="saveBoosterFeatures()" :disabled="loading"
+                      class="px-6 py-2.5 bg-nuke-gold hover:bg-amber-400 text-slate-950 font-black text-xs rounded-xl shadow-lg transition flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span>SAVE CHANGES TO CLOUDFLARE EDGE KV</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB 4: ORDERS & INVOICES                                          -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'orders'" class="space-y-4">
+
+            <!-- ── ORDER TELEMETRY KPI TILES ─────────────────────────────────── -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div class="p-3.5 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] font-semibold text-slate-400 uppercase tracking-wider">Total Invoices</div>
+                <div class="text-xl font-mono font-black text-white mt-1" x-text="orders.length"></div>
+                <div class="text-[10px] text-slate-500 font-mono">Recorded in Edge KV</div>
+              </div>
+              <div class="p-3.5 bg-nuke-surface border border-nuke-border rounded-xl glow-emerald">
+                <div class="text-[10px] font-semibold text-emerald-400 uppercase tracking-wider">Completed / Paid</div>
+                <div class="text-xl font-mono font-black text-emerald-400 mt-1" x-text="completedOrdersCount"></div>
+                <div class="text-[10px] text-slate-500 font-mono">Settled &amp; Fulfilled</div>
+              </div>
+              <div class="p-3.5 bg-nuke-surface border border-nuke-border rounded-xl glow-gold">
+                <div class="text-[10px] font-semibold text-amber-400 uppercase tracking-wider">Pending Orders</div>
+                <div class="text-xl font-mono font-black text-amber-400 mt-1" x-text="pendingOrdersCount"></div>
+                <div class="text-[10px] text-slate-500 font-mono">Awaiting verification</div>
+              </div>
+              <div class="p-3.5 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] font-semibold text-rose-400 uppercase tracking-wider">Expired / Cancelled</div>
+                <div class="text-xl font-mono font-black text-rose-400 mt-1" x-text="inactiveOrdersCount"></div>
+                <div class="text-[10px] text-slate-500 font-mono">Ready to be purged</div>
+              </div>
+            </div>
+
+            <!-- ── SEARCH BAR & CONTROLS ─────────────────────────────────────── -->
+            <div class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+              <div class="relative flex-1 max-w-md">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-xs">
+                  <i class="fa-solid fa-magnifying-glass"></i>
+                </span>
+                <input type="text" x-model="orderSearch" placeholder="Cari Order ID, HWID, Paket..."
+                       class="w-full pl-9 pr-4 py-2 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-white placeholder-slate-500 focus:outline-none focus:border-nuke-gold transition">
+              </div>
+
+              <!-- Filter Buttons & Purge Actions -->
+              <div class="flex items-center gap-2 flex-wrap">
+                <!-- Filter Pills -->
+                <div class="inline-flex rounded-xl bg-nuke-card border border-nuke-border p-1 text-[11px] font-mono overflow-x-auto max-w-full">
+                  <button @click="orderFilter = 'all'" :class="orderFilter === 'all' ? 'bg-nuke-gold text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap">
+                    Semua (<span x-text="orders.length"></span>)
+                  </button>
+                  <button @click="orderFilter = 'completed'" :class="orderFilter === 'completed' ? 'bg-emerald-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap">
+                    Paid (<span x-text="completedOrdersCount"></span>)
+                  </button>
+                  <button @click="orderFilter = 'pending'" :class="orderFilter === 'pending' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap">
+                    Pending (<span x-text="pendingOrdersCount"></span>)
+                  </button>
+                  <button @click="orderFilter = 'inactive'" :class="orderFilter === 'inactive' ? 'bg-rose-500 text-white font-bold shadow' : 'text-slate-400 hover:text-white'" class="px-2.5 py-1 rounded-lg transition whitespace-nowrap">
+                    Expired/Batal (<span x-text="inactiveOrdersCount"></span>)
+                  </button>
+                </div>
+
+                <!-- Action Buttons -->
+                <button @click="reconcileAllWithPakasir()" :disabled="loading" class="px-3 py-1.5 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow" title="Cek otomatis semua order pending ke server Pakasir">
+                  <i class="fa-solid fa-arrows-rotate" :class="{ 'fa-spin': loading }"></i>
+                  <span>Sync Pakasir</span>
+                </button>
+                <button @click="openCreateOrderModal()" class="px-3 py-1.5 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition flex items-center gap-1.5 shadow" title="Buat manual invoice order">
+                  <i class="fa-solid fa-plus"></i>
+                  <span>New Order</span>
+                </button>
+                <button @click="purgeInactiveOrders()" :disabled="loading || inactiveOrdersCount === 0"
+                        class="px-3 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed shadow"
+                        title="Hapus SEMUA transaksi Expired dan Cancelled secara permanen dari Cloudflare Edge KV">
+                  <i class="fa-solid fa-trash-can"></i>
+                  <span>Hapus Semua Inactive (<span x-text="inactiveOrdersCount"></span>)</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- ── ORDER RECORDS LISTING CONTAINER ──────────────────────────── -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl overflow-hidden shadow-xl">
+              
+              <!-- DESKTOP / TABLET VIEW: High Density Table -->
+              <div class="hidden md:block overflow-x-auto">
+                <table class="w-full text-left text-xs">
+                  <thead class="bg-nuke-card text-slate-400 uppercase font-mono text-[10px] tracking-wider border-b border-nuke-border">
+                    <tr>
+                      <th class="px-4 py-3">Order ID &amp; Target HWID</th>
+                      <th class="px-4 py-3">Plan / Item</th>
+                      <th class="px-4 py-3">Payment Method</th>
+                      <th class="px-4 py-3">Total Amount</th>
+                      <th class="px-4 py-3">Status</th>
+                      <th class="px-4 py-3">Created Date</th>
+                      <th class="px-4 py-3 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-nuke-border font-mono">
+                    <template x-for="ord in filteredOrders" :key="ord.orderId">
+                      <tr class="hover:bg-nuke-cardHover/50 transition">
+                        <!-- Order ID & HWID -->
+                        <td class="px-4 py-3">
+                          <div class="flex items-center gap-1.5">
+                            <span class="text-white font-bold" x-text="ord.orderId"></span>
+                            <button @click.stop="copyText(ord.orderId)" class="text-slate-500 hover:text-slate-300" title="Copy Order ID"><i class="fa-regular fa-copy text-[10px]"></i></button>
+                          </div>
+                          <div class="flex items-center gap-1 text-[10px] text-slate-500 mt-0.5">
+                            <i class="fa-solid fa-fingerprint text-[9px] text-slate-600"></i>
+                            <span x-text="ord.deviceId || '-'"></span>
+                            <button x-show="ord.deviceId" @click.stop="copyText(ord.deviceId)" class="text-slate-600 hover:text-slate-400" title="Copy HWID"><i class="fa-regular fa-copy text-[9px]"></i></button>
+                          </div>
+                        </td>
+
+                        <!-- Plan / Item -->
+                        <td class="px-4 py-3">
+                          <span class="text-slate-200 font-semibold" x-text="ord.planId || 'VIP Package'"></span>
+                        </td>
+
+                        <!-- Payment Method -->
+                        <td class="px-4 py-3">
+                          <span class="px-2 py-0.5 rounded bg-slate-800 text-slate-300 border border-slate-700 text-[10px] uppercase font-bold"
+                                x-text="ord.paymentMethod || 'QRIS'"></span>
+                        </td>
+
+                        <!-- Total Amount -->
+                        <td class="px-4 py-3">
+                          <div class="font-bold text-nuke-gold" x-text="'Rp ' + Number(ord.totalPayment || ord.amount || 0).toLocaleString('id-ID')"></div>
+                          <div class="text-[10px] text-slate-500" x-text="'Fee: Rp ' + Number(ord.fee || 0).toLocaleString('id-ID')"></div>
+                        </td>
+
+                        <!-- Status Badge -->
+                        <td class="px-4 py-3">
+                          <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase font-mono"
+                                :class="{
+                                  'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30': ord.status === 'completed' || ord.status === 'paid',
+                                  'bg-amber-500/15 text-amber-400 border border-amber-500/30': ord.status === 'pending',
+                                  'bg-rose-500/15 text-rose-400 border border-rose-500/30': ord.status === 'expired',
+                                  'bg-slate-700/30 text-slate-400 border border-slate-700': ord.status === 'cancelled'
+                                }">
+                            <span class="w-1.5 h-1.5 rounded-full"
+                                  :class="{
+                                    'bg-emerald-400 animate-pulse': ord.status === 'completed' || ord.status === 'paid',
+                                    'bg-amber-400': ord.status === 'pending',
+                                    'bg-rose-400': ord.status === 'expired',
+                                    'bg-slate-500': ord.status === 'cancelled'
+                                  }"></span>
+                            <span x-text="ord.status"></span>
+                          </span>
+                        </td>
+
+                        <!-- Created -->
+                        <td class="px-4 py-3 text-slate-400 text-[11px]" x-text="formatDate(ord.createdAt)"></td>
+
+                        <!-- Actions -->
+                        <td class="px-4 py-3 text-right space-x-1" @click.stop>
+                          <!-- Pakasir Check -->
+                          <button x-show="ord.paymentMethod !== 'admin_manual' && ord.status === 'pending'"
+                                  @click="verifyOrderWithPakasir(ord.orderId)"
+                                  class="p-1.5 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/40" title="Cek Status Pembayaran ke Pakasir">
+                            <i class="fa-solid fa-cloud-arrow-down text-[10px]"></i>
+                          </button>
+                          <!-- Manual Approve -->
+                          <button x-show="ord.status === 'pending'"
+                                  @click="updateOrderStatus(ord.orderId, 'completed')"
+                                  class="p-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/40" title="Verifikasi Lunas &amp; Aktifkan Akses">
+                            <i class="fa-solid fa-check text-[10px]"></i>
+                          </button>
+                          <!-- Cancel Invoice -->
+                          <button x-show="ord.status === 'pending'"
+                                  @click="updateOrderStatus(ord.orderId, 'cancelled')"
+                                  class="p-1.5 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30" title="Batalkan Invoice">
+                            <i class="fa-solid fa-xmark text-[10px]"></i>
+                          </button>
+                          <!-- PERMANENT DELETE (Active only for Cancelled and Expired orders) -->
+                          <button x-show="ord.status === 'cancelled' || ord.status === 'expired'"
+                                  @click="deleteOrder(ord.orderId)"
+                                  class="p-1.5 rounded-lg bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 transition" title="Hapus Permanen dari Cloudflare KV">
+                            <i class="fa-solid fa-trash text-[10px]"></i>
+                          </button>
+                          <!-- Audit Lock for Paid/Completed orders -->
+                          <span x-show="ord.status === 'completed' || ord.status === 'paid'"
+                                class="inline-flex items-center gap-1 text-[10px] text-slate-500 font-mono px-2 py-1 rounded bg-slate-800/40 border border-slate-700/50"
+                                title="Transaksi lunas terkunci demi integritas pembukuan dan audit finansial">
+                            <i class="fa-solid fa-lock text-[9px] text-slate-400"></i>
+                            <span class="text-[9px]">LOCKED</span>
+                          </span>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- MOBILE VIEW: Dedicated Card Stack (Touch Optimized) -->
+              <div class="md:hidden divide-y divide-nuke-border">
+                <template x-for="ord in filteredOrders" :key="ord.orderId">
+                  <div class="p-4 space-y-3 font-mono">
+                    <!-- Top Row: Order ID + Status Badge -->
+                    <div class="flex items-center justify-between gap-2">
+                      <div class="flex items-center gap-1.5 min-w-0">
+                        <i class="fa-solid fa-receipt text-amber-400 text-xs"></i>
+                        <span class="text-white font-bold text-xs truncate" x-text="ord.orderId"></span>
+                        <button @click.stop="copyText(ord.orderId)" class="text-slate-500 hover:text-slate-300 p-1" title="Copy Order ID">
+                          <i class="fa-regular fa-copy text-[10px]"></i>
+                        </button>
+                      </div>
+                      <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-bold uppercase shrink-0"
+                            :class="{
+                              'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30': ord.status === 'completed' || ord.status === 'paid',
+                              'bg-amber-500/15 text-amber-400 border border-amber-500/30': ord.status === 'pending',
+                              'bg-rose-500/15 text-rose-400 border border-rose-500/30': ord.status === 'expired',
+                              'bg-slate-700/30 text-slate-400 border border-slate-700': ord.status === 'cancelled'
+                            }">
+                        <span class="w-1.5 h-1.5 rounded-full"
+                              :class="{
+                                'bg-emerald-400 animate-pulse': ord.status === 'completed' || ord.status === 'paid',
+                                'bg-amber-400': ord.status === 'pending',
+                                'bg-rose-400': ord.status === 'expired',
+                                'bg-slate-500': ord.status === 'cancelled'
+                              }"></span>
+                        <span x-text="ord.status"></span>
+                      </span>
+                    </div>
+
+                    <!-- Target HWID -->
+                    <div class="flex items-center justify-between text-[11px] bg-nuke-card p-2 rounded-lg border border-nuke-border">
+                      <div class="flex items-center gap-1.5 text-slate-400 truncate">
+                        <i class="fa-solid fa-fingerprint text-slate-500"></i>
+                        <span class="truncate" x-text="ord.deviceId || 'No HWID'"></span>
+                      </div>
+                      <button x-show="ord.deviceId" @click.stop="copyText(ord.deviceId)" class="text-slate-500 hover:text-slate-300 px-1 shrink-0" title="Copy HWID">
+                        <i class="fa-regular fa-copy text-xs"></i>
+                      </button>
+                    </div>
+
+                    <!-- Details Row: Plan & Payment Amount -->
+                    <div class="grid grid-cols-2 gap-2 text-xs">
+                      <div>
+                        <div class="text-[10px] text-slate-500 uppercase">Paket / Item</div>
+                        <div class="text-slate-200 font-semibold truncate" x-text="ord.planId || 'VIP Package'"></div>
+                        <div class="text-[10px] text-slate-400" x-text="(ord.paymentMethod || 'QRIS').toUpperCase()"></div>
+                      </div>
+                      <div class="text-right">
+                        <div class="text-[10px] text-slate-500 uppercase">Total Bayar</div>
+                        <div class="text-nuke-gold font-bold text-sm" x-text="'Rp ' + Number(ord.totalPayment || ord.amount || 0).toLocaleString('id-ID')"></div>
+                        <div class="text-[10px] text-slate-500" x-text="formatDate(ord.createdAt)"></div>
+                      </div>
+                    </div>
+
+                    <!-- Mobile Action Buttons -->
+                    <div class="pt-2 border-t border-nuke-border flex flex-wrap gap-2">
+                      <!-- Verify Live with Pakasir -->
+                      <button x-show="ord.paymentMethod !== 'admin_manual' && ord.status === 'pending'"
+                              @click.stop="verifyOrderWithPakasir(ord.orderId)"
+                              class="flex-1 min-h-[36px] py-1.5 px-3 rounded-xl bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-cloud-arrow-down text-xs"></i>
+                        <span>Cek Pakasir</span>
+                      </button>
+
+                      <!-- Mark Completed / Approve -->
+                      <button x-show="ord.status === 'pending'"
+                              @click.stop="updateOrderStatus(ord.orderId, 'completed')"
+                              class="flex-1 min-h-[36px] py-1.5 px-3 rounded-xl bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-check text-xs"></i>
+                        <span>Setujui</span>
+                      </button>
+
+                      <!-- Cancel Invoice -->
+                      <button x-show="ord.status === 'pending'"
+                              @click.stop="updateOrderStatus(ord.orderId, 'cancelled')"
+                              class="flex-1 min-h-[36px] py-1.5 px-3 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 text-amber-400 border border-amber-500/30 text-xs font-bold transition flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-xmark text-xs"></i>
+                        <span>Batal</span>
+                      </button>
+
+                      <!-- HAPUS PERMANEN (Hanya untuk Expired & Cancelled) -->
+                      <button x-show="ord.status === 'cancelled' || ord.status === 'expired'"
+                              @click.stop="deleteOrder(ord.orderId)"
+                              class="w-full min-h-[36px] py-2 px-3 rounded-xl bg-rose-500/15 hover:bg-rose-500/25 text-rose-400 border border-rose-500/40 text-xs font-bold transition flex items-center justify-center gap-2">
+                        <i class="fa-solid fa-trash-can text-xs"></i>
+                        <span>Hapus Transaksi Permanen</span>
+                      </button>
+
+                      <!-- Audit Locked Banner for Completed Orders -->
+                      <div x-show="ord.status === 'completed' || ord.status === 'paid'"
+                           class="w-full py-1.5 px-3 rounded-lg bg-slate-800/40 border border-slate-700/50 text-[10px] text-slate-400 flex items-center justify-center gap-1.5 font-mono">
+                        <i class="fa-solid fa-lock text-[9px] text-slate-500"></i>
+                        <span>Terkunci (Pembukuan Selesai - Tidak Dapat Dihapus)</span>
+                      </div>
+                    </div>
+                  </div>
+                </template>
+              </div>
+
+              <!-- Empty State -->
+              <div x-show="filteredOrders.length === 0" class="p-8 text-center text-slate-500 text-xs space-y-2">
+                <i class="fa-solid fa-receipt text-2xl text-slate-600"></i>
+                <div class="font-semibold text-slate-400">Tidak ada data transaksi yang sesuai</div>
+                <div class="text-[11px] text-slate-500">Coba ubah filter atau kata kunci pencarian</div>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB: DYNAMIC CATALOG & LIVE PRICING                               -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'catalog'" class="space-y-6">
+            <div class="flex items-center justify-between">
+              <div>
+                <h2 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-tags text-nuke-gold"></i>
+                  <span>Dynamic Package Catalog & Live Pricing</span>
+                </h2>
+                <p class="text-xs text-slate-400">Manage VIP passes and Credit pack pricing in Edge KV without redeploying worker code.</p>
+              </div>
+              <button @click="saveCatalog()" :disabled="loading"
+                      class="px-4 py-2 bg-nuke-gold hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center gap-2">
+                <i class="fa-solid fa-floppy-disk"></i>
+                <span x-show="!loading">Save Catalog to Edge</span>
+                <span x-show="loading">Saving...</span>
+              </button>
+            </div>
+
+            <!-- VIP Plans Section -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl p-5 space-y-4">
+              <h3 class="text-xs font-bold text-amber-400 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-crown text-xs"></i>
+                <span>VIP Time Passes (Subscription Duration)</span>
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <template x-for="(plan, planKey) in (catalog.plans || {})" :key="planKey">
+                  <div class="bg-nuke-card border border-nuke-border rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-mono font-bold text-white" x-text="plan.name"></span>
+                      <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-amber-500/15 text-amber-300 border border-amber-500/30" x-text="plan.badge || 'VIP'"></span>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Duration (Days)</label>
+                      <input type="number" x-model.number="plan.durationDays" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-nuke-gold">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Price (IDR)</label>
+                      <input type="number" x-model.number="plan.price" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs font-mono text-emerald-400 focus:outline-none focus:border-nuke-gold">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Badge</label>
+                      <input type="text" x-model="plan.badge" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs text-white focus:outline-none focus:border-nuke-gold">
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- VIP Credits Section -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl p-5 space-y-4">
+              <h3 class="text-xs font-bold text-cyan-400 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-gem text-xs"></i>
+                <span>VIP Credit Micro-Packs</span>
+              </h3>
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                <template x-for="(pack, packKey) in (catalog.creditPacks || {})" :key="packKey">
+                  <div class="bg-nuke-card border border-nuke-border rounded-xl p-4 space-y-3">
+                    <div class="flex items-center justify-between">
+                      <span class="text-xs font-mono font-bold text-white" x-text="pack.name"></span>
+                      <span class="text-[10px] font-mono px-2 py-0.5 rounded bg-cyan-500/15 text-cyan-300 border border-cyan-500/30" x-text="pack.badge || 'Credits'"></span>
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Credits Amount</label>
+                      <input type="number" x-model.number="pack.credits" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Price (IDR)</label>
+                      <input type="number" x-model.number="pack.price" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs font-mono text-emerald-400 focus:outline-none focus:border-cyan-400">
+                    </div>
+                    <div>
+                      <label class="block text-[10px] text-slate-400 uppercase font-mono mb-1">Description</label>
+                      <input type="text" x-model="pack.description" class="w-full px-3 py-1.5 bg-nuke-void border border-nuke-border rounded-lg text-xs text-white focus:outline-none focus:border-cyan-400">
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+
+            <!-- Credit Consumption Actions Section -->
+            <div class="bg-nuke-surface border border-nuke-border rounded-2xl p-5 space-y-4">
+              <h3 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-2">
+                <i class="fa-solid fa-bolt text-xs text-amber-400"></i>
+                <span>Credit Boost Consumption Rules</span>
+              </h3>
+              <div class="overflow-x-auto">
+                <table class="w-full text-left text-xs font-mono">
+                  <thead class="bg-nuke-card text-slate-400 uppercase text-[10px] border-b border-nuke-border">
+                    <tr>
+                      <th class="px-4 py-2.5">Action Key</th>
+                      <th class="px-4 py-2.5">Action Name</th>
+                      <th class="px-4 py-2.5">Credits Cost</th>
+                      <th class="px-4 py-2.5">Granted Duration</th>
+                    </tr>
+                  </thead>
+                  <tbody class="divide-y divide-nuke-border">
+                    <template x-for="(act, actKey) in (catalog.creditRedeemActions || {})" :key="actKey">
+                      <tr class="hover:bg-nuke-cardHover/50">
+                        <td class="px-4 py-2.5 text-cyan-400 font-bold" x-text="act.action"></td>
+                        <td class="px-4 py-2.5">
+                          <input type="text" x-model="act.name" class="w-full px-2.5 py-1 bg-nuke-void border border-nuke-border rounded text-xs text-white">
+                        </td>
+                        <td class="px-4 py-2.5">
+                          <input type="number" x-model.number="act.credits" class="w-20 px-2.5 py-1 bg-nuke-void border border-nuke-border rounded text-xs font-bold text-amber-300">
+                        </td>
+                        <td class="px-4 py-2.5">
+                          <div class="flex items-center gap-1.5">
+                            <input type="number" :value="act.durationMs ? Math.round(act.durationMs / 60000) : 0"
+                                   @input="act.durationMs = (parseInt($event.target.value, 10) || 0) * 60000"
+                                   class="w-20 px-2.5 py-1 bg-nuke-void border border-nuke-border rounded text-xs text-white focus:outline-none focus:border-cyan-400">
+                            <span class="text-[11px] text-slate-400">mins</span>
+                          </div>
+                        </td>
+                      </tr>
+                    </template>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <!-- TAB 5: SETTINGS & GATEWAY                                         -->
+          <!-- ═════════════════════════════════════════════════════════════════ -->
+          <div x-show="activeTab === 'settings'" class="space-y-6">
+            <div class="p-6 bg-nuke-surface border border-nuke-border rounded-2xl space-y-4 max-w-2xl">
+              <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                <i class="fa-solid fa-network-wired text-nuke-gold"></i>
+                <span>Pakasir Configuration</span>
+              </h3>
+              
+              <p class="text-xs text-slate-400">Existing credentials in <code>config:pakasir</code> remain in place. Leave a secret field blank to keep its current value. Only real Pakasir transactions activate access.</p>
+              <label class="block text-xs text-slate-300">Project slug
+                <input type="text" x-model="settings.pakasir_slug" autocomplete="off" class="w-full mt-1 px-3 py-2 bg-nuke-void border border-nuke-border rounded-lg text-white font-mono">
+              </label>
+              <label class="block text-xs text-slate-300">API key <span x-show="settings.pakasir_has_api_key" class="text-emerald-400">(configured)</span>
+                <input type="password" x-model="settings.pakasir_api_key" autocomplete="new-password" placeholder="Leave blank to keep current key" class="w-full mt-1 px-3 py-2 bg-nuke-void border border-nuke-border rounded-lg text-white font-mono">
+              </label>
+              <label class="block text-xs text-slate-300">Webhook secret <span x-show="settings.pakasir_has_webhook_secret" class="text-emerald-400">(configured)</span>
+                <input type="password" x-model="settings.pakasir_webhook_secret" autocomplete="new-password" placeholder="Optional; leave blank to keep current secret" class="w-full mt-1 px-3 py-2 bg-nuke-void border border-nuke-border rounded-lg text-white font-mono">
+              </label>
+              <button @click="saveSettings()" :disabled="loading" class="px-5 py-2 bg-nuke-gold hover:bg-amber-400 text-slate-950 font-bold text-xs rounded-xl shadow transition">Save Pakasir Settings</button>
+            </div>
+
+            <!-- Cloudflare Worker API Endpoint Configuration -->
+            <div class="p-6 bg-nuke-surface border border-nuke-border rounded-2xl space-y-4 max-w-2xl">
+              <div class="flex items-center justify-between">
+                <h3 class="text-sm font-bold text-white flex items-center gap-2">
+                  <i class="fa-solid fa-cloud text-nuke-cyan"></i>
+                  <span>Cloudflare Worker API Endpoint</span>
+                </h3>
+                <div class="flex items-center gap-2">
+                  <button type="button" @click="resetApiUrl()" class="text-[10px] font-mono text-slate-400 hover:text-nuke-gold transition">Reset Default</button>
+                  <button type="button" @click="testConnection()" :disabled="connectionChecking"
+                          class="text-[10px] font-mono text-nuke-gold hover:underline flex items-center gap-1">
+                    <i class="fa-solid fa-bolt" :class="{'fa-spin': connectionChecking}"></i>
+                    <span x-text="connectionMessage || 'Test Ping'"></span>
+                  </button>
+                </div>
+              </div>
+              <p class="text-[11px] text-slate-400">Worker endpoint for VIP status, credit balance, and Pakasir payment notifications.</p>
+              <div class="relative">
+                <span class="absolute inset-y-0 left-0 pl-3.5 flex items-center text-slate-500 text-sm">
+                  <i class="fa-solid fa-link"></i>
+                </span>
+                <input type="url" x-model="apiBaseUrl" @change="localStorage.setItem('gn_api_base', apiBaseUrl)"
+                       class="w-full pl-10 pr-4 py-2.5 bg-nuke-card border border-nuke-border rounded-xl text-xs font-mono text-slate-200 focus:outline-none focus:border-nuke-gold transition">
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </main>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: GRANT / MANAGE VIP PRIVILEGE                                 -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <div x-show="grantModalOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+           x-cloak>
+        <div x-on:click.outside="grantModalOpen = false"
+             class="w-full max-w-md bg-nuke-card border border-nuke-border rounded-2xl p-6 space-y-4 glow-gold relative shadow-2xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-crown text-nuke-gold"></i>
+              <span>Manage VIP Subscription</span>
+            </h3>
+            <button type="button" @click="grantModalOpen = false" class="text-slate-500 hover:text-white p-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Target HWID / Device ID</label>
+              <input type="text" x-model="grantForm.deviceId" placeholder="Paste hardware ID (e.g. 7a8b9c...)"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-nuke-gold">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Action Mode</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" @click="grantForm.action = 'extend'"
+                        :class="grantForm.action === 'extend' ? 'bg-nuke-gold text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  + Extend
+                </button>
+                <button type="button" @click="grantForm.action = 'set'"
+                        :class="grantForm.action === 'set' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Set Exact
+                </button>
+                <button type="button" @click="grantForm.action = 'revoke'"
+                        :class="grantForm.action === 'revoke' ? 'bg-rose-500 text-white font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Revoke
+                </button>
+              </div>
+            </div>
+
+            <div x-show="grantForm.action !== 'revoke'">
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Duration Preset</label>
+              <select x-model="grantForm.days" class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-nuke-gold">
+                <option value="1">1 Day (24-Hour Pass)</option>
+                <option value="7">7 Days (Weekly VIP)</option>
+                <option value="30">30 Days (Monthly VIP)</option>
+                <option value="90">90 Days (Quarterly VIP)</option>
+                <option value="180">180 Days (Semi-Annual VIP)</option>
+                <option value="365">365 Days (1 Year VIP)</option>
+                <option value="9999">Lifetime VIP (Permanent)</option>
+              </select>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" @click="grantModalOpen = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+              Cancel
+            </button>
+            <button type="button" @click="submitGrantVip()" :disabled="loading"
+                    class="px-5 py-2 bg-nuke-gold hover:bg-amber-400 text-slate-950 text-xs font-black rounded-xl shadow transition flex items-center gap-1.5">
+              <span x-show="!loading"><i class="fa-solid fa-shield-check mr-1"></i> Apply Changes</span>
+              <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: MANAGE DEVICE CREDITS                                       -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <div x-show="creditModalOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+           x-cloak>
+        <div x-on:click.outside="creditModalOpen = false"
+             class="w-full max-w-md bg-nuke-card border border-nuke-border rounded-2xl p-6 space-y-4 glow-cyan relative shadow-2xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-gem text-cyan-400"></i>
+              <span>Manage Device Credits</span>
+            </h3>
+            <button type="button" @click="creditModalOpen = false" class="text-slate-500 hover:text-white p-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Target HWID / Device ID</label>
+              <input type="text" x-model="creditForm.deviceId" placeholder="Paste hardware ID / Device ID (e.g. 10f0d86a...)"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-cyan-300 focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-nuke-void border border-nuke-border rounded-xl">
+              <span class="text-xs text-slate-400">Current Balance:</span>
+              <span class="text-sm font-mono font-black text-amber-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-gem text-xs"></i>
+                <span x-text="(creditForm.currentCredits || 0) + ' Credits'"></span>
+              </span>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1.5">Operation Mode</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button type="button" @click="creditForm.action = 'add'"
+                        :class="creditForm.action === 'add' ? 'bg-cyan-500 text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  + Add
+                </button>
+                <button type="button" @click="creditForm.action = 'set'"
+                        :class="creditForm.action === 'set' ? 'bg-nuke-gold text-slate-950 font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  Set Exact
+                </button>
+                <button type="button" @click="creditForm.action = 'deduct'"
+                        :class="creditForm.action === 'deduct' ? 'bg-rose-500 text-white font-bold' : 'bg-nuke-void text-slate-400 border border-nuke-border hover:text-white'"
+                        class="py-2 text-xs rounded-xl transition font-semibold">
+                  - Deduct
+                </button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Quick Presets</label>
+              <div class="flex flex-wrap gap-1.5">
+                <button type="button" @click="creditForm.amount = 5; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+5 (Rp 3K)</button>
+                <button type="button" @click="creditForm.amount = 10; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+10 (Rp 5K)</button>
+                <button type="button" @click="creditForm.amount = 25; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+25 (Rp 10K)</button>
+                <button type="button" @click="creditForm.amount = 60; creditForm.action = 'add'" class="px-2.5 py-1 bg-nuke-void hover:bg-slate-800 border border-nuke-border rounded-lg text-[11px] font-mono text-cyan-400">+60 (Rp 20K)</button>
+              </div>
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Credit Amount</label>
+              <input type="number" min="0" max="10000" x-model.number="creditForm.amount"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Reason / Admin Note</label>
+              <input type="text" x-model="creditForm.reason" placeholder="e.g. Loyalty bonus, Support compensation"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs text-white placeholder-slate-600 focus:outline-none focus:border-cyan-400">
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" @click="creditModalOpen = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+              Cancel
+            </button>
+            <button type="button" @click="submitAdjustCredits()" :disabled="loading"
+                    class="px-5 py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-black rounded-xl shadow transition flex items-center gap-1.5">
+              <span x-show="!loading"><i class="fa-solid fa-check mr-1"></i> Apply Credits</span>
+              <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: MANUAL ORDER CREATION                                       -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <div x-show="orderModalOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+           x-cloak>
+        <div x-on:click.outside="orderModalOpen = false"
+             class="w-full max-w-md bg-nuke-card border border-nuke-border rounded-2xl p-6 space-y-4 glow-emerald relative shadow-2xl">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-white flex items-center gap-2">
+              <i class="fa-solid fa-cart-plus text-emerald-400"></i>
+              <span>Create & Fulfill Manual Order</span>
+            </h3>
+            <button type="button" @click="orderModalOpen = false" class="text-slate-500 hover:text-white p-1">
+              <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="space-y-3">
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Target HWID / Device ID</label>
+              <input type="text" x-model="orderForm.deviceId" placeholder="Paste hardware ID (e.g. 10f0d86a...)"
+                     class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-emerald-300 focus:outline-none focus:border-emerald-400">
+            </div>
+
+            <div>
+              <label class="block text-[11px] font-semibold text-slate-400 mb-1">Package Selection</label>
+              <select x-model="orderForm.planId" class="w-full px-3.5 py-2.5 bg-nuke-void border border-nuke-border rounded-xl text-xs font-mono text-white focus:outline-none focus:border-emerald-400">
+                <optgroup label="VIP Credits">
+                  <template x-for="pack in Object.values(catalog.creditPacks || {})" :key="pack.id"><option :value="pack.id" x-text="`${pack.name} (Rp ${Number(pack.price).toLocaleString('id-ID')})`"></option></template>
+                </optgroup>
+                <optgroup label="VIP Time Passes">
+                  <template x-for="plan in Object.values(catalog.plans || {})" :key="plan.id"><option :value="plan.id" x-text="`${plan.name} (${plan.durationDays} days - Rp ${Number(plan.price).toLocaleString('id-ID')})`"></option></template>
+                </optgroup>
+              </select>
+            </div>
+
+            <div class="flex items-center justify-between p-3 bg-nuke-void border border-nuke-border rounded-xl">
+              <div>
+                <div class="text-xs font-bold text-white">Auto-Fulfill & Activate</div>
+                <div class="text-[10px] text-slate-400">Grant VIP or credits to this device now</div>
+              </div>
+              <label class="relative inline-flex items-center cursor-pointer">
+                <input type="checkbox" x-model="orderForm.autoFulfill" class="sr-only peer">
+                <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
+              </label>
+            </div>
+          </div>
+
+          <div class="flex justify-end gap-2 pt-2">
+            <button type="button" @click="orderModalOpen = false" class="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold rounded-xl transition">
+              Cancel
+            </button>
+            <button type="button" @click="submitCreateOrder()" :disabled="loading"
+                    class="px-5 py-2 bg-emerald-500 hover:bg-emerald-400 text-slate-950 text-xs font-black rounded-xl shadow transition flex items-center gap-1.5">
+              <span x-show="!loading"><i class="fa-solid fa-check mr-1"></i> Create & Fulfill</span>
+              <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Saving...</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <!-- MODAL: ENTERPRISE USER & DEVICE DEEP INSPECTOR                      -->
+      <!-- ═══════════════════════════════════════════════════════════════════ -->
+      <div x-show="inspectModalOpen"
+           x-transition:enter="transition ease-out duration-200"
+           x-transition:enter-start="opacity-0 scale-95"
+           x-transition:enter-end="opacity-100 scale-100"
+           x-transition:leave="transition ease-in duration-150"
+           x-transition:leave-start="opacity-100 scale-100"
+           x-transition:leave-end="opacity-0 scale-95"
+           class="fixed inset-0 z-50 flex items-center justify-center p-3 md:p-6 bg-black/80 backdrop-blur-md overflow-y-auto"
+           x-cloak>
+        <div x-on:click.outside="inspectModalOpen = false"
+             class="w-full max-w-4xl bg-nuke-card border border-nuke-border rounded-2xl p-5 md:p-7 space-y-6 glow-gold relative shadow-2xl my-auto">
+          
+          <!-- Modal Header -->
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-nuke-border pb-4">
+            <div class="flex items-center gap-3">
+              <div class="w-10 h-10 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 text-lg">
+                <i class="fa-solid fa-user-gear"></i>
+              </div>
+              <div>
+                <div class="flex items-center gap-2">
+                  <h3 class="text-sm font-bold text-white tracking-wide">Enterprise User &amp; Device Console</h3>
+                  <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold uppercase"
+                        :class="lookedUpDevice && isVipActive(lookedUpDevice.expiresAt) ? 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30' : 'bg-slate-800 text-slate-400 border border-slate-700'"
+                        x-text="lookedUpDevice && isVipActive(lookedUpDevice.expiresAt) ? 'VIP ACTIVE' : 'FREE TIER'"></span>
+                </div>
+                <div class="flex items-center gap-2 mt-1">
+                  <span class="text-xs font-mono font-bold text-amber-300" x-text="lookedUpDevice?.deviceId || targetDeviceId"></span>
+                  <button type="button" @click="copyText(lookedUpDevice?.deviceId || targetDeviceId)" class="text-slate-400 hover:text-white text-xs"><i class="fa-regular fa-copy"></i></button>
+                </div>
+              </div>
+            </div>
+
+            <div class="flex items-center gap-2">
+              <div class="px-3 py-1.5 rounded-xl bg-cyan-500/10 border border-cyan-500/30 font-mono text-xs text-cyan-300 flex items-center gap-1.5">
+                <i class="fa-solid fa-gem text-cyan-400"></i>
+                <span class="font-bold" x-text="lookedUpDevice?.creditBalance || 0"></span>
+                <span class="text-[10px] text-cyan-400/80">CRD</span>
+              </div>
+              <button type="button" @click="inspectModalOpen = false" class="p-2 text-slate-400 hover:text-white rounded-lg hover:bg-slate-800 transition">
+                <i class="fa-solid fa-xmark text-sm"></i>
+              </button>
+            </div>
+          </div>
+
+          <!-- Inspector Tabs -->
+          <div class="flex items-center gap-2 border-b border-nuke-border pb-2 overflow-x-auto text-xs font-mono">
+            <button @click="inspectTab = 'profile'"
+                    :class="inspectTab === 'profile' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-surface'"
+                    class="px-3.5 py-1.5 rounded-xl transition flex items-center gap-2">
+              <i class="fa-solid fa-id-card"></i>
+              <span>License &amp; Wallet Telemetry</span>
+            </button>
+            <button @click="inspectTab = 'orders'"
+                    :class="inspectTab === 'orders' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-surface'"
+                    class="px-3.5 py-1.5 rounded-xl transition flex items-center gap-2">
+              <i class="fa-solid fa-receipt"></i>
+              <span>Invoices &amp; Orders (<span x-text="lookedUpOrders.length"></span>)</span>
+            </button>
+            <button @click="inspectTab = 'usage'"
+                    :class="inspectTab === 'usage' ? 'bg-amber-500 text-slate-950 font-bold shadow' : 'text-slate-400 hover:text-white hover:bg-nuke-surface'"
+                    class="px-3.5 py-1.5 rounded-xl transition flex items-center gap-2">
+              <i class="fa-solid fa-bolt"></i>
+              <span>Boost Consumption Logs (<span x-text="(lookedUpDevice?.consumeHistory || []).length"></span>)</span>
+            </button>
+          </div>
+
+          <!-- TAB CONTENT 1: PROFILE & LICENSES -->
+          <div x-show="inspectTab === 'profile'" class="space-y-5">
+            <!-- 6 KPI Telemetry Cards -->
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">VIP Status</div>
+                <div class="text-xs font-bold font-mono mt-1"
+                     :class="lookedUpDevice && isVipActive(lookedUpDevice.expiresAt) ? 'text-emerald-400' : 'text-slate-400'"
+                     x-text="lookedUpDevice && isVipActive(lookedUpDevice.expiresAt) ? 'ACTIVE' : 'EXPIRED'"></div>
+              </div>
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">Time Remaining</div>
+                <div class="text-xs font-bold font-mono mt-1 text-amber-300" x-text="formatRemainingDays(lookedUpDevice?.expiresAt)"></div>
+              </div>
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">Credit Balance</div>
+                <div class="text-xs font-bold font-mono mt-1 text-cyan-300" x-text="(lookedUpDevice?.creditBalance || 0) + ' Credits'"></div>
+              </div>
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">Total Consumed</div>
+                <div class="text-xs font-bold font-mono mt-1 text-slate-200" x-text="(lookedUpDevice?.totalConsumed || 0) + ' Boosts'"></div>
+              </div>
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">Total Purchased</div>
+                <div class="text-xs font-bold font-mono mt-1 text-slate-200" x-text="(lookedUpDevice?.totalPurchased || 0) + ' CRD'"></div>
+              </div>
+              <div class="p-3 bg-nuke-surface border border-nuke-border rounded-xl">
+                <div class="text-[10px] text-slate-400 uppercase font-mono">Last Active</div>
+                <div class="text-[11px] font-mono text-slate-400 mt-1 truncate" x-text="formatRelativeTime(lookedUpDevice?.updatedAt)"></div>
+              </div>
+            </div>
+
+            <!-- Two-Column Operational Panels: VIP Control & Credit Wallet Control -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Panel A: VIP License Grant / Adjust -->
+              <div class="p-4 bg-nuke-surface border border-amber-500/30 rounded-xl space-y-3">
+                <div class="flex items-center justify-between border-b border-nuke-border pb-2">
+                  <h4 class="text-xs font-bold text-amber-300 flex items-center gap-2">
+                    <i class="fa-solid fa-crown text-amber-400"></i>
+                    <span>VIP Time Pass Privileges</span>
+                  </h4>
+                  <span class="text-[10px] font-mono text-amber-400/80">Ad-Free &amp; All Boosters</span>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">Quick Presets</label>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" @click="directVipDays = 7; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+7 Days</button>
+                    <button type="button" @click="directVipDays = 30; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+30 Days</button>
+                    <button type="button" @click="directVipDays = 90; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+90 Days</button>
+                    <button type="button" @click="directVipDays = 180; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+180 Days</button>
+                    <button type="button" @click="directVipDays = 365; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">+1 Year</button>
+                    <button type="button" @click="directVipDays = 9999; directVipAction = 'extend'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-amber-300">Lifetime</button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Operation Mode</label>
+                    <select x-model="directVipAction" class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                      <option value="extend">+ Extend from Current</option>
+                      <option value="set">= Set Exact from Now</option>
+                      <option value="revoke">X Revoke Immediately</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Duration (Days)</label>
+                    <input type="number" min="1" max="9999" x-model.number="directVipDays"
+                           class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-amber-400">
+                  </div>
+                </div>
+
+                <button type="button" @click="submitDirectVip()" :disabled="loading"
+                        class="w-full py-2 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                  <span x-show="!loading"><i class="fa-solid fa-crown mr-1"></i> Apply VIP Changes to Edge</span>
+                  <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing with KV...</span>
+                </button>
+              </div>
+
+              <!-- Panel B: Credit Wallet Adjustment -->
+              <div class="p-4 bg-nuke-surface border border-cyan-500/30 rounded-xl space-y-3">
+                <div class="flex items-center justify-between border-b border-nuke-border pb-2">
+                  <h4 class="text-xs font-bold text-cyan-300 flex items-center gap-2">
+                    <i class="fa-solid fa-gem text-cyan-400"></i>
+                    <span>Credit Wallet Balance</span>
+                  </h4>
+                  <span class="text-[10px] font-mono text-cyan-400/80">Session &amp; Day Passes</span>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1.5">Quick Presets</label>
+                  <div class="flex flex-wrap gap-1.5">
+                    <button type="button" @click="directCreditAmount = 5; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+5 (Rp 3K)</button>
+                    <button type="button" @click="directCreditAmount = 10; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+10 (Rp 5K)</button>
+                    <button type="button" @click="directCreditAmount = 25; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+25 (Rp 10K)</button>
+                    <button type="button" @click="directCreditAmount = 60; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+60 (Rp 20K)</button>
+                    <button type="button" @click="directCreditAmount = 100; directCreditAction = 'add'" class="px-2.5 py-1 bg-nuke-card hover:bg-slate-800 border border-nuke-border rounded-lg text-[10.5px] font-mono text-cyan-300">+100</button>
+                  </div>
+                </div>
+
+                <div class="grid grid-cols-2 gap-2">
+                  <div>
+                    <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Operation Mode</label>
+                    <select x-model="directCreditAction" class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+                      <option value="add">+ Add to Balance</option>
+                      <option value="set">= Set Exact Balance</option>
+                      <option value="deduct">- Deduct from Balance</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Credits Amount</label>
+                    <input type="number" min="0" max="100000" x-model.number="directCreditAmount"
+                           class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-white focus:outline-none focus:border-cyan-400">
+                  </div>
+                </div>
+
+                <div>
+                  <label class="block text-[10px] font-mono uppercase text-slate-400 mb-1">Audit Reason / Note</label>
+                  <input type="text" x-model="directCreditReason" placeholder="e.g. Loyalty bonus, Support compensation"
+                         class="w-full px-2.5 py-1.5 bg-nuke-card border border-nuke-border rounded-lg text-xs font-mono text-slate-200 focus:outline-none focus:border-cyan-400">
+                </div>
+
+                <button type="button" @click="submitDirectCredit()" :disabled="loading"
+                        class="w-full py-2 bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
+                  <span x-show="!loading"><i class="fa-solid fa-bolt mr-1"></i> Apply Wallet Balance</span>
+                  <span x-show="loading"><i class="fa-solid fa-spinner fa-spin mr-1"></i> Syncing with KV...</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 2: USER ORDERS & INVOICES -->
+          <div x-show="inspectTab === 'orders'" class="space-y-4">
+            <div class="flex items-center justify-between">
+              <p class="text-xs text-slate-400">Transaction records associated with this specific hardware ID in Edge KV.</p>
+              <button type="button" @click="openCreateOrderForUser(lookedUpDevice?.deviceId)"
+                      class="px-3 py-1.5 bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 rounded-xl text-xs font-bold transition flex items-center gap-1.5">
+                <i class="fa-solid fa-plus text-[10px]"></i>
+                <span>Create Order for this User</span>
+              </button>
+            </div>
+
+            <div class="bg-nuke-surface border border-nuke-border rounded-xl overflow-hidden">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="bg-nuke-card text-slate-400 uppercase text-[10px] tracking-wider border-b border-nuke-border">
+                  <tr>
+                    <th class="px-4 py-2.5">Order ID</th>
+                    <th class="px-4 py-2.5">Package</th>
+                    <th class="px-4 py-2.5">Amount</th>
+                    <th class="px-4 py-2.5">Status</th>
+                    <th class="px-4 py-2.5">Date</th>
+                    <th class="px-4 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-nuke-border">
+                  <template x-for="ord in lookedUpOrders" :key="ord.orderId">
+                    <tr class="hover:bg-nuke-cardHover/50 transition">
+                      <td class="px-4 py-2.5">
+                        <span class="text-white font-bold" x-text="ord.orderId"></span>
+                        <div class="text-[10px] text-slate-500" x-text="ord.paymentMethod || 'QRIS'"></div>
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-300" x-text="ord.planName || ord.planId"></td>
+                      <td class="px-4 py-2.5 text-amber-400 font-bold" x-text="'Rp ' + Number(ord.totalPayment || ord.amount || 0).toLocaleString('id-ID')"></td>
+                      <td class="px-4 py-2.5">
+                        <span class="px-2 py-0.5 rounded text-[10px] font-bold uppercase"
+                              :class="{
+                                'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30': ord.status === 'completed' || ord.status === 'paid',
+                                'bg-amber-500/15 text-amber-400 border border-amber-500/30': ord.status === 'pending',
+                                'bg-rose-500/15 text-rose-400 border border-rose-500/30': ord.status === 'expired',
+                                'bg-slate-700/30 text-slate-400 border border-slate-700': ord.status === 'cancelled'
+                              }" x-text="ord.status"></span>
+                      </td>
+                      <td class="px-4 py-2.5 text-slate-400 text-[11px]" x-text="formatDate(ord.createdAt)"></td>
+                      <td class="px-4 py-2.5 text-right space-x-1">
+                        <button x-show="ord.paymentMethod !== 'admin_manual'" @click="verifyOrderWithPakasir(ord.orderId)"
+                                class="p-1 px-2 rounded-lg bg-sky-500/15 hover:bg-sky-500/25 text-sky-400 border border-sky-500/30 text-[11px]" title="Verify Pakasir live">
+                          <i class="fa-solid fa-cloud-arrow-down mr-1"></i> Pakasir
+                        </button>
+                        <button x-show="ord.status !== 'completed'" @click="updateOrderStatus(ord.orderId, 'completed')"
+                                class="p-1 px-2 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-[11px]" title="Mark completed">
+                          <i class="fa-solid fa-check mr-1"></i> Fulfill
+                        </button>
+                      </td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+
+              <div x-show="lookedUpOrders.length === 0" class="p-8 text-center text-slate-500 text-xs">
+                No orders recorded for this user HWID yet.
+              </div>
+            </div>
+          </div>
+
+          <!-- TAB CONTENT 3: CREDIT BOOST CONSUMPTION LOGS -->
+          <div x-show="inspectTab === 'usage'" class="space-y-4">
+            <p class="text-xs text-slate-400">Detailed credit redemption history across floating game overlay boost passes.</p>
+            
+            <div class="bg-nuke-surface border border-nuke-border rounded-xl overflow-hidden max-h-80 overflow-y-auto">
+              <table class="w-full text-left text-xs font-mono">
+                <thead class="bg-nuke-card text-slate-400 uppercase text-[10px] tracking-wider border-b border-nuke-border sticky top-0">
+                  <tr>
+                    <th class="px-4 py-2.5">Pass / Boost Action</th>
+                    <th class="px-4 py-2.5">Credits Deducted</th>
+                    <th class="px-4 py-2.5">Balance After</th>
+                    <th class="px-4 py-2.5">Timestamp</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-nuke-border">
+                  <template x-for="item in (lookedUpDevice?.consumeHistory || [])" :key="item.timestamp + (item.action || '')">
+                    <tr class="hover:bg-nuke-cardHover/50 transition">
+                      <td class="px-4 py-2.5">
+                        <div class="font-bold text-white" x-text="item.name || item.action"></div>
+                        <div class="text-[10px] text-slate-500" x-text="item.durationMs ? Math.round(item.durationMs / 60000) + ' Minutes Pass' : 'Instant Boost'"></div>
+                      </td>
+                      <td class="px-4 py-2.5 font-bold text-rose-400" x-text="'-' + (item.creditsDeducted || 1) + ' CRD'"></td>
+                      <td class="px-4 py-2.5 text-cyan-300 font-bold" x-text="(item.balanceAfter || 0) + ' CRD'"></td>
+                      <td class="px-4 py-2.5 text-slate-400" x-text="formatDate(item.timestamp)"></td>
+                    </tr>
+                  </template>
+                </tbody>
+              </table>
+
+              <div x-show="!lookedUpDevice?.consumeHistory || lookedUpDevice?.consumeHistory.length === 0" class="p-8 text-center text-slate-500 text-xs">
+                No credit consumption events recorded yet.
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+    </div>
+  </template>
+
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <!-- ALPINE APP LOGIC (ENTERPRISE SCRIPT)                                      -->
+  <!-- ═════════════════════════════════════════════════════════════════════════ -->
+  <script>
+    function adminApp() {
+      return {
+        isLoggedIn: false,
+        showPassword: false,
+        adminToken: '',
+        adminUsername: 'Admin',
+        apiBaseUrl: 'https://gamenukevip.agungofficialdev.workers.dev',
+        activeTab: 'overview',
+        mobileMenuOpen: false,
+        loading: false,
+        edgePing: 24,
+        connectionChecking: false,
+        connectionMessage: '',
+
+        lockoutSeconds: 0,
+        lockoutTimer: null,
+        failedLoginAttempts: 0,
+        idleTimer: null,
+
+        loginForm: {
+          username: '',
+          password: ''
+        },
+
+        stats: {
+          activeVip: 0,
+          totalDevices: 0,
+          totalOrders: 0,
+          totalRevenue: 0,
+          pendingOrders: 0,
+          completedOrders: 0,
+          expiredOrders: 0,
+          gatewayMode: 'production'
+        },
+
+        devices: [],
+        deviceSearch: '',
+        deviceFilter: 'all',
+        deviceSort: 'updated',
+        inspectModalOpen: false,
+        inspectTab: 'profile',
+        lookedUpOrders: [],
+
+        // Direct Device Manager State
+        targetDeviceId: '',
+        lookupLoading: false,
+        lookedUpDevice: null,
+        directCreditAmount: 10,
+        directCreditAction: 'add',
+        directCreditReason: 'Manual Admin Top Up',
+        directVipDays: 30,
+        directVipAction: 'extend',
+
+        orders: [],
+        orderSearch: '',
+        orderFilter: 'all',
+
+        get completedOrdersCount() {
+          return (this.orders || []).filter(o => o.status === 'completed' || o.status === 'paid').length;
+        },
+        get pendingOrdersCount() {
+          return (this.orders || []).filter(o => o.status === 'pending').length;
+        },
+        get inactiveOrdersCount() {
+          return (this.orders || []).filter(o => o.status === 'expired' || o.status === 'cancelled').length;
+        },
+
+        boosterData: {
+          version: 2,
+          emergency_broadcast: { active: false, message: '' },
+          component_overrides: {}
+        },
+
+        settings: {
+          gatewayMode: 'production'
+        },
+
+        catalog: {
+          plans: {},
+          creditPacks: {},
+          creditRedeemActions: {}
+        },
+
+        grantModalOpen: false,
+        grantForm: {
+          deviceId: '',
+          days: 30,
+          action: 'extend'
+        },
+
+        creditModalOpen: false,
+        creditForm: {
+          deviceId: '',
+          currentCredits: 0,
+          action: 'add',
+          amount: 5,
+          reason: ''
+        },
+
+        orderModalOpen: false,
+        orderForm: {
+          deviceId: '',
+          planId: 'credits_5',
+          amount: 3000,
+          creditAmount: 5,
+          autoFulfill: true
+        },
+
+        toasts: [],
+
+        get cleanApiUrl() {
+          return (this.apiBaseUrl || 'https://gamenukevip.agungofficialdev.workers.dev').trim().replace(/\/+$/, '');
+        },
+
+        resetApiUrl() {
+          this.apiBaseUrl = 'https://gamenukevip.agungofficialdev.workers.dev';
+          localStorage.setItem('gn_api_base', this.apiBaseUrl);
+          this.showToast('Reset API endpoint to default Edge Worker', 'info');
+          this.testConnection();
+        },
+
+        switchTab(tab) {
+          this.activeTab = tab;
+          this.mobileMenuOpen = false;
+          if (tab === 'overview') this.fetchOverview();
+          if (tab === 'devices') this.fetchDevices();
+          if (tab === 'booster') this.fetchBoosterFeatures();
+          if (tab === 'orders') this.fetchOrders();
+          if (tab === 'catalog') this.fetchCatalog();
+          if (tab === 'settings') this.fetchSettings();
+        },
+
+        startLockoutTimer(sec) {
+          this.lockoutSeconds = sec;
+          if (this.lockoutTimer) clearInterval(this.lockoutTimer);
+          this.lockoutTimer = setInterval(() => {
+            this.lockoutSeconds--;
+            if (this.lockoutSeconds <= 0) {
+              clearInterval(this.lockoutTimer);
+              this.lockoutSeconds = 0;
+            }
+          }, 1000);
+        },
+
+        resetIdleTimer() {
+          if (this.idleTimer) clearTimeout(this.idleTimer);
+          if (this.isLoggedIn) {
+            this.idleTimer = setTimeout(() => {
+              if (this.isLoggedIn) {
+                this.logout();
+                this.showToast('Sesi otomatis ditutup setelah 30 menit tidak aktif (Kebijakan Keamanan)', 'warning');
+              }
+            }, 30 * 60 * 1000);
+          }
+        },
+
+        async initApp() {
+          const savedUrl = localStorage.getItem('gn_api_base');
+          if (savedUrl) this.apiBaseUrl = savedUrl;
+
+          const savedToken = localStorage.getItem('gn_admin_token');
+          if (savedToken) {
+            this.adminToken = savedToken;
+            this.isLoggedIn = true;
+            this.startPingCheck();
+            this.fetchOverview();
+            // Validate token against live worker
+            try {
+              const resp = await fetch(`${this.cleanApiUrl}/api/admin/stats`, {
+                headers: this.getAuthHeaders()
+              });
+              if (resp.status === 401) {
+                this.logout();
+                this.showToast('Session expired. Please sign in again.', 'warning');
+              }
+            } catch (_) {}
+          }
+
+          // Register activity listeners for inactivity auto-logout
+          ['mousedown', 'keydown', 'touchstart', 'scroll'].forEach(evt => {
+            window.addEventListener(evt, () => this.resetIdleTimer(), { passive: true });
+          });
+          this.resetIdleTimer();
+        },
+
+        showToast(message, type = 'info') {
+          const id = Date.now() + Math.random();
+          this.toasts.push({ id, message, type });
+          setTimeout(() => {
+            this.toasts = this.toasts.filter(t => t.id !== id);
+          }, 3500);
+        },
+
+        handleAuthError(resp) {
+          if (resp && resp.status === 401) {
+            this.logout();
+            this.showToast('Session expired or unauthorized. Please re-login.', 'warning');
+            return true;
+          }
+          return false;
+        },
+
+        async testConnection() {
+          this.connectionChecking = true;
+          const t0 = performance.now();
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/health`);
+            const dt = Math.round(performance.now() - t0);
+            if (resp.ok) {
+              this.connectionMessage = `Online (${dt}ms)`;
+              this.showToast(`Connected to Edge in ${dt}ms`, 'success');
+            } else {
+              this.connectionMessage = `HTTP ${resp.status}`;
+              this.showToast(`Server returned HTTP ${resp.status}`, 'warning');
+            }
+          } catch (e) {
+            this.connectionMessage = 'Offline / Error';
+            this.showToast('Cannot connect to Cloudflare Worker. Check URL.', 'error');
+          } finally {
+            this.connectionChecking = false;
+          }
+        },
+
+        async login() {
+          if (this.lockoutSeconds > 0) {
+            this.showToast(`Akses terkunci sementara. Harap tunggu ${this.lockoutSeconds} detik.`, 'warning');
+            return;
+          }
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/login`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify(this.loginForm)
+            });
+            if (resp.status === 429) {
+              this.startLockoutTimer(60);
+              this.showToast('Rate limit terlampaui: Terlalu banyak percobaan gagal. Terkunci 60 detik.', 'error');
+              return;
+            }
+            const data = await resp.json();
+            if (data.success && data.token) {
+              this.adminToken = data.token;
+              this.adminUsername = this.loginForm.username;
+              this.isLoggedIn = true;
+              this.failedLoginAttempts = 0;
+              localStorage.setItem('gn_admin_token', data.token);
+              localStorage.setItem('gn_api_base', this.cleanApiUrl);
+              this.showToast('Authorized session established', 'success');
+              this.fetchOverview();
+              this.startPingCheck();
+              this.resetIdleTimer();
+            } else {
+              this.failedLoginAttempts++;
+              if (this.failedLoginAttempts >= 5) {
+                this.startLockoutTimer(30);
+                this.showToast('5 kali percobaan login gagal! Terkunci selama 30 detik demi keamanan.', 'error');
+              } else {
+                this.showToast(data.error || 'Authentication rejected: Invalid credentials', 'error');
+              }
+            }
+          } catch (e) {
+            this.showToast('Failed to connect to Cloudflare Edge API: ' + (e.message || 'Network error'), 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        logout() {
+          this.adminToken = '';
+          this.isLoggedIn = false;
+          if (this.idleTimer) clearTimeout(this.idleTimer);
+          localStorage.removeItem('gn_admin_token');
+          this.showToast('Session terminated', 'info');
+        },
+
+        getAuthHeaders() {
+          return {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${this.adminToken}`
+          };
+        },
+
+        async startPingCheck() {
+          const t0 = performance.now();
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/health`);
+            this.edgePing = Math.round(performance.now() - t0);
+          } catch (_) {
+            this.edgePing = 999;
+          }
+        },
+
+        getActiveTabTitle() {
+          switch (this.activeTab) {
+            case 'overview': return 'Overview & Edge Telemetry';
+            case 'devices': return 'Devices & VIP License Management';
+            case 'booster': return 'Booster Maintenance & Component Toggles';
+            case 'orders': return 'Invoices & Payment Records';
+            case 'catalog': return 'Dynamic Package Catalog & Live Pricing';
+            case 'settings': return 'Gateway Configuration';
+            default: return 'Admin Console';
+          }
+        },
+
+        refreshCurrentTab() {
+          this.startPingCheck();
+          if (this.activeTab === 'overview') this.fetchOverview();
+          if (this.activeTab === 'devices') this.fetchDevices();
+          if (this.activeTab === 'booster') this.fetchBoosterFeatures();
+          if (this.activeTab === 'orders') this.fetchOrders();
+          if (this.activeTab === 'catalog') this.fetchCatalog();
+          if (this.activeTab === 'settings') this.fetchSettings();
+        },
+
+        async fetchOverview() {
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/stats`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.stats = data.stats;
+            }
+          } catch (_) {}
+        },
+
+        async fetchDevices() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.devices = data.devices;
+            }
+          } catch (e) {
+            this.showToast('Failed to load devices from Edge', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        get activeVipCount() {
+          const now = Date.now();
+          return this.devices.filter(d => d.expiresAt && d.expiresAt > now).length;
+        },
+
+        get expiredDevicesCount() {
+          const now = Date.now();
+          return this.devices.filter(d => !d.expiresAt || d.expiresAt <= now).length;
+        },
+
+        get creditHoldingCount() {
+          return this.devices.filter(d => Number(d.creditBalance) > 0).length;
+        },
+
+        get totalHoldingCredits() {
+          return this.devices.reduce((acc, d) => acc + (Number(d.creditBalance) || 0), 0);
+        },
+
+        get filteredDevices() {
+          const now = Date.now();
+          let list = [...this.devices];
+
+          // 1. Filter by category
+          if (this.deviceFilter === 'active') {
+            list = list.filter(d => d.expiresAt && d.expiresAt > now);
+          } else if (this.deviceFilter === 'expired') {
+            list = list.filter(d => !d.expiresAt || d.expiresAt <= now);
+          } else if (this.deviceFilter === 'credits') {
+            list = list.filter(d => Number(d.creditBalance) > 0);
+          }
+
+          // 2. Filter by search query
+          if (this.deviceSearch.trim()) {
+            const q = this.deviceSearch.trim().toLowerCase();
+            list = list.filter(d => 
+              (d.deviceId || '').toLowerCase().includes(q) ||
+              (d.planId || '').toLowerCase().includes(q) ||
+              (d.planName || '').toLowerCase().includes(q)
+            );
+          }
+
+          // 3. Sort
+          if (this.deviceSort === 'updated') {
+            list.sort((a, b) => (Number(b.updatedAt) || 0) - (Number(a.updatedAt) || 0));
+          } else if (this.deviceSort === 'credits') {
+            list.sort((a, b) => (Number(b.creditBalance) || 0) - (Number(a.creditBalance) || 0));
+          } else if (this.deviceSort === 'expiry') {
+            list.sort((a, b) => (Number(b.expiresAt) || 0) - (Number(a.expiresAt) || 0));
+          } else if (this.deviceSort === 'id') {
+            list.sort((a, b) => (a.deviceId || '').localeCompare(b.deviceId || ''));
+          }
+
+          return list;
+        },
+
+        isSessionActive(dev) {
+          if (!dev || !dev.expiresAt || dev.expiresAt <= Date.now()) return false;
+          return dev.planId === 'credit_session' || dev.planId === 'boost_session' || dev.planId === 'session_30m' || (dev.expiresAt - Date.now() < 86400000 && !String(dev.planId || '').includes('month') && !String(dev.planId || '').includes('year') && !String(dev.planId || '').includes('week'));
+        },
+
+        formatRemainingDays(expiresAt) {
+          if (!expiresAt || expiresAt <= Date.now()) return 'EXPIRED';
+          const ms = expiresAt - Date.now();
+          const days = Math.floor(ms / (24 * 3600000));
+          const hours = Math.floor((ms % (24 * 3600000)) / 3600000);
+          const mins = Math.floor((ms % 3600000) / 60000);
+          if (days > 3650) return 'LIFETIME VIP';
+          if (days > 0) return `${days}d ${hours}h left`;
+          if (hours > 0) return `${hours}h ${mins}m left`;
+          if (mins > 0) return `${mins}m left (Session)`;
+          return '< 1m left (Session)';
+        },
+
+        formatRelativeTime(ts) {
+          if (!ts) return 'Never';
+          const diff = Date.now() - ts;
+          if (diff < 60000) return 'Just now';
+          if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+          if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+          return `${Math.floor(diff / 86400000)}d ago`;
+        },
+
+        async openDeviceInspector(deviceId) {
+          const id = (deviceId || '').trim();
+          if (!id) return;
+          this.targetDeviceId = id;
+          this.lookupLoading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices/lookup?deviceId=${encodeURIComponent(id)}`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success && data.device) {
+              this.lookedUpDevice = data.device;
+              this.lookedUpOrders = data.orders || [];
+              this.inspectTab = 'profile';
+              this.inspectModalOpen = true;
+              this.showToast(`User profile loaded: ${data.device.deviceId}`, 'success');
+            } else {
+              this.showToast(data.error || 'Device not found in KV', 'warning');
+            }
+          } catch (e) {
+            this.showToast('Failed to inspect device: ' + (e.message || 'Network error'), 'error');
+          } finally {
+            this.lookupLoading = false;
+          }
+        },
+
+        openCreateOrderForUser(deviceId) {
+          if (!deviceId) return;
+          this.orderForm.deviceId = deviceId;
+          this.openCreateOrderModal();
+        },
+
+        exportDevicesCsv() {
+          const rows = [
+            ['Hardware ID', 'Plan', 'Credit Balance', 'VIP Status', 'Expires At', 'Total Consumed', 'Total Purchased', 'Last Updated']
+          ];
+          for (const d of this.filteredDevices) {
+            const status = this.isVipActive(d.expiresAt) ? 'ACTIVE' : 'EXPIRED';
+            const exp = d.expiresAt ? new Date(d.expiresAt).toISOString() : '';
+            const upd = d.updatedAt ? new Date(d.updatedAt).toISOString() : '';
+            rows.push([
+              `"${d.deviceId || ''}"`,
+              `"${d.planName || d.planId || 'Free'}"`,
+              d.creditBalance || 0,
+              status,
+              `"${exp}"`,
+              d.totalConsumed || 0,
+              d.totalPurchased || 0,
+              `"${upd}"`
+            ]);
+          }
+          const csvContent = '﻿' + rows.map(r => r.join(',')).join('\n');
+          const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `gamenuke-devices-${new Date().toISOString().slice(0, 10)}.csv`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          this.showToast('Exported ' + (rows.length - 1) + ' devices to CSV', 'success');
+        },
+
+        exportDevicesJson() {
+          const jsonContent = JSON.stringify(this.filteredDevices, null, 2);
+          const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.setAttribute('href', url);
+          link.setAttribute('download', `gamenuke-devices-${new Date().toISOString().slice(0, 10)}.json`);
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+          this.showToast('Exported ' + this.filteredDevices.length + ' devices to JSON', 'success');
+        },
+
+        openGrantModal(deviceId = '', days = 30) {
+          this.grantForm.deviceId = deviceId;
+          this.grantForm.days = days;
+          this.grantForm.action = 'extend';
+          this.grantModalOpen = true;
+        },
+
+        async submitGrantVip() {
+          const deviceId = (this.grantForm.deviceId || '').trim();
+          if (!deviceId) {
+            this.showToast('Target HWID / Device ID required', 'warning');
+            return;
+          }
+          const days = parseInt(this.grantForm.days, 10) || 30;
+          const action = (this.grantForm.action || 'extend').toLowerCase();
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                days,
+                action,
+                planId: days >= 999 ? 'VIP_LIFETIME' : (days >= 365 ? '1_YEAR_ADMIN' : 'VIP_ADMIN')
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`VIP updated for ${deviceId} (${action} ${days} days)`, 'success');
+              this.grantModalOpen = false;
+              this.grantForm.deviceId = '';
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to update VIP', 'error');
+            }
+          } catch (e) {
+            this.showToast('Network error during VIP update', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        openCreditModal(deviceId = '', currentCredits = 0) {
+          this.creditForm.deviceId = deviceId;
+          this.creditForm.currentCredits = currentCredits;
+          this.creditForm.action = 'add';
+          this.creditForm.amount = 5;
+          this.creditForm.reason = '';
+          this.creditModalOpen = true;
+        },
+
+        async submitAdjustCredits() {
+          const deviceId = (this.creditForm.deviceId || '').trim();
+          if (!deviceId) {
+            this.showToast('Target HWID / Device ID required', 'warning');
+            return;
+          }
+          const amount = parseInt(this.creditForm.amount, 10);
+          if (isNaN(amount) || amount < 0) {
+            this.showToast('Valid credit amount required', 'warning');
+            return;
+          }
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices/credits`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                action: this.creditForm.action,
+                amount,
+                reason: this.creditForm.reason || 'Admin Credit Management'
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Credits updated for ${deviceId}: ${data.creditBalance} Credits`, 'success');
+              this.creditModalOpen = false;
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to update credits', 'error');
+            }
+          } catch (e) {
+            this.showToast('Network error during credit adjustment', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async revokeDeviceVip(deviceId) {
+          if (!confirm(`Revoke VIP access for ${deviceId}?`)) return;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                action: 'revoke'
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast('Device VIP revoked', 'success');
+              this.fetchDevices();
+            }
+          } catch (e) {
+            this.showToast('Failed to revoke device', 'error');
+          }
+        },
+
+        async pasteTargetDeviceId() {
+          try {
+            const text = await navigator.clipboard.readText();
+            if (text) {
+              this.targetDeviceId = text.trim();
+              this.showToast('Device ID copied from clipboard', 'info');
+              this.lookupDevice(this.targetDeviceId);
+            }
+          } catch (err) {
+            this.showToast('Clipboard access is restricted. Paste manually (Ctrl+V).', 'warning');
+          }
+        },
+
+        async lookupDevice(id) {
+          const deviceId = (id || this.targetDeviceId || '').trim();
+          if (!deviceId) {
+            this.showToast('Enter a device ID first', 'warning');
+            return;
+          }
+          this.lookupLoading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices/lookup?deviceId=${encodeURIComponent(deviceId)}`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success && data.device) {
+              this.lookedUpDevice = data.device;
+              this.targetDeviceId = data.device.deviceId;
+              this.showToast(`Device found: ${data.device.deviceId}`, 'success');
+            } else {
+              this.showToast(data.error || 'Device not found', 'error');
+            }
+          } catch (e) {
+            this.showToast('Device lookup failed: ' + (e.message || 'Network error'), 'error');
+          } finally {
+            this.lookupLoading = false;
+          }
+        },
+
+        async submitDirectCredit() {
+          if (!this.lookedUpDevice || !this.lookedUpDevice.deviceId) {
+            this.showToast('Look up a device ID first', 'warning');
+            return;
+          }
+          const deviceId = this.lookedUpDevice.deviceId;
+          const amount = parseInt(this.directCreditAmount, 10);
+          if (isNaN(amount) || amount < 0) {
+            this.showToast('Credit amount must be a valid number', 'warning');
+            return;
+          }
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices/credits`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                action: this.directCreditAction,
+                amount,
+                reason: this.directCreditReason || 'Direct Admin Top Up'
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Credits updated for ${deviceId}: ${data.creditBalance} CRD`, 'success');
+              if (data.device) {
+                this.lookedUpDevice = data.device;
+              } else {
+                this.lookedUpDevice.creditBalance = data.creditBalance;
+              }
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to update credits', 'error');
+            }
+          } catch (e) {
+            this.showToast('Network error while updating credits', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async submitDirectVip() {
+          if (!this.lookedUpDevice || !this.lookedUpDevice.deviceId) {
+            this.showToast('Look up a device ID first', 'warning');
+            return;
+          }
+          const deviceId = this.lookedUpDevice.deviceId;
+          const days = parseInt(this.directVipDays, 10) || 30;
+          const action = (this.directVipAction || 'extend').toLowerCase();
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/devices`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({
+                deviceId,
+                days,
+                action,
+                planId: days >= 999 ? 'VIP_LIFETIME' : (days >= 365 ? '1_YEAR_ADMIN' : 'VIP_ADMIN')
+              })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`VIP updated (${action} ${days} days)`, 'success');
+              if (data.device) {
+                this.lookedUpDevice = data.device;
+              } else {
+                await this.lookupDevice(deviceId);
+              }
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to update VIP', 'error');
+            }
+          } catch (e) {
+            this.showToast('Network error while updating VIP', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async fetchBoosterFeatures() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/booster/features`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.boosterData = data.features;
+            }
+          } catch (e) {
+            this.showToast('Failed to load booster features', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async saveBoosterFeatures() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/booster/features`, {
+              method: 'PUT',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify(this.boosterData)
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast('Booster controls synced across Cloudflare KV', 'success');
+            } else {
+              this.showToast('Save failed', 'error');
+            }
+          } catch (e) {
+            this.showToast('Failed to save to Cloudflare KV', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async fetchOrders() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.orders = data.orders;
+            }
+          } catch (e) {
+            this.showToast('Failed to load orders', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        get filteredOrders() {
+          let list = this.orders;
+          if (this.orderFilter === 'completed') {
+            list = list.filter(o => o.status === 'completed' || o.status === 'paid');
+          } else if (this.orderFilter === 'pending') {
+            list = list.filter(o => o.status === 'pending');
+          } else if (this.orderFilter === 'inactive') {
+            list = list.filter(o => o.status === 'expired' || o.status === 'cancelled');
+          }
+          if (!this.orderSearch.trim()) return list;
+          const q = this.orderSearch.toLowerCase();
+          return list.filter(o => (o.orderId || '').toLowerCase().includes(q) || (o.deviceId || '').toLowerCase().includes(q));
+        },
+
+        async purgeInactiveOrders() {
+          const inactiveCount = this.inactiveOrdersCount;
+          if (inactiveCount === 0) {
+            this.showToast('Tidak ada transaksi Expired atau Cancelled untuk dibersihkan.', 'info');
+            return;
+          }
+          if (!confirm(`Hapus permanen SEMUA (${inactiveCount}) transaksi berstatus Expired dan Cancelled dari database Cloudflare Edge KV?\n\nPERINGATAN: Transaksi ini akan terhapus secara permanen dari server.\nTransaksi berstatus Completed / Paid tetap aman tersimpan demi audit finansial.`)) return;
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders/purge-inactive`, {
+              method: 'POST',
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Berhasil membersihkan ${data.purged || inactiveCount} transaksi inactive dari Cloudflare KV!`, 'success');
+              this.fetchOrders();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Gagal membersihkan transaksi', 'error');
+            }
+          } catch (_) {
+            this.showToast('Gangguan jaringan saat membersihkan transaksi', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async verifyOrderWithPakasir(orderId) {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders/verify-pakasir`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({ orderId, autoApply: true })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              const p = data.pakasirData;
+              const tx = p?.data || p?.transaction || p?.payment || p || {};
+              const status = (tx.status || data.pakasirStatus || 'unknown').toLowerCase();
+              const amt = Number(tx.amount || tx.total_payment || 0).toLocaleString('id-ID');
+              const method = tx.payment_method || tx.method || 'N/A';
+
+              if (data.isCompleted) {
+                this.showToast(`Order ${orderId} verified; VIP or credits activated on the device!`, 'success');
+                this.fetchOrders();
+                this.fetchDevices();
+                this.fetchOverview();
+              } else {
+                alert(`PAKASIR STATUS FOR ${orderId}:\nStatus: ${status.toUpperCase()}\nAmount: Rp ${amt}\nMethod: ${method}\n\nPakasir has not confirmed this transaction.`);
+              }
+            } else {
+              this.showToast(data.error || 'Verification failed', 'error');
+            }
+          } catch (e) {
+            this.showToast('Failed to contact Pakasir verification API', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async reconcileAllWithPakasir() {
+          if (!confirm('Check pending orders with Pakasir? Confirmed payments will activate VIP or credits.')) return;
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders/reconcile-all`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({})
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              if (data.activatedCount > 0) {
+                this.showToast(`Reconciled: ${data.activatedCount} paid orders activated!`, 'success');
+              } else {
+                this.showToast(`Reconciliation complete: ${data.totalChecked} orders checked; no newly completed payments.`, 'info');
+              }
+              this.fetchOrders();
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Pakasir reconciliation failed', 'error');
+            }
+          } catch (e) {
+            this.showToast('Server reconciliation failed', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        openCreateOrderModal() {
+          this.orderForm = {
+            deviceId: '',
+            planId: 'credits_5',
+            amount: 3000,
+            creditAmount: 5,
+            autoFulfill: true
+          };
+          this.fetchCatalog();
+          this.orderModalOpen = true;
+        },
+
+        async submitCreateOrder() {
+          const deviceId = (this.orderForm.deviceId || '').trim();
+          if (!deviceId) {
+            this.showToast('Device ID is required', 'warning');
+            return;
+          }
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders/create`, {
+              method: 'POST',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify(this.orderForm)
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Order ${data.orderId} created and ${data.autoFulfill ? 'activated on the device' : 'saved'}!`, 'success');
+              this.orderModalOpen = false;
+              this.fetchOrders();
+              this.fetchDevices();
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Failed to create order', 'error');
+            }
+          } catch (_) {
+            this.showToast('Failed to create order manual', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async updateOrderStatus(orderId, status) {
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders`, {
+              method: 'PUT',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify({ orderId, status })
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Order ${orderId} marked as ${status} and device access synced`, 'success');
+              this.fetchOrders();
+              this.fetchDevices();
+              this.fetchOverview();
+            } else { this.showToast(data.error || 'Order update rejected', 'error'); }
+          } catch (e) {
+            this.showToast('Failed to update order', 'error');
+          }
+        },
+
+        async deleteOrder(orderId) {
+          const ord = (this.orders || []).find(o => o.orderId === orderId);
+          if (ord && (ord.status === 'completed' || ord.status === 'paid')) {
+            alert('Transaksi berstatus SUDAH DIBAYAR / COMPLETED tidak dapat dihapus demi integritas pembukuan dan audit finansial.');
+            return;
+          }
+          if (!confirm(`Hapus permanen transaksi ${orderId} dari database Cloudflare Edge KV?\n\nPERINGATAN: Data invoice dan log pesanan akan dihapus permanen dan tidak dapat dipulihkan.`)) return;
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/orders?orderId=${encodeURIComponent(orderId)}&permanent=1`, {
+              method: 'DELETE',
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast(`Transaksi ${orderId} berhasil dihapus permanen dari Cloudflare KV`, 'success');
+              this.orders = (this.orders || []).filter(o => o.orderId !== orderId);
+              this.fetchOverview();
+            } else {
+              this.showToast(data.error || 'Gagal menghapus transaksi', 'error');
+            }
+          } catch (e) {
+            this.showToast('Gagal menghapus transaksi dari Edge KV', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async fetchSettings() {
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/settings`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.settings = data.settings;
+            }
+          } catch (_) {}
+        },
+
+        async saveSettings() {
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/settings`, {
+              method: 'PUT',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify(this.settings)
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.settings.pakasir_api_key = '';
+              this.settings.pakasir_webhook_secret = '';
+              this.showToast('Pakasir configuration saved', 'success');
+            }
+          } catch (_) {
+            this.showToast('Failed to save settings', 'error');
+          }
+        },
+
+        async fetchCatalog() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/catalog`, {
+              headers: this.getAuthHeaders()
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success && data.catalog) {
+              this.catalog = data.catalog;
+              if (this.orderModalOpen && !this.catalog.creditPacks?.[this.orderForm.planId] && !this.catalog.plans?.[this.orderForm.planId]) {
+                this.orderForm.planId = Object.keys(this.catalog.creditPacks || {})[0] || Object.keys(this.catalog.plans || {})[0] || '';
+              }
+            }
+          } catch (e) {
+            this.showToast('Failed to load dynamic catalog', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        async saveCatalog() {
+          this.loading = true;
+          try {
+            const resp = await fetch(`${this.cleanApiUrl}/api/admin/catalog`, {
+              method: 'PUT',
+              headers: this.getAuthHeaders(),
+              body: JSON.stringify(this.catalog)
+            });
+            if (this.handleAuthError(resp)) return;
+            const data = await resp.json();
+            if (data.success) {
+              this.showToast('Dynamic Catalog & Pricing saved to Edge KV!', 'success');
+              if (data.catalog) this.catalog = data.catalog;
+            } else {
+              this.showToast(data.error || 'Failed to update catalog', 'error');
+            }
+          } catch (e) {
+            this.showToast('Error updating catalog in Edge KV', 'error');
+          } finally {
+            this.loading = false;
+          }
+        },
+
+        isVipActive(expiresAt) {
+          return expiresAt && expiresAt > Date.now();
+        },
+
+        formatDate(ts) {
+          if (!ts) return '-';
+          return new Date(ts).toLocaleString('en-US', {
+            day: '2-digit', month: 'short', year: 'numeric',
+            hour: '2-digit', minute: '2-digit'
+          });
+        },
+
+        copyText(text) {
+          navigator.clipboard.writeText(text);
+          this.showToast('Copied to clipboard', 'info');
+        }
+      }
+    }
+  </script>
+
+</body>
+</html>

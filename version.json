@@ -1,0 +1,26 @@
+﻿{
+    "versionCode":  38,
+    "versionName":  "3.8.0-Neutrino",
+    "appName":  "Game Nuke Neutrino Edition",
+    "publishedAt":  "2026-10-11",
+    "minAndroidVersion":  11,
+    "targetSdk":  35,
+    "releaseNotes":  [
+                         "Neutrino Cyber Jukebox \u0026 YouTube Engine: Full direct YouTube / YouTube Music search and background streaming with zero advertisements, zero audio interruptions, and instant auto-skipping.",
+                         "Ultra-Compact Quantum Reactor Minimize Badge: Completely redesigned 34dp static obsidian reactor badge in both portrait and landscape with zero idle CPU overdraw and smooth hardware-accelerated edge snapping.",
+                         "WhatsApp Community Integration: Direct access to the official Game Nuke WhatsApp community channel in the dashboard footer and navigation drawer.",
+                         "Extreme Low-RAM Architecture: Offscreen 1x1 audio rendering engine without heavy GPU surfaces, reducing memory footprint to \u003c20MB and ensuring zero gaming lag or frame drops.",
+                         "Neutrino Neural Telemetry AI Core: Real-time autonomous hardware telemetry, cognitive bottleneck analysis, and low-latency kernel performance tuning.",
+                         "Professional eSports Sensi Panel: Calibrated hardware touch calibration with custom response curves and 1.00x pure linear pass-through without cheat presets.",
+                         "Absolute Zero-Ghost Touch Protection: Hardware kernel BTN_TOUCH release detection guarantees instant pointer purge with zero phantom taps.",
+                         "Universal Brand Compatibility: Fully audited and validated across HyperOS/MIUI (Xiaomi/POCO), One UI (Samsung), ColorOS/OxygenOS (Oppo/Realme/OnePlus), FuntouchOS (Vivo/iQOO), ROG UI (ASUS), and Stock AOSP (Google Pixel) on Android 11 through Android 16."
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.8.0-Neutrino/GameNuke-v3.8.0-Neutrino.apk",
+    "localApkUrl":  "GameNuke-v3.8.0-Neutrino.apk",
+    "apkSizeMb":  "32.35",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.8.0-Neutrino/GameNuke-v3.8.0-Neutrino.apk",
+    "sha256":  "419B5FA57C2DE99C84EF95627C310643300E3F545708FCA3DBC9DE482BDF9CCC",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "nvidia_nim_api_key":  "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"
+}
