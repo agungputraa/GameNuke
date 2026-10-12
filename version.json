@@ -1,0 +1,24 @@
+﻿{
+    "versionCode":  39,
+    "versionName":  "3.9.0-Parallax",
+    "appName":  "Game Nuke Parallax Edition",
+    "publishedAt":  "2026-10-12",
+    "minAndroidVersion":  11,
+    "targetSdk":  35,
+    "releaseNotes":  [
+                         "Google Play Protect Enterprise Hardening: Neutralized false positive financial fraud blocks via zero-permission privileged shell notification reader.",
+                         "Universal Multi-OEM Touch Passthrough: Eliminated screen touch freezing and dead zones on Samsung One UI, Xiaomi/Redmi HyperOS/MIUI, Vivo/iQOO, Oppo/Realme ColorOS, Asus ROG, Tecno, and Pixel.",
+                         "Universal Dual-Engine Touch Listener: Seamless activation across all Android 11+ OEM devices via Elevated Shell Injection Mode (iAdb / Shizuku / Wireless ADB).",
+                         "Macro Studio Overlay Touch Isolation: Strict FLAG_NOT_TOUCHABLE enforcement when studio is hidden or minimized, preserving 100% native gaming digitizer response.",
+                         "Parallax Neural Engine v7: On-device autonomous telemetry AI core, real-time dynamic hardware optimization, and zero-stutter frame pacing.",
+                         "Cyber Jukebox \u0026 Floating Cockpit: Instant latency-free streaming audio controls, background playback resilience, and expanded hardware monitors."
+                     ],
+    "downloadUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.9.0-Parallax/GameNuke-v3.9.0-Parallax.apk",
+    "localApkUrl":  "GameNuke-v3.9.0-Parallax.apk",
+    "apkSizeMb":  "32.38",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v3.9.0-Parallax/GameNuke-v3.9.0-Parallax.apk",
+    "sha256":  "5EBC57CCC1A78AB944BF06A3DE67E20269A298E6D0F21E285B6206B5C6EFB6EA",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "nvidia_nim_api_key":  "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"
+}
