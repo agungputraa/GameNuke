@@ -1,0 +1,27 @@
+﻿{
+    "versionCode":  40,
+    "versionName":  "4.0.0-Apex",
+    "appName":  "Game Nuke Apex Edition",
+    "publishedAt":  "2026-10-15",
+    "minAndroidVersion":  11,
+    "targetSdk":  35,
+    "releaseNotes":  [
+                         "Deep Clean \u0026 Autonomous AI Sentinel: Kernel RAM compaction, storage cache trim, and zombie process reaping.",
+                         "Precision Flick: Enhanced manual vertical drag curve response for fluid aim tracking.",
+                         "Macro Studio Apex: Streamlined action configuration with multi-touch isolation and zero-jitter burst execution.",
+                         "Community Room Protocol 2: Fast sync, typing indicators, image compression, and resilient chat retry.",
+                         "Universal Dual-Engine Touch Listener: Seamless activation across all Android 11+ OEM devices."
+                     ],
+    "downloadUrl":  "GameNuke-v4.0.0-Apex.apk",
+    "localApkUrl":  "GameNuke-v4.0.0-Apex.apk",
+    "apkSizeMb":  "37.29",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v4.0.0-Apex/GameNuke-v4.0.0-Apex.apk",
+    "sha256":  "2F2DEA5247FB996A992BC7031827BFFE16E3614BF12763308ABB9DBBF65F72BF",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinks":  [
+                                "https://uplcm.com/4/12027321",
+                                "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
+                            ],
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "nvidia_nim_api_key":  "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"
+}
