@@ -1,0 +1,27 @@
+{
+    "versionCode":  40,
+    "versionName":  "4.0.0-Apex",
+    "appName":  "Game Nuke Apex Edition",
+    "publishedAt":  "2026-10-17",
+    "minAndroidVersion":  11,
+    "targetSdk":  35,
+    "releaseNotes":  [
+                         "Apex Gaming Engine: Comprehensive performance and stability optimizations for ultra-smooth gameplay.",
+                         "Universal Multi-OEM Support: Enhanced touch responsiveness and fluid UI transitions across all devices.",
+                         "Precision Flick & Sensi: Fine-tuned touch curve response and zero-jitter aim tracking.",
+                         "Deep Clean & Thermal Guard: Autonomous background optimization and adaptive session stabilization.",
+                         "Macro Studio Apex: Multi-touch isolation with zero-lag burst execution."
+                     ],
+    "downloadUrl":  "GameNuke-v4.0.0-Apex.apk",
+    "localApkUrl":  "GameNuke-v4.0.0-Apex.apk",
+    "apkSizeMb":  "40.51",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v4.0.0-Apex/GameNuke-v4.0.0-Apex.apk",
+    "sha256":  "F1F1878881D3516E13211D2A9C992CE82E312F7EB31BED129F8EF8743554B54D",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinks":  [
+                                "https://uplcm.com/4/12027321",
+                                "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
+                            ],
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "nvidia_nim_api_key":  "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"
+}
