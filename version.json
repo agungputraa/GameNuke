@@ -1,28 +1,27 @@
 {
-  "versionCode": 41,
-  "versionName": "4.1.0-Laniakea",
-  "appName": "Game Nuke Laniakea Edition",
-  "publishedAt": "2026-11-14",
-  "minAndroidVersion": 11,
-  "targetSdk": 36,
-  "releaseNotes": [
-    "Laniakea Gaming Engine: Adaptive performance telemetry, GPU pipeline controls, and session stabilization for Android 11-16 (SDK 36).",
-    "Obsidian-Emerald Command UI: Redesigned splash video, vector launcher emblem, and balanced Config telemetry panels.",
-    "Resilient Bridge & Shell Overlay Unlock: Automated Restricted-Settings & Floating HUD bypass via Shizuku, iAdb, Core Daemon, and Native ADB.",
-    "Hardened Release Architecture: Play Protect friendly manifest permissions, scoped internal FileProvider, and R8 release optimizations.",
-    "Macro Studio & Touch Response: Multi-touch isolation, One-Euro smoothing, and asymmetric drag-curve calibration."
-  ],
-  "downloadUrl": "GameNuke-v4.1.0-Laniakea.apk",
-  "localApkUrl": "GameNuke-v4.1.0-Laniakea.apk",
-  "apkSizeMb": "37.54",
-  "githubReleaseUrl": "https://github.com/agungputraa/GameNuke/releases/download/v4.1.0-Laniakea/GameNuke-v4.1.0-Laniakea.apk",
-  "sha256": "5186398B465448EF48179A34B23924B6BFD86EC3F2F369D452BD8C442BECF067",
-  "directlinkAdUrl": "https://dulyhagglermounting.com/2082665",
-  "downloadDirectlinks": [
-    "https://uplcm.com/4/12027321",
-    "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990"
-  ],
-  "downloadDirectlinkUrl": "https://bmadss.com/get/?spot_id=2006837&cat=25&subid=808526990",
-  "nvidia_nim_api_key": "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",
-  "portalUrl": "https://gamenukeofficial.com"
+    "versionCode":  41,
+    "versionName":  "4.1.0-Laniakea",
+    "appName":  "Game Nuke Laniakea Edition",
+    "publishedAt":  "2026-11-15",
+    "minAndroidVersion":  11,
+    "targetSdk":  36,
+    "releaseNotes":  [
+                         "Laniakea Gaming Engine: Adaptive performance telemetry, GPU pipeline controls, and session stabilization for Android 11-16 (SDK 36).",
+                         "Obsidian-Emerald Command UI: Redesigned splash video, vector launcher emblem, and balanced Config telemetry panels.",
+                         "Resilient Bridge & Shell Overlay Unlock: Automated Restricted-Settings & Floating HUD bypass via Shizuku, iAdb, Core Daemon, and Native ADB.",
+                         "Hardened Release Architecture: Play Protect friendly manifest permissions, scoped internal FileProvider, and R8 release optimizations.",
+                         "Macro Studio & Touch Response: Multi-touch isolation, One-Euro smoothing, and asymmetric drag-curve calibration."
+                     ],
+    "downloadUrl":  "GameNuke-v4.1.0-Laniakea.apk",
+    "localApkUrl":  "GameNuke-v4.1.0-Laniakea.apk",
+    "apkSizeMb":  "37.55",
+    "githubReleaseUrl":  "https://github.com/agungputraa/GameNuke/releases/download/v4.1.0-Laniakea/GameNuke-v4.1.0-Laniakea.apk",
+    "sha256":  "5186398B465448EF48179A34B23924B6BFD86EC3F2F369D452BD8C442BECF067",
+    "directlinkAdUrl":  "https://dulyhagglermounting.com/2082665",
+    "downloadDirectlinks":  [
+                                "https://uplcm.com/4/12027321",
+                                "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990"
+                            ],
+    "downloadDirectlinkUrl":  "https://bmadss.com/get/?spot_id=2006837\u0026cat=25\u0026subid=808526990",
+    "nvidia_nim_api_key":  "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"
 }

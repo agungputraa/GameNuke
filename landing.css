@@ -118,7 +118,7 @@
 .hero-trust .icon { width:14px; height:14px; color:var(--accent); }
 
 /* Compact, consistently spaced content on phones. */
-.section,.vip-section { padding:56px 0; }
+.section { padding:56px 0; }
 .section-heading { display:grid; gap:16px; margin-bottom:26px; }
 .section-heading>div { max-width:680px; }
 .section-heading>p { color:var(--muted); font-size:14px; line-height:1.8; max-width:580px; margin:0; }
@@ -184,36 +184,6 @@
 .demo-chart-grid { stroke:var(--line); stroke-width:1; fill:none; }
 .demo-footer { display:flex; justify-content:space-between; flex-wrap:wrap; gap:7px; padding:13px 16px; border-top:1px solid var(--line); color:var(--muted); font:7px/1.5 var(--font-mono); }
 .demo-caption { color:var(--muted); font-size:10px; line-height:1.7; margin:0; padding:0 16px 16px; }
-
-/* All four prices/actions are preserved; inclusions use native disclosure. */
-.vip-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:14px; }
-.vip-card { position:relative; min-width:0; display:flex; flex-direction:column; gap:20px; padding:22px; background:var(--surface); border:1px solid var(--line); border-radius:var(--radius); }
-.vip-card.featured { border-color:#65bd9e; background:linear-gradient(145deg,#1a3437,#0d1814); }
-.vip-badge-tag { align-self:flex-start; font:8px/1.5 var(--font-mono); letter-spacing:.07em; padding:5px 8px; border-radius:5px; color:var(--accent); background:#173c32; border:1px solid #336250; }
-.vip-badge-value { color:#f8d38a; background:#332c20; border-color:#665338; }
-.vip-plan-name { display:block; font-size:19px; font-weight:650; letter-spacing:-.025em; margin:0; }
-.vip-plan-desc { font-size:12px; line-height:1.75; color:var(--muted); margin:8px 0 18px; }
-.vip-price-box { display:flex; flex-wrap:wrap; align-items:baseline; gap:8px; padding-bottom:18px; border-bottom:1px solid var(--line); }
-.vip-price-val { font-size:30px; font-weight:700; letter-spacing:-.04em; font-variant-numeric:tabular-nums; }
-.vip-price-value { color:#f8d38a; }
-.vip-price-accent { color:var(--accent); }
-.vip-price-dur { font:10px/1.5 var(--font-mono); color:var(--muted); }
-.vip-inclusions { margin-top:4px; }
-.vip-inclusions summary { display:flex; justify-content:space-between; align-items:center; gap:12px; min-height:44px; cursor:pointer; list-style:none; font-size:12px; font-weight:550; color:var(--muted); }
-.vip-inclusions summary::-webkit-details-marker { display:none; }
-.vip-inclusions summary>span { width:8px; height:8px; border:solid var(--accent); border-width:0 1.5px 1.5px 0; transform:rotate(45deg); margin-right:3px; transition:transform .2s; flex:none; }
-.vip-inclusions[open] summary>span { transform:rotate(225deg); }
-.vip-perks-list { display:grid; gap:12px; list-style:none; padding:0; margin:10px 0 0; }
-.vip-perks-list li { display:flex; align-items:flex-start; gap:9px; font-size:12px; line-height:1.7; color:#bbcadd; }
-.vip-perks-list svg { width:14px; height:14px; color:var(--accent); flex:none; margin-top:3px; }
-.vip-cta-btn { margin-top:auto; min-height:46px; font-size:12px; }
-.vip-trust-banner { display:grid; gap:16px; margin-top:22px; padding:20px; border:1px solid var(--line); border-radius:14px; background:#0b1813; }
-.vip-payment-info { display:flex; align-items:flex-start; gap:12px; min-width:0; }
-.vip-payment-icon { display:grid; place-items:center; width:36px; height:36px; border-radius:10px; border:1px solid var(--line-strong); background:var(--accent-soft); color:var(--accent); flex:none; }
-.vip-payment-info strong { display:block; font-size:13px; line-height:1.5; }
-.vip-payment-info span { display:block; font-size:12px; color:var(--muted); margin-top:5px; line-height:1.7; }
-.vip-payment-badge { display:flex; align-items:center; gap:6px; color:var(--accent); font-size:10px; }
-.vip-plan-note { font-size:12px; line-height:1.8; color:var(--muted); margin:22px 0 0; }
 
 .editions-section { border-top:1px solid var(--line); }
 .edition-grid { display:grid; grid-template-columns:minmax(0,1fr); gap:16px; }
@@ -305,7 +275,7 @@
   .hero-bottom { margin-top:40px; }
   .hero-trust { grid-template-columns:repeat(4,minmax(0,1fr)); gap:20px; }
   .hero-trust>span { font-size:11px; }
-  .section,.vip-section { padding-block:76px; }
+  .section { padding-block:76px; }
   .section-heading { margin-bottom:32px; }
   .section-heading.centered { text-align:center; justify-items:center; }
   .section-heading.centered>p { max-width:660px; }
@@ -332,11 +302,6 @@
   .demo-chart { height:125px; }
   .demo-footer { padding:15px 24px; font-size:8px; }
   .demo-caption { padding:0 24px 20px; font-size:11px; }
-  .vip-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; align-items:stretch; }
-  .vip-card { padding:60px 26px 26px; }
-  .vip-badge-tag { position:absolute; top:22px; left:26px; }
-  .vip-card>div { width:100%; }
-  .vip-plan-desc { min-height:44px; }
   .edition-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:20px; }
   .edition-card { padding:26px; }
   .install-section,.community-section,.faq-section { padding-top:0; }
@@ -366,7 +331,7 @@
   .hero-product { --phone-width:320px; padding:24px; border-radius:26px; }
   .hero-bottom { display:flex; justify-content:space-between; align-items:center; margin-top:48px; padding-block:24px; gap:28px; }
   .hero-trust { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:26px; }
-  .section,.vip-section { padding-block:96px; }
+  .section { padding-block:96px; }
   .section-heading { display:flex; align-items:flex-end; justify-content:space-between; gap:40px; margin-bottom:36px; }
   .section-heading>p { max-width:370px; }
   .section-heading.centered { display:grid; gap:16px; justify-content:center; }
@@ -385,14 +350,6 @@
   .macro-actions { flex:none; flex-direction:column; }
   .cockpit-layout { grid-template-columns:minmax(0,.85fr) minmax(0,1.15fr); align-items:center; gap:64px; }
   .cockpit-copy h2 { max-width:450px; }
-  .vip-grid { align-items:stretch; }
-  .vip-card { padding:60px 28px 28px; }
-  .vip-badge-tag { left:28px; }
-  .vip-plan-desc { min-height:42px; }
-  .vip-trust-banner { display:flex; align-items:center; justify-content:space-between; gap:26px; padding:24px; }
-  .vip-payment-info { align-items:center; }
-  .vip-payment-badge { flex:none; }
-  .vip-plan-note { max-width:920px; margin:26px auto 0; text-align:center; }
   .edition-grid { max-width:1060px; margin-inline:auto; gap:24px; }
   .edition-card { padding:32px; }
   .edition-title { margin:30px 0 20px; }
@@ -411,14 +368,6 @@
   .final-cta { padding-block:84px; }
   .mobile-actionbar { display:none; }
 }
-@media (min-width:1280px) {
-  .vip-grid { grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; }
-  .vip-card { padding:60px 24px 24px; }
-  .vip-badge-tag { left:24px; }
-  .vip-plan-desc { min-height:64px; }
-  .vip-price-box { display:grid; gap:4px; }
-  .vip-price-val { font-size:29px; }
-}
 @media (min-width:821px) and (max-width:1023px) { .mobile-actionbar { display:none; } }
 @media (max-width:359px) {
   .hero h1 { font-size:38px; }
@@ -426,7 +375,7 @@
   .preview-heading,.preview-heading>small { font-size:7px; }
   .hero-preview-note { font-size:7px; gap:5px 8px; }
   .hero-preview-note>span+span::before { margin-right:8px; }
-  .feature-panel,.vip-card,.edition-card { padding:20px; }
+  .feature-panel,.edition-card { padding:20px; }
   .mobile-actionbar-row { gap:8px; }
   .mobile-release { gap:6px; }
   .mobile-release strong { font-size:10px; }
@@ -434,5 +383,5 @@
   .mobile-actionbar .button { gap:6px; padding-inline:10px; font-size:10px; }
 }
 @media (prefers-reduced-motion:reduce) {
-  .mobile-actionbar,.vip-inclusions summary>span,.faq-list summary>span::after { transition:none; }
+  .mobile-actionbar,.faq-list summary>span::after { transition:none; }
 }

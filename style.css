@@ -22,7 +22,7 @@ img,svg,canvas,video { display:block; max-width:100%; }
 img { height:auto; }
 button:focus-visible,a:focus-visible,summary:focus-visible { outline:3px solid var(--accent); outline-offset:5px; }
 :where(h1,h2,h3,p,li,td,th,small,strong,a) { overflow-wrap:break-word; }
-:where(.container,.nav-shell,.hero-layout,.hero-actions,.section-heading,.feature-bento,.vip-grid,.edition-grid,.footer-main,.content-shell,.dl-portal-grid)>* { min-width:0; }
+:where(.container,.nav-shell,.hero-layout,.hero-actions,.section-heading,.feature-bento,.edition-grid,.footer-main,.content-shell,.dl-portal-grid)>* { min-width:0; }
 .container { width:min(calc(100% - 64px),var(--container)); margin-inline:auto; }
 .mono { font-family:var(--font-mono); font-variant-numeric:tabular-nums; }
 .svg-sprite { position:absolute; width:0; height:0; overflow:hidden; }
