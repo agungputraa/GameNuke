@@ -2,9 +2,9 @@
   'use strict';
 
   const DEFAULT_VERSION = {
-    versionName: '4.0.0-Apex',
-    apkSizeMb: '37.29',
-    publishedAt: '2026-10-15',
+    versionName: '4.1.0-Laniakea',
+    apkSizeMb: '37.55',
+    publishedAt: '2026-11-15',
     directlinkAdUrl: 'https://dulyhagglermounting.com/2082665'
   };
   const state = { version: { ...DEFAULT_VERSION }, modalReturnFocus: null, translateRequested: false, downloadTransitioning: false };

@@ -8,8 +8,8 @@
   ]);
 
   const DEFAULTS = {
-    versionName: '4.0.0-Apex',
-    apkSizeMb: '37.29',
+    versionName: '4.1.0-Laniakea',
+    apkSizeMb: '37.55',
     downloadDirectlinks: [...DIRECTLINK_POOL],
     downloadDirectlinkUrl: DIRECTLINK_POOL[0]
   };

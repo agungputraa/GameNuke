@@ -1,10 +1,10 @@
 # Game Nuke Official
 
-> Official technical and product documentation for Game Nuke Apex Edition, an Android gaming performance and telemetry utility.
+> Official technical and product documentation for Game Nuke Laniakea Edition, an Android gaming performance and telemetry utility.
 
 Canonical website: https://gamenukeofficial.com/
 Primary language: English
-Current release: v4.0.0-Apex
+Current release: v4.1.0-Laniakea
 Supported platform: Android 11–16, ARM64
 Release information source: version.json on the official domain
 Performance claims: No fixed FPS, latency, or thermal result is guaranteed. Interface previews use example metrics.

@@ -23,7 +23,7 @@ jobs:
         run: |
           TAG_NAME="${{ github.event.release.tag_name }}"
           if [ -z "$TAG_NAME" ]; then
-            TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v3.3.0-Hyperion")
+            TAG_NAME=$(git describe --tags --abbrev=0 2>/dev/null || echo "v4.1.0-Laniakea")
           fi
           CLEAN_VERSION="${TAG_NAME#v}"
           
@@ -44,7 +44,7 @@ jobs:
             DOWNLOAD_URL="https://github.com/${{ github.repository }}/releases/download/${TAG_NAME}/${ASSET_NAME}"
             SIZE_MB="32.1"
           else
-            SIZE_MB=$(echo "scale=1; $ASSET_SIZE_BYTES / 1048576" | bc 2>/dev/null || echo "32.1")
+            SIZE_MB=$(echo "scale=2; $ASSET_SIZE_BYTES / 1048576" | bc 2>/dev/null || echo "32.10")
           fi
 
           PUB_DATE=$(date -u +"%Y-%m-%d")
@@ -61,7 +61,7 @@ jobs:
 
           EDITION_NAME="${CLEAN_VERSION##*-}"
           if [ -z "$EDITION_NAME" ] || [ "$EDITION_NAME" = "$CLEAN_VERSION" ]; then
-            EDITION_NAME="Hyperion"
+            EDITION_NAME="Laniakea"
           fi
 
           # Update version.json safely
